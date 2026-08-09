@@ -140,7 +140,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright opens `/` and sees the app shell; failure unknown route shows the not-found surface. Evidence `.omo/evidence/docshub-product-strategy/task-1.md`.
   Commit: Y | chore(repo): scaffold docshub saas monorepo
 
-- [ ] 2. Port decisions into repo ADRs and machine-checkable guardrails
+- [x] 2. Port decisions into repo ADRs and machine-checkable guardrails
   What to do / Must NOT do: Copy ADR-001/002/003 into `docs/adr/` with decision/status/consequences; add guardrail tests for banned patterns (deprecated MCP capabilities, raw-code persistence outside allowlisted transient paths, doc-body inlining in index templates, repo-write calls outside the PR-proposal module, network calls in core without injection). Must not paraphrase decisions in ways that weaken constraints.
   Parallelization: Wave 0 | Blocked by: 1 | Blocks: 6,10,11,15,16
   References: R1, R6, R13.
