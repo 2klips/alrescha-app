@@ -1,0 +1,22 @@
+{
+  "sha": "2222222222222222222222222222222222222222",
+  "url": "https://api.github.com/repos/specproof/drifted-demo/git/trees/2222222222222222222222222222222222222222",
+  "tree": [
+    { "path": ".agents/skills/review-auth/SKILL.md", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000001", "size": 361 },
+    { "path": ".cursor/rules/testing.mdc", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000002", "size": 251 },
+    { "path": "AGENTS.md", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000003", "size": 340 },
+    { "path": "TODO.md", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000004", "size": 235 },
+    { "path": "docs/adr/ADR-001-session-timeout.md", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000005", "size": 361 },
+    { "path": "docs/adr/ADR-002-unused-export.md", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000006", "size": 232 },
+    { "path": "package.json", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000007", "size": 401 },
+    { "path": "spec.md", "mode": "100644", "type": "blob", "sha": "2c21df516c98fbe15507a60b3d0d7e91008dd80e", "size": 579 },
+    { "path": "src/api/AGENTS.md", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000008", "size": 147 },
+    { "path": "src/api/health.ts", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000009", "size": 238 },
+    { "path": "src/audit.ts", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000010", "size": 347 },
+    { "path": "src/session.ts", "mode": "100644", "type": "blob", "sha": "e09d9d794c308e1ee483edfcb94c76b972a062be", "size": 275 },
+    { "path": "tests/session.test.ts", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000011", "size": 566 },
+    { "path": "tsconfig.json", "mode": "100644", "type": "blob", "sha": "3000000000000000000000000000000000000012", "size": 196 }
+  ],
+  "truncated": false
+}
+

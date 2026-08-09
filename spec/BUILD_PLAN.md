@@ -148,7 +148,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy guardrail suite green; failure fixture importing MCP sampling fails with a specific message. Evidence `.omo/evidence/docshub-product-strategy/task-2.md`.
   Commit: Y | docs(adr): record github-first assurance decisions
 
-- [ ] 3. Build the drifted-demo fixture repo and recorded API fixtures
+- [x] 3. Build the drifted-demo fixture repo and recorded API fixtures
   What to do / Must NOT do: `fixtures/drifted-demo/` TS project (spec.md, two ADRs, AGENTS.md + nested, `.cursor/rules`, one SKILL.md, TODO.md, code + vitest tests) seeded with every finding type plus an expected-findings manifest (types, spans); recorded GitHub API tree/contents/webhook/Actions-artifact fixtures for offline deterministic pipeline tests; a JUnit/JSON test-report artifact fixture. Must not exceed a size that keeps e2e under 30s.
   Parallelization: Wave 0 | Blocked by: 1 | Blocks: 8,10,11,12
   References: R1, R3, R5, R18.

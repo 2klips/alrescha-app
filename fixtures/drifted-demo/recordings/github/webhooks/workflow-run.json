@@ -1,0 +1,26 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-github-delivery": "00000000-0000-4000-8000-000000000003",
+    "x-github-event": "workflow_run",
+    "x-hub-signature-256": "sha256=54ee14489f2c12857d8cd239b4bac4e880e29c25f87d0ae845be3d00a09e463a"
+  },
+  "body": {
+    "action": "completed",
+    "workflow_run": {
+      "id": 8801,
+      "name": "CI",
+      "event": "push",
+      "head_sha": "1111111111111111111111111111111111111111",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "repository": {
+      "id": 424242,
+      "full_name": "specproof/drifted-demo",
+      "default_branch": "main",
+      "private": true
+    },
+    "installation": { "id": 777 }
+  }
+}

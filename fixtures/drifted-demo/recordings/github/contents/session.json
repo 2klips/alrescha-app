@@ -1,0 +1,14 @@
+{
+  "type": "file",
+  "encoding": "base64",
+  "size": 275,
+  "name": "session.ts",
+  "path": "src/session.ts",
+  "content": "ZXhwb3J0IGludGVyZmFjZSBTZXNzaW9uIHsKICByZWFkb25seSBsYXN0QWN0aXZpdHlBdDogbnVtYmVyOwp9CgpleHBvcnQgY29uc3QgU0VTU0lPTl9USU1FT1VUX01TID0gMzAgKiA2MCAqIDFfMDAwOwoKZXhwb3J0IGZ1bmN0aW9uIGlzU2Vzc2lvbkV4cGlyZWQoc2Vzc2lvbjogU2Vzc2lvbiwgbm93OiBudW1iZXIpOiBib29sZWFuIHsKICByZXR1cm4gbm93IC0gc2Vzc2lvbi5sYXN0QWN0aXZpdHlBdCA+PSBTRVNTSU9OX1RJTUVPVVRfTVM7Cn0KCg==",
+  "sha": "e09d9d794c308e1ee483edfcb94c76b972a062be",
+  "url": "https://api.github.com/repos/specproof/drifted-demo/contents/src/session.ts?ref=1111111111111111111111111111111111111111",
+  "git_url": "https://api.github.com/repos/specproof/drifted-demo/git/blobs/e09d9d794c308e1ee483edfcb94c76b972a062be",
+  "html_url": "https://github.com/specproof/drifted-demo/blob/1111111111111111111111111111111111111111/src/session.ts",
+  "download_url": "https://raw.githubusercontent.com/specproof/drifted-demo/1111111111111111111111111111111111111111/src/session.ts"
+}
+

@@ -21,7 +21,7 @@
 ## 상태
 
 - [x] 기획·설계 완료 (spec/ v3.3, ADR-001~007)
-- [ ] Wave 0: 부트스트랩 + ADR 이식 + 픽스처
+- [x] Wave 0: 부트스트랩 + ADR 이식 + 픽스처
 - [ ] Wave 1–5: BUILD_PLAN 참조
 
 © 2026 SpecProof · a project by 2klips
