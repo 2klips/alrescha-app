@@ -1,5 +1,19 @@
 ﻿# DocsHub 결정 로그
 
+## ADR-007 — 구현 인수인계 체계 (2026-08-09)
+
+**날짜:** 2026-08-09
+**상태:** 채택
+
+### 결정
+
+1. **구현 레포 분리:** 애플리케이션 코드는 신규 레포 **`2klips/specproof-app`**에서 구현한다. `2klips/specproof`는 기획·홍보(사이트+spec) 레포로 유지 — GitHub Pages 충돌 방지. 구현 중 스펙 기준본은 `specproof-app/spec/`이며, 기획 변경은 specproof에서 결정 후 app 레포로 동기화한다.
+2. **재량 결정 기본값 (다른 지시 없으면 이것으로):** 그래프 렌더러 = React Flow(성능 테스트 미달 시 canvas 전환 허용) · 실시간 채널 = Supabase Realtime broadcast · 잡 큐 = Postgres 자체 구현(`FOR UPDATE SKIP LOCKED`) · 모노레포 = pnpm + `apps/web`·`apps/worker`·`packages/core`·`packages/mcp` · AI 판단 기본 모델 = claude-sonnet-5(어댑터 교체 가능) · 개발 = 로컬(supabase CLI), 프로덕션 제안 = Vercel(web)+Fly.io(worker/MCP).
+3. **세션 운영법:** 코딩 에이전트는 **한 세션에 한 웨이브**(또는 2–3개 할일)만 진행. 세션 시작 프롬프트 템플릿·종료 검증 절차는 `IMPLEMENTATION_GUIDE.md`에 정의.
+4. **사람 준비물 단계화:** Wave 0–2는 준비물 0(픽스처 오프라인). GitHub App 등록·Supabase 클라우드·AI API 키·배포 계정은 단계별 체크리스트로 관리(가이드 §2).
+
+---
+
 ## ADR-006 — 기획 재점검: 타깃·진척 기록·하네스 뷰·개인 라이브러리 (2026-08-09)
 
 **날짜:** 2026-08-09
