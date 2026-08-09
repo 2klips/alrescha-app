@@ -132,7 +132,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
 ## Todos
 > Implementation + Test = ONE todo. Never separate.
 <!-- APPEND TASK BATCHES BELOW THIS LINE WITH edit/apply_patch - never rewrite the headers above. -->
-- [ ] 1. Bootstrap monorepo, tooling, and repo-native agent docs
+- [x] 1. Bootstrap monorepo, tooling, and repo-native agent docs
   What to do / Must NOT do: pnpm workspace with the Next.js app, `packages/core`, `packages/mcp`; TypeScript strict, vitest, Playwright, tsup for packages; root AGENTS.md + CLAUDE.md wrapper (`@AGENTS.md`); `.env.example`. Must not add production dependencies without recording why; must not scaffold a marketing site.
   Parallelization: Wave 0 | Blocked by: none | Blocks: 2,3,4,5
   References: R1, R8, R14.
