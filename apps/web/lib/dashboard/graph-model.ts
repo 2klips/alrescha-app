@@ -23,10 +23,20 @@ export interface GraphNode {
   y: number;
 }
 
+export interface GraphEdgeProvenance {
+  confidence: number;
+  endLine: number;
+  grade: EvidenceGrade;
+  relation: "declares" | "implements" | "references" | "tests";
+  sourcePath: string;
+  startLine: number;
+}
+
 export interface GraphEdge {
   broken: boolean;
   grade: EvidenceGrade;
   id: string;
+  provenance: GraphEdgeProvenance;
   source: string;
   target: string;
 }
@@ -71,7 +81,7 @@ const BASE_NODES: readonly Omit<GraphNode, "x" | "y">[] = [
   { id: "test-pack", label: "context-pack.test.ts", path: "tests/context-pack.test.ts", type: "test", grade: "broken", findingCount: 1 },
 ] as const;
 
-const BASE_EDGES: readonly Omit<GraphEdge, "id">[] = [
+const BASE_EDGES: readonly Omit<GraphEdge, "id" | "provenance">[] = [
   { source: "doc-guide", target: "req-auth", grade: "verified", broken: false },
   { source: "doc-plan", target: "req-webhook", grade: "verified", broken: false },
   { source: "doc-plan", target: "req-ci", grade: "verified", broken: false },
@@ -85,6 +95,30 @@ const BASE_EDGES: readonly Omit<GraphEdge, "id">[] = [
   { source: "req-context", target: "code-pack", grade: "broken", broken: true },
   { source: "code-pack", target: "test-pack", grade: "broken", broken: true },
 ] as const;
+
+function edgeProvenance(
+  source: GraphNode,
+  target: GraphNode,
+  grade: EvidenceGrade,
+  index: number,
+): GraphEdgeProvenance {
+  const relation =
+    source.type === "document"
+      ? "declares"
+      : target.type === "test"
+        ? "tests"
+        : target.type === "code"
+          ? "implements"
+          : "references";
+  return {
+    confidence: grade === "verified" ? 1 : grade === "inferred" ? 0.78 : 0.94,
+    endLine: 38 + index,
+    grade,
+    relation,
+    sourcePath: source.path.split(":")[0]!,
+    startLine: 36 + index,
+  };
+}
 
 function initialPosition(index: number, total: number): { x: number; y: number } {
   const spoke = (index * 2.399963229728653) % (Math.PI * 2);
@@ -165,7 +199,13 @@ export function createFixtureGraph(nodeCount = BASE_NODES.length): GraphData {
   for (let index = 0; index < BASE_EDGES.length; index += 1) {
     const edge = BASE_EDGES[index]!;
     if (available.has(edge.source) && available.has(edge.target)) {
-      edges.push({ ...edge, id: `edge-${index}` });
+      const source = nodes.find((node) => node.id === edge.source)!;
+      const target = nodes.find((node) => node.id === edge.target)!;
+      edges.push({
+        ...edge,
+        id: `edge-${index}`,
+        provenance: edgeProvenance(source, target, edge.grade, index),
+      });
     }
   }
   for (let index = BASE_NODES.length; index < nodes.length; index += 1) {
@@ -175,6 +215,7 @@ export function createFixtureGraph(nodeCount = BASE_NODES.length): GraphData {
       broken: current.grade === "broken",
       grade: current.grade,
       id: `edge-generated-${index}`,
+      provenance: edgeProvenance(previous, current, current.grade, index),
       source: previous.id,
       target: current.id,
     });
@@ -210,6 +251,7 @@ export function clusterGraph(data: GraphData, threshold = 120): GraphData {
       broken: target.grade === "broken",
       grade: target.grade,
       id: `cluster-edge-${index}`,
+      provenance: edgeProvenance(source, target, target.grade, index),
       source: source.id,
       target: target.id,
     });

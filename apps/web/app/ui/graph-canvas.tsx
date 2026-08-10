@@ -2,13 +2,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { GraphData, GraphNode } from "../../lib/dashboard/graph-model";
+import type { GraphData, GraphEdge, GraphNode } from "../../lib/dashboard/graph-model";
+import type { PulsePhase } from "../../lib/realtime/access-events";
 
 interface GraphCanvasProps {
   data: GraphData;
   focusNodeId?: string | null;
+  onEdgeSelect?: (edge: GraphEdge) => void;
   onNodeDoubleClick?: (node: GraphNode) => void;
   onNodeSelect?: (node: GraphNode) => void;
+  pulseStates?: Readonly<Record<string, PulsePhase>>;
+  selectedEdgeId?: string | null;
 }
 
 interface Camera {
@@ -30,7 +34,17 @@ const TYPE_GLYPHS = {
   test: "T",
 } as const;
 
-export function GraphCanvas({ data, focusNodeId, onNodeDoubleClick, onNodeSelect }: GraphCanvasProps) {
+const EMPTY_PULSE_STATES: Readonly<Record<string, PulsePhase>> = {};
+
+export function GraphCanvas({
+  data,
+  focusNodeId,
+  onEdgeSelect,
+  onNodeDoubleClick,
+  onNodeSelect,
+  pulseStates = EMPTY_PULSE_STATES,
+  selectedEdgeId,
+}: GraphCanvasProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const gestureRef = useRef<{
     mode: "drag-node" | "pan";
@@ -68,12 +82,7 @@ export function GraphCanvas({ data, focusNodeId, onNodeDoubleClick, onNodeSelect
         aria-label={`Evidence graph with ${data.nodes.length} visible nodes`}
         className="graph-canvas"
         data-testid="evidence-graph-canvas"
-        onDoubleClick={(event) => {
-          const node = nodeFromTarget(event.target);
-          if (node) onNodeDoubleClick?.(node);
-        }}
         onPointerDown={(event) => {
-          event.currentTarget.setPointerCapture(event.pointerId);
           const node = nodeFromTarget(event.target);
           gestureRef.current = {
             mode: node ? "drag-node" : "pan",
@@ -126,11 +135,19 @@ export function GraphCanvas({ data, focusNodeId, onNodeDoubleClick, onNodeSelect
             const source = nodesById.get(edge.source);
             const target = nodesById.get(edge.target);
             if (!source || !target) return null;
+            const flowing = [pulseStates[source.id], pulseStates[target.id]].some(
+              (phase) => phase === "pulse" || phase === "decay",
+            );
             return (
               <line
-                className={`graph-edge ${edge.grade}${edge.broken ? " broken" : ""}`}
+                className={`graph-edge ${edge.grade}${edge.broken ? " broken" : ""}${flowing ? " flowing" : ""}${selectedEdgeId === edge.id ? " selected" : ""}${onEdgeSelect ? " interactive" : ""}`}
                 data-edge-id={edge.id}
                 key={edge.id}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onEdgeSelect?.(edge);
+                }}
+                onPointerDown={(event) => event.stopPropagation()}
                 x1={source.x}
                 x2={target.x}
                 y1={source.y}
@@ -142,11 +159,20 @@ export function GraphCanvas({ data, focusNodeId, onNodeDoubleClick, onNodeSelect
             const radius = node.clusterCount ? 27 + Math.min(12, node.clusterCount / 6) : 18;
             const selected = node.id === (focusNodeId ?? selectedId);
             const color = NODE_COLORS[node.grade];
+            const pulsePhase = pulseStates[node.id] ?? "idle";
             return (
               <g
-                className={`graph-node ${node.grade}${selected ? " selected" : ""}`}
+                className={`graph-node ${node.grade} ${pulsePhase}${selected ? " selected" : ""}`}
                 data-node-id={node.id}
                 key={node.id}
+                onClick={() => {
+                  setSelectedId(node.id);
+                  onNodeSelect?.(node);
+                }}
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                  onNodeDoubleClick?.(node);
+                }}
                 transform={`translate(${node.x} ${node.y})`}
               >
                 {selected ? <circle className="node-halo" cx="0" cy="0" r={radius + 12} /> : null}
@@ -166,6 +192,11 @@ export function GraphCanvas({ data, focusNodeId, onNodeDoubleClick, onNodeSelect
         {data.nodes.map((node) => (
           <button key={node.id} onClick={() => onNodeSelect?.(node)} type="button">
             {node.label}, {node.type}, {node.grade}
+          </button>
+        ))}
+        {data.edges.map((edge) => (
+          <button key={edge.id} onClick={() => onEdgeSelect?.(edge)} type="button">
+            {edge.provenance.relation}: {edge.source} to {edge.target}, {edge.provenance.grade}
           </button>
         ))}
       </div>

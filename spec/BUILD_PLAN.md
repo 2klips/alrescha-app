@@ -236,7 +236,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright walks a seeded finding to its evidence and receipt; failure tampered receipt fixture shows a tamper flag. Evidence `.omo/evidence/docshub-product-strategy/task-13.png`.
   Commit: Y | feat(findings): surface drift findings lint and receipts
 
-- [ ] 14. Build the live-activity glow layer and evidence detail graph
+- [x] 14. Build the live-activity glow layer and evidence detail graph
   What to do / Must NOT do: (a) **Realtime neuron glow**: subscribe the main dashboard to the workspace realtime channel; on each access event pulse the touched nodes (2–3s decay) and animate flow along touched edges, batch-render overlapping events as waves, keep afterglow on recently-touched nodes; add the HUD **agent-activity feed** (tool name, target, relative time) synced to the glow with click-to-focus camera. (b) **Evidence detail graph** (`/graph`, entered via node double-click): local depth-2 view with provenance inspection (span, confidence, grade on edge select), orphan toggle, click-through to findings/docs. Must not drop tool-response latency for event logging (fire-and-forget), must not display events from other workspaces, must not show edges without provenance on hover/detail.
   Parallelization: Wave 3 | Blocked by: 12,13 | Blocks: 19
   References: R1, R14, R15.

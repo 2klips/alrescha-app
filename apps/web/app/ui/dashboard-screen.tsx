@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   AlertTriangle,
   Braces,
   CheckCircle2,
@@ -11,12 +12,14 @@ import {
   GitBranch,
   LoaderCircle,
   Network,
+  Play,
+  Radio,
   RotateCcw,
   Search,
   TestTube2,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   filterGraph,
@@ -27,6 +30,19 @@ import {
   type GraphNode,
   type GraphNodeType,
 } from "../../lib/dashboard/graph-model";
+import {
+  DEMO_REVOKED_TOKEN_ID,
+  DEMO_WORKSPACE_ID,
+  createDemoAccessEvents,
+  createBrowserWorkspaceRealtimeSource,
+  createRealtimeGraphState,
+  dispatchBrowserAccessEvent,
+  pulsePhaseAt,
+  reduceAccessEventBatch,
+  relativeEventTime,
+  subscribeWorkspaceRealtime,
+  type PulsePhase,
+} from "../../lib/realtime/access-events";
 import { GraphCanvas } from "./graph-canvas";
 
 interface DashboardScreenProps {
@@ -149,9 +165,12 @@ function MetricEvidence({ panel, onClose }: { panel: MetricPanel; onClose: () =>
 export function DashboardScreen({ model }: DashboardScreenProps) {
   const [filters, setFilters] = useState<GraphFilters>({ grade: "all", query: "", type: "all" });
   const [localFocus, setLocalFocus] = useState(false);
+  const [cameraFocusNodeId, setCameraFocusNodeId] = useState<string | null>(null);
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [metricPanel, setMetricPanel] = useState<MetricPanel | null>(null);
   const [recovered, setRecovered] = useState(false);
+  const [clock, setClock] = useState(0);
+  const [realtime, setRealtime] = useState(() => createRealtimeGraphState(DEMO_WORKSPACE_ID));
   const baseGraph = useMemo(() => filterGraph(model.graph, filters), [filters, model.graph]);
   const visibleGraph = useMemo(
     () => (localFocus && selectedNode ? focusLocalGraph(baseGraph, selectedNode.id) : baseGraph),
@@ -159,6 +178,43 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
   );
   const blocked =
     !recovered && ["loading", "empty", "scanning", "failed", "permission-error"].includes(model.state);
+  const pulseStates = useMemo(() => {
+    const phases: Record<string, PulsePhase> = {};
+    for (const [nodeId, pulse] of Object.entries(realtime.pulses)) {
+      phases[nodeId] = pulsePhaseAt(pulse, clock);
+    }
+    return phases;
+  }, [clock, realtime.pulses]);
+
+  useEffect(() => {
+    if (realtime.feed.length === 0) return;
+    const timer = window.setInterval(() => setClock(Date.now()), 180);
+    const stop = window.setTimeout(() => window.clearInterval(timer), 12_500);
+    return () => {
+      window.clearInterval(timer);
+      window.clearTimeout(stop);
+    };
+  }, [realtime.renderBatches]);
+
+  useEffect(() => {
+    const policy = {
+      revokedTokenIds: new Set([DEMO_REVOKED_TOKEN_ID]),
+      workspaceId: DEMO_WORKSPACE_ID,
+    };
+    return subscribeWorkspaceRealtime(
+      createBrowserWorkspaceRealtimeSource(window),
+      policy,
+      (events) => setRealtime((current) => reduceAccessEventBatch(current, events, policy)),
+      (flush) => window.requestAnimationFrame(flush),
+    );
+  }, []);
+
+  function replayMcpSession() {
+    const now = Date.now();
+    const startedAt = now - 720;
+    setClock(now);
+    for (const event of createDemoAccessEvents(startedAt)) dispatchBrowserAccessEvent(window, event);
+  }
 
   return (
     <main className="dashboard-shell">
@@ -167,9 +223,10 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
         {blocked ? <StatusSurface model={model} onRetry={() => setRecovered(true)} /> : (
           <GraphCanvas
             data={visibleGraph}
-            focusNodeId={selectedNode?.id ?? null}
+            focusNodeId={cameraFocusNodeId}
             onNodeDoubleClick={(node) => window.location.assign(`/graph?node=${encodeURIComponent(node.id)}`)}
             onNodeSelect={setSelectedNode}
+            pulseStates={pulseStates}
           />
         )}
 
@@ -240,6 +297,37 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
         ) : null}
 
         {metricPanel ? <MetricEvidence onClose={() => setMetricPanel(null)} panel={metricPanel} /> : null}
+
+        {!blocked ? (
+          <aside className="activity-feed hud-panel" aria-label="Agent activity">
+            <header>
+              <span><Activity size={14} />Agent activity</span>
+              <span className="live-indicator"><Radio size={12} />Live</span>
+            </header>
+            <button className="replay-activity" onClick={replayMcpSession} type="button"><Play size={13} />Replay MCP session</button>
+            <div className="activity-list" role="feed">
+              {realtime.feed.map((event) => (
+                <button
+                  aria-label={`${event.tool} ${event.targetPath}`}
+                  key={event.id}
+                  onClick={() => {
+                    const node = model.graph.nodes.find((candidate) => event.targetNodeIds.includes(candidate.id));
+                    if (node) {
+                      setSelectedNode(node);
+                      setCameraFocusNodeId(node.id);
+                    }
+                  }}
+                  type="button"
+                >
+                  <span className="activity-pulse" />
+                  <span><strong>{event.tool}</strong><small>{event.targetPath}</small></span>
+                  <time>{relativeEventTime(event.occurredAt, clock)}</time>
+                </button>
+              ))}
+              {realtime.feed.length === 0 ? <p>No MCP reads in this view.</p> : null}
+            </div>
+          </aside>
+        ) : null}
 
         {selectedNode ? (
           <aside className="node-inspector hud-panel" aria-label="Selected node">
