@@ -164,7 +164,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright signs up and lands in a personal workspace; failure direct API access to another workspace's repo returns 403. Evidence `.omo/evidence/docshub-product-strategy/task-4.md`.
   Commit: Y | feat(auth): add tenant-safe solo workspaces
 
-- [ ] 5. Create the typed domain model and migrations
+- [x] 5. Create the typed domain model and migrations
   What to do / Must NOT do: Postgres schema + zod domain types for repositories, artifacts, requirements, evidence, edges, findings, receipts, runs/jobs, credit ledger, MCP tokens, GitHub installations, **index_entries (search keys + graph-neighbor cache, reserved embedding column), and access_events (token id, tool, target node ids, ts — no prompt text)**; provenance (source artifact + span or reason) and confidence NOT NULL on edges/findings; stable ULIDs; migrations runner. Must not store raw code bodies by default; must not design tables that preclude team expansion.
   Parallelization: Wave 1 | Blocked by: 1,4 | Blocks: 6,7,9,13,17
   References: R1, R10, R14.
