@@ -204,7 +204,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy structured JSON for fixture spec; failure malformed doc yields diagnostics, not a crash. Evidence `.omo/evidence/docshub-product-strategy/task-9.json`.
   Commit: Y | feat(parser): extract markdown structure with spans
 
-- [ ] 10. Implement requirement extractor and drift rules engine
+- [x] 10. Implement requirement extractor and drift rules engine
   What to do / Must NOT do: Deterministic requirement extraction (task lists, acceptance criteria, ADR decisions, MUST/SHOULD) with spans; drift rules producing the six finding types with severity, confidence, evidence links, suggested next action; `inferred`-only chains cap at medium severity; AI-assist hooks stubbed until todo 17. Must not emit a finding without provenance; must not double-report the same span.
   Parallelization: Wave 2 | Blocked by: 2,3,8,9 | Blocks: 13,15,16
   References: R1, R13.

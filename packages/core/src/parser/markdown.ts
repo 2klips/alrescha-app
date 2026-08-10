@@ -6,6 +6,7 @@ import { toString } from "mdast-util-to-string";
 import type {
   Definition,
   Heading,
+  InlineCode,
   Link,
   LinkReference,
   ListItem,
@@ -52,6 +53,11 @@ export interface ParsedFrontmatter {
   span: MarkdownSpan;
 }
 
+export interface ParsedCodeReference {
+  span: MarkdownSpan;
+  value: string;
+}
+
 export interface ParsedLink {
   kind: "markdown" | "reference" | "wiki";
   label: string;
@@ -67,6 +73,11 @@ export interface ParsedMarkdownSection {
   text: string;
 }
 
+export interface ParsedParagraph {
+  span: MarkdownSpan;
+  text: string;
+}
+
 export interface MarkdownDiagnostic {
   message: string;
   severity: "warning" | "error";
@@ -76,11 +87,13 @@ export interface MarkdownDiagnostic {
 export interface ParsedMarkdownStructure {
   acceptanceCriteria: ParsedMarkdownSection[];
   adrSections: ParsedMarkdownSection[];
+  codeReferences: ParsedCodeReference[];
   diagnostics: MarkdownDiagnostic[];
   frontmatter: ParsedFrontmatter | null;
   headings: ParsedHeading[];
   links: ParsedLink[];
   normativeStatements: ParsedNormativeStatement[];
+  paragraphs: ParsedParagraph[];
   path: string;
   tasks: ParsedTask[];
 }
@@ -298,7 +311,9 @@ export function parseMarkdownStructure({
   const headings: ParsedHeading[] = [];
   const tasks: ParsedTask[] = [];
   const normativeStatements: ParsedNormativeStatement[] = [];
+  const paragraphs: ParsedParagraph[] = [];
   const links: ParsedLink[] = [];
+  const codeReferences: ParsedCodeReference[] = [];
   const definitions = new Map<string, Definition>();
   const diagnostics: MarkdownDiagnostic[] = [];
   let frontmatter: ParsedFrontmatter | null = null;
@@ -364,6 +379,13 @@ export function parseMarkdownStructure({
     });
   });
 
+  visit(tree, "inlineCode", (node: InlineCode) => {
+    codeReferences.push({
+      span: toSpan(path, source, node),
+      value: node.value,
+    });
+  });
+
   visit(tree, "linkReference", (node: LinkReference) => {
     const definition = definitions.get(node.identifier.toLowerCase());
     if (!definition) {
@@ -392,17 +414,20 @@ export function parseMarkdownStructure({
   links.sort((left, right) => left.span.startByte - right.span.startByte);
 
   visit(tree, "paragraph", (node: Paragraph) => {
+    paragraphs.push({ span: toSpan(path, source, node), text: toString(node) });
     normativeStatements.push(...normativeStatementsIn(path, source, node));
   });
 
   return {
     acceptanceCriteria,
     adrSections,
+    codeReferences,
     diagnostics,
     frontmatter,
     headings,
     links,
     normativeStatements,
+    paragraphs,
     path,
     tasks,
   };

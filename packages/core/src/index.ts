@@ -51,14 +51,40 @@ export type {
   MarkdownDiagnostic,
   MarkdownSpan,
   ParseMarkdownInput,
+  ParsedCodeReference,
   ParsedHeading,
   ParsedFrontmatter,
   ParsedLink,
   ParsedMarkdownSection,
   ParsedMarkdownStructure,
   ParsedNormativeStatement,
+  ParsedParagraph,
   ParsedTask,
 } from "./parser/markdown";
+
+export { extractRequirements } from "./assurance/requirements";
+export type {
+  ExtractedRequirement,
+  ExtractRequirementsInput,
+  RequirementOrigin,
+} from "./assurance/requirements";
+
+export {
+  AI_ASSIST_STATUS,
+  DISABLED_ASSURANCE_AI_ASSIST,
+  analyzeRepositoryAssurance,
+} from "./assurance/rules";
+export type {
+  AnalyzeRepositoryAssuranceInput,
+  AssuranceFinding,
+  AssuranceFindingType,
+  AssuranceGrade,
+  AssuranceSeverity,
+  AssuranceSourceFile,
+  DisabledAssuranceAiAssist,
+  FindingEvidenceLink,
+  FindingProvenance,
+} from "./assurance/rules";
 
 export {
   GITHUB_PR_PROPOSAL_PERMISSION,

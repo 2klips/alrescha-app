@@ -1,0 +1,39 @@
+{
+  "task": 10,
+  "date": "2026-08-10",
+  "status": "pass",
+  "delivered": [
+    "deterministic requirement extraction from task lists, acceptance blocks, ADR decisions, and MUST/SHOULD sentences",
+    "overlap suppression so task and section requirements do not duplicate contained normative sentences",
+    "six deterministic drift rules: missing-implementation, missing-test, stale-doc, contradicting-instructions, orphan-doc, and unproven-claim",
+    "mandatory provenance, confidence, evidence links, suggested actions, and stable finding IDs",
+    "inferred-only severity cap at medium and a disabled AI-assist hook reserved for todo 17",
+    "incremental missing-test behavior based on requirement IDs in test metadata"
+  ],
+  "acceptance": {
+    "targetedCommand": "pnpm test -- assurance-rules",
+    "targetedResult": "4 tests passed",
+    "fixtureManifestFindings": 6,
+    "fixtureFindingsMatched": 6,
+    "unexplainedExtras": 0,
+    "matchedFields": ["type", "severity", "provenance spans"],
+    "findingTypes": [
+      "missing-implementation",
+      "missing-test",
+      "stale-doc",
+      "contradicting-instructions",
+      "orphan-doc",
+      "unproven-claim"
+    ],
+    "duplicatePrimarySpans": 0,
+    "findingsWithoutProvenance": 0,
+    "inferredHighSeverityFindings": 0,
+    "removedFixtureTestMissingTestLines": [6, 7],
+    "lint": "pass",
+    "typecheck": "pass",
+    "fullTest": "72 tests passed in 13 files"
+  },
+  "deferred": [
+    "AI-assisted extraction remains disabled through DISABLED_ASSURANCE_AI_ASSIST until todo 17."
+  ]
+}
