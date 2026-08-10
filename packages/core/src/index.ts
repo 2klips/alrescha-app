@@ -74,6 +74,15 @@ export {
   DISABLED_ASSURANCE_AI_ASSIST,
   analyzeRepositoryAssurance,
 } from "./assurance/rules";
+
+export {
+  digestInTotoStatement,
+  inTotoStatementSchema,
+  inTotoSubjectSchema,
+  specProofReceiptPredicateSchema,
+  verifyInTotoStatement,
+} from "./assurance/receipts";
+export type { InTotoStatement, ReceiptVerification } from "./assurance/receipts";
 export type {
   AnalyzeRepositoryAssuranceInput,
   AssuranceFinding,

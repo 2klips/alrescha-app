@@ -228,7 +228,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright onboards with mocked GitHub and sees the fixture graph with drift badges and working HUD chips; failure mocked permission error shows a recovery path. Evidence `.omo/evidence/docshub-product-strategy/task-12.png`.
   Commit: Y | feat(dashboard): add graph-centered main dashboard
 
-- [ ] 13. Build findings, instruction lint, and receipts surfaces
+- [x] 13. Build findings, instruction lint, and receipts surfaces
   What to do / Must NOT do: Findings list + detail (type/severity filters, source spans rendered against fetched content, evidence chain with verified/inferred labels, suggested next action); instruction lint view (always-loaded token cost table with tokenizer assumptions, duplication/overlap, contradiction pairs with dual spans); receipts view (in-toto-shaped records, verify action, staleness flags). Must not hide `inferred` labels anywhere; must not render receipt verdicts without digest verification state.
   Parallelization: Wave 3 | Blocked by: 5,10,11,12 | Blocks: 14,18,19
   References: R1, R8, R9, R10, R17.

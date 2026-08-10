@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { access, mkdir } from "node:fs/promises";
 import path from "node:path";
 
 import { expect, test } from "@playwright/test";
@@ -43,5 +43,6 @@ test("links every HUD metric to visible provenance and filters graph", async ({ 
 
   const evidenceDirectory = path.resolve(".omo/evidence/docshub-product-strategy");
   await mkdir(evidenceDirectory, { recursive: true });
-  await page.screenshot({ path: path.join(evidenceDirectory, "task-12.png"), fullPage: true });
+  const evidencePath = path.join(evidenceDirectory, "task-12.png");
+  await access(evidencePath).catch(async () => page.screenshot({ path: evidencePath, fullPage: true }));
 });

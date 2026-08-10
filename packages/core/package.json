@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./receipts": "./src/assurance/receipts.ts"
   },
   "dependencies": {
     "@flowershow/remark-wiki-link": "3.4.0",
