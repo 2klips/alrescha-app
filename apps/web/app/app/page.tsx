@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentUserId } from "../../lib/auth/current-user";
+import { buildDashboardViewModel } from "../../lib/dashboard/graph-model";
 import { createClient } from "../../lib/supabase/server";
+import { DashboardScreen } from "../ui/dashboard-screen";
 
 export default async function WorkspacePage() {
   const userId = await getCurrentUserId();
@@ -13,15 +15,11 @@ export default async function WorkspacePage() {
   const supabase = await createClient();
   const { data: workspaces } = await supabase.from("workspaces").select("id, name").limit(1);
   const workspace = workspaces?.[0];
+  const model = buildDashboardViewModel("scanned");
 
   return (
-    <main>
-      <section className="shell" aria-labelledby="workspace-title">
-        <div className="eyebrow">Personal workspace</div>
-        <h1 id="workspace-title">{workspace?.name ?? "Workspace ready"}</h1>
-        <p data-user-id={userId}>GitHub 레포를 연결하면 첫 증거 스캔을 시작합니다.</p>
-      </section>
-    </main>
+    <div data-user-id={userId} data-workspace-name={workspace?.name ?? "Personal workspace"}>
+      <DashboardScreen model={model} />
+    </div>
   );
 }
-

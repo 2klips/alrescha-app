@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  description: "Evidence, not claims, for AI-built software.",
-  title: "SpecProof",
+  description: "Trace every software claim to implementation and verified test evidence.",
+  title: "SpecProof · Evidence graph",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
@@ -15,4 +15,3 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     </html>
   );
 }
-

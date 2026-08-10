@@ -1,15 +1,11 @@
-export default function HomePage() {
-  return (
-    <main>
-      <section className="shell" aria-labelledby="app-title">
-        <div className="eyebrow">Project assurance workspace</div>
-        <h1 id="app-title">SpecProof</h1>
-        <p>
-          Connect a GitHub repository. Trace each requirement to implementation and test
-          evidence. Keep verified execution separate from inferred judgment.
-        </p>
-      </section>
-    </main>
-  );
-}
+import { buildDashboardViewModel, parseDashboardState } from "../lib/dashboard/graph-model";
+import { DashboardScreen } from "./ui/dashboard-screen";
 
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ state?: string | string[] }>;
+}) {
+  const { state } = await searchParams;
+  return <DashboardScreen model={buildDashboardViewModel(parseDashboardState(state))} />;
+}

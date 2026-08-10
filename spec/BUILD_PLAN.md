@@ -220,7 +220,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy artifact fixture ingested and linked; failure malformed JUnit rejected with diagnostics, no partial writes. Evidence `.omo/evidence/docshub-product-strategy/task-11.json`.
   Commit: Y | feat(evidence): ingest ci test reports as verified evidence
 
-- [ ] 12. Build onboarding and the graph-centered main dashboard
+- [x] 12. Build onboarding and the graph-centered main dashboard
   What to do / Must NOT do: App-first onboarding (sign in → install GitHub App with permission explanations → select repo → first-scan progress rendered in the graph area) landing on the **full-bleed second-brain graph** (force-directed; zoom/pan/drag/search; node-type and evidence-grade filters; clustered default above a node threshold; canvas/WebGL renderer allowed for 60fps at 500+ nodes) with HUD overlays: repo/metric chips top-left (unresolved findings, impl coverage, test coverage, always-loaded token cost — each click-through to its evidence surface), legend + CI-evidence banner bottom, and drift badges (red ring on nodes with open findings, red dashed broken-evidence edges). The live-activity feed and glow layer land in todo 14. Must not put users through a marketing page; must not render an unfiltered hairball by default; must not show any number that cannot navigate to its evidence.
   Parallelization: Wave 3 | Blocked by: 3,4,6,8 | Blocks: 13,14,19
   References: R1, R14, R15.
