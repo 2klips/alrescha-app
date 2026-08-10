@@ -27,6 +27,7 @@ const SUPABASE_TEST_BOOTSTRAP = `
 
 export const AUTH_TENANCY_MIGRATION = "supabase/migrations/202608100001_auth_tenancy.sql";
 export const EVIDENCE_GRAPH_MIGRATION = "supabase/migrations/202608100002_evidence_graph_domain.sql";
+export const GITHUB_APP_MIGRATION = "supabase/migrations/202608100003_github_app_webhooks.sql";
 
 export async function createTestDatabase(migrations: readonly string[]): Promise<PGlite> {
   const database = new PGlite();

@@ -172,7 +172,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy seed script builds a mini evidence graph; failure cross-tenant FK insert fails. Evidence `.omo/evidence/docshub-product-strategy/task-5.md`.
   Commit: Y | feat(data): add evidence-graph domain schema
 
-- [ ] 6. Add GitHub App installation and webhook ingestion
+- [x] 6. Add GitHub App installation and webhook ingestion
   What to do / Must NOT do: GitHub App with minimal read-only permissions (contents:read, checks:read, actions:read, metadata) + optional pull-requests:write requested separately with UI explanation; installation flow, repo selection, installation-token handling, webhook signature verification, event normalization (push, check_run/workflow_run completion), idempotent ingestion. Must not request write/admin scopes beyond the PR-proposal permission; must not process unverified webhook payloads.
   Parallelization: Wave 1 | Blocked by: 2,4,5 | Blocks: 7,8,12,16
   References: R2, R3, R4.

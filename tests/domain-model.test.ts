@@ -104,10 +104,13 @@ describe("typed evidence-graph domain and migrations", () => {
   it("loads ordered, immutable migration files through the migration runner", async () => {
     const migrations = await loadMigrations();
 
-    expect(migrations.map(({ name }) => name)).toEqual([
+    expect(migrations.slice(0, 2).map(({ name }) => name)).toEqual([
       "202608100001_auth_tenancy.sql",
       "202608100002_evidence_graph_domain.sql",
     ]);
+    expect(migrations.map(({ name }) => name)).toEqual(
+      [...migrations.map(({ name }) => name)].sort((left, right) => left.localeCompare(right)),
+    );
     expect(migrations.every(({ checksum }) => /^[0-9a-f]{64}$/.test(checksum))).toBe(true);
   });
 
