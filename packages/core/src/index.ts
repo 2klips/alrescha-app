@@ -46,6 +46,20 @@ export type {
   ScannedArtifact,
 } from "./ingest/repository-scanner";
 
+export { parseMarkdownStructure } from "./parser/markdown";
+export type {
+  MarkdownDiagnostic,
+  MarkdownSpan,
+  ParseMarkdownInput,
+  ParsedHeading,
+  ParsedFrontmatter,
+  ParsedLink,
+  ParsedMarkdownSection,
+  ParsedMarkdownStructure,
+  ParsedNormativeStatement,
+  ParsedTask,
+} from "./parser/markdown";
+
 export {
   GITHUB_PR_PROPOSAL_PERMISSION,
   GITHUB_READ_ONLY_PERMISSIONS,

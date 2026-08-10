@@ -196,7 +196,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy fixture repo scan reports expected counts; failure oversized file skipped with recorded reason. Evidence `.omo/evidence/docshub-product-strategy/task-8.json`.
   Commit: Y | feat(ingest): scan repositories via github api
 
-- [ ] 9. Implement Markdown/frontmatter/link parser
+- [x] 9. Implement Markdown/frontmatter/link parser
   What to do / Must NOT do: remark/unified pipeline extracting headings, frontmatter, wikilinks/relative links, task lists, ADR sections, acceptance-criteria blocks, MUST/SHOULD sentences, with byte/line spans and recoverable diagnostics. Must not use ad hoc regex where the AST serves; must not lose span fidelity.
   Parallelization: Wave 2 | Blocked by: 5 | Blocks: 10,16
   References: R16.

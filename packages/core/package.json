@@ -7,7 +7,16 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
+    "@flowershow/remark-wiki-link": "3.4.0",
+    "mdast-util-to-string": "4.0.0",
+    "remark-frontmatter": "5.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
     "typescript": "5.9.3",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.1.0",
+    "unist-util-visit-parents": "6.0.2",
+    "yaml": "2.9.0",
     "zod": "4.4.3"
   },
   "scripts": {
@@ -15,6 +24,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@types/mdast": "4.0.4",
+    "@types/unist": "3.0.3",
     "tsup": "8.5.1"
   }
 }
