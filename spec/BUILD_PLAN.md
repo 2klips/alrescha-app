@@ -156,7 +156,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy fixture pipeline replay end-to-end offline; failure manifest referencing a nonexistent span fails validation. Evidence `.omo/evidence/docshub-product-strategy/task-3.md`.
   Commit: Y | test(fixtures): add drifted demo repo and recorded github fixtures
 
-- [ ] 4. Implement auth and solo-workspace tenancy
+- [x] 4. Implement auth and solo-workspace tenancy
   What to do / Must NOT do: Supabase auth, personal workspace auto-provisioned per user, RLS policies, server-side authorization helpers; workspace/member tables schema-ready for teams but no invite/team UI. Must not rely on client-only checks; must not expose any cross-tenant read path.
   Parallelization: Wave 1 | Blocked by: 1 | Blocks: 5,6,12
   References: R14.

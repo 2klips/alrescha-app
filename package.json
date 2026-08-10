@@ -18,6 +18,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r --if-present typecheck"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.4",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.62.1",
     "@types/node": "26.2.0",

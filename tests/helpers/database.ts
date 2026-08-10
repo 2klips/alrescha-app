@@ -1,0 +1,52 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+import { PGlite, type Transaction } from "@electric-sql/pglite";
+
+const ROOT = resolve(import.meta.dirname, "../..");
+
+const SUPABASE_TEST_BOOTSTRAP = `
+  create role anon nologin;
+  create role authenticated nologin;
+  create role service_role nologin bypassrls;
+  create schema auth;
+  create table auth.users (
+    id uuid primary key,
+    email text unique,
+    raw_user_meta_data jsonb not null default '{}'::jsonb
+  );
+  create or replace function auth.uid()
+  returns uuid
+  language sql
+  stable
+  set search_path = ''
+  as $$
+    select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
+  $$;
+`;
+
+export const AUTH_TENANCY_MIGRATION = "supabase/migrations/202608100001_auth_tenancy.sql";
+
+export async function createTestDatabase(migrations: readonly string[]): Promise<PGlite> {
+  const database = new PGlite();
+  await database.waitReady;
+  await database.exec(SUPABASE_TEST_BOOTSTRAP);
+
+  for (const migration of migrations) {
+    await database.exec(await readFile(resolve(ROOT, migration), "utf8"));
+  }
+
+  return database;
+}
+
+export async function asAuthenticatedUser<T>(
+  database: PGlite,
+  userId: string,
+  callback: (transaction: Transaction) => Promise<T>,
+): Promise<T> {
+  return database.transaction(async (transaction) => {
+    await transaction.query("select set_config('request.jwt.claim.sub', $1, true)", [userId]);
+    await transaction.exec("set local role authenticated");
+    return callback(transaction);
+  });
+}

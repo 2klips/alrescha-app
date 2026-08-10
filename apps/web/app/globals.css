@@ -60,3 +60,19 @@ a {
   color: #75efb9;
 }
 
+.button {
+  border: 1px solid #58d6a1;
+  border-radius: 0.65rem;
+  background: #58d6a1;
+  color: #04110c;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.8rem 1.15rem;
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
