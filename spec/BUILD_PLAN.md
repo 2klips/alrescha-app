@@ -212,7 +212,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy full scan→extract→check pipeline on fixtures; failure removing a fixture test flips the right requirement to missing-test incrementally. Evidence `.omo/evidence/docshub-product-strategy/task-10.json`.
   Commit: Y | feat(assurance): detect spec-code drift with provenance
 
-- [ ] 11. Implement evidence probes and CI test-report ingestion
+- [x] 11. Implement evidence probes and CI test-report ingestion
   What to do / Must NOT do: Evidence probes for path/glob existence and symbol presence from scanned metadata (regex fallback downgrades confidence with reason); ingest GitHub Actions artifacts (JUnit XML, vitest/jest JSON) and check runs for the analyzed commit, mapping test cases to requirements via naming/annotation conventions; report-backed evidence on the same commit is `verified`, everything else `inferred` with a visible "connect CI reports" explanation. Must not execute repo code; must not mark anything `verified` from AI reasoning or stale-commit reports.
   Parallelization: Wave 2 | Blocked by: 2,3,7,8 | Blocks: 13,18
   References: R5, R16, R18.

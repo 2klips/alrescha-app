@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "@flowershow/remark-wiki-link": "3.4.0",
+    "fast-xml-parser": "5.10.1",
     "mdast-util-to-string": "4.0.0",
+    "picomatch": "4.0.5",
     "remark-frontmatter": "5.0.0",
     "remark-gfm": "4.0.1",
     "remark-parse": "11.0.0",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@types/mdast": "4.0.4",
+    "@types/picomatch": "4.0.3",
     "@types/unist": "3.0.3",
     "tsup": "8.5.1"
   }

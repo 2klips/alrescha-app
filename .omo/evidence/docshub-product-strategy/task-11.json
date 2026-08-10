@@ -1,0 +1,41 @@
+{
+  "task": 11,
+  "date": "2026-08-10",
+  "status": "pass",
+  "delivered": [
+    "metadata-only exact path, glob, and exported-symbol probes",
+    "explicit confidence downgrade to 0.65 for regex-derived symbol metadata",
+    "JUnit XML plus Vitest/Jest JSON parsing with requirement-ID mapping",
+    "verified evidence only for parsed passing reports and successful checks on the analyzed commit",
+    "stale, failed, or unconfirmed reports retained as inferred evidence with a visible reason",
+    "one connect-CI guidance object instead of repeated per-finding banners",
+    "atomic malformed-report rejection with diagnostics and no partial evidence",
+    "read-only GitHub Actions artifact/check-run collector with bounded in-memory ZIP extraction",
+    "negative guardrail proving no repository-code execution path"
+  ],
+  "acceptance": {
+    "targetedCommand": "pnpm test -- ci-evidence evidence-probes",
+    "targetedResult": "6 tests passed",
+    "recordedRequirementEvidence": ["REQ-AUTH-002"],
+    "recordedEvidenceGrade": "verified",
+    "recordedReportFormats": ["junit", "vitest-json"],
+    "sameCommitSourcesMerged": 2,
+    "staleCommitGrade": "inferred",
+    "staleCommitReasonIncludesBothShas": true,
+    "malformedJunitDiagnostics": 1,
+    "malformedJunitEvidenceRecords": 0,
+    "regexFallbackConfidence": 0.65,
+    "repositoryCodeExecutionPaths": 0,
+    "lint": "pass",
+    "typecheck": "pass",
+    "fullTest": "78 tests passed in 15 files"
+  },
+  "sources": [
+    "https://docs.github.com/en/rest/actions/artifacts?apiVersion=2026-03-10",
+    "https://docs.github.com/en/rest/checks/runs?apiVersion=2026-03-10",
+    "https://v4.vitest.dev/guide/reporters"
+  ],
+  "deferred": [
+    "Live private-repository GitHub smoke requires Phase B GitHub App credentials; recorded REST and ZIP responses cover transport and ingestion offline."
+  ]
+}

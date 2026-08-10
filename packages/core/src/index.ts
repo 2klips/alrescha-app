@@ -86,6 +86,29 @@ export type {
   FindingProvenance,
 } from "./assurance/rules";
 
+export { probeRepositoryEvidence } from "./evidence/probes";
+export type {
+  EvidenceProbeKind,
+  ProbeArtifactMetadata,
+  ProbeRepositoryEvidenceInput,
+  RepositoryEvidenceProbe,
+  RepositoryEvidenceProbeResult,
+  SymbolExtractionMethod,
+} from "./evidence/probes";
+
+export { ingestCiTestReports } from "./evidence/ci-reports";
+export type {
+  CiCheckRun,
+  CiEvidenceGuidance,
+  CiEvidenceSource,
+  CiReportArtifact,
+  CiReportDiagnostic,
+  CiReportFormat,
+  CiRequirementEvidence,
+  CiTestReportIngestionResult,
+  IngestCiTestReportsInput,
+} from "./evidence/ci-reports";
+
 export {
   GITHUB_PR_PROPOSAL_PERMISSION,
   GITHUB_READ_ONLY_PERMISSIONS,

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@specproof/core": "workspace:*",
+    "fflate": "0.8.3",
     "postgres": "3.4.9"
   },
   "devDependencies": {
