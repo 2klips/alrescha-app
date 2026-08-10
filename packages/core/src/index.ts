@@ -27,6 +27,26 @@ export {
 export type { Edge, Finding, Provenance } from "./data/schemas";
 
 export {
+  classifyArtifactPath,
+  extractExportedSymbols,
+  persistedKind,
+  scanRepository,
+} from "./ingest/repository-scanner";
+export type {
+  ArtifactClassification,
+  ExportedSymbolMetadata,
+  PersistedArtifactKind,
+  PreviousScannedArtifact,
+  RepositoryScanPlan,
+  RepositorySource,
+  RepositoryTree,
+  RepositoryTreeEntry,
+  ScanSkip,
+  ScanSkipReason,
+  ScannedArtifact,
+} from "./ingest/repository-scanner";
+
+export {
   GITHUB_PR_PROPOSAL_PERMISSION,
   GITHUB_READ_ONLY_PERMISSIONS,
   GITHUB_WEBHOOK_EVENTS,

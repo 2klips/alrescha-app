@@ -1,0 +1,41 @@
+{
+  "task": 8,
+  "date": "2026-08-10",
+  "status": "pass",
+  "delivered": [
+    "GitHub recursive Tree and raw Contents source using installation tokens",
+    "non-recursive subtree fallback for truncated GitHub tree responses",
+    "classification for AGENTS.md, CLAUDE.md and .claude/rules, SKILL.md, .cursor/rules, specs, ADRs, TODO/progress, and TS/JS metadata",
+    "TypeScript compiler-API exported symbol extraction with line and column spans",
+    "SHA-256 digests, Git blob identity, incremental unchanged-commit and unchanged-blob short circuits",
+    "binary, oversized, submodule, and symlink skip records",
+    "metadata-only Postgres persistence adapter and repository scan migration"
+  ],
+  "acceptance": {
+    "fixtureArtifactsExpected": 12,
+    "fixtureArtifactsMatched": 12,
+    "targetedCommand": "pnpm test -- repository-scanner",
+    "targetedResult": "7 tests passed",
+    "lint": "pass",
+    "typecheck": "pass",
+    "fullTest": "63 tests passed in 11 files",
+    "unchangedCommitTouchedRows": 0,
+    "unchangedCommitApiCalls": 0,
+    "rawStorageColumns": []
+  },
+  "negativeScenarios": [
+    "oversized file skipped before content fetch",
+    "invalid UTF-8 or NUL-bearing file recorded as binary",
+    "Git submodule not followed",
+    "symbolic link not followed",
+    "truncated recursive tree expanded one subtree at a time"
+  ],
+  "sources": [
+    "https://docs.github.com/en/rest/git/trees",
+    "https://docs.github.com/en/rest/repos/contents",
+    "https://github.com/microsoft/TypeScript/wiki/Using-the-Compiler-API"
+  ],
+  "deferred": [
+    "Live GitHub API smoke requires Phase B GitHub App credentials; API transport is covered by mocked HTTP and recorded fixture replay."
+  ]
+}

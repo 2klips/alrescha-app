@@ -29,6 +29,7 @@ export const AUTH_TENANCY_MIGRATION = "supabase/migrations/202608100001_auth_ten
 export const EVIDENCE_GRAPH_MIGRATION = "supabase/migrations/202608100002_evidence_graph_domain.sql";
 export const GITHUB_APP_MIGRATION = "supabase/migrations/202608100003_github_app_webhooks.sql";
 export const WORKER_CREDIT_MIGRATION = "supabase/migrations/202608100004_worker_credit_lifecycle.sql";
+export const REPOSITORY_SCAN_MIGRATION = "supabase/migrations/202608100005_repository_scans.sql";
 
 export async function createTestDatabase(migrations: readonly string[]): Promise<PGlite> {
   const database = new PGlite();

@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@specproof/core": "workspace:*",
     "postgres": "3.4.9"
   },
   "devDependencies": {

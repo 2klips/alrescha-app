@@ -188,7 +188,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy push event enqueues scan+analyze and completes with ledger untouched; failure worker crash mid-judgment refunds the reservation. Evidence `.omo/evidence/docshub-product-strategy/task-7.md`.
   Commit: Y | feat(worker): add credit-safe background jobs
 
-- [ ] 8. Implement the GitHub-API repo scanner and artifact classifier
+- [x] 8. Implement the GitHub-API repo scanner and artifact classifier
   What to do / Must NOT do: Scan selected repo trees via the GitHub API at a given commit: classify AI-facing artifacts (AGENTS.md root+nested, CLAUDE.md/`.claude/rules/`, SKILL.md, `.cursor/rules`, specs, ADRs, TODO/progress docs) and code metadata (paths, exported symbols via TS compiler API on transiently fetched content, spans, digests); incremental rescan by digest/commit diff; persist metadata only. Must not persist raw file bodies by default; must not follow submodules outside the repo; must skip binaries/oversized files with reason.
   Parallelization: Wave 2 | Blocked by: 3,6,7 | Blocks: 10,11,12
   References: R4, R8, R9, R16.
