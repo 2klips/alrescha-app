@@ -180,7 +180,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright completes mocked installation and sees the selected repo pending first scan; failure invalid signature returns 401 and writes nothing. Evidence `.omo/evidence/docshub-product-strategy/task-6.md`.
   Commit: Y | feat(github): connect repositories through github app
 
-- [ ] 7. Build background worker and credit lifecycle foundation
+- [x] 7. Build background worker and credit lifecycle foundation
   What to do / Must NOT do: Worker queue for scan/analyze/judge/pack jobs with enqueue, claim, heartbeat, bounded retry, cancel, idempotency keys, tenant isolation, rate limits, webhook-triggered runs; internal credit ledger with monthly grants, admin top-up records, reservation, settlement, refund, per-workspace caps; deterministic jobs (scan/analyze) consume no credits. Must not run credit-consuming jobs synchronously in request handlers; must not double-charge on retry.
   Parallelization: Wave 1 | Blocked by: 5,6 | Blocks: 8,11,17
   References: R1, R3, R17.

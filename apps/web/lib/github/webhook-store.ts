@@ -7,24 +7,21 @@ export function createGitHubWebhookStore(): GitHubWebhookStore {
 
   return {
     async insertEvent(event: PersistedGitHubWebhookEvent) {
-      const { error } = await admin.from("github_webhook_deliveries").insert({
-        action: event.action,
-        commit_sha: event.commitSha,
-        conclusion: event.conclusion,
-        delivery_id: event.deliveryId,
-        event: event.event,
-        payload_digest: event.payloadDigest,
-        repository_id: event.repositoryId,
-        workspace_id: event.workspaceId,
+      const { data, error } = await admin.rpc("ingest_github_webhook_event", {
+        target_action: event.action,
+        target_commit_sha: event.commitSha,
+        target_conclusion: event.conclusion,
+        target_delivery_id: event.deliveryId,
+        target_event: event.event,
+        target_payload_digest: event.payloadDigest,
+        target_repository_id: event.repositoryId,
+        target_workspace_id: event.workspaceId,
       });
 
-      if (!error) {
-        return "inserted";
+      if (error) {
+        throw new Error(`Failed to persist GitHub webhook: ${error.code}`);
       }
-      if (error.code === "23505") {
-        return "duplicate";
-      }
-      throw new Error(`Failed to persist GitHub webhook: ${error.code}`);
+      return data === false ? "duplicate" : "inserted";
     },
 
     async resolveRepository({ installationId, repositoryFullName, repositoryGitHubId }) {
