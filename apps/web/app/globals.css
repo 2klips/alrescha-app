@@ -1847,6 +1847,35 @@ a {
 .eyebrow { color: var(--verified); font: 0.68rem ui-monospace, monospace; letter-spacing: 0.12em; text-transform: uppercase; }
 .button { background: var(--verified); border: 1px solid var(--verified); color: #04111b; cursor: pointer; display: inline-block; font-weight: 700; padding: 0.7rem 0.9rem; text-decoration: none; }
 
+/* Hosted MCP token settings. */
+.mcp-settings-shell { margin: 0 auto; max-width: 76rem; padding: clamp(2rem, 6vw, 5rem) 1rem; }
+.mcp-settings-shell > header { max-width: 50rem; }
+.mcp-settings-shell h1 { font: 600 clamp(2.4rem, 7vw, 5rem) Bahnschrift, sans-serif; margin: 0.55rem 0; }
+.mcp-settings-shell > header p { color: var(--muted); line-height: 1.7; }
+.mcp-settings-shell code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+.mcp-settings-grid { display: grid; gap: 1rem; grid-template-columns: minmax(18rem, 0.8fr) minmax(24rem, 1.2fr); margin-top: 2rem; }
+.mcp-settings-card { background: var(--panel); border: 1px solid var(--line-strong); padding: 1.25rem; }
+.mcp-settings-card h2 { font: 600 1.25rem Bahnschrift, sans-serif; margin: 0 0 1.25rem; }
+.mcp-settings-card p { color: var(--muted); }
+.mcp-token-form { display: grid; gap: 0.7rem; }
+.mcp-token-form > label, .mcp-token-form legend { color: var(--muted); font: 0.72rem ui-monospace, monospace; letter-spacing: 0.04em; text-transform: uppercase; }
+.mcp-token-form > input { background: #07151f; border: 1px solid var(--line-strong); min-height: 2.75rem; padding: 0.65rem 0.75rem; }
+.mcp-token-form fieldset { border: 1px solid var(--line); display: grid; gap: 0.65rem; margin: 0; padding: 0.85rem; }
+.mcp-token-form fieldset label { align-items: center; display: flex; gap: 0.55rem; }
+.mcp-token-form .button { justify-self: start; margin-top: 0.3rem; }
+.mcp-token-form .button:disabled { cursor: wait; opacity: 0.65; }
+.mcp-secret { background: rgb(81 214 144 / 8%); border: 1px solid rgb(81 214 144 / 45%); display: grid; gap: 0.65rem; margin-top: 1rem; padding: 0.85rem; }
+.mcp-secret strong { color: var(--ok); }
+.mcp-secret code { overflow-wrap: anywhere; user-select: all; }
+.mcp-error { color: var(--broken) !important; }
+.mcp-token-list { display: grid; gap: 0.7rem; list-style: none; margin: 0; padding: 0; }
+.mcp-token-list li { align-items: center; border: 1px solid var(--line); display: flex; gap: 1rem; justify-content: space-between; padding: 0.85rem; }
+.mcp-token-list li > div { display: grid; gap: 0.25rem; }
+.mcp-token-list code { color: var(--verified); font-size: 0.78rem; }
+.mcp-token-list span { color: var(--muted); font-size: 0.72rem; }
+.mcp-revoke { background: transparent; border: 1px solid var(--broken); color: var(--broken); cursor: pointer; padding: 0.45rem 0.65rem; }
+.mcp-revoked { color: var(--broken) !important; font: 0.7rem ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 rgb(101 184 255 / 8%); opacity: 0.65; } 50% { box-shadow: 0 0 0 0.65rem rgb(101 184 255 / 5%); opacity: 1; } }
 @keyframes evidence-flow { to { stroke-dashoffset: -24; } }
@@ -1857,6 +1886,7 @@ a {
 }
 
 @media (max-width: 900px) {
+  .mcp-settings-grid { grid-template-columns: 1fr; }
   .dashboard-shell { min-height: 46rem; }
   .repo-hud { left: 0.8rem; top: 0.8rem; }
   .graph-tools { left: 0.8rem; overflow-x: auto; right: 0.8rem; top: 11.1rem; transform: none; }
