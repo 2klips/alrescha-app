@@ -252,7 +252,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy MCP client with a settings-issued token fetches findings for the fixture repo; failure revoked token returns auth error; cross-tenant resource request denied. Evidence `.omo/evidence/docshub-product-strategy/task-15.md`.
   Commit: Y | feat(mcp): serve context and findings over hosted stateless mcp
 
-- [ ] 16. Implement context packs and the minimal-index PR proposal
+- [x] 16. Implement context packs and the minimal-index PR proposal
   What to do / Must NOT do: Graph-driven pack builder (task input → doc selection, reading order, omitted-doc rationale, token estimates with assumptions, target-agent formatting) exposed in web + MCP; minimal-index writer generates a bounded ≤30-line DocsHub-managed AGENTS.md section (+ CLAUDE.md `@AGENTS.md` wrapper) pointing at the hosted MCP, delivered **only as a PR proposal** via the optional pull-requests:write permission; markers idempotent. Must not inline doc bodies or generated overviews into static files; must not touch content outside managed markers; must not commit to any branch directly.
   Parallelization: Wave 4 | Blocked by: 2,6,9,10,15 | Blocks: 17,18,19
   References: R4, R8, R12, R13, R17.

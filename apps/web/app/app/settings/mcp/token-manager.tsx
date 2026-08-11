@@ -4,10 +4,10 @@ import type { PublicMcpTokenRecord } from "@specproof/mcp";
 import { useActionState } from "react";
 
 import {
-  INITIAL_ISSUE_MCP_TOKEN_STATE,
   issueMcpToken,
   revokeMcpToken,
 } from "./actions";
+import { INITIAL_ISSUE_MCP_TOKEN_STATE } from "./state";
 
 function timestamp(value: string | null): string {
   return value ? `${value.slice(0, 16).replace("T", " ")} UTC` : "Never";

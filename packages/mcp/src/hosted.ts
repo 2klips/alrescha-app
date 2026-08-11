@@ -518,22 +518,47 @@ function createServer(
       description:
         "Select a load-on-demand context pack for a task and token budget",
       inputSchema: z.object({
+        target_agent: z
+          .enum(["claude-code", "codex", "cursor", "generic"])
+          .optional(),
         task_description: z.string().trim().min(1).max(1_000),
         token_budget: z.number().int().min(128).max(32_000).optional(),
       }),
       outputSchema: z.object({
+        assumption: z.string(),
         estimatedTokens: z.number().int().nonnegative(),
         excluded: z.array(z.object({ path: z.string(), reason: z.string() })),
         nodeIds: z.array(z.string()),
+        omitted: z.array(
+          z.object({
+            estimatedTokens: z.number().int().positive(),
+            path: z.string(),
+            rank: z.number().int().positive(),
+            reason: z.string(),
+            title: z.string(),
+          }),
+        ),
         paths: z.array(z.string()),
+        readingOrder: z.array(
+          z.object({
+            estimatedTokens: z.number().int().positive(),
+            id: z.string(),
+            path: z.string(),
+            rank: z.number().int().positive(),
+            reason: z.string(),
+            title: z.string(),
+          }),
+        ),
+        targetAgent: z.enum(["claude-code", "codex", "cursor", "generic"]),
         text: z.string(),
         title: z.string(),
         workspaceId: z.string(),
       }),
     },
-    async ({ task_description, token_budget }) => {
+    async ({ target_agent, task_description, token_budget }) => {
       const workspace = await readWorkspace();
       const contextPack = selectWorkspaceContextPack(workspace, {
+        ...(target_agent ? { targetAgent: target_agent } : {}),
         taskDescription: task_description,
         tokenBudget: token_budget ?? 2_000,
       });

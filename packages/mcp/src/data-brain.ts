@@ -1,3 +1,10 @@
+import {
+  composeContextPack,
+  type ContextDocument,
+  type ContextDocumentKind,
+  type ContextTargetAgent,
+} from "@specproof/core";
+
 import type {
   McpArtifactData,
   McpFindingData,
@@ -70,10 +77,27 @@ export interface WorkspaceFinding extends McpFindingData {
 }
 
 export interface SelectedContextPack {
+  assumption: string;
   estimatedTokens: number;
   excluded: Array<{ path: string; reason: string }>;
   nodeIds: string[];
+  omitted: Array<{
+    estimatedTokens: number;
+    path: string;
+    rank: number;
+    reason: string;
+    title: string;
+  }>;
   paths: string[];
+  readingOrder: Array<{
+    estimatedTokens: number;
+    id: string;
+    path: string;
+    rank: number;
+    reason: string;
+    title: string;
+  }>;
+  targetAgent: ContextTargetAgent;
   text: string;
   title: string;
 }
@@ -348,53 +372,119 @@ export function getWorkspaceFindings(
 
 export function selectWorkspaceContextPack(
   workspace: McpWorkspaceData,
-  input: { taskDescription: string; tokenBudget: number },
+  input: {
+    targetAgent?: ContextTargetAgent;
+    taskDescription: string;
+    tokenBudget: number;
+  },
 ): SelectedContextPack {
-  const tokens = queryTokens(input.taskDescription);
-  const candidates = workspace.repositories.flatMap((repository) =>
-    repository.contextPacks.map((pack) => {
-      const searchable = normalizeSearchText([pack.title, pack.content, ...pack.paths].join(" "));
-      return {
-        pack,
-        repositoryId: repository.id,
-        score: tokens.reduce((score, token) => score + (searchable.includes(token) ? 1 : 0), 0),
+  const documentKinds = new Set<ContextDocumentKind>([
+    "agents",
+    "claude",
+    "skill",
+    "cursor_rule",
+    "spec",
+    "adr",
+    "todo_progress",
+  ]);
+  const documents: ContextDocument[] = workspace.repositories.flatMap(
+    (repository) => {
+      const relatedNodeIds = new Map<string, Set<string>>();
+      const connect = (left: string, right: string) => {
+        const leftConnections = relatedNodeIds.get(left) ?? new Set<string>();
+        leftConnections.add(right);
+        relatedNodeIds.set(left, leftConnections);
       };
-    }),
+
+      for (const edge of repository.edges) {
+        connect(edge.sourceNodeId, edge.targetNodeId);
+        connect(edge.targetNodeId, edge.sourceNodeId);
+      }
+      for (const requirement of repository.requirements) {
+        connect(requirement.sourceArtifactId, requirement.id);
+        connect(requirement.id, requirement.sourceArtifactId);
+      }
+
+      return repository.artifacts.flatMap((artifact) => {
+        if (!documentKinds.has(artifact.kind as ContextDocumentKind)) return [];
+
+        return [
+          {
+            content: artifact.content,
+            id: artifact.id,
+            kind: artifact.kind as ContextDocumentKind,
+            path: artifact.path,
+            relatedNodeIds: [...(relatedNodeIds.get(artifact.id) ?? [])],
+            title: artifact.title,
+          },
+        ];
+      });
+    },
   );
-  candidates.sort(
-    (left, right) =>
-      right.score - left.score ||
-      left.pack.title.localeCompare(right.pack.title) ||
-      left.repositoryId.localeCompare(right.repositoryId) ||
-      left.pack.id.localeCompare(right.pack.id),
-  );
-  const selected = candidates[0]?.pack;
-  if (!selected) {
-    return {
-      estimatedTokens: 0,
-      excluded: [],
-      nodeIds: [],
-      paths: [],
-      text: "",
-      title: "No context pack available",
-    };
+  const relations = workspace.repositories.flatMap((repository) => [
+    ...repository.edges.map((edge) => ({
+      sourceId: edge.sourceNodeId,
+      targetId: edge.targetNodeId,
+      type: edge.relation,
+    })),
+    ...repository.requirements.map((requirement) => ({
+      sourceId: requirement.id,
+      sourceLabel: requirement.statement,
+      targetId: requirement.sourceArtifactId,
+      type: "specified_by",
+    })),
+  ]);
+  const pack = composeContextPack({
+    documents,
+    relations,
+    targetAgent: input.targetAgent ?? "generic",
+    taskDescription: input.taskDescription,
+    tokenBudget: input.tokenBudget,
+  });
+  const selectedNodeIds = new Set(pack.readingOrder.map(({ id }) => id));
+
+  for (const repository of workspace.repositories) {
+    for (const requirement of repository.requirements) {
+      if (selectedNodeIds.has(requirement.sourceArtifactId))
+        selectedNodeIds.add(requirement.id);
+    }
+    for (const edge of repository.edges) {
+      if (selectedNodeIds.has(edge.sourceNodeId))
+        selectedNodeIds.add(edge.targetNodeId);
+      if (selectedNodeIds.has(edge.targetNodeId))
+        selectedNodeIds.add(edge.sourceNodeId);
+    }
   }
 
-  const maxCharacters = input.tokenBudget * 4;
-  const text = selected.content.slice(0, maxCharacters);
-  const includedPaths = new Set(selected.paths);
-  const excluded = workspace.repositories
-    .flatMap((repository) => repository.artifacts)
-    .filter((artifact) => !includedPaths.has(artifact.path))
-    .map((artifact) => ({ path: artifact.path, reason: "outside selected context pack" }))
-    .sort((left, right) => left.path.localeCompare(right.path));
+  const omitted = pack.omitted.map(
+    ({ estimatedTokens, path, rank, reason, title }) => ({
+      estimatedTokens,
+      path,
+      rank,
+      reason,
+      title,
+    }),
+  );
 
   return {
-    estimatedTokens: Math.ceil(text.length / 4),
-    excluded,
-    nodeIds: [...selected.nodeIds],
-    paths: [...selected.paths],
-    text,
-    title: selected.title,
+    assumption: pack.assumption,
+    estimatedTokens: pack.estimatedTokens,
+    excluded: omitted.map(({ path, reason }) => ({ path, reason })),
+    nodeIds: [...selectedNodeIds],
+    omitted,
+    paths: pack.readingOrder.map(({ path }) => path),
+    readingOrder: pack.readingOrder.map(
+      ({ estimatedTokens, id, path, rank, reason, title }) => ({
+        estimatedTokens,
+        id,
+        path,
+        rank,
+        reason,
+        title,
+      }),
+    ),
+    targetAgent: pack.targetAgent,
+    text: pack.formattedText,
+    title: `Context for ${input.taskDescription}`,
   };
 }

@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { extname, relative, resolve } from "node:path";
 
 export type GuardrailRule =
+  | "direct-branch-mutation"
   | "deprecated-mcp-capability"
   | "doc-body-inlining"
   | "network-in-core"
@@ -48,6 +49,14 @@ function isIndexTemplatePath(file: string): boolean {
 }
 
 const RULES: readonly PatternRule[] = [
+  {
+    rule: "direct-branch-mutation",
+    pattern:
+      /\.pulls\.merge\s*\(|\.(?:mergePullRequest|updateDefaultBranch|pushToDefaultBranch)\s*\(/g,
+    when: () => true,
+    message: () =>
+      "Direct branch mutation and pull-request merge paths are forbidden; proposals remain advisory-only.",
+  },
   {
     rule: "deprecated-mcp-capability",
     pattern:
@@ -194,4 +203,3 @@ export async function scanGuardrails(rootDir: string): Promise<readonly Guardrai
       left.file.localeCompare(right.file) || left.line - right.line || left.column - right.column,
   );
 }
-

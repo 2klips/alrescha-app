@@ -528,6 +528,7 @@ describe("hosted MCP contract", () => {
 
     const context = await client.callTool({
       arguments: {
+        target_agent: "codex",
         task_description: "Update CI evidence ingestion",
         token_budget: 128,
       },
@@ -535,15 +536,23 @@ describe("hosted MCP contract", () => {
     });
     expect(context.structuredContent).toMatchObject({
       estimatedTokens: expect.any(Number),
-      excluded: [
+      assumption: expect.stringContaining("one token per four"),
+      omitted: [],
+      readingOrder: [
         {
-          path: "packages/core/src/evidence/ci-reports.ts",
-          reason: "outside selected context pack",
+          path: "spec/WORK_SPEC.md",
+          rank: 1,
+          reason: expect.stringMatching(/Connected|Matched/),
         },
       ],
-      nodeIds: ["01K287J3D18V7A1MZG9E8D1Y11", "01K287J3D18V7A1MZG9E8D1Y21"],
+      nodeIds: [
+        "01K287J3D18V7A1MZG9E8D1Y11",
+        "01K287J3D18V7A1MZG9E8D1Y21",
+        "01K287J3D18V7A1MZG9E8D1Y12",
+      ],
       paths: ["spec/WORK_SPEC.md"],
-      title: "CI evidence context",
+      targetAgent: "codex",
+      title: "Context for Update CI evidence ingestion",
     });
     expect(
       (context.structuredContent as { estimatedTokens: number })

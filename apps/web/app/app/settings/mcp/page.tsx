@@ -3,6 +3,11 @@ import { redirect } from "next/navigation";
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { SupabaseMcpStore } from "../../../../lib/mcp/supabase-store";
 import { createClient } from "../../../../lib/supabase/server";
+import { ContextTools } from "./context-tools";
+import {
+  INITIAL_CONTEXT_PACK_STATE,
+  INITIAL_INDEX_PROPOSAL_STATE,
+} from "./state";
 import { McpTokenManager } from "./token-manager";
 
 export const dynamic = "force-dynamic";
@@ -32,11 +37,16 @@ export default async function McpSettingsPage() {
         <h1>MCP access</h1>
         <p>
           Connect a coding agent to <code>/api/mcp</code> with a scoped bearer
-          token. Repository mutation, sessions, Sampling, Roots, and Logging are
-          unavailable.
+          token. Compose task-specific context on demand. Repository changes are
+          restricted to reviewed advisory pull requests; sessions, Sampling,
+          Roots, and Logging are unavailable.
         </p>
       </header>
       <McpTokenManager tokens={tokens} />
+      <ContextTools
+        initialContextState={INITIAL_CONTEXT_PACK_STATE}
+        initialProposalState={INITIAL_INDEX_PROPOSAL_STATE}
+      />
     </main>
   );
 }

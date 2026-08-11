@@ -130,6 +130,43 @@ export type { GitHubPermissionLevel, GitHubPermissions } from "./github/app-perm
 export { GITHUB_API_VERSION, requestInstallationToken } from "./github/installation-token";
 export type { InstallationToken, InstallationTokenRequest } from "./github/installation-token";
 
+export {
+  CONTEXT_TOKEN_ESTIMATE_ASSUMPTION,
+  composeContextPack,
+} from "./context/context-pack";
+export type {
+  ComposeContextPackInput,
+  ContextDocument,
+  ContextDocumentKind,
+  ContextPack,
+  ContextPackEntry,
+  ContextRelation,
+  ContextTargetAgent,
+  OmittedContextDocument,
+} from "./context/context-pack";
+
+export {
+  SPECPROOF_INDEX_BEGIN,
+  SPECPROOF_INDEX_END,
+  applyManagedIndex,
+  buildMinimalIndexProposalFiles,
+  renderManagedIndex,
+} from "./context/minimal-index";
+export type {
+  BuildMinimalIndexProposalFilesInput,
+  MinimalIndexProposalFile,
+  MinimalIndexProposalFiles,
+  RenderManagedIndexInput,
+} from "./context/minimal-index";
+
+export { proposeMinimalIndexPullRequest } from "./context/index-pr-proposal";
+export type {
+  IndexPrProposalAuthorization,
+  IndexPrProposalGitHub,
+  IndexPrProposalResult,
+  ProposeMinimalIndexPullRequestInput,
+} from "./context/index-pr-proposal";
+
 export { prepareGitHubOnboarding, selectGitHubRepository } from "./github/onboarding";
 export type {
   GitHubOnboardingStore,

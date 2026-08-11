@@ -125,5 +125,15 @@ describe("machine-checkable guardrails", () => {
       ),
     ).toEqual([]);
   });
+  it("rejects merge and default-branch mutation even inside PR-proposal modules", () => {
+    for (const source of [
+      "await octokit.pulls.merge(input);",
+      "await gateway.updateDefaultBranch(input);",
+      "await gateway.pushToDefaultBranch(input);",
+    ]) {
+      expect(scanGuardrailFile("packages/github/src/index-pr/create.ts", source)).toEqual([
+        expect.objectContaining({ rule: "direct-branch-mutation" }),
+      ]);
+    }
+  });
 });
-
