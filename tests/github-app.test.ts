@@ -1,9 +1,12 @@
+import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
   GITHUB_PR_PROPOSAL_PERMISSION,
   GITHUB_READ_ONLY_PERMISSIONS,
+  GITHUB_WEBHOOK_EVENTS,
+  MAX_GITHUB_WEBHOOK_BODY_BYTES,
   assertMinimalGitHubPermissions,
   handleGitHubWebhook,
   prepareGitHubOnboarding,
@@ -71,6 +74,7 @@ describe("GitHub App connection and webhook ingestion", () => {
   });
 
   it("accepts only the exact read-only profile or separately enabled PR proposals", () => {
+    expect(GITHUB_WEBHOOK_EVENTS).toContain("installation");
     expect(() => assertMinimalGitHubPermissions(GITHUB_READ_ONLY_PERMISSIONS)).not.toThrow();
     expect(() =>
       assertMinimalGitHubPermissions(
@@ -174,6 +178,9 @@ describe("GitHub App connection and webhook ingestion", () => {
         }
         return { id: REPOSITORY_ID, workspaceId };
       },
+      async revokeInstallation() {
+        return "unknown";
+      },
     };
     const recordings = await Promise.all(
       ["push.json", "check-run.json", "workflow-run.json"].map((name) =>
@@ -227,5 +234,49 @@ describe("GitHub App connection and webhook ingestion", () => {
     expect(afterInvalid.rows[0]?.count).toBe(3);
     expect(events.rows.map(({ event }) => event)).toEqual(["check_run", "push", "workflow_run"]);
     expect(events.rows.every(({ commit_sha }) => commit_sha === "1".repeat(40))).toBe(true);
+  });
+
+  it("degrades safely when GitHub deletes an installation", async () => {
+    const rawBody = JSON.stringify({ action: "deleted", installation: { id: 777 } });
+    const revokeInstallation = vi.fn().mockResolvedValue("revoked");
+    const result = await handleGitHubWebhook({
+      deliveryId: "installation-revoked-delivery",
+      event: "installation",
+      rawBody,
+      secret: webhookSecret,
+      signature: `sha256=${createHmac("sha256", webhookSecret).update(rawBody).digest("hex")}`,
+      store: {
+        insertEvent: vi.fn(),
+        resolveRepository: vi.fn(),
+        revokeInstallation,
+      },
+    });
+
+    expect(result).toEqual({ body: { duplicate: false, revoked: true }, status: 200 });
+    expect(revokeInstallation).toHaveBeenCalledWith({
+      deliveryId: "installation-revoked-delivery",
+      githubInstallationId: 777,
+      reason: "deleted",
+    });
+  });
+
+  it("rejects oversized webhook bodies before touching storage", async () => {
+    const store: GitHubWebhookStore = {
+      insertEvent: vi.fn(),
+      resolveRepository: vi.fn(),
+      revokeInstallation: vi.fn(),
+    };
+    const result = await handleGitHubWebhook({
+      deliveryId: "oversized",
+      event: "push",
+      rawBody: "x".repeat(MAX_GITHUB_WEBHOOK_BODY_BYTES + 1),
+      secret: webhookSecret,
+      signature: null,
+      store,
+    });
+
+    expect(result).toEqual({ body: { error: "payload_too_large" }, status: 413 });
+    expect(store.resolveRepository).not.toHaveBeenCalled();
+    expect(store.revokeInstallation).not.toHaveBeenCalled();
   });
 });

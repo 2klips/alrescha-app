@@ -28,7 +28,11 @@ export default async function SelectRepositoryPage({
       <section className="shell" aria-labelledby="repository-title">
         <div className="eyebrow">Repository selection</div>
         <h1 id="repository-title">Choose the first repository.</h1>
-        <p>선택 후 installation token은 해당 레포 하나로 제한되고 저장되지 않습니다.</p>
+        <p>
+          After selection, the transient installation token is scoped to this
+          repository and is never stored. Private source is fetched only while
+          a scan runs; metadata-only evidence is retained.
+        </p>
         {result.data?.map((repository) => (
           <form action="/api/github/repositories" method="post" key={repository.github_repository_id}>
             <input name="installationId" type="hidden" value={repository.installation_id} />
@@ -36,7 +40,12 @@ export default async function SelectRepositoryPage({
             <button className="button" type="submit">{repository.full_name}</button>
           </form>
         ))}
-        {!result.data?.length ? <p role="status">선택 가능한 레포가 없습니다.</p> : null}
+        {!result.data?.length ? (
+          <p role="status">
+            No repositories are available. Reinstall the GitHub App or try the
+            seeded demo from onboarding.
+          </p>
+        ) : null}
       </section>
     </main>
   );

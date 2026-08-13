@@ -206,6 +206,7 @@ export type {
 } from "./github/onboarding";
 
 export {
+  MAX_GITHUB_WEBHOOK_BODY_BYTES,
   handleGitHubWebhook,
   normalizeGitHubWebhook,
   verifyGitHubWebhookSignature,

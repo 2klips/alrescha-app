@@ -671,6 +671,12 @@ a {
   font-size: 1.05rem;
 }
 
+.graph-state h2 {
+  font-family: Bahnschrift, "Arial Narrow", sans-serif;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
 .graph-state > span {
   color: var(--muted);
   font-size: 0.75rem;
@@ -713,7 +719,10 @@ a {
   font-size: 0.72rem;
   margin-top: 0.35rem;
   padding: 0.55rem 0.7rem;
+  text-decoration: none;
 }
+
+.revoked-actions { display: flex; flex-wrap: wrap; gap: 0.55rem; justify-content: center; }
 
 .onboarding-shell {
   align-items: center;
@@ -884,6 +893,16 @@ a {
 
 .primary-action svg:last-child { margin-left: auto; }
 .primary-action:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.secondary-action {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  cursor: pointer;
+  margin-top: 0.65rem;
+  min-height: 2.6rem;
+  width: 100%;
+}
 
 .onboarding-card > small {
   align-items: center;
@@ -1928,6 +1947,12 @@ a {
 .pilot-empty-state p { color: var(--muted); line-height: 1.65; max-width: 42rem; }
 .pilot-empty-state form, .pilot-empty-state .secondary-button { margin-top: 1.2rem; }
 
+/* Release privacy boundary. */
+.privacy-boundary-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 2rem; }
+.privacy-boundary-grid h2 { font: 600 1.25rem Bahnschrift, sans-serif; margin: 0.5rem 0; }
+.privacy-boundary-grid p { line-height: 1.65; }
+.privacy-boundary-grid a { color: var(--verified); }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 rgb(101 184 255 / 8%); opacity: 0.65; } 50% { box-shadow: 0 0 0 0.65rem rgb(101 184 255 / 5%); opacity: 1; } }
 @keyframes evidence-flow { to { stroke-dashoffset: -24; } }
@@ -1938,7 +1963,7 @@ a {
 }
 
 @media (max-width: 900px) {
-  .mcp-settings-grid, .context-settings-grid, .ai-settings-grid, .pilot-stats-grid { grid-template-columns: 1fr; }
+  .mcp-settings-grid, .context-settings-grid, .ai-settings-grid, .pilot-stats-grid, .privacy-boundary-grid { grid-template-columns: 1fr; }
   .dashboard-shell { min-height: 46rem; }
   .repo-hud { left: 0.8rem; top: 0.8rem; }
   .graph-tools { left: 0.8rem; overflow-x: auto; right: 0.8rem; top: 11.1rem; transform: none; }

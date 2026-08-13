@@ -73,7 +73,10 @@ export default async function AiSettingsPage() {
         <p>
           AI confirms ambiguous drift candidates. Successful platform runs use
           credits; failed or schema-invalid runs are refunded. BYOK bypasses
-          credits.
+          credits. A judgment runs only after your explicit provider choice;
+          inferred output, provenance, job status, and ledger entries remain
+          until workspace deletion. Raw source and plaintext keys are not
+          stored. Review <a href="/app/settings/privacy">privacy &amp; retention</a>.
         </p>
       </header>
       <AiUsageSettings

@@ -125,6 +125,26 @@ function StatusSurface({ model, onRetry }: { model: DashboardViewModel; onRetry:
       </div>
     );
   }
+  if (model.state === "revoked") {
+    return (
+      <div className="graph-state error-state" role="alert">
+        <AlertTriangle size={24} />
+        <h2>GitHub App disconnected</h2>
+        <span>
+          Automatic scans are paused. Stored evidence remains read-only, and no
+          credits are used while disconnected.
+        </span>
+        <div className="revoked-actions">
+          <a className="compact-button" href="/app/connect/github">
+            <RotateCcw size={14} /> Reconnect GitHub App
+          </a>
+          <button className="compact-button" onClick={onRetry} type="button">
+            View stored evidence
+          </button>
+        </div>
+      </div>
+    );
+  }
   if (model.state === "failed" || model.state === "permission-error") {
     return (
       <div className="graph-state error-state" role="alert">
@@ -177,7 +197,7 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
     [baseGraph, localFocus, selectedNode],
   );
   const blocked =
-    !recovered && ["loading", "empty", "scanning", "failed", "permission-error"].includes(model.state);
+    !recovered && ["loading", "empty", "scanning", "failed", "permission-error", "revoked"].includes(model.state);
   const pulseStates = useMemo(() => {
     const phases: Record<string, PulsePhase> = {};
     for (const [nodeId, pulse] of Object.entries(realtime.pulses)) {

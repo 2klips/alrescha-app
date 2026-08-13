@@ -30,17 +30,26 @@ export default async function ConnectGitHubPage() {
       <section className="shell" aria-labelledby="connect-title">
         <div className="eyebrow">GitHub App connection</div>
         <h1 id="connect-title">Connect a repository.</h1>
-        <p>기본 연결은 읽기 전용입니다. 설치 화면에서 접근할 레포를 직접 선택합니다.</p>
-        <ul>
-          <li>Contents: read — 명세·지침·코드 메타데이터 스캔</li>
-          <li>Checks: read — 검증 결과 수집</li>
-          <li>Actions: read — 실행 아티팩트 수집</li>
-          <li>Metadata: read — 레포 식별</li>
-        </ul>
-        <a className="button" href={installationUrl}>GitHub App 설치</a>
         <p>
-          PR 제안 기능은 기본 권한에 포함되지 않습니다. 사용자가 기능을 켤 때
-          <code> pull_requests:write</code>만 별도 승인받습니다.
+          The default connection is read-only. You choose exactly which public
+          or private repositories the GitHub App may access.
+        </p>
+        <ul>
+          <li>Contents: read — transiently fetch specs, instructions, and code</li>
+          <li>Checks: read — collect commit-linked verification results</li>
+          <li>Actions: read — fetch selected test-report artifacts</li>
+          <li>Metadata: read — identify repository and default branch</li>
+        </ul>
+        <p>
+          Raw source and installation tokens are not stored. SpecProof stores
+          metadata, digests, spans, findings, and receipts. Access events are
+          retained for 30 days during the pilot.
+        </p>
+        <a className="button" href={installationUrl}>Install GitHub App</a>
+        <p>
+          PR proposals are off by default. Enabling them requests only
+          <code> pull_requests:write</code>. Review the full boundary in
+          {" "}<a href="/app/settings/privacy">Privacy &amp; data boundary</a>.
         </p>
       </section>
     </main>

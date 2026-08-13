@@ -25,8 +25,18 @@ const STEPS = ["Sign in", "Install app", "Select repo", "First scan"] as const;
 export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlowProps) {
   const [step, setStep] = useState(0);
   const [permissionError, setPermissionError] = useState(initialPermissionError);
+  const [seededDemo, setSeededDemo] = useState(false);
 
-  if (step === 4) return <DashboardScreen model={buildDashboardViewModel("scanned")} />;
+  if (step === 4) {
+    return (
+      <DashboardScreen
+        model={buildDashboardViewModel(
+          "scanned",
+          seededDemo ? "specproof/drifted-demo" : "2klips/specproof-app",
+        )}
+      />
+    );
+  }
 
   return (
     <main className="onboarding-shell">
@@ -54,6 +64,16 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
           <button className="primary-action" onClick={() => setStep(1)} type="button">
             <GitFork size={17} /> Continue with GitHub <ChevronRight size={16} />
           </button>
+          <button
+            className="secondary-action"
+            onClick={() => {
+              setSeededDemo(true);
+              setStep(2);
+            }}
+            type="button"
+          >
+            Try seeded demo
+          </button>
           <small><LockKeyhole size={13} /> No local install. No repository writes.</small>
         </section>
       ) : null}
@@ -62,7 +82,11 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
         <section className="onboarding-card wide-card" aria-labelledby="permission-title">
           <span className="panel-kicker">02 · GitHub App</span>
           <h1 id="permission-title">Read only. Evidence only.</h1>
-          <p>Choose repositories on GitHub. Access stays scoped to that selection.</p>
+          <p>
+            Choose repositories on GitHub. Access stays scoped to that selection.
+            Source files are fetched transiently; SpecProof stores metadata,
+            digests, spans, findings, and receipts.
+          </p>
           {permissionError ? (
             <div className="permission-error" role="alert">
               <AlertTriangle size={18} />
@@ -80,18 +104,34 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
           <button className="primary-action" disabled={permissionError} onClick={() => setStep(2)} type="button">
             Install GitHub App <ChevronRight size={16} />
           </button>
-          <small>Optional `pull_requests:write` is requested later only for advisory PR proposals.</small>
+          <small>
+            Access events are retained 30 days. Optional `pull_requests:write` is
+            requested later only for advisory PR proposals.
+          </small>
         </section>
       ) : null}
 
       {step === 2 ? (
         <section className="onboarding-card wide-card" aria-labelledby="repo-title">
           <span className="panel-kicker">03 · Repository</span>
-          <h1 id="repo-title">Choose first proof graph.</h1>
-          <p>Installation token stays transient and is never stored.</p>
+          <h1 id="repo-title">
+            {seededDemo ? "Explore a known drift case." : "Choose first proof graph."}
+          </h1>
+          <p>
+            {seededDemo
+              ? "This bundled public fixture needs no GitHub token, private-repository permission, or credits."
+              : "Installation token stays transient and is never stored."}
+          </p>
           <button className="repo-choice" onClick={() => setStep(3)} type="button">
             <span className="repo-mark"><Network size={18} /></span>
-            <span><strong>2klips/specproof-app</strong><small>TypeScript · main · updated now</small></span>
+            <span>
+              <strong>{seededDemo ? "specproof/drifted-demo" : "2klips/specproof-app"}</strong>
+              <small>
+                {seededDemo
+                  ? "fixtures/drifted-demo · seeded expected findings"
+                  : "TypeScript · main · updated now"}
+              </small>
+            </span>
             <ChevronRight size={17} />
           </button>
         </section>
@@ -106,7 +146,9 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
             <LoaderCircle className="spin" size={22} />
             <span className="panel-kicker">04 · First scan</span>
             <h1 id="scan-title">Building proof spine</h1>
-            <p>15 artifacts indexed · 13 requirements · mapping code evidence</p>
+            <p>
+              15 artifacts indexed · 13 requirements · metadata-only evidence graph
+            </p>
             <div className="scan-track"><span style={{ width: "76%" }} /></div>
             <button className="primary-action" onClick={() => setStep(4)} type="button">Open evidence graph <ChevronRight size={16} /></button>
           </div>

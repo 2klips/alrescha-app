@@ -21,6 +21,7 @@ import { createGitHubAppJwt } from "../../../../lib/github/api";
 import { githubAppEnvironment } from "../../../../lib/github/env";
 import { readMinimalIndexSource } from "../../../../lib/github/index-pr/source";
 import { SupabaseMcpStore } from "../../../../lib/mcp/supabase-store";
+import { recordSecurityAuditEvent } from "../../../../lib/security/audit";
 import { createClient } from "../../../../lib/supabase/server";
 import {
   INITIAL_INDEX_PROPOSAL_STATE,
@@ -134,11 +135,11 @@ export async function createMinimalIndexProposal(
   void _formData;
 
   try {
-    const { client, workspaceId } = await settingsContext();
+    const { client, userId, workspaceId } = await settingsContext();
     const repository = await client
       .from("repositories")
       .select(
-        "default_branch, full_name, github_repository_id, installation_id",
+        "id, default_branch, full_name, github_repository_id, installation_id",
       )
       .eq("workspace_id", workspaceId)
       .order("selected_at", { ascending: false })
@@ -153,7 +154,7 @@ export async function createMinimalIndexProposal(
 
     const installation = await client
       .from("github_installations")
-      .select("github_installation_id, permission_mode")
+      .select("github_installation_id, permission_mode, revoked_at")
       .eq("id", repository.data.installation_id)
       .eq("workspace_id", workspaceId)
       .maybeSingle();
@@ -161,6 +162,12 @@ export async function createMinimalIndexProposal(
       return {
         ...INITIAL_INDEX_PROPOSAL_STATE,
         error: "GitHub installation is unavailable.",
+      };
+    }
+    if (installation.data.revoked_at) {
+      return {
+        ...INITIAL_INDEX_PROPOSAL_STATE,
+        error: "GitHub App is disconnected. Reconnect before preparing a proposal.",
       };
     }
 
@@ -204,6 +211,16 @@ export async function createMinimalIndexProposal(
           throw new Error("GitHub contents:write decision is unresolved.");
         },
       },
+    });
+
+    await recordSecurityAuditEvent({
+      action: "index_pr_proposed",
+      actorId: userId,
+      actorKind: "user",
+      metadata: { outcome: result.status },
+      targetId: repository.data.id,
+      targetType: "repository",
+      workspaceId,
     });
 
     return {

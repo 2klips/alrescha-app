@@ -2,6 +2,8 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export type SupportedGitHubWebhook = "check_run" | "push" | "workflow_run";
 
+export const MAX_GITHUB_WEBHOOK_BODY_BYTES = 1_048_576;
+
 export interface NormalizedGitHubWebhookEvent {
   readonly action: string | null;
   readonly commitSha: string;
@@ -26,6 +28,11 @@ export interface GitHubWebhookStore {
     repositoryFullName: string;
     repositoryGitHubId: number;
   }): Promise<{ id: string; workspaceId: string } | null>;
+  revokeInstallation(input: {
+    deliveryId: string;
+    githubInstallationId: number;
+    reason: "deleted" | "suspend";
+  }): Promise<"duplicate" | "revoked" | "unknown">;
 }
 
 type JsonRecord = Record<string, unknown>;
@@ -113,6 +120,33 @@ export function normalizeGitHubWebhook(
   };
 }
 
+function normalizeInstallationRevocation(
+  eventHeader: string,
+  deliveryId: string,
+  rawBody: string,
+): {
+  deliveryId: string;
+  githubInstallationId: number;
+  reason: "deleted" | "suspend";
+} | null {
+  if (eventHeader !== "installation") return null;
+
+  const body = record(JSON.parse(rawBody) as unknown, "webhook body");
+  const action = stringField(body, "action", "webhook body");
+  if (action !== "deleted" && action !== "suspend") return null;
+  const installation = record(body.installation, "webhook body.installation");
+
+  return {
+    deliveryId,
+    githubInstallationId: numberField(
+      installation,
+      "id",
+      "webhook body.installation",
+    ),
+    reason: action,
+  };
+}
+
 export async function handleGitHubWebhook(input: {
   readonly deliveryId: string | null;
   readonly event: string | null;
@@ -121,11 +155,40 @@ export async function handleGitHubWebhook(input: {
   readonly signature: string | null;
   readonly store: GitHubWebhookStore;
 }): Promise<{ body: Readonly<Record<string, unknown>>; status: number }> {
+  if (Buffer.byteLength(input.rawBody, "utf8") > MAX_GITHUB_WEBHOOK_BODY_BYTES) {
+    return { body: { error: "payload_too_large" }, status: 413 };
+  }
   if (!verifyGitHubWebhookSignature(input.secret, input.rawBody, input.signature)) {
     return { body: { error: "invalid_signature" }, status: 401 };
   }
   if (!input.deliveryId || !input.event) {
     return { body: { error: "missing_github_headers" }, status: 400 };
+  }
+
+  if (input.event === "installation") {
+    let revocation: ReturnType<typeof normalizeInstallationRevocation>;
+    try {
+      revocation = normalizeInstallationRevocation(
+        input.event,
+        input.deliveryId,
+        input.rawBody,
+      );
+    } catch {
+      return { body: { error: "invalid_payload" }, status: 400 };
+    }
+    if (!revocation) return { body: { ignored: true }, status: 202 };
+
+    const outcome = await input.store.revokeInstallation(revocation);
+    if (outcome === "unknown") {
+      return {
+        body: { ignored: true, reason: "installation_not_linked" },
+        status: 202,
+      };
+    }
+    return {
+      body: { duplicate: outcome === "duplicate", revoked: true },
+      status: 200,
+    };
   }
 
   let event: NormalizedGitHubWebhookEvent | null;

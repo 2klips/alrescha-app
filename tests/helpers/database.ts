@@ -41,6 +41,8 @@ export const AI_JUDGMENT_MIGRATION =
   "supabase/migrations/202608100007_ai_judgment.sql";
 export const PILOT_INSTRUMENTATION_MIGRATION =
   "supabase/migrations/202608100008_pilot_instrumentation.sql";
+export const RELEASE_HARDENING_MIGRATION =
+  "supabase/migrations/202608100009_release_hardening.sql";
 
 export async function createTestDatabase(
   migrations: readonly string[],

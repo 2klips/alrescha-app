@@ -10,6 +10,7 @@ import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { createGitHubAppJwt } from "../../../../lib/github/api";
 import { githubAppEnvironment } from "../../../../lib/github/env";
 import { saveSelectedRepository } from "../../../../lib/github/onboarding-store";
+import { consumeWorkspaceSecurityLimit } from "../../../../lib/security/audit";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { createClient } from "../../../../lib/supabase/server";
 
@@ -41,11 +42,24 @@ export async function POST(request: Request) {
     return Response.json({ error: "forbidden" }, { status: 403 });
   }
 
+  const withinLimit = await consumeWorkspaceSecurityLimit({
+    maximumRequests: 20,
+    operation: "repository_selection",
+    windowSeconds: 60,
+    workspaceId: workspace.data.id,
+  });
+  if (!withinLimit) {
+    return Response.json(
+      { error: "rate_limited" },
+      { headers: { "Retry-After": "60" }, status: 429 },
+    );
+  }
+
   const admin = createAdminClient();
   const [installation, repository] = await Promise.all([
     admin
       .from("github_installations")
-      .select("github_installation_id, permission_mode")
+      .select("github_installation_id, permission_mode, revoked_at")
       .eq("id", installationId)
       .eq("workspace_id", workspace.data.id)
       .maybeSingle(),
@@ -62,6 +76,9 @@ export async function POST(request: Request) {
   }
 
   const installationData = installation.data;
+  if (installationData.revoked_at) {
+    return Response.json({ error: "github_installation_revoked" }, { status: 409 });
+  }
   const environment = githubAppEnvironment();
   const permissions = installationData.permission_mode === "read_with_pr_proposals"
     ? { ...GITHUB_READ_ONLY_PERMISSIONS, ...GITHUB_PR_PROPOSAL_PERMISSION }
@@ -73,7 +90,8 @@ export async function POST(request: Request) {
       fullName: repository.data.full_name,
       githubRepositoryId: repository.data.github_repository_id,
     },
-    saveSelection: saveSelectedRepository,
+    saveSelection: (selection) =>
+      saveSelectedRepository({ ...selection, actorUserId: userId }),
     verifyCurrentAccess: async (repositoryId) => {
       await requestInstallationToken({
         appJwt: createGitHubAppJwt(environment.appId, environment.privateKey),

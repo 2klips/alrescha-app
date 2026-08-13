@@ -27,11 +27,11 @@ export function createGitHubWebhookStore(): GitHubWebhookStore {
     async resolveRepository({ installationId, repositoryFullName, repositoryGitHubId }) {
       const installation = await admin
         .from("github_installations")
-        .select("id, workspace_id")
+        .select("id, revoked_at, workspace_id")
         .eq("github_installation_id", installationId)
         .maybeSingle();
 
-      if (installation.error || !installation.data) {
+      if (installation.error || !installation.data || installation.data.revoked_at) {
         return null;
       }
 
@@ -49,6 +49,19 @@ export function createGitHubWebhookStore(): GitHubWebhookStore {
       }
 
       return { id: repository.data.id, workspaceId: repository.data.workspace_id };
+    },
+
+    async revokeInstallation({ deliveryId, githubInstallationId, reason }) {
+      const { data, error } = await admin.rpc("revoke_github_installation", {
+        target_delivery_id: deliveryId,
+        target_github_installation_id: githubInstallationId,
+        target_reason: reason,
+      });
+      if (error) throw new Error(`Failed to revoke GitHub installation: ${error.code}`);
+      if (data !== "duplicate" && data !== "revoked" && data !== "unknown") {
+        throw new Error("GitHub installation revocation returned an invalid outcome.");
+      }
+      return data;
     },
   };
 }

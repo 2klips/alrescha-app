@@ -5,6 +5,7 @@ export type DashboardState =
   | "scanned"
   | "failed"
   | "permission-error"
+  | "revoked"
   | "no-ci"
   | "large";
 
@@ -59,6 +60,7 @@ export const DASHBOARD_STATES: readonly DashboardState[] = [
   "scanned",
   "failed",
   "permission-error",
+  "revoked",
   "no-ci",
   "large",
 ] as const;
@@ -324,7 +326,10 @@ export interface DashboardViewModel {
   state: DashboardState;
 }
 
-export function buildDashboardViewModel(state: DashboardState): DashboardViewModel {
+export function buildDashboardViewModel(
+  state: DashboardState,
+  repo = "2klips/specproof-app",
+): DashboardViewModel {
   const source = createFixtureGraph(state === "large" ? 500 : BASE_NODES.length);
   const graph = state === "large" ? clusterGraph(source) : forceDirectedLayout(source);
   return {
@@ -335,7 +340,7 @@ export function buildDashboardViewModel(state: DashboardState): DashboardViewMod
     graph,
     isClustered: state === "large",
     metrics: { implementation: 84, tests: state === "no-ci" ? 0 : 71, tokenCost: 1840, unresolved: 4 },
-    repo: "2klips/specproof-app",
+    repo,
     state,
   };
 }

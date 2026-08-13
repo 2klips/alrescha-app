@@ -167,6 +167,8 @@ export const githubInstallationSchema = z.strictObject({
   githubInstallationId: z.number().int().positive(),
   id: ulidSchema,
   permissionMode: z.enum(["read_only", "read_with_pr_proposals"]),
+  revokedAt: timestampSchema.nullable(),
+  revocationReason: z.enum(["deleted", "suspend"]).nullable(),
   workspaceId: workspaceIdSchema,
 });
 

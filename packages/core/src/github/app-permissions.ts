@@ -9,7 +9,12 @@ export const GITHUB_PR_PROPOSAL_PERMISSION = {
   pull_requests: "write",
 } as const;
 
-export const GITHUB_WEBHOOK_EVENTS = ["push", "check_run", "workflow_run"] as const;
+export const GITHUB_WEBHOOK_EVENTS = [
+  "push",
+  "check_run",
+  "workflow_run",
+  "installation",
+] as const;
 
 export type GitHubPermissionLevel = "read" | "write";
 export type GitHubPermissions = Readonly<Record<string, GitHubPermissionLevel>>;

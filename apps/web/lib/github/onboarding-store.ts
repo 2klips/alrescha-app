@@ -4,6 +4,7 @@ import type {
 } from "@specproof/core";
 
 import { createAdminClient } from "../supabase/admin";
+import { recordSecurityAuditEvent } from "../security/audit";
 
 export function createGitHubOnboardingStore(): GitHubOnboardingStore {
   const admin = createAdminClient();
@@ -29,6 +30,8 @@ export function createGitHubOnboardingStore(): GitHubOnboardingStore {
               account_id: installation.accountId,
               account_login: installation.accountLogin,
               permission_mode: permissionMode,
+              revoked_at: null,
+              revocation_reason: null,
               updated_at: new Date().toISOString(),
             })
             .eq("id", existing.data.id)
@@ -64,12 +67,26 @@ export function createGitHubOnboardingStore(): GitHubOnboardingStore {
         throw new Error(`Failed to save available repositories: ${repositories.error.code}`);
       }
 
+      await recordSecurityAuditEvent({
+        action: "github_installation_connected",
+        actorId: String(installation.accountId),
+        actorKind: "github",
+        metadata: {
+          permissionMode,
+          repositoryCount: installation.repositories.length,
+        },
+        targetId: saved.data.id,
+        targetType: "github_installation",
+        workspaceId,
+      });
+
       return { installationId: saved.data.id };
     },
   };
 }
 
 export async function saveSelectedRepository(input: {
+  actorUserId?: string;
   installationId: string;
   repository: GitHubRepositoryChoice;
   workspaceId: string;
@@ -92,6 +109,16 @@ export async function saveSelectedRepository(input: {
     .single();
   if (saved.error || !saved.data) {
     throw new Error(`Failed to select GitHub repository: ${saved.error?.code ?? "unknown"}`);
+  }
+  if (input.actorUserId) {
+    await recordSecurityAuditEvent({
+      action: "repository_selected",
+      actorId: input.actorUserId,
+      actorKind: "user",
+      targetId: saved.data.id,
+      targetType: "repository",
+      workspaceId: input.workspaceId,
+    });
   }
   return { repositoryId: saved.data.id };
 }

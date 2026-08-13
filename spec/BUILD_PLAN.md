@@ -276,7 +276,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy stats after three fixture analyses shows trends; failure stats before opt-in prompts for consent. Evidence `.omo/evidence/docshub-product-strategy/task-18.png`.
   Commit: Y | feat(stats): measure assurance impact per workspace
 
-- [ ] 19. Harden security/privacy, onboarding copy, and pilot release checklist
+- [x] 19. Harden security/privacy, onboarding copy, and pilot release checklist
   What to do / Must NOT do: Finalize permission explanations, data-boundary/privacy UI (metadata-only storage, transient fetches, BYOK key handling), rate limits, audit logging of repo-touching actions, GitHub-revoke degradation, error states, seeded demo-repo onboarding path, deployment checklist, pilot recruitment script with baseline metrics capture. Must not ship private-repo access or credit-consuming jobs without clear permission and retention disclosure; must not include savings claims without linking to the user's own stats.
   Parallelization: Wave 5 | Blocked by: 12,13,14,15,16,17,18 | Blocks: final
   References: R1, R2, R3, R4.
