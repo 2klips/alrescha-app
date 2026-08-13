@@ -39,6 +39,8 @@ export const HOSTED_MCP_MIGRATION =
   "supabase/migrations/202608100006_hosted_mcp.sql";
 export const AI_JUDGMENT_MIGRATION =
   "supabase/migrations/202608100007_ai_judgment.sql";
+export const PILOT_INSTRUMENTATION_MIGRATION =
+  "supabase/migrations/202608100008_pilot_instrumentation.sql";
 
 export async function createTestDatabase(
   migrations: readonly string[],

@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./byok": "./src/ai/byok.ts",
-    "./receipts": "./src/assurance/receipts.ts"
+    "./receipts": "./src/assurance/receipts.ts",
+    "./stats": "./src/stats/pilot-stats.ts"
   },
   "dependencies": {
     "@flowershow/remark-wiki-link": "3.4.0",

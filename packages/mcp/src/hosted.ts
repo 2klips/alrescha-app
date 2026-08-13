@@ -13,7 +13,12 @@ import {
   searchWorkspaceIndex,
   selectWorkspaceContextPack,
 } from "./data-brain";
-import { createUlid, type McpPrincipal, type McpStore } from "./store";
+import {
+  createUlid,
+  type McpPackMeasurement,
+  type McpPrincipal,
+  type McpStore,
+} from "./store";
 
 const SERVER_INFO = { name: "specproof", version: "0.1.0" } as const;
 const PRIVATE_TTL_MS = 60_000;
@@ -52,6 +57,10 @@ function emitAccessEvent(
   principal: McpPrincipal,
   tool: string,
   targetNodeIds: readonly string[],
+  packTokens?: Pick<
+    McpPackMeasurement,
+    "baselineTokens" | "selectedTokens"
+  >,
 ): void {
   const occurredAt = new Date();
   const event = {
@@ -62,10 +71,20 @@ function emitAccessEvent(
     tool,
     workspaceId: principal.workspaceId,
   };
+  const measurement = packTokens
+    ? {
+        accessEventId: event.id,
+        ...packTokens,
+        occurredAt: event.occurredAt,
+        workspaceId: event.workspaceId,
+      }
+    : undefined;
   const channel = `workspace:${principal.workspaceId}:access-events`;
   queueMicrotask(() => {
     void Promise.allSettled([
-      Promise.resolve().then(() => store.recordAccessEvent(event)),
+      Promise.resolve().then(() =>
+        store.recordAccessEvent(event, measurement),
+      ),
       Promise.resolve().then(() => store.publishAccessEvent(channel, event)),
     ]);
   });
@@ -562,11 +581,23 @@ function createServer(
         taskDescription: task_description,
         tokenBudget: token_budget ?? 2_000,
       });
+      const baselineTokens =
+        contextPack.estimatedTokens +
+        contextPack.omitted.reduce(
+          (total, omitted) => total + omitted.estimatedTokens,
+          0,
+        );
       emitAccessEvent(
         store,
         principal,
         "request_context_pack",
         contextPack.nodeIds,
+        baselineTokens > 0
+          ? {
+              baselineTokens,
+              selectedTokens: contextPack.estimatedTokens,
+            }
+          : undefined,
       );
       return toolResult({
         ...contextPack,

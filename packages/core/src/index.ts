@@ -231,3 +231,12 @@ export type {
   NormalizedGitHubWebhook,
   RecordedWebhookKind,
 } from "./github/recorded-fixtures";
+
+export { computePilotStats } from "./stats/pilot-stats";
+export type {
+  PilotPackMeasurement,
+  PilotReceiptSnapshot,
+  PilotRunMeasurement,
+  PilotStatsInput,
+  PilotStatsReport,
+} from "./stats/pilot-stats";

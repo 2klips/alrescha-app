@@ -7,5 +7,6 @@ export default defineConfig({
     },
     exclude: ["**/node_modules/**", "tests/e2e/**"],
     include: ["apps/**/*.test.{ts,tsx}", "packages/**/*.test.ts", "tests/**/*.test.ts"],
+    maxWorkers: 4,
   },
 });

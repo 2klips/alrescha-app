@@ -268,7 +268,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy judgment run resolves an ambiguous contradiction candidate and ledger settles once; failure exhausted credits disables judgment jobs gracefully with top-up guidance while deterministic analysis keeps working. Evidence `.omo/evidence/docshub-product-strategy/task-17.md`.
   Commit: Y | feat(ai): add credit-safe judgment layer with byok
 
-- [ ] 18. Add opt-in pilot instrumentation and stats
+- [x] 18. Add opt-in pilot instrumentation and stats
   What to do / Must NOT do: Opt-in per workspace: tokens per pack vs naive full-dump baseline, findings opened/resolved across receipt chain, scan durations, MCP pack-request counts; stats page + JSON export; "not enough evidence" empty states. Must not enable by default; must not fabricate deltas from single data points; must not send data to third parties.
   Parallelization: Wave 5 | Blocked by: 3,11,13,16,17 | Blocks: 19
   References: R1, R12, R17.

@@ -5,6 +5,7 @@ import {
   EVIDENCE_GRAPH_MIGRATION,
   GITHUB_APP_MIGRATION,
   HOSTED_MCP_MIGRATION,
+  PILOT_INSTRUMENTATION_MIGRATION,
   REPOSITORY_SCAN_MIGRATION,
   WORKER_CREDIT_MIGRATION,
   asAuthenticatedUser,
@@ -29,6 +30,7 @@ describe("hosted MCP persistence", () => {
       WORKER_CREDIT_MIGRATION,
       REPOSITORY_SCAN_MIGRATION,
       HOSTED_MCP_MIGRATION,
+      PILOT_INSTRUMENTATION_MIGRATION,
     ]);
     await database.query(
       "insert into auth.users (id, email) values ($1, 'mcp-a@example.test'), ($2, 'mcp-b@example.test')",
@@ -152,6 +154,71 @@ describe("hosted MCP persistence", () => {
         [workspaceB, TOKEN_A],
       ),
     ).rejects.toThrow(/access_events_token_tenant_fk/);
+  });
+
+  it("collects context-pack token metrics only after explicit owner consent", async () => {
+    const workspace = await database.query<{
+      pilot_instrumentation_enabled: boolean;
+    }>(
+      "select pilot_instrumentation_enabled from public.workspaces where id = $1",
+      [workspaceA],
+    );
+    expect(workspace.rows).toEqual([
+      { pilot_instrumentation_enabled: false },
+    ]);
+
+    await database.query(
+      `insert into public.access_events
+        (id, workspace_id, token_id, tool, pack_selected_tokens, pack_baseline_tokens)
+       values ($1, $2, $3, 'request_context_pack', 600, 2000)`,
+      [fixedUlid("R"), workspaceA, TOKEN_A],
+    );
+    const beforeConsent = await database.query<{
+      pack_baseline_tokens: number | null;
+      pack_selected_tokens: number | null;
+    }>(
+      `select pack_selected_tokens, pack_baseline_tokens
+       from public.access_events where id = $1`,
+      [fixedUlid("R")],
+    );
+    expect(beforeConsent.rows).toEqual([
+      { pack_baseline_tokens: null, pack_selected_tokens: null },
+    ]);
+
+    await asAuthenticatedUser(database, USER_A, (transaction) =>
+      transaction.query(
+        `update public.workspaces
+         set pilot_instrumentation_enabled = true,
+             pilot_instrumentation_consented_at = now()
+         where id = $1`,
+        [workspaceA],
+      ),
+    );
+    await database.query(
+      `insert into public.access_events
+        (id, workspace_id, token_id, tool, pack_selected_tokens, pack_baseline_tokens)
+       values ($1, $2, $3, 'request_context_pack', 500, 1900)`,
+      [fixedUlid("S"), workspaceA, TOKEN_A],
+    );
+    const afterConsent = await database.query<{
+      pack_baseline_tokens: number | null;
+      pack_selected_tokens: number | null;
+    }>(
+      `select pack_selected_tokens, pack_baseline_tokens
+       from public.access_events where id = $1`,
+      [fixedUlid("S")],
+    );
+    expect(afterConsent.rows).toEqual([
+      { pack_baseline_tokens: 1900, pack_selected_tokens: 500 },
+    ]);
+    await expect(
+      database.query(
+        `insert into public.access_events
+          (id, workspace_id, token_id, tool, pack_selected_tokens, pack_baseline_tokens)
+         values ($1, $2, $3, 'request_context_pack', 2000, 500)`,
+        [fixedUlid("T"), workspaceA, TOKEN_A],
+      ),
+    ).rejects.toThrow(/access_events_pack_metrics_pair/);
   });
 
   it("supports owner revocation and applies RLS to hosted MCP records", async () => {

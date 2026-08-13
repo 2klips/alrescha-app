@@ -42,6 +42,7 @@ export type {
   McpIndexEntryData,
   McpNodeType,
   McpNote,
+  McpPackMeasurement,
   McpPrincipal,
   McpProgressEvent,
   McpProgressStatus,

@@ -1907,6 +1907,27 @@ a {
 .diff-columns { display: grid; gap: 0.7rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 0.6rem; }
 .diff-columns > div > span { color: var(--muted); font: 0.68rem ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
 
+/* Opt-in pilot stats. */
+.pilot-stats-layout { display: grid; gap: 1rem; margin-top: 2rem; }
+.pilot-stats-toolbar { align-items: center; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; padding-bottom: 0.85rem; }
+.pilot-stats-toolbar > span { color: var(--muted); font: 0.72rem ui-monospace, monospace; letter-spacing: 0.08em; text-transform: uppercase; }
+.pilot-stats-toolbar > div { align-items: center; display: flex; gap: 0.7rem; }
+.pilot-stats-toolbar form { margin: 0; }
+.pilot-stop-button { background: transparent; border: 0; color: var(--muted); cursor: pointer; font: inherit; padding: 0.6rem; text-decoration: underline; text-underline-offset: 0.2rem; }
+.pilot-stats-grid { display: grid; gap: 1rem; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pilot-stat-card { background: linear-gradient(145deg, rgb(18 42 57 / 92%), rgb(8 24 35 / 98%)); border: 1px solid var(--line-strong); min-height: 13rem; padding: 1.25rem; }
+.pilot-stat-card > span { color: var(--muted); font: 0.68rem ui-monospace, monospace; letter-spacing: 0.1em; text-transform: uppercase; }
+.pilot-stat-card strong { color: var(--verified); display: block; font: 600 clamp(1.8rem, 4vw, 3rem) Bahnschrift, sans-serif; margin: 1rem 0 0.45rem; }
+.pilot-stat-card p { color: var(--ink); margin: 0 0 1.4rem; }
+.pilot-stat-card small { color: var(--muted); }
+.pilot-methodology { background: var(--panel); border: 1px solid var(--line); padding: 1rem 1.2rem; }
+.pilot-methodology summary { color: var(--verified); cursor: pointer; font-weight: 700; }
+.pilot-methodology p { color: var(--muted); line-height: 1.6; }
+.pilot-empty-state { background: var(--panel); border: 1px solid var(--line-strong); margin-top: 2rem; max-width: 48rem; padding: clamp(1.4rem, 4vw, 2.5rem); }
+.pilot-empty-state h2 { font: 600 clamp(1.8rem, 4vw, 2.8rem) Bahnschrift, sans-serif; margin: 0.55rem 0; }
+.pilot-empty-state p { color: var(--muted); line-height: 1.65; max-width: 42rem; }
+.pilot-empty-state form, .pilot-empty-state .secondary-button { margin-top: 1.2rem; }
+
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes breathe { 0%, 100% { box-shadow: 0 0 0 0 rgb(101 184 255 / 8%); opacity: 0.65; } 50% { box-shadow: 0 0 0 0.65rem rgb(101 184 255 / 5%); opacity: 1; } }
 @keyframes evidence-flow { to { stroke-dashoffset: -24; } }
@@ -1917,7 +1938,7 @@ a {
 }
 
 @media (max-width: 900px) {
-  .mcp-settings-grid, .context-settings-grid, .ai-settings-grid { grid-template-columns: 1fr; }
+  .mcp-settings-grid, .context-settings-grid, .ai-settings-grid, .pilot-stats-grid { grid-template-columns: 1fr; }
   .dashboard-shell { min-height: 46rem; }
   .repo-hud { left: 0.8rem; top: 0.8rem; }
   .graph-tools { left: 0.8rem; overflow-x: auto; right: 0.8rem; top: 11.1rem; transform: none; }
@@ -1946,6 +1967,8 @@ a {
 }
 
 @media (max-width: 620px) {
+  .pilot-stats-toolbar { align-items: start; flex-direction: column; gap: 0.8rem; }
+  .pilot-stats-toolbar > div { align-items: start; flex-direction: column; }
   .context-form-row, .diff-columns { grid-template-columns: 1fr; }
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
   .graph-tools { top: 14.8rem; }

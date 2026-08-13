@@ -10,6 +10,7 @@ import {
   type McpEdgeRelation,
   type McpNodeType,
   type McpNote,
+  type McpPackMeasurement,
   type McpPrincipal,
   type McpProgressEvent,
   type McpProgressStatus,
@@ -536,10 +537,15 @@ export class SupabaseMcpStore implements McpStore {
     }
   }
 
-  async recordAccessEvent(event: McpAccessEvent): Promise<void> {
+  async recordAccessEvent(
+    event: McpAccessEvent,
+    measurement?: McpPackMeasurement,
+  ): Promise<void> {
     const result = await this.client.from("access_events").insert({
       id: event.id,
       occurred_at: event.occurredAt,
+      pack_baseline_tokens: measurement?.baselineTokens ?? null,
+      pack_selected_tokens: measurement?.selectedTokens ?? null,
       target_node_ids: event.targetNodeIds,
       token_id: event.tokenId,
       tool: event.tool,

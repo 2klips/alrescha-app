@@ -179,6 +179,14 @@ export interface McpAccessEvent {
   workspaceId: string;
 }
 
+export interface McpPackMeasurement {
+  accessEventId: string;
+  baselineTokens: number;
+  occurredAt: string;
+  selectedTokens: number;
+  workspaceId: string;
+}
+
 export interface IssueAccessTokenInput {
   actorUserId: string;
   expiresAt?: string | null;
@@ -231,7 +239,10 @@ export interface McpStore {
   }): Promise<PublicMcpTokenRecord[]>;
   loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData>;
   publishAccessEvent(channel: string, event: McpAccessEvent): Promise<void>;
-  recordAccessEvent(event: McpAccessEvent): Promise<void>;
+  recordAccessEvent(
+    event: McpAccessEvent,
+    measurement?: McpPackMeasurement,
+  ): Promise<void>;
   revokeAccessToken(input: {
     actorUserId: string;
     tokenId: string;
@@ -273,6 +284,7 @@ export function createAccessTokenSecret(): string {
 export class InMemoryMcpStore implements McpStore {
   readonly #accessEventFailures: boolean;
   readonly #accessEvents: McpAccessEvent[] = [];
+  readonly #packMeasurements: McpPackMeasurement[] = [];
   readonly #notes: McpNote[] = [];
   readonly #now: () => Date;
   readonly #progressEvents: McpProgressEvent[] = [];
@@ -294,6 +306,12 @@ export class InMemoryMcpStore implements McpStore {
     return this.#accessEvents
       .filter((event) => event.workspaceId === workspaceId)
       .map((event) => ({ ...event, targetNodeIds: [...event.targetNodeIds] }));
+  }
+
+  packMeasurementsForWorkspace(workspaceId: string): McpPackMeasurement[] {
+    return this.#packMeasurements
+      .filter((measurement) => measurement.workspaceId === workspaceId)
+      .map((measurement) => ({ ...measurement }));
   }
 
   async appendNote(
@@ -458,13 +476,17 @@ export class InMemoryMcpStore implements McpStore {
       }));
   }
 
-  async recordAccessEvent(event: McpAccessEvent): Promise<void> {
+  async recordAccessEvent(
+    event: McpAccessEvent,
+    measurement?: McpPackMeasurement,
+  ): Promise<void> {
     if (this.#accessEventFailures)
       throw new Error("Access event persistence failed");
     this.#accessEvents.push({
       ...event,
       targetNodeIds: [...event.targetNodeIds],
     });
+    if (measurement) this.#packMeasurements.push({ ...measurement });
   }
 
   async revokeAccessToken(input: {

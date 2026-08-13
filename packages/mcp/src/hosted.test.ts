@@ -689,7 +689,8 @@ describe("hosted MCP contract", () => {
     });
     await client.callTool({
       arguments: {
-        task_description: "private prompt content must not be logged",
+        task_description:
+          "CI evidence policy; private prompt content must not be logged",
       },
       name: "request_context_pack",
     });
@@ -730,6 +731,19 @@ describe("hosted MCP contract", () => {
     ).toBe(true);
     expect(JSON.stringify(events)).not.toContain("private prompt content");
     expect(JSON.stringify(events)).not.toContain("private search query");
+    const packEvent = events.find(
+      ({ tool }) => tool === "request_context_pack",
+    );
+    const measurements = store.packMeasurementsForWorkspace(WORKSPACE_ID);
+    expect(measurements).toHaveLength(1);
+    expect(measurements[0]).toMatchObject({
+      accessEventId: packEvent?.id,
+      workspaceId: WORKSPACE_ID,
+    });
+    expect(measurements[0]?.baselineTokens).toBeGreaterThanOrEqual(
+      measurements[0]?.selectedTokens ?? 0,
+    );
+    expect(measurements[0]?.selectedTokens).toBeGreaterThan(0);
     expect(store.publishedAccessEventsForWorkspace(WORKSPACE_ID)).toEqual(
       events.map((event) => ({
         channel: `workspace:${WORKSPACE_ID}:access-events`,
