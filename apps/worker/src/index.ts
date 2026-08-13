@@ -6,4 +6,21 @@ export type { CollectedGitHubCiEvidence } from "./github-ci-evidence-source";
 export { RepositoryScanStore } from "./repository-scan-store";
 export { runRepositoryScan } from "./repository-scan";
 export { runWorkerOnce } from "./worker";
-export type { JobContext, JobHandler, JobHandlers, WorkerOutcome } from "./worker";
+export type {
+  JobContext,
+  JobHandler,
+  JobHandlers,
+  WorkerOutcome,
+} from "./worker";
+export {
+  AnthropicJudgmentProvider,
+  OpenAiJudgmentProvider,
+} from "./ai-providers";
+export { JudgmentProviderLoader } from "./provider-loader";
+export type { ByokKeyStore } from "./provider-loader";
+export { createJudgmentJobHandler } from "./judgment-job";
+export type { JudgmentJobStore } from "./judgment-job";
+export {
+  PostgresByokKeyStore,
+  PostgresJudgmentJobStore,
+} from "./postgres-judgment-store";

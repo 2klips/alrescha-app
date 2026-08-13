@@ -1848,6 +1848,15 @@ a {
 .button { background: var(--verified); border: 1px solid var(--verified); color: #04111b; cursor: pointer; display: inline-block; font-weight: 700; padding: 0.7rem 0.9rem; text-decoration: none; }
 
 /* Hosted MCP token settings. */
+.ai-settings-grid { display: grid; gap: 1rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 2rem; }
+.credit-meter { align-items: baseline; display: flex; gap: 1rem; margin-bottom: 1rem; }
+.credit-meter strong { color: var(--verified); font: 600 2rem Bahnschrift, sans-serif; }
+.credit-warning { border-left: 2px solid var(--warn); margin: 1rem 0; padding-left: 1rem; }
+.credit-ledger-list, .byok-provider-list { display: grid; gap: 0.55rem; list-style: none; margin: 1rem 0 0; padding: 0; }
+.credit-ledger-list li, .byok-provider-list li { align-items: center; border-top: 1px solid var(--line); display: grid; gap: 0.5rem; grid-template-columns: 1fr auto auto; padding-top: 0.55rem; }
+.credit-ledger-list time, .byok-provider-list span { color: var(--muted); font-size: 0.78rem; }
+.byok-key-form { display: grid; gap: 0.6rem; margin: 1rem 0; }
+.byok-key-form input, .byok-key-form select { background: #07151f; border: 1px solid var(--line-strong); color: inherit; padding: 0.65rem 0.75rem; }
 .mcp-settings-shell { margin: 0 auto; max-width: 76rem; padding: clamp(2rem, 6vw, 5rem) 1rem; }
 .mcp-settings-shell > header { max-width: 50rem; }
 .mcp-settings-shell h1 { font: 600 clamp(2.4rem, 7vw, 5rem) Bahnschrift, sans-serif; margin: 0.55rem 0; }
@@ -1908,7 +1917,7 @@ a {
 }
 
 @media (max-width: 900px) {
-  .mcp-settings-grid, .context-settings-grid { grid-template-columns: 1fr; }
+  .mcp-settings-grid, .context-settings-grid, .ai-settings-grid { grid-template-columns: 1fr; }
   .dashboard-shell { min-height: 46rem; }
   .repo-hud { left: 0.8rem; top: 0.8rem; }
   .graph-tools { left: 0.8rem; overflow-x: auto; right: 0.8rem; top: 11.1rem; transform: none; }

@@ -16,8 +16,14 @@ export interface ClaimedJob {
 
 export interface WorkerQueue {
   claim(workspaceId: string, workerId: string): Promise<ClaimedJob | null>;
-  finish(jobId: string, workerId: string, succeeded: boolean, error?: string): Promise<string>;
+  finish(
+    jobId: string,
+    workerId: string,
+    succeeded: boolean,
+    error?: string,
+  ): Promise<string>;
   heartbeat(jobId: string, workerId: string): Promise<boolean>;
+  reject(jobId: string, workerId: string, error: string): Promise<string>;
   reserveCredits(jobId: string): Promise<string | null>;
 }
 
@@ -36,7 +42,10 @@ interface ClaimedJobRow {
 export class PostgresWorkerQueue implements WorkerQueue {
   constructor(private readonly sql: postgres.Sql) {}
 
-  async claim(workspaceId: string, workerId: string): Promise<ClaimedJob | null> {
+  async claim(
+    workspaceId: string,
+    workerId: string,
+  ): Promise<ClaimedJob | null> {
     const rows = await this.sql<ClaimedJobRow[]>`
       select id, workspace_id, repository_id, run_id, kind, payload,
              attempt_count, max_attempts, credit_cost
@@ -58,7 +67,12 @@ export class PostgresWorkerQueue implements WorkerQueue {
       : null;
   }
 
-  async finish(jobId: string, workerId: string, succeeded: boolean, error?: string): Promise<string> {
+  async finish(
+    jobId: string,
+    workerId: string,
+    succeeded: boolean,
+    error?: string,
+  ): Promise<string> {
     const rows = await this.sql<{ outcome: string }[]>`
       select public.finish_job(${jobId}, ${workerId}, ${succeeded}, ${error ?? null}) as outcome
     `;
@@ -77,5 +91,16 @@ export class PostgresWorkerQueue implements WorkerQueue {
       select public.reserve_job_credits(${jobId}) as reservation_id
     `;
     return rows[0]?.reservation_id ?? null;
+  }
+
+  async reject(
+    jobId: string,
+    workerId: string,
+    error: string,
+  ): Promise<string> {
+    const rows = await this.sql<{ outcome: string }[]>`
+      select public.reject_job(${jobId}, ${workerId}, ${error}) as outcome
+    `;
+    return rows[0]?.outcome ?? "ignored";
   }
 }

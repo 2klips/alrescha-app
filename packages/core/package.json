@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./byok": "./src/ai/byok.ts",
     "./receipts": "./src/assurance/receipts.ts"
   },
   "dependencies": {

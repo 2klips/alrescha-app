@@ -27,6 +27,22 @@ export {
 export type { Edge, Finding, Provenance } from "./data/schemas";
 
 export {
+  JudgmentValidationError,
+  applyJudgment,
+  executeJudgment,
+  judgmentOutputSchema,
+  judgmentRequestSchema,
+} from "./ai/judgment";
+export type {
+  ExecutedJudgment,
+  JudgmentKind,
+  JudgmentOutput,
+  JudgmentProvider,
+  JudgmentRequest,
+  JudgmentTargetState,
+} from "./ai/judgment";
+
+export {
   classifyArtifactPath,
   extractExportedSymbols,
   persistedKind,
@@ -82,7 +98,10 @@ export {
   specProofReceiptPredicateSchema,
   verifyInTotoStatement,
 } from "./assurance/receipts";
-export type { InTotoStatement, ReceiptVerification } from "./assurance/receipts";
+export type {
+  InTotoStatement,
+  ReceiptVerification,
+} from "./assurance/receipts";
 export type {
   AnalyzeRepositoryAssuranceInput,
   AssuranceFinding,
@@ -125,10 +144,19 @@ export {
   assertMinimalGitHubPermissions,
   githubInstallationUrl,
 } from "./github/app-permissions";
-export type { GitHubPermissionLevel, GitHubPermissions } from "./github/app-permissions";
+export type {
+  GitHubPermissionLevel,
+  GitHubPermissions,
+} from "./github/app-permissions";
 
-export { GITHUB_API_VERSION, requestInstallationToken } from "./github/installation-token";
-export type { InstallationToken, InstallationTokenRequest } from "./github/installation-token";
+export {
+  GITHUB_API_VERSION,
+  requestInstallationToken,
+} from "./github/installation-token";
+export type {
+  InstallationToken,
+  InstallationTokenRequest,
+} from "./github/installation-token";
 
 export {
   CONTEXT_TOKEN_ESTIMATE_ASSUMPTION,
@@ -167,7 +195,10 @@ export type {
   ProposeMinimalIndexPullRequestInput,
 } from "./context/index-pr-proposal";
 
-export { prepareGitHubOnboarding, selectGitHubRepository } from "./github/onboarding";
+export {
+  prepareGitHubOnboarding,
+  selectGitHubRepository,
+} from "./github/onboarding";
 export type {
   GitHubOnboardingStore,
   GitHubRepositoryChoice,

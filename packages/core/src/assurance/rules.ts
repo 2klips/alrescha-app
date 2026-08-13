@@ -11,7 +11,7 @@ import {
 } from "../parser/markdown";
 import { extractRequirements, type ExtractedRequirement } from "./requirements";
 
-export const AI_ASSIST_STATUS = "deferred-until-todo-17" as const;
+export const AI_ASSIST_STATUS = "worker-judgment-jobs-available" as const;
 
 export interface DisabledAssuranceAiAssist {
   readonly enabled: false;

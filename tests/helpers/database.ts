@@ -25,14 +25,24 @@ const SUPABASE_TEST_BOOTSTRAP = `
   $$;
 `;
 
-export const AUTH_TENANCY_MIGRATION = "supabase/migrations/202608100001_auth_tenancy.sql";
-export const EVIDENCE_GRAPH_MIGRATION = "supabase/migrations/202608100002_evidence_graph_domain.sql";
-export const GITHUB_APP_MIGRATION = "supabase/migrations/202608100003_github_app_webhooks.sql";
-export const WORKER_CREDIT_MIGRATION = "supabase/migrations/202608100004_worker_credit_lifecycle.sql";
-export const REPOSITORY_SCAN_MIGRATION = "supabase/migrations/202608100005_repository_scans.sql";
-export const HOSTED_MCP_MIGRATION = "supabase/migrations/202608100006_hosted_mcp.sql";
+export const AUTH_TENANCY_MIGRATION =
+  "supabase/migrations/202608100001_auth_tenancy.sql";
+export const EVIDENCE_GRAPH_MIGRATION =
+  "supabase/migrations/202608100002_evidence_graph_domain.sql";
+export const GITHUB_APP_MIGRATION =
+  "supabase/migrations/202608100003_github_app_webhooks.sql";
+export const WORKER_CREDIT_MIGRATION =
+  "supabase/migrations/202608100004_worker_credit_lifecycle.sql";
+export const REPOSITORY_SCAN_MIGRATION =
+  "supabase/migrations/202608100005_repository_scans.sql";
+export const HOSTED_MCP_MIGRATION =
+  "supabase/migrations/202608100006_hosted_mcp.sql";
+export const AI_JUDGMENT_MIGRATION =
+  "supabase/migrations/202608100007_ai_judgment.sql";
 
-export async function createTestDatabase(migrations: readonly string[]): Promise<PGlite> {
+export async function createTestDatabase(
+  migrations: readonly string[],
+): Promise<PGlite> {
   const database = new PGlite();
   await database.waitReady;
   await database.exec(SUPABASE_TEST_BOOTSTRAP);
@@ -50,7 +60,10 @@ export async function asAuthenticatedUser<T>(
   callback: (transaction: Transaction) => Promise<T>,
 ): Promise<T> {
   return database.transaction(async (transaction) => {
-    await transaction.query("select set_config('request.jwt.claim.sub', $1, true)", [userId]);
+    await transaction.query(
+      "select set_config('request.jwt.claim.sub', $1, true)",
+      [userId],
+    );
     await transaction.exec("set local role authenticated");
     return callback(transaction);
   });

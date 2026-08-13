@@ -260,7 +260,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy user triggers index PR from settings and sees the diff-only proposal; failure missing pull-requests permission shows a grant-or-copy-manually path. Evidence `.omo/evidence/docshub-product-strategy/task-16.md`.
   Commit: Y | feat(context): compose on-demand packs and advisory index pr
 
-- [ ] 17. Implement the AI-judgment layer with credits and BYOK
+- [x] 17. Implement the AI-judgment layer with credits and BYOK
   What to do / Must NOT do: Provider abstraction (Anthropic + OpenAI adapters, none hard-coded in core) running judgment jobs (drift verdict confirmation, requirement disambiguation, contradiction confirmation) through the worker with credit reservation/settlement/refund; zod-validated outputs stored as `inferred` with payload records; judgments upgrade confidence but never to `verified`; BYOK mode (keys encrypted at rest, never logged) bypasses credits; credit usage view in settings. Must not charge for failed/schema-invalid outputs; must not auto-apply severity changes without recording the judgment payload.
   Parallelization: Wave 4 | Blocked by: 5,7,15,16 | Blocks: 18,19
   References: R1, R12, R17.

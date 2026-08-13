@@ -221,10 +221,10 @@ describe("deterministic drift rules", () => {
         ),
       ).size,
     ).toBe(findings.length);
-    expect(AI_ASSIST_STATUS).toBe("deferred-until-todo-17");
+    expect(AI_ASSIST_STATUS).toBe("worker-judgment-jobs-available");
     expect(DISABLED_ASSURANCE_AI_ASSIST).toEqual({
       enabled: false,
-      status: "deferred-until-todo-17",
+      status: "worker-judgment-jobs-available",
     });
   });
 
