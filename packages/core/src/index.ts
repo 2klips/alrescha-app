@@ -78,6 +78,23 @@ export type {
   ParsedTask,
 } from "./parser/markdown";
 
+export { parseTodoDocument } from "./progress/todos";
+export type {
+  DocumentTodoSource,
+  ParsedTodoItem,
+  TodoStatus,
+} from "./progress/todos";
+
+export { buildProgressDashboard } from "./progress/dashboard";
+export type {
+  BuildProgressDashboardInput,
+  ProgressCommitInput,
+  ProgressDashboard,
+  ProgressEventInput,
+  ProgressFindingInput,
+  ProgressTodo,
+} from "./progress/dashboard";
+
 export { extractRequirements } from "./assurance/requirements";
 export type {
   ExtractedRequirement,
@@ -174,6 +191,7 @@ export type {
 } from "./context/context-pack";
 
 export {
+  PROGRESS_LOGGING_INSTRUCTION,
   SPECPROOF_INDEX_BEGIN,
   SPECPROOF_INDEX_END,
   applyManagedIndex,

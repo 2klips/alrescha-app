@@ -292,7 +292,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy `pnpm bench:databrain --dry-run` completes with mocked models and full report structure; failure a task without a grading manifest is rejected at load, and a mid-run provider failure marks the trial failed without corrupting the report. Evidence `.omo/evidence/docshub-product-strategy/task-20.md`.
   Commit: Y | feat(bench): prove data brain accuracy and token gains
 
-- [ ] 21. Build the progress dashboard and token-frugal logging format
+- [x] 21. Build the progress dashboard and token-frugal logging format
   What to do / Must NOT do: Parse todo items from TODO/progress docs (checkbox state, spans) into `todos`; extend `log_progress` handling to create/update todo items and feed a recent-work timeline; build `/progress`: progress % (requirement coverage + todo completion, sources labeled), todo board (open/in-progress/done/blocked, each item linked to its span or event), recent-work timeline (events newest-first with commits and finding resolutions); ship the logging format in the skill/minimal-index as a "once per task unit" instruction. Must not fabricate progress from AI inference; must not require narrative journaling or per-turn logging; must not exceed the ≤150-token/call format target in the shipped instruction; must not show a progress number whose source is not labeled.
   Parallelization: Wave 4 | Blocked by: 5,9,15 | Blocks: 19
   References: R1, R8, R17.

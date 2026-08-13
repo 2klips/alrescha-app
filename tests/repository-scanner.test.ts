@@ -82,6 +82,20 @@ describe("GitHub repository scanner", () => {
     expect(result.skipped).toEqual([]);
     expect(result.touchedRows).toBe(manifest.artifacts.length);
     expect(result.artifacts.every((artifact) => !("content" in artifact))).toBe(true);
+    expect(result.artifacts.find(({ path }) => path === "TODO.md")?.todoItems).toEqual([
+      expect.objectContaining({
+        status: "done",
+        title: "REQ-AUTH-002: enforce the 30-minute session timeout.",
+      }),
+      expect.objectContaining({ status: "open", title: "REQ-AUTH-001: implement GitHub OAuth login." }),
+      expect.objectContaining({ status: "open", title: "REQ-AUTH-003: add an audit-event CI test." }),
+      expect.objectContaining({ status: "open", title: "Remove the stale legacy billing reference." }),
+    ]);
+    expect(
+      result.artifacts
+        .filter(({ path }) => path !== "TODO.md")
+        .every(({ todoItems }) => todoItems.length === 0),
+    ).toBe(true);
   });
 
   it("recognizes every supported AI-facing path convention", () => {

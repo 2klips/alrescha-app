@@ -433,6 +433,7 @@ function createServer(
           status: z.enum(["started", "progress", "done", "blocked"]),
           summary: z.string(),
           task: z.string(),
+          todoId: z.string(),
         }),
         workspaceId: z.string(),
       }),
@@ -447,6 +448,7 @@ function createServer(
           status: event.status,
           summary: event.summary,
           task: event.task,
+          todoId: event.todoId,
         },
         workspaceId: principal.workspaceId,
       });

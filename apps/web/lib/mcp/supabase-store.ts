@@ -161,30 +161,30 @@ export class SupabaseMcpStore implements McpStore {
     },
   ): Promise<McpProgressEvent> {
     await this.assertOwner(principal.userId, principal.workspaceId);
-    const occurredAt = new Date();
+    const result = await this.client.rpc("log_progress_atomic", {
+      p_refs: input.refs ?? [],
+      p_status: input.status,
+      p_summary: input.summary,
+      p_task: input.task,
+      p_token_id: principal.tokenId,
+      p_user_id: principal.userId,
+      p_workspace_id: principal.workspaceId,
+    });
+    queryError("MCP progress write failed", result.error);
+    const row = rows(result.data)[0];
+    if (!row) throw new Error("MCP progress write failed: empty result");
     const event: McpProgressEvent = {
-      id: createUlid(occurredAt),
-      occurredAt: occurredAt.toISOString(),
+      id: requiredString(row, "event_id"),
+      occurredAt: requiredString(row, "event_occurred_at"),
       refs: input.refs ?? [],
       status: input.status,
       summary: input.summary,
       task: input.task,
+      todoId: requiredString(row, "todo_id"),
       tokenId: principal.tokenId,
       userId: principal.userId,
       workspaceId: principal.workspaceId,
     };
-    const result = await this.client.from("progress_events").insert({
-      id: event.id,
-      occurred_at: event.occurredAt,
-      refs: event.refs,
-      status: event.status,
-      summary: event.summary,
-      task: event.task,
-      token_id: event.tokenId,
-      user_id: event.userId,
-      workspace_id: event.workspaceId,
-    });
-    queryError("MCP progress write failed", result.error);
     return event;
   }
 

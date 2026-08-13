@@ -147,6 +147,18 @@ export interface McpPrincipal {
 }
 
 export type McpProgressStatus = "started" | "progress" | "done" | "blocked";
+export type McpTodoStatus = "open" | "in-progress" | "done" | "blocked";
+
+export interface McpTodo {
+  createdAt: string;
+  id: string;
+  sourceEventId: string;
+  sourceKey: string;
+  status: McpTodoStatus;
+  title: string;
+  updatedAt: string;
+  workspaceId: string;
+}
 
 export interface McpProgressEvent {
   id: string;
@@ -155,6 +167,7 @@ export interface McpProgressEvent {
   status: McpProgressStatus;
   summary: string;
   task: string;
+  todoId: string;
   tokenId: string;
   userId: string;
   workspaceId: string;
@@ -293,6 +306,7 @@ export class InMemoryMcpStore implements McpStore {
     event: McpAccessEvent;
   }> = [];
   readonly #tokensByHash = new Map<string, McpTokenRecord>();
+  readonly #todos: McpTodo[] = [];
   readonly #workspaces = new Map<string, McpWorkspaceData>();
 
   constructor(options: InMemoryMcpStoreOptions) {
@@ -344,17 +358,53 @@ export class InMemoryMcpStore implements McpStore {
   ): Promise<McpProgressEvent> {
     await this.loadWorkspace(principal);
     const now = this.#now();
+    const task = input.task.trim();
+    const summary = input.summary.trim();
+    const refs = [...(input.refs ?? [])];
+    if (task.length < 1 || task.length > 120)
+      throw new Error("log_progress task must contain 1 to 120 characters");
+    if (summary.length < 1 || summary.length > 200)
+      throw new Error("log_progress summary must contain 1 to 200 characters");
+    if (refs.length > 10)
+      throw new Error("log_progress refs must contain at most 10 entries");
+
+    const sourceKey = `progress:${task.toLocaleLowerCase("en-US")}`;
+    const existingTodo = this.#todos.find(
+      (todo) =>
+        todo.workspaceId === principal.workspaceId &&
+        (todo.id === task || todo.sourceKey === sourceKey),
+    );
+    const todoStatus: McpTodoStatus =
+      input.status === "started" || input.status === "progress"
+        ? "in-progress"
+        : input.status;
+    const eventId = createUlid(now);
+    const todo: McpTodo = existingTodo
+      ? { ...existingTodo, status: todoStatus, updatedAt: now.toISOString() }
+      : {
+          createdAt: now.toISOString(),
+          id: createUlid(now),
+          sourceEventId: eventId,
+          sourceKey,
+          status: todoStatus,
+          title: task,
+          updatedAt: now.toISOString(),
+          workspaceId: principal.workspaceId,
+        };
     const event: McpProgressEvent = {
-      id: createUlid(now),
+      id: eventId,
       occurredAt: now.toISOString(),
-      refs: [...(input.refs ?? [])],
+      refs,
       status: input.status,
-      summary: input.summary,
-      task: input.task,
+      summary,
+      task,
+      todoId: todo.id,
       tokenId: principal.tokenId,
       userId: principal.userId,
       workspaceId: principal.workspaceId,
     };
+    if (existingTodo) Object.assign(existingTodo, todo);
+    else this.#todos.push(todo);
     this.#progressEvents.push(event);
     return { ...event, refs: [...event.refs] };
   }
@@ -451,6 +501,12 @@ export class InMemoryMcpStore implements McpStore {
     return this.#progressEvents
       .filter((event) => event.workspaceId === workspaceId)
       .map((event) => ({ ...event, refs: [...event.refs] }));
+  }
+
+  todosForWorkspace(workspaceId: string): McpTodo[] {
+    return this.#todos
+      .filter((todo) => todo.workspaceId === workspaceId)
+      .map((todo) => ({ ...todo }));
   }
 
   async publishAccessEvent(

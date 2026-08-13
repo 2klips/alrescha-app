@@ -53,6 +53,8 @@ export type {
   McpSourceSpan,
   McpStore,
   McpTokenRecord,
+  McpTodo,
+  McpTodoStatus,
   McpWorkspaceData,
   PublicMcpTokenRecord,
 } from "./store";

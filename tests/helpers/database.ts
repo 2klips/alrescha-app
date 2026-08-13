@@ -43,6 +43,8 @@ export const PILOT_INSTRUMENTATION_MIGRATION =
   "supabase/migrations/202608100008_pilot_instrumentation.sql";
 export const RELEASE_HARDENING_MIGRATION =
   "supabase/migrations/202608100009_release_hardening.sql";
+export const PROGRESS_DASHBOARD_MIGRATION =
+  "supabase/migrations/202608100010_progress_dashboard.sql";
 
 export async function createTestDatabase(
   migrations: readonly string[],

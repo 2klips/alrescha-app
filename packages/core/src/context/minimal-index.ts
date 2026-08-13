@@ -1,6 +1,11 @@
 export const SPECPROOF_INDEX_BEGIN =
   "<!-- SPECPROOF:BEGIN (managed — do not edit inside) -->";
 export const SPECPROOF_INDEX_END = "<!-- SPECPROOF:END -->";
+export const PROGRESS_LOGGING_INSTRUCTION = [
+  "- Once per completed task unit, call `log_progress`:",
+  '  `{"task":"<todo id/title>","status":"done","summary":"<verified result; max 200 chars>","refs":["<path/commit>"]}`',
+  "- Use only verified work; never invent progress; never log per turn or narrative.",
+].join("\n");
 
 export interface RenderManagedIndexInput {
   readonly dashboardUrl: string;
@@ -43,6 +48,7 @@ export function renderManagedIndex(input: RenderManagedIndexInput): string {
     "- Before coding, call MCP tool `request_context_pack` with your task description.",
     `- MCP endpoint: ${mcpEndpoint} (token: see project settings)`,
     `- Findings & receipts: ${dashboardUrl}`,
+    ...PROGRESS_LOGGING_INSTRUCTION.split("\n"),
     SPECPROOF_INDEX_END,
   ].join("\n");
 }

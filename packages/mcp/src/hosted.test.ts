@@ -576,25 +576,56 @@ describe("hosted MCP contract", () => {
     clients.push(client);
     await client.connect(transport);
 
-    const progress = await client.callTool({
+    const started = await client.callTool({
+      arguments: {
+        refs: ["spec/BUILD_PLAN.md"],
+        status: "started",
+        summary: "Started hosted MCP contract.",
+        task: "Task 21",
+      },
+      name: "log_progress",
+    });
+    const progressed = await client.callTool({
+      arguments: {
+        refs: ["packages/mcp/src/hosted.ts"],
+        status: "progress",
+        summary: "Linked progress events to the todo.",
+        task: "Task 21",
+      },
+      name: "log_progress",
+    });
+    const done = await client.callTool({
       arguments: {
         refs: ["spec/WORK_SPEC.md", "0f00bfb"],
         status: "done",
         summary: "Implemented hosted MCP contract.",
-        task: "Task 15",
+        task: "Task 21",
       },
       name: "log_progress",
     });
-    expect(progress.isError).not.toBe(true);
-    expect(progress.structuredContent).toMatchObject({
+    expect(started.isError).not.toBe(true);
+    expect(progressed.isError).not.toBe(true);
+    expect(done.isError).not.toBe(true);
+    expect(done.structuredContent).toMatchObject({
       event: {
         id: expect.stringMatching(/^[0-9A-HJKMNP-TV-Z]{26}$/),
         status: "done",
         summary: "Implemented hosted MCP contract.",
-        task: "Task 15",
+        task: "Task 21",
+        todoId: expect.stringMatching(/^[0-9A-HJKMNP-TV-Z]{26}$/),
       },
     });
-    expect(store.progressEventsForWorkspace(WORKSPACE_ID)).toHaveLength(1);
+    expect(store.progressEventsForWorkspace(WORKSPACE_ID)).toHaveLength(3);
+    expect(store.todosForWorkspace(WORKSPACE_ID)).toEqual([
+      expect.objectContaining({ status: "done", title: "Task 21" }),
+    ]);
+    expect(
+      new Set(
+        store
+          .progressEventsForWorkspace(WORKSPACE_ID)
+          .map(({ todoId }) => todoId),
+      ),
+    ).toHaveLength(1);
 
     const invalid = await client.callTool({
       arguments: {
@@ -605,7 +636,8 @@ describe("hosted MCP contract", () => {
       name: "log_progress",
     });
     expect(invalid.isError).toBe(true);
-    expect(store.progressEventsForWorkspace(WORKSPACE_ID)).toHaveLength(1);
+    expect(store.progressEventsForWorkspace(WORKSPACE_ID)).toHaveLength(3);
+    expect(store.todosForWorkspace(WORKSPACE_ID)).toHaveLength(1);
 
     const note = await client.callTool({
       arguments: {
@@ -640,7 +672,8 @@ describe("hosted MCP contract", () => {
       name: "log_progress",
     });
     expect(deniedWrite.isError).toBe(true);
-    expect(store.progressEventsForWorkspace(WORKSPACE_ID)).toHaveLength(1);
+    expect(store.progressEventsForWorkspace(WORKSPACE_ID)).toHaveLength(3);
+    expect(store.todosForWorkspace(WORKSPACE_ID)).toHaveLength(1);
 
     const writeOnly = await store.issueAccessToken({
       actorUserId: USER_ID,

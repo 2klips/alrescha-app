@@ -1,6 +1,7 @@
 import {
   applyManagedIndex,
   buildMinimalIndexProposalFiles,
+  PROGRESS_LOGGING_INSTRUCTION,
   renderManagedIndex,
 } from "../packages/core/src/index";
 import { describe, expect, it } from "vitest";
@@ -32,9 +33,19 @@ describe("minimal agent index", () => {
       true,
     );
     expect(once.endsWith("\n\nKeep this exact suffix.\n")).toBe(true);
-    expect(section.split("\n")).toHaveLength(6);
+    expect(section.split("\n")).toHaveLength(9);
     expect(section.split("\n").length).toBeLessThanOrEqual(30);
     expect(once).toContain("call MCP tool `request_context_pack`");
+    expect(once).toContain("Once per completed task unit");
+  });
+
+  it("keeps the verified logging instruction below 150 estimated tokens", () => {
+    const estimatedTokens = Math.ceil(PROGRESS_LOGGING_INSTRUCTION.length / 4);
+
+    expect(estimatedTokens).toBeLessThanOrEqual(150);
+    expect(PROGRESS_LOGGING_INSTRUCTION).toContain('"summary":"<verified result; max 200 chars>"');
+    expect(PROGRESS_LOGGING_INSTRUCTION).toContain("never invent progress");
+    expect(PROGRESS_LOGGING_INSTRUCTION).toContain("never log per turn");
   });
 
   it("proposes bounded index files without document-body inlining", () => {

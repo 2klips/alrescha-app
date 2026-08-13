@@ -2,6 +2,7 @@
 
 import { verifyInTotoStatement, type ReceiptVerification } from "@specproof/core/receipts";
 import {
+  Activity,
   AlertTriangle,
   ArrowRight,
   BadgeCheck,
@@ -58,6 +59,7 @@ function AppHeader({ surface }: { surface: AssuranceSurface }) {
         <Link href="/"><LayoutDashboard size={15} />Graph</Link>
         <Link aria-current={surface === "findings" ? "page" : undefined} href="/findings"><FileWarning size={15} />Findings</Link>
         <Link aria-current={surface === "lint" ? "page" : undefined} href="/lint"><Braces size={15} />Instruction lint</Link>
+        <Link href="/progress"><Activity size={15} />Progress</Link>
         <Link aria-current={surface === "receipts" ? "page" : undefined} href="/receipts"><ReceiptText size={15} />Receipts</Link>
       </nav>
       <span className="commit-chip"><GitBranch size={13} />main · clean scan</span>

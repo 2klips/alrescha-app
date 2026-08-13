@@ -145,5 +145,75 @@ export class RepositoryScanStore {
           exported_symbols = excluded.exported_symbols,
           updated_at = now()
     `;
+
+    await this.syncDocumentTodos(
+      transaction,
+      workspaceId,
+      repositoryId,
+      artifactId,
+      artifact,
+    );
+  }
+
+  private async syncDocumentTodos(
+    transaction: postgres.TransactionSql,
+    workspaceId: string,
+    repositoryId: string,
+    artifactId: string,
+    artifact: ScannedArtifact,
+  ): Promise<void> {
+    const sourceKeys = artifact.todoItems.map(({ sourceKey }) => sourceKey);
+    if (sourceKeys.length === 0) {
+      await transaction`
+        delete from public.todos
+        where workspace_id = ${workspaceId}
+          and repository_id = ${repositoryId}
+          and source_artifact_id = ${artifactId}
+          and source_kind = 'document'
+      `;
+    } else {
+      await transaction`
+        delete from public.todos
+        where workspace_id = ${workspaceId}
+          and repository_id = ${repositoryId}
+          and source_artifact_id = ${artifactId}
+          and source_kind = 'document'
+          and not (source_key = any(${sourceKeys}))
+      `;
+    }
+
+    for (const todo of artifact.todoItems) {
+      await transaction`
+        insert into public.todos (
+          workspace_id,
+          repository_id,
+          title,
+          status,
+          source_kind,
+          source_key,
+          source_artifact_id,
+          source_path,
+          source_span
+        ) values (
+          ${workspaceId},
+          ${repositoryId},
+          ${todo.title},
+          ${todo.status},
+          'document',
+          ${todo.sourceKey},
+          ${artifactId},
+          ${todo.source.path},
+          ${JSON.stringify(todo.source.span)}::jsonb
+        )
+        on conflict (workspace_id, source_kind, source_key) do update
+        set title = excluded.title,
+            status = excluded.status,
+            repository_id = excluded.repository_id,
+            source_artifact_id = excluded.source_artifact_id,
+            source_path = excluded.source_path,
+            source_span = excluded.source_span,
+            updated_at = now()
+      `;
+    }
   }
 }

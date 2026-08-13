@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 
 import ts from "typescript";
 
+import { parseTodoDocument, type ParsedTodoItem } from "../progress/todos";
+
 export type ArtifactClassification =
   | "adr"
   | "agents"
@@ -52,9 +54,10 @@ export interface ScannedArtifact {
   readonly sizeBytes: number;
   readonly sourceBlobSha: string;
   readonly sourceCommitSha: string;
+  readonly todoItems: readonly ParsedTodoItem[];
 }
 
-export type PreviousScannedArtifact = ScannedArtifact;
+export type PreviousScannedArtifact = Omit<ScannedArtifact, "todoItems">;
 
 export interface ScanSkip {
   readonly detail: string;
@@ -329,6 +332,10 @@ export async function scanRepository(input: {
       sizeBytes: bytes.byteLength,
       sourceBlobSha: entry.sha,
       sourceCommitSha: input.commitSha,
+      todoItems:
+        classification === "todo_progress"
+          ? parseTodoDocument({ path: entry.path, source })
+          : [],
     });
   }
 
