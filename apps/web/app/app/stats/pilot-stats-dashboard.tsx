@@ -113,6 +113,13 @@ export function PilotStatsDashboard({
         <p>{report.methodology.findingTrend}</p>
         <p>{report.methodology.tokenBaseline}</p>
         <p>{report.methodology.scanDuration}</p>
+        <p>
+          Cross-arm accuracy and model-reported token results:{" "}
+          <a href="https://github.com/2klips/specproof-app/blob/main/benchmarks/databrain/results.real.md">
+            full Data Brain efficacy benchmark
+          </a>
+          .
+        </p>
       </details>
     </div>
   );

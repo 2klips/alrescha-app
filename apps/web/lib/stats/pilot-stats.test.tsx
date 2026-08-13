@@ -156,6 +156,9 @@ describe("pilot stats dashboard", () => {
     expect(html).toContain("2 MCP pack requests");
     expect(html).toContain("deterministic per-document estimates");
     expect(html).toContain('href="/api/stats/export"');
+    expect(html).toContain(
+      'href="https://github.com/2klips/specproof-app/blob/main/benchmarks/databrain/results.real.md"',
+    );
   });
 
   test("prompts for explicit consent before showing or collecting stats", () => {

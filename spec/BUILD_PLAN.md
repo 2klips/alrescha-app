@@ -284,7 +284,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy fresh user completes the demo-repo journey end-to-end; failure user revokes the GitHub installation and the app degrades with guidance. Evidence `.omo/evidence/docshub-product-strategy/task-19.png`.
   Commit: Y | chore(release): prepare pilot-ready saas
 
-- [ ] 20. Build the Data Brain efficacy benchmark harness and run it
+- [x] 20. Build the Data Brain efficacy benchmark harness and run it
   What to do / Must NOT do: Scripted A/B harness (Claude Agent SDK or scripted MCP client): load a pre-registered task manifest (≥12 tasks × 3 trials over `fixtures/drifted-demo/` plus at least one realistic-scale repo; task types: implementation with test-pass grading, question-answering with answer-manifest grading, drift-judgment with findings-manifest grading), run arm A (repo checkout only), arm A′ (naive full-doc dump), arm B (Data Brain via `search_index`/`get_artifact`/context packs) with the same model and prompts; record graded accuracy, input+output tokens (model-reported), tool calls, wall time per trial; emit deterministic JSON + a human-readable Markdown report (model/version/tokenizer assumptions stated) committed under `benchmarks/`; wire a `pnpm bench:databrain` entry point. Must not cherry-pick tasks or trials, must not aggregate away failed trials, must not hard-code arm-specific prompt advantages, must not present results anywhere without linking the full report.
   Parallelization: Wave 5 | Blocked by: 3,15,16,17 | Blocks: final
   References: R1, R12, R13, R17.

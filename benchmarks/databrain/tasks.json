@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "model": "gpt-5-nano-2025-08-07",
+  "trialsPerArm": 3,
+  "arms": ["checkout", "full-dump", "data-brain"],
+  "tasks": [
+    {
+      "id": "fixture-implement-remaining-session-ms",
+      "type": "implementation",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "session timeout remaining milliseconds SESSION_TIMEOUT_MS",
+      "prompt": "Implement `remainingSessionMs(session, now)` in `src/session.ts`. Return milliseconds until the existing 30-minute timeout, clamped to zero. Preserve existing exports. Return the complete changed file in `files`.",
+      "grader": {
+        "kind": "test-pass",
+        "testPath": "benchmarks/databrain/graders/remaining-session-ms.test.ts"
+      }
+    },
+    {
+      "id": "fixture-implement-refresh-session",
+      "type": "implementation",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "session expiry refresh lastActivityAt",
+      "prompt": "Implement `refreshSession(session, now)` in `src/session.ts`. Return `null` when the existing session is expired; otherwise return a new Session with `lastActivityAt` set to `now`. Preserve existing exports. Return the complete changed file in `files`.",
+      "grader": {
+        "kind": "test-pass",
+        "testPath": "benchmarks/databrain/graders/refresh-session.test.ts"
+      }
+    },
+    {
+      "id": "fixture-implement-github-login",
+      "type": "implementation",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "REQ-AUTH-001 GitHub OAuth login loginWithGitHub",
+      "prompt": "Implement `loginWithGitHub(code: string)` in new file `src/auth.ts`. It must reject an empty code and otherwise return `/auth/callback?code=` plus the URL-encoded code. No network access. Return the complete new file in `files`.",
+      "grader": {
+        "kind": "test-pass",
+        "testPath": "benchmarks/databrain/graders/github-login.test.ts"
+      }
+    },
+    {
+      "id": "fixture-implement-password-reset",
+      "type": "implementation",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "password reset claim deterministic offline",
+      "prompt": "Implement `createPasswordResetRequest(email: string, now: number)` in new file `src/password-reset.ts`. Trim and lowercase email, reject an empty result, and return `{ email, expiresAt: now + 15 minutes }`. No network or randomness. Return the complete new file in `files`.",
+      "grader": {
+        "kind": "test-pass",
+        "testPath": "benchmarks/databrain/graders/password-reset.test.ts"
+      }
+    },
+    {
+      "id": "fixture-answer-session-policy",
+      "type": "question-answering",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "REQ-AUTH-002 session expiry boundary timeout",
+      "prompt": "What is the session timeout duration, and at exactly what comparison boundary does expiration occur? Cite the relevant symbol or requirement in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          ["30 minutes", "30-minute", "1800000"],
+          [">=", "greater than or equal", "exact boundary"],
+          ["SESSION_TIMEOUT_MS", "REQ-AUTH-002"]
+        ]
+      }
+    },
+    {
+      "id": "fixture-answer-audit-schema",
+      "type": "question-answering",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "successful login audit event schema recordSuccessfulLogin",
+      "prompt": "Which event name and user identifier key are emitted after a successful login? Answer with both exact JSON field values in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [["login_succeeded"], ["user_id"]]
+      }
+    },
+    {
+      "id": "fixture-answer-api-rule-conflict",
+      "type": "question-answering",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "API response JSON key rules snake_case camelCase AGENTS",
+      "prompt": "Describe the response-key instruction conflict affecting `src/api/health.ts`. Name both conventions and their applicable instruction scopes in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          ["snake_case"],
+          ["camelCase", "camel case"],
+          ["root", "fixture"],
+          ["subtree", "src/api"]
+        ]
+      }
+    },
+    {
+      "id": "fixture-answer-legacy-billing",
+      "type": "question-answering",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "legacyCharge legacy billing retired integration",
+      "prompt": "Is the documented `legacyCharge` implementation present? State the claimed path and the evidence-based status in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          ["src/legacy-billing.ts"],
+          ["missing", "does not exist", "absent"],
+          ["stale", "outdated"]
+        ]
+      }
+    },
+    {
+      "id": "fixture-judge-auth-drift",
+      "type": "drift-judgment",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "authentication missing implementation password reset unproven claim",
+      "prompt": "Identify authentication/product-claim drift. Return only semantic identifiers formatted `kind:subject` in `findings`; use requirement IDs where present.",
+      "grader": {
+        "kind": "findings-manifest",
+        "expectedFindings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      }
+    },
+    {
+      "id": "fixture-judge-instruction-doc-drift",
+      "type": "drift-judgment",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "contradicting instructions API JSON keys orphan ADR-002",
+      "prompt": "Identify instruction and orphan-document drift. Return only semantic identifiers formatted `kind:subject` in `findings`.",
+      "grader": {
+        "kind": "findings-manifest",
+        "expectedFindings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      }
+    },
+    {
+      "id": "real-answer-github-permissions",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "GitHub App read only permissions optional pull request proposals",
+      "prompt": "For this realistic repository, list every default GitHub App permission and the optional write permission for advisory PR proposals in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          ["contents:read", "contents read"],
+          ["checks:read", "checks read"],
+          ["actions:read", "actions read"],
+          ["metadata:read", "metadata read"],
+          ["pull_requests:write", "pull requests write"]
+        ]
+      }
+    },
+    {
+      "id": "real-answer-mcp-contract",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "MCP protocol stateless Sampling Roots Logging sessions forbidden",
+      "prompt": "For this realistic repository, state the hosted MCP protocol version, state model, and forbidden capabilities in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          ["2026-07-28"],
+          ["stateless"],
+          ["Sampling"],
+          ["Roots"],
+          ["Logging"],
+          ["session", "sessions"]
+        ]
+      }
+    }
+  ]
+}
