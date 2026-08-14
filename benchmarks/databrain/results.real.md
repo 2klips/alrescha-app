@@ -6,7 +6,7 @@ Full deterministic trial data: [./results.real.json](./results.real.json)
 
 - Mode: `real`
 - Model/version: `gpt-5-nano-2025-08-07`
-- Generated: `2026-08-13T14:14:48.902Z`
+- Generated: `2026-08-14T12:44:32.602Z`
 - Manifest SHA-256: `fc9f23049679ab559a610324db1a7b3359a62969fb03374c6871907f89c2a662`
 - Token accounting: OpenAI Responses API usage.input_tokens and usage.output_tokens are authoritative; no local tokenizer estimate is substituted.
 - Protocol: 12 pre-registered tasks × 3 trials × 3 arms = 108 trials.
@@ -15,168 +15,169 @@ Full deterministic trial data: [./results.real.json](./results.real.json)
 
 ## Hypothesis gate
 
-- Accuracy delta, Data Brain vs checkout: 0.46pp (non-inferiority margin: -5pp; improvement goal: +5pp).
-- Token reduction, Data Brain vs checkout: 52.01% (target: 30%).
-- Result: **MET**.
+- Accuracy delta, Data Brain vs checkout: -7.04pp (non-inferiority margin: -5pp; improvement goal: +5pp).
+- Token reduction, Data Brain vs checkout: 55.28% (target: 30%).
+- Result: **NOT MET**.
+- Iteration plan: inspect failed/low-score task rows, tighten evidence ranking/context-pack selection, then rerun the unchanged pre-registered manifest. Product claims remain limited to these measured results.
 
 ## Arm totals
 
 | Arm | Trials | Mean score | Pass rate | Input tokens | Output tokens | Total tokens | Tool calls | Wall ms | Failed |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| checkout | 36 | 0.644 | 55.56% | 124137 | 7517 | 131654 | 306 | 103725 | 0 |
-| full-dump | 36 | 0.389 | 30.56% | 268623 | 8258 | 276881 | 0 | 107792 | 0 |
-| data-brain | 36 | 0.648 | 55.56% | 55593 | 7584 | 63177 | 366 | 100011 | 0 |
+| checkout | 36 | 0.644 | 58.33% | 125886 | 7052 | 132938 | 303 | 95761 | 0 |
+| full-dump | 36 | 0.514 | 41.67% | 268473 | 8406 | 276879 | 0 | 135759 | 0 |
+| data-brain | 36 | 0.574 | 52.78% | 52515 | 6941 | 59456 | 366 | 93915 | 1 |
 
 ## Task × arm totals
 
 | Task | Arm | Mean score | Total tokens | Tool calls | Wall ms | Failed |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| fixture-implement-remaining-session-ms | checkout | 1.000 | 4786 | 27 | 12992 | 0 |
-| fixture-implement-remaining-session-ms | full-dump | 0.667 | 3204 | 0 | 13035 | 0 |
-| fixture-implement-remaining-session-ms | data-brain | 1.000 | 5128 | 27 | 8708 | 0 |
-| fixture-implement-refresh-session | checkout | 0.667 | 5046 | 27 | 10708 | 0 |
-| fixture-implement-refresh-session | full-dump | 0.000 | 3045 | 0 | 10849 | 0 |
-| fixture-implement-refresh-session | data-brain | 1.000 | 5401 | 24 | 10828 | 0 |
-| fixture-implement-github-login | checkout | 1.000 | 9836 | 27 | 13272 | 0 |
-| fixture-implement-github-login | full-dump | 0.667 | 2903 | 0 | 10173 | 0 |
-| fixture-implement-github-login | data-brain | 1.000 | 5315 | 27 | 12531 | 0 |
-| fixture-implement-password-reset | checkout | 1.000 | 3916 | 27 | 16070 | 0 |
-| fixture-implement-password-reset | full-dump | 0.000 | 3466 | 0 | 16331 | 0 |
-| fixture-implement-password-reset | data-brain | 0.667 | 5510 | 27 | 15810 | 0 |
-| fixture-answer-session-policy | checkout | 1.000 | 5544 | 27 | 6414 | 0 |
-| fixture-answer-session-policy | full-dump | 0.444 | 2453 | 0 | 5248 | 0 |
-| fixture-answer-session-policy | data-brain | 0.667 | 4857 | 27 | 6195 | 0 |
-| fixture-answer-audit-schema | checkout | 1.000 | 8628 | 27 | 5969 | 0 |
-| fixture-answer-audit-schema | full-dump | 0.000 | 2401 | 0 | 4661 | 0 |
-| fixture-answer-audit-schema | data-brain | 1.000 | 4472 | 30 | 5313 | 0 |
-| fixture-answer-api-rule-conflict | checkout | 1.000 | 7171 | 27 | 8860 | 0 |
-| fixture-answer-api-rule-conflict | full-dump | 1.000 | 2893 | 0 | 7805 | 0 |
-| fixture-answer-api-rule-conflict | data-brain | 1.000 | 4571 | 36 | 8363 | 0 |
-| fixture-answer-legacy-billing | checkout | 0.667 | 4288 | 27 | 5127 | 0 |
-| fixture-answer-legacy-billing | full-dump | 0.556 | 2436 | 0 | 7714 | 0 |
-| fixture-answer-legacy-billing | data-brain | 0.444 | 3853 | 27 | 4813 | 0 |
-| fixture-judge-auth-drift | checkout | 0.000 | 3919 | 27 | 7016 | 0 |
-| fixture-judge-auth-drift | full-dump | 0.000 | 2862 | 0 | 7720 | 0 |
-| fixture-judge-auth-drift | data-brain | 0.000 | 3548 | 33 | 4108 | 0 |
-| fixture-judge-instruction-doc-drift | checkout | 0.000 | 10214 | 27 | 4276 | 0 |
-| fixture-judge-instruction-doc-drift | full-dump | 0.000 | 2272 | 0 | 5809 | 0 |
-| fixture-judge-instruction-doc-drift | data-brain | 0.000 | 3526 | 33 | 3676 | 0 |
-| real-answer-github-permissions | checkout | 0.000 | 25970 | 24 | 5116 | 0 |
-| real-answer-github-permissions | full-dump | 0.333 | 124276 | 0 | 7842 | 0 |
-| real-answer-github-permissions | data-brain | 0.000 | 7285 | 39 | 11583 | 0 |
-| real-answer-mcp-contract | checkout | 0.389 | 42336 | 12 | 7905 | 0 |
-| real-answer-mcp-contract | full-dump | 1.000 | 124670 | 0 | 10605 | 0 |
-| real-answer-mcp-contract | data-brain | 1.000 | 9711 | 36 | 8083 | 0 |
+| fixture-implement-remaining-session-ms | checkout | 1.000 | 4835 | 27 | 14479 | 0 |
+| fixture-implement-remaining-session-ms | full-dump | 0.333 | 3133 | 0 | 11244 | 0 |
+| fixture-implement-remaining-session-ms | data-brain | 1.000 | 5149 | 27 | 8359 | 0 |
+| fixture-implement-refresh-session | checkout | 1.000 | 5097 | 27 | 10341 | 0 |
+| fixture-implement-refresh-session | full-dump | 0.000 | 3204 | 0 | 10172 | 0 |
+| fixture-implement-refresh-session | data-brain | 1.000 | 5429 | 24 | 9333 | 0 |
+| fixture-implement-github-login | checkout | 0.667 | 9652 | 27 | 9585 | 0 |
+| fixture-implement-github-login | full-dump | 1.000 | 2875 | 0 | 8592 | 0 |
+| fixture-implement-github-login | data-brain | 1.000 | 5315 | 27 | 8895 | 0 |
+| fixture-implement-password-reset | checkout | 1.000 | 3670 | 27 | 10917 | 0 |
+| fixture-implement-password-reset | full-dump | 0.667 | 3553 | 0 | 12982 | 0 |
+| fixture-implement-password-reset | data-brain | 0.000 | 5441 | 27 | 13826 | 0 |
+| fixture-answer-session-policy | checkout | 1.000 | 5597 | 27 | 5392 | 0 |
+| fixture-answer-session-policy | full-dump | 0.556 | 2513 | 0 | 5888 | 0 |
+| fixture-answer-session-policy | data-brain | 0.889 | 4851 | 27 | 5602 | 0 |
+| fixture-answer-audit-schema | checkout | 1.000 | 8481 | 27 | 5189 | 0 |
+| fixture-answer-audit-schema | full-dump | 0.167 | 2371 | 0 | 3771 | 0 |
+| fixture-answer-audit-schema | data-brain | 1.000 | 4395 | 30 | 4238 | 0 |
+| fixture-answer-api-rule-conflict | checkout | 1.000 | 7251 | 27 | 7549 | 0 |
+| fixture-answer-api-rule-conflict | full-dump | 1.000 | 2966 | 0 | 9131 | 0 |
+| fixture-answer-api-rule-conflict | data-brain | 1.000 | 4666 | 36 | 7596 | 0 |
+| fixture-answer-legacy-billing | checkout | 0.333 | 4346 | 27 | 5813 | 0 |
+| fixture-answer-legacy-billing | full-dump | 0.444 | 2574 | 0 | 5701 | 0 |
+| fixture-answer-legacy-billing | data-brain | 0.333 | 3876 | 27 | 3719 | 0 |
+| fixture-judge-auth-drift | checkout | 0.000 | 3580 | 27 | 3948 | 0 |
+| fixture-judge-auth-drift | full-dump | 0.000 | 2388 | 0 | 4179 | 0 |
+| fixture-judge-auth-drift | data-brain | 0.000 | 3613 | 33 | 5231 | 0 |
+| fixture-judge-instruction-doc-drift | checkout | 0.000 | 10234 | 27 | 4142 | 0 |
+| fixture-judge-instruction-doc-drift | full-dump | 0.000 | 2355 | 0 | 4090 | 0 |
+| fixture-judge-instruction-doc-drift | data-brain | 0.000 | 3568 | 33 | 3469 | 0 |
+| real-answer-github-permissions | checkout | 0.400 | 27053 | 24 | 8154 | 0 |
+| real-answer-github-permissions | full-dump | 1.000 | 124050 | 0 | 8418 | 0 |
+| real-answer-github-permissions | data-brain | 0.000 | 6631 | 39 | 5000 | 0 |
+| real-answer-mcp-contract | checkout | 0.333 | 43142 | 9 | 10252 | 0 |
+| real-answer-mcp-contract | full-dump | 1.000 | 124897 | 0 | 51591 | 0 |
+| real-answer-mcp-contract | data-brain | 0.667 | 6522 | 36 | 18647 | 1 |
 
 ## Every trial
 
 | Task | Arm | Trial | Status | Score | Input | Output | Total | Tools | Wall ms | Error |
 | --- | --- | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| fixture-implement-remaining-session-ms | checkout | 1 | completed | 1.000 | 1337 | 269 | 1606 | 9 | 5654 |  |
-| fixture-implement-remaining-session-ms | checkout | 2 | completed | 1.000 | 1337 | 266 | 1603 | 9 | 3853 |  |
-| fixture-implement-remaining-session-ms | checkout | 3 | completed | 1.000 | 1337 | 240 | 1577 | 9 | 3485 |  |
-| fixture-implement-remaining-session-ms | full-dump | 1 | completed | 1.000 | 721 | 294 | 1015 | 0 | 3482 |  |
-| fixture-implement-remaining-session-ms | full-dump | 2 | completed | 1.000 | 721 | 359 | 1080 | 0 | 4485 |  |
-| fixture-implement-remaining-session-ms | full-dump | 3 | completed | 0.000 | 721 | 388 | 1109 | 0 | 5068 |  |
-| fixture-implement-remaining-session-ms | data-brain | 1 | completed | 1.000 | 1488 | 199 | 1687 | 9 | 2555 |  |
-| fixture-implement-remaining-session-ms | data-brain | 2 | completed | 1.000 | 1488 | 227 | 1715 | 9 | 3089 |  |
-| fixture-implement-remaining-session-ms | data-brain | 3 | completed | 1.000 | 1488 | 238 | 1726 | 9 | 3064 |  |
-| fixture-implement-refresh-session | checkout | 1 | completed | 0.000 | 1435 | 241 | 1676 | 9 | 3431 |  |
-| fixture-implement-refresh-session | checkout | 2 | completed | 1.000 | 1435 | 257 | 1692 | 9 | 3777 |  |
-| fixture-implement-refresh-session | checkout | 3 | completed | 1.000 | 1435 | 243 | 1678 | 9 | 3500 |  |
-| fixture-implement-refresh-session | full-dump | 1 | completed | 0.000 | 732 | 375 | 1107 | 0 | 4375 |  |
-| fixture-implement-refresh-session | full-dump | 2 | completed | 0.000 | 732 | 126 | 858 | 0 | 2166 |  |
-| fixture-implement-refresh-session | full-dump | 3 | completed | 0.000 | 732 | 348 | 1080 | 0 | 4308 |  |
-| fixture-implement-refresh-session | data-brain | 1 | completed | 1.000 | 1509 | 280 | 1789 | 8 | 3271 |  |
-| fixture-implement-refresh-session | data-brain | 2 | completed | 1.000 | 1509 | 312 | 1821 | 8 | 3673 |  |
-| fixture-implement-refresh-session | data-brain | 3 | completed | 1.000 | 1509 | 282 | 1791 | 8 | 3884 |  |
-| fixture-implement-github-login | checkout | 1 | completed | 1.000 | 2993 | 269 | 3262 | 9 | 5333 |  |
-| fixture-implement-github-login | checkout | 2 | completed | 1.000 | 2993 | 200 | 3193 | 9 | 3500 |  |
-| fixture-implement-github-login | checkout | 3 | completed | 1.000 | 2993 | 388 | 3381 | 9 | 4439 |  |
-| fixture-implement-github-login | full-dump | 1 | completed | 1.000 | 732 | 290 | 1022 | 0 | 3826 |  |
-| fixture-implement-github-login | full-dump | 2 | completed | 1.000 | 732 | 220 | 952 | 0 | 3431 |  |
-| fixture-implement-github-login | full-dump | 3 | completed | 0.000 | 732 | 197 | 929 | 0 | 2916 |  |
-| fixture-implement-github-login | data-brain | 1 | completed | 1.000 | 1526 | 187 | 1713 | 9 | 5662 |  |
-| fixture-implement-github-login | data-brain | 2 | completed | 1.000 | 1526 | 256 | 1782 | 9 | 3056 |  |
-| fixture-implement-github-login | data-brain | 3 | completed | 1.000 | 1526 | 294 | 1820 | 9 | 3813 |  |
-| fixture-implement-password-reset | checkout | 1 | completed | 1.000 | 915 | 278 | 1193 | 9 | 4993 |  |
-| fixture-implement-password-reset | checkout | 2 | completed | 1.000 | 915 | 560 | 1475 | 9 | 7111 |  |
-| fixture-implement-password-reset | checkout | 3 | completed | 1.000 | 915 | 333 | 1248 | 9 | 3966 |  |
-| fixture-implement-password-reset | full-dump | 1 | completed | 0.000 | 740 | 497 | 1237 | 0 | 5417 |  |
-| fixture-implement-password-reset | full-dump | 2 | completed | 0.000 | 740 | 327 | 1067 | 0 | 6196 |  |
-| fixture-implement-password-reset | full-dump | 3 | completed | 0.000 | 740 | 422 | 1162 | 0 | 4718 |  |
-| fixture-implement-password-reset | data-brain | 1 | completed | 1.000 | 1365 | 378 | 1743 | 9 | 3997 |  |
-| fixture-implement-password-reset | data-brain | 2 | completed | 0.000 | 1365 | 607 | 1972 | 9 | 5299 |  |
-| fixture-implement-password-reset | data-brain | 3 | completed | 1.000 | 1365 | 430 | 1795 | 9 | 6514 |  |
-| fixture-answer-session-policy | checkout | 1 | completed | 1.000 | 1711 | 142 | 1853 | 9 | 1944 |  |
-| fixture-answer-session-policy | checkout | 2 | completed | 1.000 | 1711 | 154 | 1865 | 9 | 2831 |  |
-| fixture-answer-session-policy | checkout | 3 | completed | 1.000 | 1711 | 115 | 1826 | 9 | 1639 |  |
-| fixture-answer-session-policy | full-dump | 1 | completed | 0.333 | 705 | 109 | 814 | 0 | 1549 |  |
-| fixture-answer-session-policy | full-dump | 2 | completed | 0.667 | 705 | 120 | 825 | 0 | 1798 |  |
-| fixture-answer-session-policy | full-dump | 3 | completed | 0.333 | 705 | 109 | 814 | 0 | 1901 |  |
-| fixture-answer-session-policy | data-brain | 1 | completed | 0.667 | 1448 | 159 | 1607 | 9 | 2007 |  |
-| fixture-answer-session-policy | data-brain | 2 | completed | 0.667 | 1448 | 168 | 1616 | 9 | 2125 |  |
-| fixture-answer-session-policy | data-brain | 3 | completed | 0.667 | 1448 | 186 | 1634 | 9 | 2063 |  |
-| fixture-answer-audit-schema | checkout | 1 | completed | 1.000 | 2741 | 129 | 2870 | 9 | 1626 |  |
-| fixture-answer-audit-schema | checkout | 2 | completed | 1.000 | 2741 | 179 | 2920 | 9 | 2403 |  |
-| fixture-answer-audit-schema | checkout | 3 | completed | 1.000 | 2741 | 97 | 2838 | 9 | 1940 |  |
-| fixture-answer-audit-schema | full-dump | 1 | completed | 0.000 | 703 | 74 | 777 | 0 | 1222 |  |
-| fixture-answer-audit-schema | full-dump | 2 | completed | 0.000 | 703 | 81 | 784 | 0 | 1476 |  |
-| fixture-answer-audit-schema | full-dump | 3 | completed | 0.000 | 703 | 137 | 840 | 0 | 1963 |  |
-| fixture-answer-audit-schema | data-brain | 1 | completed | 1.000 | 1376 | 150 | 1526 | 10 | 1847 |  |
-| fixture-answer-audit-schema | data-brain | 2 | completed | 1.000 | 1376 | 103 | 1479 | 10 | 1659 |  |
-| fixture-answer-audit-schema | data-brain | 3 | completed | 1.000 | 1376 | 91 | 1467 | 10 | 1807 |  |
-| fixture-answer-api-rule-conflict | checkout | 1 | completed | 1.000 | 2161 | 160 | 2321 | 9 | 3286 |  |
-| fixture-answer-api-rule-conflict | checkout | 2 | completed | 1.000 | 2161 | 319 | 2480 | 9 | 3163 |  |
-| fixture-answer-api-rule-conflict | checkout | 3 | completed | 1.000 | 2161 | 209 | 2370 | 9 | 2411 |  |
-| fixture-answer-api-rule-conflict | full-dump | 1 | completed | 1.000 | 704 | 206 | 910 | 0 | 2189 |  |
-| fixture-answer-api-rule-conflict | full-dump | 2 | completed | 1.000 | 704 | 349 | 1053 | 0 | 3210 |  |
-| fixture-answer-api-rule-conflict | full-dump | 3 | completed | 1.000 | 704 | 226 | 930 | 0 | 2406 |  |
-| fixture-answer-api-rule-conflict | data-brain | 1 | completed | 1.000 | 1271 | 194 | 1465 | 12 | 2151 |  |
-| fixture-answer-api-rule-conflict | data-brain | 2 | completed | 1.000 | 1271 | 340 | 1611 | 12 | 3315 |  |
-| fixture-answer-api-rule-conflict | data-brain | 3 | completed | 1.000 | 1271 | 224 | 1495 | 12 | 2897 |  |
-| fixture-answer-legacy-billing | checkout | 1 | completed | 0.667 | 1313 | 110 | 1423 | 9 | 1637 |  |
-| fixture-answer-legacy-billing | checkout | 2 | completed | 0.667 | 1313 | 119 | 1432 | 9 | 1532 |  |
-| fixture-answer-legacy-billing | checkout | 3 | completed | 0.667 | 1313 | 120 | 1433 | 9 | 1958 |  |
-| fixture-answer-legacy-billing | full-dump | 1 | completed | 0.667 | 701 | 115 | 816 | 0 | 1850 |  |
-| fixture-answer-legacy-billing | full-dump | 2 | completed | 0.667 | 701 | 94 | 795 | 0 | 1398 |  |
-| fixture-answer-legacy-billing | full-dump | 3 | completed | 0.333 | 701 | 124 | 825 | 0 | 4466 |  |
-| fixture-answer-legacy-billing | data-brain | 1 | completed | 0.333 | 1189 | 124 | 1313 | 9 | 1869 |  |
-| fixture-answer-legacy-billing | data-brain | 2 | completed | 0.333 | 1189 | 75 | 1264 | 9 | 1430 |  |
-| fixture-answer-legacy-billing | data-brain | 3 | completed | 0.667 | 1189 | 87 | 1276 | 9 | 1514 |  |
-| fixture-judge-auth-drift | checkout | 1 | completed | 0.000 | 1098 | 255 | 1353 | 9 | 2607 |  |
-| fixture-judge-auth-drift | checkout | 2 | completed | 0.000 | 1098 | 93 | 1191 | 9 | 1573 |  |
-| fixture-judge-auth-drift | checkout | 3 | completed | 0.000 | 1098 | 277 | 1375 | 9 | 2836 |  |
-| fixture-judge-auth-drift | full-dump | 1 | completed | 0.000 | 706 | 222 | 928 | 0 | 2454 |  |
-| fixture-judge-auth-drift | full-dump | 2 | completed | 0.000 | 706 | 286 | 992 | 0 | 2893 |  |
-| fixture-judge-auth-drift | full-dump | 3 | completed | 0.000 | 706 | 236 | 942 | 0 | 2373 |  |
-| fixture-judge-auth-drift | data-brain | 1 | completed | 0.000 | 1085 | 125 | 1210 | 11 | 1595 |  |
-| fixture-judge-auth-drift | data-brain | 2 | completed | 0.000 | 1085 | 85 | 1170 | 11 | 1191 |  |
-| fixture-judge-auth-drift | data-brain | 3 | completed | 0.000 | 1085 | 83 | 1168 | 11 | 1322 |  |
-| fixture-judge-instruction-doc-drift | checkout | 1 | completed | 0.000 | 3323 | 88 | 3411 | 9 | 1555 |  |
-| fixture-judge-instruction-doc-drift | checkout | 2 | completed | 0.000 | 3323 | 93 | 3416 | 9 | 1559 |  |
-| fixture-judge-instruction-doc-drift | checkout | 3 | completed | 0.000 | 3323 | 64 | 3387 | 9 | 1162 |  |
-| fixture-judge-instruction-doc-drift | full-dump | 1 | completed | 0.000 | 700 | 50 | 750 | 0 | 1197 |  |
-| fixture-judge-instruction-doc-drift | full-dump | 2 | completed | 0.000 | 700 | 62 | 762 | 0 | 3469 |  |
-| fixture-judge-instruction-doc-drift | full-dump | 3 | completed | 0.000 | 700 | 60 | 760 | 0 | 1143 |  |
-| fixture-judge-instruction-doc-drift | data-brain | 1 | completed | 0.000 | 1115 | 72 | 1187 | 11 | 1233 |  |
-| fixture-judge-instruction-doc-drift | data-brain | 2 | completed | 0.000 | 1115 | 59 | 1174 | 11 | 1220 |  |
-| fixture-judge-instruction-doc-drift | data-brain | 3 | completed | 0.000 | 1115 | 50 | 1165 | 11 | 1223 |  |
-| real-answer-github-permissions | checkout | 1 | completed | 0.000 | 8510 | 143 | 8653 | 8 | 1663 |  |
-| real-answer-github-permissions | checkout | 2 | completed | 0.000 | 8510 | 127 | 8637 | 8 | 1458 |  |
-| real-answer-github-permissions | checkout | 3 | completed | 0.000 | 8510 | 170 | 8680 | 8 | 1995 |  |
-| real-answer-github-permissions | full-dump | 1 | completed | 1.000 | 41200 | 118 | 41318 | 0 | 1981 |  |
-| real-answer-github-permissions | full-dump | 2 | completed | 0.000 | 41200 | 281 | 41481 | 0 | 3282 |  |
-| real-answer-github-permissions | full-dump | 3 | completed | 0.000 | 41200 | 277 | 41477 | 0 | 2579 |  |
-| real-answer-github-permissions | data-brain | 1 | completed | 0.000 | 2096 | 201 | 2297 | 13 | 2283 |  |
-| real-answer-github-permissions | data-brain | 2 | completed | 0.000 | 2096 | 97 | 2193 | 13 | 1466 |  |
-| real-answer-github-permissions | data-brain | 3 | completed | 0.000 | 2096 | 699 | 2795 | 13 | 7834 |  |
-| real-answer-mcp-contract | checkout | 1 | completed | 0.667 | 13842 | 269 | 14111 | 4 | 2692 |  |
-| real-answer-mcp-contract | checkout | 2 | completed | 0.167 | 13842 | 211 | 14053 | 4 | 2096 |  |
-| real-answer-mcp-contract | checkout | 3 | completed | 0.333 | 13842 | 330 | 14172 | 4 | 3117 |  |
-| real-answer-mcp-contract | full-dump | 1 | completed | 1.000 | 41197 | 427 | 41624 | 0 | 4097 |  |
-| real-answer-mcp-contract | full-dump | 2 | completed | 1.000 | 41197 | 316 | 41513 | 0 | 3142 |  |
-| real-answer-mcp-contract | full-dump | 3 | completed | 1.000 | 41197 | 336 | 41533 | 0 | 3366 |  |
-| real-answer-mcp-contract | data-brain | 1 | completed | 1.000 | 3063 | 160 | 3223 | 12 | 2870 |  |
-| real-answer-mcp-contract | data-brain | 2 | completed | 1.000 | 3063 | 194 | 3257 | 12 | 2525 |  |
-| real-answer-mcp-contract | data-brain | 3 | completed | 1.000 | 3063 | 168 | 3231 | 12 | 2688 |  |
+| fixture-implement-remaining-session-ms | checkout | 1 | completed | 1.000 | 1337 | 266 | 1603 | 9 | 4979 |  |
+| fixture-implement-remaining-session-ms | checkout | 2 | completed | 1.000 | 1337 | 235 | 1572 | 9 | 4365 |  |
+| fixture-implement-remaining-session-ms | checkout | 3 | completed | 1.000 | 1337 | 323 | 1660 | 9 | 5135 |  |
+| fixture-implement-remaining-session-ms | full-dump | 1 | completed | 1.000 | 721 | 250 | 971 | 0 | 3394 |  |
+| fixture-implement-remaining-session-ms | full-dump | 2 | completed | 0.000 | 721 | 411 | 1132 | 0 | 4090 |  |
+| fixture-implement-remaining-session-ms | full-dump | 3 | completed | 0.000 | 721 | 309 | 1030 | 0 | 3760 |  |
+| fixture-implement-remaining-session-ms | data-brain | 1 | completed | 1.000 | 1488 | 218 | 1706 | 9 | 2661 |  |
+| fixture-implement-remaining-session-ms | data-brain | 2 | completed | 1.000 | 1488 | 218 | 1706 | 9 | 2546 |  |
+| fixture-implement-remaining-session-ms | data-brain | 3 | completed | 1.000 | 1488 | 249 | 1737 | 9 | 3152 |  |
+| fixture-implement-refresh-session | checkout | 1 | completed | 1.000 | 1435 | 266 | 1701 | 9 | 3838 |  |
+| fixture-implement-refresh-session | checkout | 2 | completed | 1.000 | 1435 | 273 | 1708 | 9 | 3547 |  |
+| fixture-implement-refresh-session | checkout | 3 | completed | 1.000 | 1435 | 253 | 1688 | 9 | 2956 |  |
+| fixture-implement-refresh-session | full-dump | 1 | completed | 0.000 | 732 | 402 | 1134 | 0 | 3835 |  |
+| fixture-implement-refresh-session | full-dump | 2 | completed | 0.000 | 732 | 408 | 1140 | 0 | 3893 |  |
+| fixture-implement-refresh-session | full-dump | 3 | completed | 0.000 | 732 | 198 | 930 | 0 | 2444 |  |
+| fixture-implement-refresh-session | data-brain | 1 | completed | 1.000 | 1509 | 362 | 1871 | 8 | 3454 |  |
+| fixture-implement-refresh-session | data-brain | 2 | completed | 1.000 | 1509 | 259 | 1768 | 8 | 3071 |  |
+| fixture-implement-refresh-session | data-brain | 3 | completed | 1.000 | 1509 | 281 | 1790 | 8 | 2808 |  |
+| fixture-implement-github-login | checkout | 1 | completed | 1.000 | 2993 | 208 | 3201 | 9 | 2824 |  |
+| fixture-implement-github-login | checkout | 2 | completed | 0.000 | 2993 | 217 | 3210 | 9 | 3091 |  |
+| fixture-implement-github-login | checkout | 3 | completed | 1.000 | 2993 | 248 | 3241 | 9 | 3670 |  |
+| fixture-implement-github-login | full-dump | 1 | completed | 1.000 | 732 | 230 | 962 | 0 | 2943 |  |
+| fixture-implement-github-login | full-dump | 2 | completed | 1.000 | 732 | 217 | 949 | 0 | 2836 |  |
+| fixture-implement-github-login | full-dump | 3 | completed | 1.000 | 732 | 232 | 964 | 0 | 2813 |  |
+| fixture-implement-github-login | data-brain | 1 | completed | 1.000 | 1526 | 308 | 1834 | 9 | 3331 |  |
+| fixture-implement-github-login | data-brain | 2 | completed | 1.000 | 1526 | 243 | 1769 | 9 | 2867 |  |
+| fixture-implement-github-login | data-brain | 3 | completed | 1.000 | 1526 | 186 | 1712 | 9 | 2697 |  |
+| fixture-implement-password-reset | checkout | 1 | completed | 1.000 | 915 | 264 | 1179 | 9 | 3364 |  |
+| fixture-implement-password-reset | checkout | 2 | completed | 1.000 | 915 | 334 | 1249 | 9 | 4010 |  |
+| fixture-implement-password-reset | checkout | 3 | completed | 1.000 | 915 | 327 | 1242 | 9 | 3543 |  |
+| fixture-implement-password-reset | full-dump | 1 | completed | 1.000 | 740 | 410 | 1150 | 0 | 3977 |  |
+| fixture-implement-password-reset | full-dump | 2 | completed | 0.000 | 740 | 472 | 1212 | 0 | 4517 |  |
+| fixture-implement-password-reset | full-dump | 3 | completed | 1.000 | 740 | 451 | 1191 | 0 | 4488 |  |
+| fixture-implement-password-reset | data-brain | 1 | completed | 0.000 | 1365 | 349 | 1714 | 9 | 3986 |  |
+| fixture-implement-password-reset | data-brain | 2 | completed | 0.000 | 1365 | 632 | 1997 | 9 | 5959 |  |
+| fixture-implement-password-reset | data-brain | 3 | completed | 0.000 | 1365 | 365 | 1730 | 9 | 3881 |  |
+| fixture-answer-session-policy | checkout | 1 | completed | 1.000 | 1711 | 146 | 1857 | 9 | 2246 |  |
+| fixture-answer-session-policy | checkout | 2 | completed | 1.000 | 1711 | 158 | 1869 | 9 | 1597 |  |
+| fixture-answer-session-policy | checkout | 3 | completed | 1.000 | 1711 | 160 | 1871 | 9 | 1549 |  |
+| fixture-answer-session-policy | full-dump | 1 | completed | 0.667 | 705 | 145 | 850 | 0 | 1611 |  |
+| fixture-answer-session-policy | full-dump | 2 | completed | 0.667 | 705 | 166 | 871 | 0 | 1997 |  |
+| fixture-answer-session-policy | full-dump | 3 | completed | 0.333 | 705 | 87 | 792 | 0 | 2280 |  |
+| fixture-answer-session-policy | data-brain | 1 | completed | 0.667 | 1448 | 141 | 1589 | 9 | 1538 |  |
+| fixture-answer-session-policy | data-brain | 2 | completed | 1.000 | 1448 | 196 | 1644 | 9 | 2091 |  |
+| fixture-answer-session-policy | data-brain | 3 | completed | 1.000 | 1448 | 170 | 1618 | 9 | 1973 |  |
+| fixture-answer-audit-schema | checkout | 1 | completed | 1.000 | 2741 | 123 | 2864 | 9 | 2783 |  |
+| fixture-answer-audit-schema | checkout | 2 | completed | 1.000 | 2741 | 58 | 2799 | 9 | 1089 |  |
+| fixture-answer-audit-schema | checkout | 3 | completed | 1.000 | 2741 | 77 | 2818 | 9 | 1317 |  |
+| fixture-answer-audit-schema | full-dump | 1 | completed | 0.000 | 703 | 76 | 779 | 0 | 1091 |  |
+| fixture-answer-audit-schema | full-dump | 2 | completed | 0.500 | 703 | 108 | 811 | 0 | 1539 |  |
+| fixture-answer-audit-schema | full-dump | 3 | completed | 0.000 | 703 | 78 | 781 | 0 | 1141 |  |
+| fixture-answer-audit-schema | data-brain | 1 | completed | 1.000 | 1376 | 65 | 1441 | 10 | 1014 |  |
+| fixture-answer-audit-schema | data-brain | 2 | completed | 1.000 | 1376 | 113 | 1489 | 10 | 1650 |  |
+| fixture-answer-audit-schema | data-brain | 3 | completed | 1.000 | 1376 | 89 | 1465 | 10 | 1574 |  |
+| fixture-answer-api-rule-conflict | checkout | 1 | completed | 1.000 | 2161 | 164 | 2325 | 9 | 1720 |  |
+| fixture-answer-api-rule-conflict | checkout | 2 | completed | 1.000 | 2161 | 316 | 2477 | 9 | 3078 |  |
+| fixture-answer-api-rule-conflict | checkout | 3 | completed | 1.000 | 2161 | 288 | 2449 | 9 | 2751 |  |
+| fixture-answer-api-rule-conflict | full-dump | 1 | completed | 1.000 | 704 | 276 | 980 | 0 | 2625 |  |
+| fixture-answer-api-rule-conflict | full-dump | 2 | completed | 1.000 | 704 | 271 | 975 | 0 | 3186 |  |
+| fixture-answer-api-rule-conflict | full-dump | 3 | completed | 1.000 | 704 | 307 | 1011 | 0 | 3320 |  |
+| fixture-answer-api-rule-conflict | data-brain | 1 | completed | 1.000 | 1271 | 207 | 1478 | 12 | 2077 |  |
+| fixture-answer-api-rule-conflict | data-brain | 2 | completed | 1.000 | 1271 | 279 | 1550 | 12 | 2380 |  |
+| fixture-answer-api-rule-conflict | data-brain | 3 | completed | 1.000 | 1271 | 367 | 1638 | 12 | 3139 |  |
+| fixture-answer-legacy-billing | checkout | 1 | completed | 0.333 | 1313 | 123 | 1436 | 9 | 2394 |  |
+| fixture-answer-legacy-billing | checkout | 2 | completed | 0.333 | 1313 | 137 | 1450 | 9 | 1623 |  |
+| fixture-answer-legacy-billing | checkout | 3 | completed | 0.333 | 1313 | 147 | 1460 | 9 | 1796 |  |
+| fixture-answer-legacy-billing | full-dump | 1 | completed | 0.667 | 701 | 193 | 894 | 0 | 2377 |  |
+| fixture-answer-legacy-billing | full-dump | 2 | completed | 0.333 | 701 | 149 | 850 | 0 | 1675 |  |
+| fixture-answer-legacy-billing | full-dump | 3 | completed | 0.333 | 701 | 129 | 830 | 0 | 1649 |  |
+| fixture-answer-legacy-billing | data-brain | 1 | completed | 0.333 | 1189 | 120 | 1309 | 9 | 1478 |  |
+| fixture-answer-legacy-billing | data-brain | 2 | completed | 0.333 | 1189 | 94 | 1283 | 9 | 1094 |  |
+| fixture-answer-legacy-billing | data-brain | 3 | completed | 0.333 | 1189 | 95 | 1284 | 9 | 1147 |  |
+| fixture-judge-auth-drift | checkout | 1 | completed | 0.000 | 1098 | 134 | 1232 | 9 | 1631 |  |
+| fixture-judge-auth-drift | checkout | 2 | completed | 0.000 | 1098 | 94 | 1192 | 9 | 1238 |  |
+| fixture-judge-auth-drift | checkout | 3 | completed | 0.000 | 1098 | 58 | 1156 | 9 | 1079 |  |
+| fixture-judge-auth-drift | full-dump | 1 | completed | 0.000 | 706 | 92 | 798 | 0 | 1457 |  |
+| fixture-judge-auth-drift | full-dump | 2 | completed | 0.000 | 706 | 91 | 797 | 0 | 1244 |  |
+| fixture-judge-auth-drift | full-dump | 3 | completed | 0.000 | 706 | 87 | 793 | 0 | 1478 |  |
+| fixture-judge-auth-drift | data-brain | 1 | completed | 0.000 | 1085 | 88 | 1173 | 11 | 1457 |  |
+| fixture-judge-auth-drift | data-brain | 2 | completed | 0.000 | 1085 | 154 | 1239 | 11 | 1914 |  |
+| fixture-judge-auth-drift | data-brain | 3 | completed | 0.000 | 1085 | 116 | 1201 | 11 | 1860 |  |
+| fixture-judge-instruction-doc-drift | checkout | 1 | completed | 0.000 | 3323 | 86 | 3409 | 9 | 1368 |  |
+| fixture-judge-instruction-doc-drift | checkout | 2 | completed | 0.000 | 3323 | 122 | 3445 | 9 | 1811 |  |
+| fixture-judge-instruction-doc-drift | checkout | 3 | completed | 0.000 | 3323 | 57 | 3380 | 9 | 963 |  |
+| fixture-judge-instruction-doc-drift | full-dump | 1 | completed | 0.000 | 700 | 67 | 767 | 0 | 1178 |  |
+| fixture-judge-instruction-doc-drift | full-dump | 2 | completed | 0.000 | 700 | 50 | 750 | 0 | 1184 |  |
+| fixture-judge-instruction-doc-drift | full-dump | 3 | completed | 0.000 | 700 | 138 | 838 | 0 | 1728 |  |
+| fixture-judge-instruction-doc-drift | data-brain | 1 | completed | 0.000 | 1115 | 77 | 1192 | 11 | 1222 |  |
+| fixture-judge-instruction-doc-drift | data-brain | 2 | completed | 0.000 | 1115 | 68 | 1183 | 11 | 1011 |  |
+| fixture-judge-instruction-doc-drift | data-brain | 3 | completed | 0.000 | 1115 | 78 | 1193 | 11 | 1236 |  |
+| real-answer-github-permissions | checkout | 1 | completed | 0.000 | 8878 | 128 | 9006 | 8 | 1562 |  |
+| real-answer-github-permissions | checkout | 2 | completed | 1.000 | 8878 | 162 | 9040 | 8 | 5175 |  |
+| real-answer-github-permissions | checkout | 3 | completed | 0.200 | 8878 | 129 | 9007 | 8 | 1417 |  |
+| real-answer-github-permissions | full-dump | 1 | completed | 1.000 | 41175 | 117 | 41292 | 0 | 2409 |  |
+| real-answer-github-permissions | full-dump | 2 | completed | 1.000 | 41175 | 180 | 41355 | 0 | 3381 |  |
+| real-answer-github-permissions | full-dump | 3 | completed | 1.000 | 41175 | 228 | 41403 | 0 | 2628 |  |
+| real-answer-github-permissions | data-brain | 1 | completed | 0.000 | 2091 | 125 | 2216 | 13 | 2071 |  |
+| real-answer-github-permissions | data-brain | 2 | completed | 0.000 | 2091 | 128 | 2219 | 13 | 1595 |  |
+| real-answer-github-permissions | data-brain | 3 | completed | 0.000 | 2091 | 105 | 2196 | 13 | 1334 |  |
+| real-answer-mcp-contract | checkout | 1 | completed | 0.500 | 14057 | 337 | 14394 | 3 | 3067 |  |
+| real-answer-mcp-contract | checkout | 2 | completed | 0.000 | 14057 | 360 | 14417 | 3 | 3117 |  |
+| real-answer-mcp-contract | checkout | 3 | completed | 0.500 | 14057 | 274 | 14331 | 3 | 4068 |  |
+| real-answer-mcp-contract | full-dump | 1 | completed | 1.000 | 41172 | 238 | 41410 | 0 | 34324 |  |
+| real-answer-mcp-contract | full-dump | 2 | completed | 1.000 | 41172 | 466 | 41638 | 0 | 8147 |  |
+| real-answer-mcp-contract | full-dump | 3 | completed | 1.000 | 41172 | 677 | 41849 | 0 | 9120 |  |
+| real-answer-mcp-contract | data-brain | 1 | failed | 0.000 | 0 | 0 | 0 | 12 | 7991 | provider_failure |
+| real-answer-mcp-contract | data-brain | 2 | completed | 1.000 | 3063 | 215 | 3278 | 12 | 8710 |  |
+| real-answer-mcp-contract | data-brain | 3 | completed | 1.000 | 3063 | 181 | 3244 | 12 | 1946 |  |

@@ -2,12 +2,13 @@
 
 ## Result
 
-- Final real run: 12 pre-registered tasks × 3 arms × 3 trials = 108/108 completed, 0 provider failures.
+- Final F5 reproduction: 12 pre-registered tasks × 3 arms × 3 trials = 108/108 recorded, including one retained provider failure.
 - Fixed model/version: `gpt-5-nano-2025-08-07`.
-- Checkout: mean score `0.643519`, `131654` total model-reported tokens.
-- Data Brain: mean score `0.648148`, `63177` total model-reported tokens.
-- Accuracy delta: `+0.4629pp`; non-inferiority gate passed.
-- Token reduction: `52.012852%`; 30% target passed.
+- Checkout: mean score `0.644444`, `132938` total model-reported tokens.
+- Data Brain: mean score `0.574074`, `59456` total model-reported tokens.
+- Accuracy delta: `-7.037pp`; non-inferiority gate missed.
+- Token reduction: `55.275392%`; 30% target passed.
+- Overall hypothesis gate: **NOT MET**. The committed report contains the required iteration plan and exposes results as measured.
 - Full human report: [results.real.md](../../../benchmarks/databrain/results.real.md).
 - Full trial data: [results.real.json](../../../benchmarks/databrain/results.real.json).
 - Mock report: [results.dry-run.md](../../../benchmarks/databrain/results.dry-run.md).
@@ -17,8 +18,8 @@
 - `pnpm vitest run tests/databrain-benchmark.test.ts`: 13/13 passed.
 - Coverage includes manifest rejection, minimum protocol, all three graders, isolated fresh-copy implementation tests, arm isolation, model-reported token accounting, provider failure persistence, rate-limit retry timing, full 108-trial dry run, and Markdown report generation.
 - `pnpm bench:databrain --dry-run`: 108/108 trials, 0 failed.
-- `pnpm bench:databrain --concurrency=1`: 108/108 real trials, 0 failed.
-- JSON parses successfully, contains exactly 108 trials, and Markdown links the full JSON report.
+- `pnpm bench:databrain`: 108/108 real trials recorded, 1 failed and retained in the denominator.
+- JSON parses successfully, contains exactly 108 unique pre-registered trials, and Markdown links the full JSON report.
 - API-key-pattern scan of the committed report returned false. `.env.local` remains ignored and uncommitted.
 - Product token-comparison UI links the full committed benchmark report.
 
