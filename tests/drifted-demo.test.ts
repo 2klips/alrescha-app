@@ -33,7 +33,7 @@ async function directoryBytes(directory: string): Promise<number> {
   let bytes = 0;
 
   for (const entry of entries) {
-    if (entry.name === ".reports") {
+    if (entry.name === ".reports" || entry.name === "node_modules") {
       continue;
     }
 
