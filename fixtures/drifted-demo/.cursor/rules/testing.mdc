@@ -1,0 +1,8 @@
+---
+description: Deterministic fixture test naming
+globs: tests/**/*.test.ts
+alwaysApply: false
+---
+
+Every test name MUST start with its requirement ID. Tests MUST NOT call the network or system clock.
+

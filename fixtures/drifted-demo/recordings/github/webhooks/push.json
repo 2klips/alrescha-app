@@ -1,0 +1,25 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-github-delivery": "00000000-0000-4000-8000-000000000001",
+    "x-github-event": "push",
+    "x-hub-signature-256": "sha256=1f50086bdec6470e4b5b2b73b463c6fe4092636f0063b7bc8f9daf20148cf421"
+  },
+  "body": {
+    "ref": "refs/heads/main",
+    "before": "0000000000000000000000000000000000000000",
+    "after": "1111111111111111111111111111111111111111",
+    "repository": {
+      "id": 424242,
+      "full_name": "specproof/drifted-demo",
+      "default_branch": "main",
+      "private": true
+    },
+    "installation": { "id": 777 },
+    "head_commit": {
+      "id": "1111111111111111111111111111111111111111",
+      "message": "fixture: introduce deterministic drift",
+      "timestamp": "2026-08-09T12:00:00Z"
+    }
+  }
+}

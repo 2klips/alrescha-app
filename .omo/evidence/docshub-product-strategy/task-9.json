@@ -1,0 +1,33 @@
+{
+  "task": 9,
+  "date": "2026-08-10",
+  "status": "pass",
+  "delivered": [
+    "remark/unified parser with GFM, YAML frontmatter, and AST wikilink support",
+    "headings, nested task lists, Markdown links, reference links, relative links, and wikilinks",
+    "ADR sections, acceptance-criteria sections, and individual MUST/SHOULD statements",
+    "UTF-8 byte offsets plus exact line and column spans for every extracted element",
+    "recoverable YAML diagnostics that preserve the rest of the parsed document",
+    "wikilink source-span correction for the upstream plugin's omitted opening delimiters"
+  ],
+  "acceptance": {
+    "targetedCommand": "pnpm test -- markdown-parser",
+    "targetedResult": "5 tests passed",
+    "fixture": "fixtures/drifted-demo/spec.md",
+    "malformedDocument": "diagnostic returned without crash",
+    "nestedTaskDepths": [1, 2],
+    "mixedLinkKinds": ["wiki", "markdown", "reference"],
+    "largeDocumentSections": 1000,
+    "allExtractedSpansVerifiedAgainstUtf8Bytes": true,
+    "lint": "pass",
+    "typecheck": "pass",
+    "fullTest": "68 tests passed in 12 files"
+  },
+  "sources": [
+    "https://github.com/remarkjs/remark",
+    "https://github.com/remarkjs/remark-gfm",
+    "https://github.com/syntax-tree/mdast",
+    "https://github.com/flowershow/remark-wiki-link"
+  ],
+  "deferred": []
+}

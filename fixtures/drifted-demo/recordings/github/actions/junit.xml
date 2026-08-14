@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="vitest tests" tests="1" failures="0" errors="0" time="0.004">
+  <testsuite name="tests/session.test.ts" timestamp="2026-08-09T12:00:00.000Z" hostname="fixture" tests="1" failures="0" errors="0" skipped="0" time="0.004">
+    <testcase classname="tests/session.test.ts" name="REQ-AUTH-002 session expiry &gt; REQ-AUTH-002 expires at the exact 30-minute boundary" time="0.004" />
+  </testsuite>
+</testsuites>
+

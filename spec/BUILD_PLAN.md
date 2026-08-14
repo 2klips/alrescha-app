@@ -132,7 +132,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
 ## Todos
 > Implementation + Test = ONE todo. Never separate.
 <!-- APPEND TASK BATCHES BELOW THIS LINE WITH edit/apply_patch - never rewrite the headers above. -->
-- [ ] 1. Bootstrap monorepo, tooling, and repo-native agent docs
+- [x] 1. Bootstrap monorepo, tooling, and repo-native agent docs
   What to do / Must NOT do: pnpm workspace with the Next.js app, `packages/core`, `packages/mcp`; TypeScript strict, vitest, Playwright, tsup for packages; root AGENTS.md + CLAUDE.md wrapper (`@AGENTS.md`); `.env.example`. Must not add production dependencies without recording why; must not scaffold a marketing site.
   Parallelization: Wave 0 | Blocked by: none | Blocks: 2,3,4,5
   References: R1, R8, R14.
@@ -140,7 +140,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright opens `/` and sees the app shell; failure unknown route shows the not-found surface. Evidence `.omo/evidence/docshub-product-strategy/task-1.md`.
   Commit: Y | chore(repo): scaffold docshub saas monorepo
 
-- [ ] 2. Port decisions into repo ADRs and machine-checkable guardrails
+- [x] 2. Port decisions into repo ADRs and machine-checkable guardrails
   What to do / Must NOT do: Copy ADR-001/002/003 into `docs/adr/` with decision/status/consequences; add guardrail tests for banned patterns (deprecated MCP capabilities, raw-code persistence outside allowlisted transient paths, doc-body inlining in index templates, repo-write calls outside the PR-proposal module, network calls in core without injection). Must not paraphrase decisions in ways that weaken constraints.
   Parallelization: Wave 0 | Blocked by: 1 | Blocks: 6,10,11,15,16
   References: R1, R6, R13.
@@ -148,7 +148,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy guardrail suite green; failure fixture importing MCP sampling fails with a specific message. Evidence `.omo/evidence/docshub-product-strategy/task-2.md`.
   Commit: Y | docs(adr): record github-first assurance decisions
 
-- [ ] 3. Build the drifted-demo fixture repo and recorded API fixtures
+- [x] 3. Build the drifted-demo fixture repo and recorded API fixtures
   What to do / Must NOT do: `fixtures/drifted-demo/` TS project (spec.md, two ADRs, AGENTS.md + nested, `.cursor/rules`, one SKILL.md, TODO.md, code + vitest tests) seeded with every finding type plus an expected-findings manifest (types, spans); recorded GitHub API tree/contents/webhook/Actions-artifact fixtures for offline deterministic pipeline tests; a JUnit/JSON test-report artifact fixture. Must not exceed a size that keeps e2e under 30s.
   Parallelization: Wave 0 | Blocked by: 1 | Blocks: 8,10,11,12
   References: R1, R3, R5, R18.
@@ -156,7 +156,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy fixture pipeline replay end-to-end offline; failure manifest referencing a nonexistent span fails validation. Evidence `.omo/evidence/docshub-product-strategy/task-3.md`.
   Commit: Y | test(fixtures): add drifted demo repo and recorded github fixtures
 
-- [ ] 4. Implement auth and solo-workspace tenancy
+- [x] 4. Implement auth and solo-workspace tenancy
   What to do / Must NOT do: Supabase auth, personal workspace auto-provisioned per user, RLS policies, server-side authorization helpers; workspace/member tables schema-ready for teams but no invite/team UI. Must not rely on client-only checks; must not expose any cross-tenant read path.
   Parallelization: Wave 1 | Blocked by: 1 | Blocks: 5,6,12
   References: R14.
@@ -164,7 +164,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright signs up and lands in a personal workspace; failure direct API access to another workspace's repo returns 403. Evidence `.omo/evidence/docshub-product-strategy/task-4.md`.
   Commit: Y | feat(auth): add tenant-safe solo workspaces
 
-- [ ] 5. Create the typed domain model and migrations
+- [x] 5. Create the typed domain model and migrations
   What to do / Must NOT do: Postgres schema + zod domain types for repositories, artifacts, requirements, evidence, edges, findings, receipts, runs/jobs, credit ledger, MCP tokens, GitHub installations, **index_entries (search keys + graph-neighbor cache, reserved embedding column), and access_events (token id, tool, target node ids, ts — no prompt text)**; provenance (source artifact + span or reason) and confidence NOT NULL on edges/findings; stable ULIDs; migrations runner. Must not store raw code bodies by default; must not design tables that preclude team expansion.
   Parallelization: Wave 1 | Blocked by: 1,4 | Blocks: 6,7,9,13,17
   References: R1, R10, R14.
@@ -172,7 +172,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy seed script builds a mini evidence graph; failure cross-tenant FK insert fails. Evidence `.omo/evidence/docshub-product-strategy/task-5.md`.
   Commit: Y | feat(data): add evidence-graph domain schema
 
-- [ ] 6. Add GitHub App installation and webhook ingestion
+- [x] 6. Add GitHub App installation and webhook ingestion
   What to do / Must NOT do: GitHub App with minimal read-only permissions (contents:read, checks:read, actions:read, metadata) + optional pull-requests:write requested separately with UI explanation; installation flow, repo selection, installation-token handling, webhook signature verification, event normalization (push, check_run/workflow_run completion), idempotent ingestion. Must not request write/admin scopes beyond the PR-proposal permission; must not process unverified webhook payloads.
   Parallelization: Wave 1 | Blocked by: 2,4,5 | Blocks: 7,8,12,16
   References: R2, R3, R4.
@@ -180,7 +180,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright completes mocked installation and sees the selected repo pending first scan; failure invalid signature returns 401 and writes nothing. Evidence `.omo/evidence/docshub-product-strategy/task-6.md`.
   Commit: Y | feat(github): connect repositories through github app
 
-- [ ] 7. Build background worker and credit lifecycle foundation
+- [x] 7. Build background worker and credit lifecycle foundation
   What to do / Must NOT do: Worker queue for scan/analyze/judge/pack jobs with enqueue, claim, heartbeat, bounded retry, cancel, idempotency keys, tenant isolation, rate limits, webhook-triggered runs; internal credit ledger with monthly grants, admin top-up records, reservation, settlement, refund, per-workspace caps; deterministic jobs (scan/analyze) consume no credits. Must not run credit-consuming jobs synchronously in request handlers; must not double-charge on retry.
   Parallelization: Wave 1 | Blocked by: 5,6 | Blocks: 8,11,17
   References: R1, R3, R17.
@@ -188,7 +188,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy push event enqueues scan+analyze and completes with ledger untouched; failure worker crash mid-judgment refunds the reservation. Evidence `.omo/evidence/docshub-product-strategy/task-7.md`.
   Commit: Y | feat(worker): add credit-safe background jobs
 
-- [ ] 8. Implement the GitHub-API repo scanner and artifact classifier
+- [x] 8. Implement the GitHub-API repo scanner and artifact classifier
   What to do / Must NOT do: Scan selected repo trees via the GitHub API at a given commit: classify AI-facing artifacts (AGENTS.md root+nested, CLAUDE.md/`.claude/rules/`, SKILL.md, `.cursor/rules`, specs, ADRs, TODO/progress docs) and code metadata (paths, exported symbols via TS compiler API on transiently fetched content, spans, digests); incremental rescan by digest/commit diff; persist metadata only. Must not persist raw file bodies by default; must not follow submodules outside the repo; must skip binaries/oversized files with reason.
   Parallelization: Wave 2 | Blocked by: 3,6,7 | Blocks: 10,11,12
   References: R4, R8, R9, R16.
@@ -196,7 +196,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy fixture repo scan reports expected counts; failure oversized file skipped with recorded reason. Evidence `.omo/evidence/docshub-product-strategy/task-8.json`.
   Commit: Y | feat(ingest): scan repositories via github api
 
-- [ ] 9. Implement Markdown/frontmatter/link parser
+- [x] 9. Implement Markdown/frontmatter/link parser
   What to do / Must NOT do: remark/unified pipeline extracting headings, frontmatter, wikilinks/relative links, task lists, ADR sections, acceptance-criteria blocks, MUST/SHOULD sentences, with byte/line spans and recoverable diagnostics. Must not use ad hoc regex where the AST serves; must not lose span fidelity.
   Parallelization: Wave 2 | Blocked by: 5 | Blocks: 10,16
   References: R16.
@@ -204,7 +204,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy structured JSON for fixture spec; failure malformed doc yields diagnostics, not a crash. Evidence `.omo/evidence/docshub-product-strategy/task-9.json`.
   Commit: Y | feat(parser): extract markdown structure with spans
 
-- [ ] 10. Implement requirement extractor and drift rules engine
+- [x] 10. Implement requirement extractor and drift rules engine
   What to do / Must NOT do: Deterministic requirement extraction (task lists, acceptance criteria, ADR decisions, MUST/SHOULD) with spans; drift rules producing the six finding types with severity, confidence, evidence links, suggested next action; `inferred`-only chains cap at medium severity; AI-assist hooks stubbed until todo 17. Must not emit a finding without provenance; must not double-report the same span.
   Parallelization: Wave 2 | Blocked by: 2,3,8,9 | Blocks: 13,15,16
   References: R1, R13.
@@ -212,7 +212,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy full scan→extract→check pipeline on fixtures; failure removing a fixture test flips the right requirement to missing-test incrementally. Evidence `.omo/evidence/docshub-product-strategy/task-10.json`.
   Commit: Y | feat(assurance): detect spec-code drift with provenance
 
-- [ ] 11. Implement evidence probes and CI test-report ingestion
+- [x] 11. Implement evidence probes and CI test-report ingestion
   What to do / Must NOT do: Evidence probes for path/glob existence and symbol presence from scanned metadata (regex fallback downgrades confidence with reason); ingest GitHub Actions artifacts (JUnit XML, vitest/jest JSON) and check runs for the analyzed commit, mapping test cases to requirements via naming/annotation conventions; report-backed evidence on the same commit is `verified`, everything else `inferred` with a visible "connect CI reports" explanation. Must not execute repo code; must not mark anything `verified` from AI reasoning or stale-commit reports.
   Parallelization: Wave 2 | Blocked by: 2,3,7,8 | Blocks: 13,18
   References: R5, R16, R18.
@@ -220,7 +220,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy artifact fixture ingested and linked; failure malformed JUnit rejected with diagnostics, no partial writes. Evidence `.omo/evidence/docshub-product-strategy/task-11.json`.
   Commit: Y | feat(evidence): ingest ci test reports as verified evidence
 
-- [ ] 12. Build onboarding and the graph-centered main dashboard
+- [x] 12. Build onboarding and the graph-centered main dashboard
   What to do / Must NOT do: App-first onboarding (sign in → install GitHub App with permission explanations → select repo → first-scan progress rendered in the graph area) landing on the **full-bleed second-brain graph** (force-directed; zoom/pan/drag/search; node-type and evidence-grade filters; clustered default above a node threshold; canvas/WebGL renderer allowed for 60fps at 500+ nodes) with HUD overlays: repo/metric chips top-left (unresolved findings, impl coverage, test coverage, always-loaded token cost — each click-through to its evidence surface), legend + CI-evidence banner bottom, and drift badges (red ring on nodes with open findings, red dashed broken-evidence edges). The live-activity feed and glow layer land in todo 14. Must not put users through a marketing page; must not render an unfiltered hairball by default; must not show any number that cannot navigate to its evidence.
   Parallelization: Wave 3 | Blocked by: 3,4,6,8 | Blocks: 13,14,19
   References: R1, R14, R15.
@@ -228,7 +228,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright onboards with mocked GitHub and sees the fixture graph with drift badges and working HUD chips; failure mocked permission error shows a recovery path. Evidence `.omo/evidence/docshub-product-strategy/task-12.png`.
   Commit: Y | feat(dashboard): add graph-centered main dashboard
 
-- [ ] 13. Build findings, instruction lint, and receipts surfaces
+- [x] 13. Build findings, instruction lint, and receipts surfaces
   What to do / Must NOT do: Findings list + detail (type/severity filters, source spans rendered against fetched content, evidence chain with verified/inferred labels, suggested next action); instruction lint view (always-loaded token cost table with tokenizer assumptions, duplication/overlap, contradiction pairs with dual spans); receipts view (in-toto-shaped records, verify action, staleness flags). Must not hide `inferred` labels anywhere; must not render receipt verdicts without digest verification state.
   Parallelization: Wave 3 | Blocked by: 5,10,11,12 | Blocks: 14,18,19
   References: R1, R8, R9, R10, R17.
@@ -236,7 +236,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy Playwright walks a seeded finding to its evidence and receipt; failure tampered receipt fixture shows a tamper flag. Evidence `.omo/evidence/docshub-product-strategy/task-13.png`.
   Commit: Y | feat(findings): surface drift findings lint and receipts
 
-- [ ] 14. Build the live-activity glow layer and evidence detail graph
+- [x] 14. Build the live-activity glow layer and evidence detail graph
   What to do / Must NOT do: (a) **Realtime neuron glow**: subscribe the main dashboard to the workspace realtime channel; on each access event pulse the touched nodes (2–3s decay) and animate flow along touched edges, batch-render overlapping events as waves, keep afterglow on recently-touched nodes; add the HUD **agent-activity feed** (tool name, target, relative time) synced to the glow with click-to-focus camera. (b) **Evidence detail graph** (`/graph`, entered via node double-click): local depth-2 view with provenance inspection (span, confidence, grade on edge select), orphan toggle, click-through to findings/docs. Must not drop tool-response latency for event logging (fire-and-forget), must not display events from other workspaces, must not show edges without provenance on hover/detail.
   Parallelization: Wave 3 | Blocked by: 12,13 | Blocks: 19
   References: R1, R14, R15.
@@ -244,7 +244,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy a scripted MCP client session makes the fixture graph glow while the feed lists each call and clicking a feed item focuses the node; failure a burst of events stays smooth (no per-event re-layout) and a revoked token's events never appear. Evidence `.omo/evidence/docshub-product-strategy/task-14.png`.
   Commit: Y | feat(graph-ui): add live agent glow and evidence detail view
 
-- [ ] 15. Implement the hosted MCP server and data-index tools
+- [x] 15. Implement the hosted MCP server and data-index tools
   What to do / Must NOT do: `packages/mcp` service on the 2026-07-28 stateless spec over Streamable HTTP with per-user scoped access tokens (created/revoked in settings UI); resources (overview, artifact inventory, findings, receipts summary, context packs) and tools (**`search_index(query, type_filter?)` over `index_entries` with the ranking rules, `query_brain(filter)` for deterministic structured queries over types/statuses/relations (e.g. "requirements without test evidence"), `get_artifact(path|id)` with graph-neighbor summary**, `request_context_pack`, `get_findings`, **structured `log_progress({task, status, summary, refs?})` validating the ADR-006 format**, `record_note`); `server/discover`; cacheable lists with `ttlMs`; tenant isolation on every call; **every read tool/resource call emits an access_event (fire-and-forget) onto the workspace realtime channel**. Must not use Sampling/Roots/Logging or sessions; must not expose repo-mutating tools; must not leak cross-tenant data through caching; must not let event logging failures fail the tool response; must not store prompt/task text in events.
   Parallelization: Wave 4 | Blocked by: 2,4,5,7,10 | Blocks: 16,17,19
   References: R6, R7.
@@ -252,7 +252,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy MCP client with a settings-issued token fetches findings for the fixture repo; failure revoked token returns auth error; cross-tenant resource request denied. Evidence `.omo/evidence/docshub-product-strategy/task-15.md`.
   Commit: Y | feat(mcp): serve context and findings over hosted stateless mcp
 
-- [ ] 16. Implement context packs and the minimal-index PR proposal
+- [x] 16. Implement context packs and the minimal-index PR proposal
   What to do / Must NOT do: Graph-driven pack builder (task input → doc selection, reading order, omitted-doc rationale, token estimates with assumptions, target-agent formatting) exposed in web + MCP; minimal-index writer generates a bounded ≤30-line DocsHub-managed AGENTS.md section (+ CLAUDE.md `@AGENTS.md` wrapper) pointing at the hosted MCP, delivered **only as a PR proposal** via the optional pull-requests:write permission; markers idempotent. Must not inline doc bodies or generated overviews into static files; must not touch content outside managed markers; must not commit to any branch directly.
   Parallelization: Wave 4 | Blocked by: 2,6,9,10,15 | Blocks: 17,18,19
   References: R4, R8, R12, R13, R17.
@@ -260,7 +260,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy user triggers index PR from settings and sees the diff-only proposal; failure missing pull-requests permission shows a grant-or-copy-manually path. Evidence `.omo/evidence/docshub-product-strategy/task-16.md`.
   Commit: Y | feat(context): compose on-demand packs and advisory index pr
 
-- [ ] 17. Implement the AI-judgment layer with credits and BYOK
+- [x] 17. Implement the AI-judgment layer with credits and BYOK
   What to do / Must NOT do: Provider abstraction (Anthropic + OpenAI adapters, none hard-coded in core) running judgment jobs (drift verdict confirmation, requirement disambiguation, contradiction confirmation) through the worker with credit reservation/settlement/refund; zod-validated outputs stored as `inferred` with payload records; judgments upgrade confidence but never to `verified`; BYOK mode (keys encrypted at rest, never logged) bypasses credits; credit usage view in settings. Must not charge for failed/schema-invalid outputs; must not auto-apply severity changes without recording the judgment payload.
   Parallelization: Wave 4 | Blocked by: 5,7,15,16 | Blocks: 18,19
   References: R1, R12, R17.
@@ -268,7 +268,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy judgment run resolves an ambiguous contradiction candidate and ledger settles once; failure exhausted credits disables judgment jobs gracefully with top-up guidance while deterministic analysis keeps working. Evidence `.omo/evidence/docshub-product-strategy/task-17.md`.
   Commit: Y | feat(ai): add credit-safe judgment layer with byok
 
-- [ ] 18. Add opt-in pilot instrumentation and stats
+- [x] 18. Add opt-in pilot instrumentation and stats
   What to do / Must NOT do: Opt-in per workspace: tokens per pack vs naive full-dump baseline, findings opened/resolved across receipt chain, scan durations, MCP pack-request counts; stats page + JSON export; "not enough evidence" empty states. Must not enable by default; must not fabricate deltas from single data points; must not send data to third parties.
   Parallelization: Wave 5 | Blocked by: 3,11,13,16,17 | Blocks: 19
   References: R1, R12, R17.
@@ -276,7 +276,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy stats after three fixture analyses shows trends; failure stats before opt-in prompts for consent. Evidence `.omo/evidence/docshub-product-strategy/task-18.png`.
   Commit: Y | feat(stats): measure assurance impact per workspace
 
-- [ ] 19. Harden security/privacy, onboarding copy, and pilot release checklist
+- [x] 19. Harden security/privacy, onboarding copy, and pilot release checklist
   What to do / Must NOT do: Finalize permission explanations, data-boundary/privacy UI (metadata-only storage, transient fetches, BYOK key handling), rate limits, audit logging of repo-touching actions, GitHub-revoke degradation, error states, seeded demo-repo onboarding path, deployment checklist, pilot recruitment script with baseline metrics capture. Must not ship private-repo access or credit-consuming jobs without clear permission and retention disclosure; must not include savings claims without linking to the user's own stats.
   Parallelization: Wave 5 | Blocked by: 12,13,14,15,16,17,18 | Blocks: final
   References: R1, R2, R3, R4.
@@ -284,7 +284,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy fresh user completes the demo-repo journey end-to-end; failure user revokes the GitHub installation and the app degrades with guidance. Evidence `.omo/evidence/docshub-product-strategy/task-19.png`.
   Commit: Y | chore(release): prepare pilot-ready saas
 
-- [ ] 20. Build the Data Brain efficacy benchmark harness and run it
+- [x] 20. Build the Data Brain efficacy benchmark harness and run it
   What to do / Must NOT do: Scripted A/B harness (Claude Agent SDK or scripted MCP client): load a pre-registered task manifest (≥12 tasks × 3 trials over `fixtures/drifted-demo/` plus at least one realistic-scale repo; task types: implementation with test-pass grading, question-answering with answer-manifest grading, drift-judgment with findings-manifest grading), run arm A (repo checkout only), arm A′ (naive full-doc dump), arm B (Data Brain via `search_index`/`get_artifact`/context packs) with the same model and prompts; record graded accuracy, input+output tokens (model-reported), tool calls, wall time per trial; emit deterministic JSON + a human-readable Markdown report (model/version/tokenizer assumptions stated) committed under `benchmarks/`; wire a `pnpm bench:databrain` entry point. Must not cherry-pick tasks or trials, must not aggregate away failed trials, must not hard-code arm-specific prompt advantages, must not present results anywhere without linking the full report.
   Parallelization: Wave 5 | Blocked by: 3,15,16,17 | Blocks: final
   References: R1, R12, R13, R17.
@@ -292,7 +292,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy `pnpm bench:databrain --dry-run` completes with mocked models and full report structure; failure a task without a grading manifest is rejected at load, and a mid-run provider failure marks the trial failed without corrupting the report. Evidence `.omo/evidence/docshub-product-strategy/task-20.md`.
   Commit: Y | feat(bench): prove data brain accuracy and token gains
 
-- [ ] 21. Build the progress dashboard and token-frugal logging format
+- [x] 21. Build the progress dashboard and token-frugal logging format
   What to do / Must NOT do: Parse todo items from TODO/progress docs (checkbox state, spans) into `todos`; extend `log_progress` handling to create/update todo items and feed a recent-work timeline; build `/progress`: progress % (requirement coverage + todo completion, sources labeled), todo board (open/in-progress/done/blocked, each item linked to its span or event), recent-work timeline (events newest-first with commits and finding resolutions); ship the logging format in the skill/minimal-index as a "once per task unit" instruction. Must not fabricate progress from AI inference; must not require narrative journaling or per-turn logging; must not exceed the ≤150-token/call format target in the shipped instruction; must not show a progress number whose source is not labeled.
   Parallelization: Wave 4 | Blocked by: 5,9,15 | Blocks: 19
   References: R1, R8, R17.
@@ -300,7 +300,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy a scripted MCP session logs three task updates and Playwright sees the board and timeline update with correct states; failure a log_progress call with an oversized summary is rejected with a typed error and no partial todo write. Evidence `.omo/evidence/docshub-product-strategy/task-21.png`.
   Commit: Y | feat(progress): add todo board and frugal work logging
 
-- [ ] 22. Build the personal library (save/browse)
+- [x] 22. Build the personal library (save/browse)
   What to do / Must NOT do: `library_items` flows: "save to library" from the harness dashboard captures type, source (repo/path/commit), content snapshot, and tags; `/app/library` lists items workspace-globally with search and tag filters and shows source provenance; deleting an item never touches the source repo. Must not implement import-into-project, PR generation, team sharing, or any public/marketplace surface; must not store items without source provenance.
   Parallelization: Wave 4 | Blocked by: 4,5,8,13 | Blocks: 19
   References: R1, R2.
@@ -310,11 +310,11 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
 
 ## Final verification wave
 > Runs in parallel after ALL todos. ALL must APPROVE. Surface results and wait for the user's explicit okay before declaring complete.
-- [ ] F1. Plan compliance audit: run `pnpm test -- plan-compliance adr-guardrails evidence-coverage job-lifecycle credit-reconciliation` and `pnpm exec tsx scripts/verify-plan-coverage.ts .omo/plans/docshub-product-strategy.md`. PASS means every Must Have maps to at least one test or browser-QA artifact, every Must NOT has a negative assertion (incl. no-raw-code-storage, no-inlining, no-deprecated-MCP, advisory-only writes, verified/inferred separation, no-charge-on-failure), every todo evidence path exists, and the script exits 0. FAIL otherwise. Evidence `.omo/evidence/docshub-product-strategy/final/plan-compliance.md`.
-- [ ] F2. Code quality review: run `pnpm lint && pnpm typecheck && pnpm test -- rls auth parser extractor probes rules receipts worker credit webhook mcp github-permissions pr-proposal` plus `pnpm exec tsx scripts/security-audit.ts` (webhook forgery, token/key handling, tenant isolation, transient-fetch boundary, injection in span rendering). PASS means all exit 0 with no high/critical findings. FAIL otherwise. Evidence `.omo/evidence/docshub-product-strategy/final/code-review.md`.
-- [ ] F3. Real manual QA: run `pnpm exec playwright test tests/e2e/pilot-flow.spec.ts --project=chromium --trace=on`. PASS means Playwright signs up, installs the mocked GitHub App with permission explanations, selects the fixture repo, watches the first scan, inspects health/findings/lint/graph/receipts, issues an MCP token and fetches a context pack via MCP client, triggers the index PR proposal, runs a judgment job with credit settlement, checks stats opt-in, and verifies a receipt — without assertion failure. FAIL otherwise. Evidence `.omo/evidence/docshub-product-strategy/final/browser-qa.png` plus trace transcript.
-- [ ] F4. Scope fidelity: run `pnpm test -- scope-fidelity` and `pnpm exec tsx scripts/verify-scope-boundaries.ts`. PASS means no local CLI, team UI, external billing, non-GitHub providers, marketplace, skill security scanning, direct/autonomous writes, raw-code persistence, always-loaded generated context, deprecated MCP features, or unsupported savings claims are reachable in MVP fixtures. FAIL if any forbidden path is present or uncovered by a negative test. Evidence `.omo/evidence/docshub-product-strategy/final/scope-fidelity.md`.
-- [ ] F5. Efficacy benchmark report (ADR-005): verify `benchmarks/` contains a committed report from a real (non-dry-run) execution of todo 20's harness covering every pre-registered task and trial, with per-arm accuracy/token/tool-call/time tables and stated model/tokenizer assumptions. PASS means the report is complete, reproducible (`pnpm bench:databrain` re-runs), and every efficiency claim surfaced in the app or README links to it; if the hypothesis gate (accuracy non-inferior AND ≥30% token reduction) is unmet, PASS additionally requires a documented iteration plan and honest as-measured presentation — claims may never exceed the report. FAIL if the report is missing, partial, cherry-picked, or contradicted by product copy. Evidence `.omo/evidence/docshub-product-strategy/final/efficacy-benchmark.md`.
+- [x] F1. Plan compliance audit: run `pnpm test -- plan-compliance adr-guardrails evidence-coverage job-lifecycle credit-reconciliation` and `pnpm exec tsx scripts/verify-plan-coverage.ts .omo/plans/docshub-product-strategy.md`. PASS means every Must Have maps to at least one test or browser-QA artifact, every Must NOT has a negative assertion (incl. no-raw-code-storage, no-inlining, no-deprecated-MCP, advisory-only writes, verified/inferred separation, no-charge-on-failure), every todo evidence path exists, and the script exits 0. FAIL otherwise. Evidence `.omo/evidence/docshub-product-strategy/final/plan-compliance.md`.
+- [x] F2. Code quality review: run `pnpm lint && pnpm typecheck && pnpm test -- rls auth parser extractor probes rules receipts worker credit webhook mcp github-permissions pr-proposal` plus `pnpm exec tsx scripts/security-audit.ts` (webhook forgery, token/key handling, tenant isolation, transient-fetch boundary, injection in span rendering). PASS means all exit 0 with no high/critical findings. FAIL otherwise. Evidence `.omo/evidence/docshub-product-strategy/final/code-review.md`.
+- [x] F3. Real manual QA: run `pnpm exec playwright test tests/e2e/pilot-flow.spec.ts --project=chromium --trace=on`. PASS means Playwright signs up, installs the mocked GitHub App with permission explanations, selects the fixture repo, watches the first scan, inspects health/findings/lint/graph/receipts, issues an MCP token and fetches a context pack via MCP client, triggers the index PR proposal, runs a judgment job with credit settlement, checks stats opt-in, and verifies a receipt — without assertion failure. FAIL otherwise. Evidence `.omo/evidence/docshub-product-strategy/final/browser-qa.png` plus trace transcript.
+- [x] F4. Scope fidelity: run `pnpm test -- scope-fidelity` and `pnpm exec tsx scripts/verify-scope-boundaries.ts`. PASS means no local CLI, team UI, external billing, non-GitHub providers, marketplace, skill security scanning, direct/autonomous writes, raw-code persistence, always-loaded generated context, deprecated MCP features, or unsupported savings claims are reachable in MVP fixtures. FAIL if any forbidden path is present or uncovered by a negative test. Evidence `.omo/evidence/docshub-product-strategy/final/scope-fidelity.md`.
+- [x] F5. Efficacy benchmark report (ADR-005): verify `benchmarks/` contains a committed report from a real (non-dry-run) execution of todo 20's harness covering every pre-registered task and trial, with per-arm accuracy/token/tool-call/time tables and stated model/tokenizer assumptions. PASS means the report is complete, reproducible (`pnpm bench:databrain` re-runs), and every efficiency claim surfaced in the app or README links to it; if the hypothesis gate (accuracy non-inferior AND ≥30% token reduction) is unmet, PASS additionally requires a documented iteration plan and honest as-measured presentation — claims may never exceed the report. FAIL if the report is missing, partial, cherry-picked, or contradicted by product copy. Evidence `.omo/evidence/docshub-product-strategy/final/efficacy-benchmark.md`.
 
 ## Commit strategy
 - Conventional commits, one logical slice per todo; do not auto-commit unless the user explicitly authorizes commits in the execution phase.

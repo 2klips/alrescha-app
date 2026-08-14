@@ -1,0 +1,11 @@
+{
+  "fixture": "drifted-demo",
+  "repository": "specproof/drifted-demo",
+  "commitSha": "1111111111111111111111111111111111111111",
+  "treeSha": "2222222222222222222222222222222222222222",
+  "installationId": 777,
+  "webhookSecret": "drifted-demo-webhook-secret",
+  "recordedAt": "2026-08-09T12:00:00Z",
+  "offline": true
+}
+

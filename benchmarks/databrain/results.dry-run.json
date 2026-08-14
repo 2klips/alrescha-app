@@ -1,0 +1,3006 @@
+{
+  "aggregates": [
+    {
+      "arm": "checkout",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "passedTrials": 36,
+      "passRate": 1,
+      "totalInputTokens": 113100,
+      "totalOutputTokens": 1803,
+      "totalTokens": 114903,
+      "totalToolCalls": 306,
+      "totalWallTimeMs": 6619,
+      "trialCount": 36
+    },
+    {
+      "arm": "full-dump",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "passedTrials": 36,
+      "passRate": 1,
+      "totalInputTokens": 199227,
+      "totalOutputTokens": 1803,
+      "totalTokens": 201030,
+      "totalToolCalls": 0,
+      "totalWallTimeMs": 6670,
+      "trialCount": 36
+    },
+    {
+      "arm": "data-brain",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "passedTrials": 36,
+      "passRate": 1,
+      "totalInputTokens": 51720,
+      "totalOutputTokens": 1803,
+      "totalTokens": 53523,
+      "totalToolCalls": 366,
+      "totalWallTimeMs": 6948,
+      "trialCount": 36
+    }
+  ],
+  "hypothesis": {
+    "accuracyDeltaPercentagePoints": 0,
+    "accuracyNonInferior": true,
+    "baselineArm": "checkout",
+    "dataBrainArm": "data-brain",
+    "targetTokenReductionPercent": 30,
+    "tokenReductionPercent": 53.418971,
+    "tokenTargetMet": true
+  },
+  "protocol": {
+    "arms": [
+      "checkout",
+      "full-dump",
+      "data-brain"
+    ],
+    "expectedTrialCount": 108,
+    "taskCount": 12,
+    "trialsPerArm": 3
+  },
+  "run": {
+    "generatedAt": "2026-08-13T14:16:15.696Z",
+    "manifestDigest": "fc9f23049679ab559a610324db1a7b3359a62969fb03374c6871907f89c2a662",
+    "mode": "dry-run",
+    "model": "gpt-5-nano-2025-08-07",
+    "tokenizerAssumption": "Mock usage is deterministic ceil((context + prompt) characters / 4) input and serialized-output characters / 4 output."
+  },
+  "schemaVersion": 1,
+  "trials": [
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1048,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 125,
+      "responseId": "mock-fixture-implement-remaining-session-ms-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 567
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1048,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 125,
+      "responseId": "mock-fixture-implement-remaining-session-ms-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 567
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1048,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 125,
+      "responseId": "mock-fixture-implement-remaining-session-ms-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 567
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 662,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 125,
+      "responseId": "mock-fixture-implement-remaining-session-ms-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 564
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 662,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 125,
+      "responseId": "mock-fixture-implement-remaining-session-ms-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 564
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 662,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 125,
+      "responseId": "mock-fixture-implement-remaining-session-ms-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 557
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1390,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 125,
+      "responseId": "mock-fixture-implement-remaining-session-ms-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 547
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1390,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 125,
+      "responseId": "mock-fixture-implement-remaining-session-ms-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 546
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1390,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 125,
+      "responseId": "mock-fixture-implement-remaining-session-ms-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 547
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a80caf1f32a4d21a7b313197a46ea31aa33a48e9c42f934d348c6a265439fd5e",
+      "taskId": "fixture-implement-refresh-session",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1124,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function refreshSession(session: Session, now: number): Session | null {\n  return isSessionExpired(session, now) ? null : { lastActivityAt: now };\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 126,
+      "responseId": "mock-fixture-implement-refresh-session-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 540
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a80caf1f32a4d21a7b313197a46ea31aa33a48e9c42f934d348c6a265439fd5e",
+      "taskId": "fixture-implement-refresh-session",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1124,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function refreshSession(session: Session, now: number): Session | null {\n  return isSessionExpired(session, now) ? null : { lastActivityAt: now };\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 126,
+      "responseId": "mock-fixture-implement-refresh-session-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 558
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a80caf1f32a4d21a7b313197a46ea31aa33a48e9c42f934d348c6a265439fd5e",
+      "taskId": "fixture-implement-refresh-session",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1124,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function refreshSession(session: Session, now: number): Session | null {\n  return isSessionExpired(session, now) ? null : { lastActivityAt: now };\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 126,
+      "responseId": "mock-fixture-implement-refresh-session-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 557
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a80caf1f32a4d21a7b313197a46ea31aa33a48e9c42f934d348c6a265439fd5e",
+      "taskId": "fixture-implement-refresh-session",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 672,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function refreshSession(session: Session, now: number): Session | null {\n  return isSessionExpired(session, now) ? null : { lastActivityAt: now };\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 126,
+      "responseId": "mock-fixture-implement-refresh-session-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 529
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a80caf1f32a4d21a7b313197a46ea31aa33a48e9c42f934d348c6a265439fd5e",
+      "taskId": "fixture-implement-refresh-session",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 672,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function refreshSession(session: Session, now: number): Session | null {\n  return isSessionExpired(session, now) ? null : { lastActivityAt: now };\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 126,
+      "responseId": "mock-fixture-implement-refresh-session-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 531
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a80caf1f32a4d21a7b313197a46ea31aa33a48e9c42f934d348c6a265439fd5e",
+      "taskId": "fixture-implement-refresh-session",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 672,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function refreshSession(session: Session, now: number): Session | null {\n  return isSessionExpired(session, now) ? null : { lastActivityAt: now };\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 126,
+      "responseId": "mock-fixture-implement-refresh-session-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 528
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a80caf1f32a4d21a7b313197a46ea31aa33a48e9c42f934d348c6a265439fd5e",
+      "taskId": "fixture-implement-refresh-session",
+      "toolCalls": 8,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1405,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function refreshSession(session: Session, now: number): Session | null {\n  return isSessionExpired(session, now) ? null : { lastActivityAt: now };\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 126,
+      "responseId": "mock-fixture-implement-refresh-session-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 538
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a80caf1f32a4d21a7b313197a46ea31aa33a48e9c42f934d348c6a265439fd5e",
+      "taskId": "fixture-implement-refresh-session",
+      "toolCalls": 8,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1405,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function refreshSession(session: Session, now: number): Session | null {\n  return isSessionExpired(session, now) ? null : { lastActivityAt: now };\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 126,
+      "responseId": "mock-fixture-implement-refresh-session-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 531
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a80caf1f32a4d21a7b313197a46ea31aa33a48e9c42f934d348c6a265439fd5e",
+      "taskId": "fixture-implement-refresh-session",
+      "toolCalls": 8,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1405,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function refreshSession(session: Session, now: number): Session | null {\n  return isSessionExpired(session, now) ? null : { lastActivityAt: now };\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 126,
+      "responseId": "mock-fixture-implement-refresh-session-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 545
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "708ebd344c8975ae3c81f05e22de755245952839499240ef7756d401708d698f",
+      "taskId": "fixture-implement-github-login",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 2025,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function loginWithGitHub(code: string): string {\n  if (code.length === 0) throw new TypeError(\"GitHub code is required.\");\n  return `/auth/callback?code=${encodeURIComponent(code)}`;\n}\n",
+            "path": "src/auth.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 68,
+      "responseId": "mock-fixture-implement-github-login-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 546
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "708ebd344c8975ae3c81f05e22de755245952839499240ef7756d401708d698f",
+      "taskId": "fixture-implement-github-login",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 2025,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function loginWithGitHub(code: string): string {\n  if (code.length === 0) throw new TypeError(\"GitHub code is required.\");\n  return `/auth/callback?code=${encodeURIComponent(code)}`;\n}\n",
+            "path": "src/auth.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 68,
+      "responseId": "mock-fixture-implement-github-login-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 540
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "708ebd344c8975ae3c81f05e22de755245952839499240ef7756d401708d698f",
+      "taskId": "fixture-implement-github-login",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 2025,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function loginWithGitHub(code: string): string {\n  if (code.length === 0) throw new TypeError(\"GitHub code is required.\");\n  return `/auth/callback?code=${encodeURIComponent(code)}`;\n}\n",
+            "path": "src/auth.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 68,
+      "responseId": "mock-fixture-implement-github-login-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 536
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "708ebd344c8975ae3c81f05e22de755245952839499240ef7756d401708d698f",
+      "taskId": "fixture-implement-github-login",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 666,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function loginWithGitHub(code: string): string {\n  if (code.length === 0) throw new TypeError(\"GitHub code is required.\");\n  return `/auth/callback?code=${encodeURIComponent(code)}`;\n}\n",
+            "path": "src/auth.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 68,
+      "responseId": "mock-fixture-implement-github-login-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 572
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "708ebd344c8975ae3c81f05e22de755245952839499240ef7756d401708d698f",
+      "taskId": "fixture-implement-github-login",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 666,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function loginWithGitHub(code: string): string {\n  if (code.length === 0) throw new TypeError(\"GitHub code is required.\");\n  return `/auth/callback?code=${encodeURIComponent(code)}`;\n}\n",
+            "path": "src/auth.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 68,
+      "responseId": "mock-fixture-implement-github-login-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 566
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "708ebd344c8975ae3c81f05e22de755245952839499240ef7756d401708d698f",
+      "taskId": "fixture-implement-github-login",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 666,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function loginWithGitHub(code: string): string {\n  if (code.length === 0) throw new TypeError(\"GitHub code is required.\");\n  return `/auth/callback?code=${encodeURIComponent(code)}`;\n}\n",
+            "path": "src/auth.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 68,
+      "responseId": "mock-fixture-implement-github-login-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 559
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "708ebd344c8975ae3c81f05e22de755245952839499240ef7756d401708d698f",
+      "taskId": "fixture-implement-github-login",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1373,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function loginWithGitHub(code: string): string {\n  if (code.length === 0) throw new TypeError(\"GitHub code is required.\");\n  return `/auth/callback?code=${encodeURIComponent(code)}`;\n}\n",
+            "path": "src/auth.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 68,
+      "responseId": "mock-fixture-implement-github-login-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 556
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "708ebd344c8975ae3c81f05e22de755245952839499240ef7756d401708d698f",
+      "taskId": "fixture-implement-github-login",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1373,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function loginWithGitHub(code: string): string {\n  if (code.length === 0) throw new TypeError(\"GitHub code is required.\");\n  return `/auth/callback?code=${encodeURIComponent(code)}`;\n}\n",
+            "path": "src/auth.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 68,
+      "responseId": "mock-fixture-implement-github-login-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 555
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "708ebd344c8975ae3c81f05e22de755245952839499240ef7756d401708d698f",
+      "taskId": "fixture-implement-github-login",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1373,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function loginWithGitHub(code: string): string {\n  if (code.length === 0) throw new TypeError(\"GitHub code is required.\");\n  return `/auth/callback?code=${encodeURIComponent(code)}`;\n}\n",
+            "path": "src/auth.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 68,
+      "responseId": "mock-fixture-implement-github-login-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 555
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "taskId": "fixture-implement-password-reset",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 863,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function createPasswordResetRequest(email: string, now: number): {\n  email: string;\n  expiresAt: number;\n} {\n  const normalizedEmail = email.trim().toLowerCase();\n  if (normalizedEmail.length === 0) throw new TypeError(\"Email is required.\");\n  return { email: normalizedEmail, expiresAt: now + 15 * 60 * 1_000 };\n}\n",
+            "path": "src/password-reset.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 104,
+      "responseId": "mock-fixture-implement-password-reset-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 547
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "taskId": "fixture-implement-password-reset",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 863,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function createPasswordResetRequest(email: string, now: number): {\n  email: string;\n  expiresAt: number;\n} {\n  const normalizedEmail = email.trim().toLowerCase();\n  if (normalizedEmail.length === 0) throw new TypeError(\"Email is required.\");\n  return { email: normalizedEmail, expiresAt: now + 15 * 60 * 1_000 };\n}\n",
+            "path": "src/password-reset.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 104,
+      "responseId": "mock-fixture-implement-password-reset-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 547
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "taskId": "fixture-implement-password-reset",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 863,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function createPasswordResetRequest(email: string, now: number): {\n  email: string;\n  expiresAt: number;\n} {\n  const normalizedEmail = email.trim().toLowerCase();\n  if (normalizedEmail.length === 0) throw new TypeError(\"Email is required.\");\n  return { email: normalizedEmail, expiresAt: now + 15 * 60 * 1_000 };\n}\n",
+            "path": "src/password-reset.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 104,
+      "responseId": "mock-fixture-implement-password-reset-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 547
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "taskId": "fixture-implement-password-reset",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 677,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function createPasswordResetRequest(email: string, now: number): {\n  email: string;\n  expiresAt: number;\n} {\n  const normalizedEmail = email.trim().toLowerCase();\n  if (normalizedEmail.length === 0) throw new TypeError(\"Email is required.\");\n  return { email: normalizedEmail, expiresAt: now + 15 * 60 * 1_000 };\n}\n",
+            "path": "src/password-reset.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 104,
+      "responseId": "mock-fixture-implement-password-reset-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 568
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "taskId": "fixture-implement-password-reset",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 677,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function createPasswordResetRequest(email: string, now: number): {\n  email: string;\n  expiresAt: number;\n} {\n  const normalizedEmail = email.trim().toLowerCase();\n  if (normalizedEmail.length === 0) throw new TypeError(\"Email is required.\");\n  return { email: normalizedEmail, expiresAt: now + 15 * 60 * 1_000 };\n}\n",
+            "path": "src/password-reset.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 104,
+      "responseId": "mock-fixture-implement-password-reset-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 568
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "taskId": "fixture-implement-password-reset",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 677,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function createPasswordResetRequest(email: string, now: number): {\n  email: string;\n  expiresAt: number;\n} {\n  const normalizedEmail = email.trim().toLowerCase();\n  if (normalizedEmail.length === 0) throw new TypeError(\"Email is required.\");\n  return { email: normalizedEmail, expiresAt: now + 15 * 60 * 1_000 };\n}\n",
+            "path": "src/password-reset.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 104,
+      "responseId": "mock-fixture-implement-password-reset-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 564
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "taskId": "fixture-implement-password-reset",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1306,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function createPasswordResetRequest(email: string, now: number): {\n  email: string;\n  expiresAt: number;\n} {\n  const normalizedEmail = email.trim().toLowerCase();\n  if (normalizedEmail.length === 0) throw new TypeError(\"Email is required.\");\n  return { email: normalizedEmail, expiresAt: now + 15 * 60 * 1_000 };\n}\n",
+            "path": "src/password-reset.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 104,
+      "responseId": "mock-fixture-implement-password-reset-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 691
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "taskId": "fixture-implement-password-reset",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1306,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function createPasswordResetRequest(email: string, now: number): {\n  email: string;\n  expiresAt: number;\n} {\n  const normalizedEmail = email.trim().toLowerCase();\n  if (normalizedEmail.length === 0) throw new TypeError(\"Email is required.\");\n  return { email: normalizedEmail, expiresAt: now + 15 * 60 * 1_000 };\n}\n",
+            "path": "src/password-reset.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 104,
+      "responseId": "mock-fixture-implement-password-reset-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 647
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "taskId": "fixture-implement-password-reset",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1306,
+      "output": {
+        "answer": "",
+        "files": [
+          {
+            "content": "export function createPasswordResetRequest(email: string, now: number): {\n  email: string;\n  expiresAt: number;\n} {\n  const normalizedEmail = email.trim().toLowerCase();\n  if (normalizedEmail.length === 0) throw new TypeError(\"Email is required.\");\n  return { email: normalizedEmail, expiresAt: now + 15 * 60 * 1_000 };\n}\n",
+            "path": "src/password-reset.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 104,
+      "responseId": "mock-fixture-implement-password-reset-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 690
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a5ee6c34bf4ca8cdb02c6b84378122b5cb163844f68cbaae05830bae0a5a6fa0",
+      "taskId": "fixture-answer-session-policy",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1317,
+      "output": {
+        "answer": "30 minutes; >=; SESSION_TIMEOUT_MS",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 18,
+      "responseId": "mock-fixture-answer-session-policy-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a5ee6c34bf4ca8cdb02c6b84378122b5cb163844f68cbaae05830bae0a5a6fa0",
+      "taskId": "fixture-answer-session-policy",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1317,
+      "output": {
+        "answer": "30 minutes; >=; SESSION_TIMEOUT_MS",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 18,
+      "responseId": "mock-fixture-answer-session-policy-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a5ee6c34bf4ca8cdb02c6b84378122b5cb163844f68cbaae05830bae0a5a6fa0",
+      "taskId": "fixture-answer-session-policy",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1317,
+      "output": {
+        "answer": "30 minutes; >=; SESSION_TIMEOUT_MS",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 18,
+      "responseId": "mock-fixture-answer-session-policy-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a5ee6c34bf4ca8cdb02c6b84378122b5cb163844f68cbaae05830bae0a5a6fa0",
+      "taskId": "fixture-answer-session-policy",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 647,
+      "output": {
+        "answer": "30 minutes; >=; SESSION_TIMEOUT_MS",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 18,
+      "responseId": "mock-fixture-answer-session-policy-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a5ee6c34bf4ca8cdb02c6b84378122b5cb163844f68cbaae05830bae0a5a6fa0",
+      "taskId": "fixture-answer-session-policy",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 647,
+      "output": {
+        "answer": "30 minutes; >=; SESSION_TIMEOUT_MS",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 18,
+      "responseId": "mock-fixture-answer-session-policy-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a5ee6c34bf4ca8cdb02c6b84378122b5cb163844f68cbaae05830bae0a5a6fa0",
+      "taskId": "fixture-answer-session-policy",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 647,
+      "output": {
+        "answer": "30 minutes; >=; SESSION_TIMEOUT_MS",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 18,
+      "responseId": "mock-fixture-answer-session-policy-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a5ee6c34bf4ca8cdb02c6b84378122b5cb163844f68cbaae05830bae0a5a6fa0",
+      "taskId": "fixture-answer-session-policy",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1364,
+      "output": {
+        "answer": "30 minutes; >=; SESSION_TIMEOUT_MS",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 18,
+      "responseId": "mock-fixture-answer-session-policy-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a5ee6c34bf4ca8cdb02c6b84378122b5cb163844f68cbaae05830bae0a5a6fa0",
+      "taskId": "fixture-answer-session-policy",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1364,
+      "output": {
+        "answer": "30 minutes; >=; SESSION_TIMEOUT_MS",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 18,
+      "responseId": "mock-fixture-answer-session-policy-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "a5ee6c34bf4ca8cdb02c6b84378122b5cb163844f68cbaae05830bae0a5a6fa0",
+      "taskId": "fixture-answer-session-policy",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1364,
+      "output": {
+        "answer": "30 minutes; >=; SESSION_TIMEOUT_MS",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 18,
+      "responseId": "mock-fixture-answer-session-policy-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "9150b9190e09c6a1eb2c8d64a0ab49212933f3b7d99e927d46e78cc9efb935d4",
+      "taskId": "fixture-answer-audit-schema",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 required facts matched"
+      },
+      "inputTokens": 2043,
+      "output": {
+        "answer": "login_succeeded; user_id",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 16,
+      "responseId": "mock-fixture-answer-audit-schema-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "9150b9190e09c6a1eb2c8d64a0ab49212933f3b7d99e927d46e78cc9efb935d4",
+      "taskId": "fixture-answer-audit-schema",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 required facts matched"
+      },
+      "inputTokens": 2043,
+      "output": {
+        "answer": "login_succeeded; user_id",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 16,
+      "responseId": "mock-fixture-answer-audit-schema-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "9150b9190e09c6a1eb2c8d64a0ab49212933f3b7d99e927d46e78cc9efb935d4",
+      "taskId": "fixture-answer-audit-schema",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 required facts matched"
+      },
+      "inputTokens": 2043,
+      "output": {
+        "answer": "login_succeeded; user_id",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 16,
+      "responseId": "mock-fixture-answer-audit-schema-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "9150b9190e09c6a1eb2c8d64a0ab49212933f3b7d99e927d46e78cc9efb935d4",
+      "taskId": "fixture-answer-audit-schema",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 required facts matched"
+      },
+      "inputTokens": 642,
+      "output": {
+        "answer": "login_succeeded; user_id",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 16,
+      "responseId": "mock-fixture-answer-audit-schema-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "9150b9190e09c6a1eb2c8d64a0ab49212933f3b7d99e927d46e78cc9efb935d4",
+      "taskId": "fixture-answer-audit-schema",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 required facts matched"
+      },
+      "inputTokens": 642,
+      "output": {
+        "answer": "login_succeeded; user_id",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 16,
+      "responseId": "mock-fixture-answer-audit-schema-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "9150b9190e09c6a1eb2c8d64a0ab49212933f3b7d99e927d46e78cc9efb935d4",
+      "taskId": "fixture-answer-audit-schema",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 required facts matched"
+      },
+      "inputTokens": 642,
+      "output": {
+        "answer": "login_succeeded; user_id",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 16,
+      "responseId": "mock-fixture-answer-audit-schema-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "9150b9190e09c6a1eb2c8d64a0ab49212933f3b7d99e927d46e78cc9efb935d4",
+      "taskId": "fixture-answer-audit-schema",
+      "toolCalls": 10,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 required facts matched"
+      },
+      "inputTokens": 1278,
+      "output": {
+        "answer": "login_succeeded; user_id",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 16,
+      "responseId": "mock-fixture-answer-audit-schema-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "9150b9190e09c6a1eb2c8d64a0ab49212933f3b7d99e927d46e78cc9efb935d4",
+      "taskId": "fixture-answer-audit-schema",
+      "toolCalls": 10,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 required facts matched"
+      },
+      "inputTokens": 1278,
+      "output": {
+        "answer": "login_succeeded; user_id",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 16,
+      "responseId": "mock-fixture-answer-audit-schema-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "9150b9190e09c6a1eb2c8d64a0ab49212933f3b7d99e927d46e78cc9efb935d4",
+      "taskId": "fixture-answer-audit-schema",
+      "toolCalls": 10,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 required facts matched"
+      },
+      "inputTokens": 1278,
+      "output": {
+        "answer": "login_succeeded; user_id",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 16,
+      "responseId": "mock-fixture-answer-audit-schema-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "2b12ff4b3a3eb7f9e3cc0126606cfe3f61cb1b91638cfc9df22762bb665cc23f",
+      "taskId": "fixture-answer-api-rule-conflict",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "4/4 required facts matched"
+      },
+      "inputTokens": 1613,
+      "output": {
+        "answer": "snake_case; camelCase; root; subtree",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-api-rule-conflict-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "2b12ff4b3a3eb7f9e3cc0126606cfe3f61cb1b91638cfc9df22762bb665cc23f",
+      "taskId": "fixture-answer-api-rule-conflict",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "4/4 required facts matched"
+      },
+      "inputTokens": 1613,
+      "output": {
+        "answer": "snake_case; camelCase; root; subtree",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-api-rule-conflict-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "2b12ff4b3a3eb7f9e3cc0126606cfe3f61cb1b91638cfc9df22762bb665cc23f",
+      "taskId": "fixture-answer-api-rule-conflict",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "4/4 required facts matched"
+      },
+      "inputTokens": 1613,
+      "output": {
+        "answer": "snake_case; camelCase; root; subtree",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-api-rule-conflict-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "2b12ff4b3a3eb7f9e3cc0126606cfe3f61cb1b91638cfc9df22762bb665cc23f",
+      "taskId": "fixture-answer-api-rule-conflict",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "4/4 required facts matched"
+      },
+      "inputTokens": 647,
+      "output": {
+        "answer": "snake_case; camelCase; root; subtree",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-api-rule-conflict-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "2b12ff4b3a3eb7f9e3cc0126606cfe3f61cb1b91638cfc9df22762bb665cc23f",
+      "taskId": "fixture-answer-api-rule-conflict",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "4/4 required facts matched"
+      },
+      "inputTokens": 647,
+      "output": {
+        "answer": "snake_case; camelCase; root; subtree",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-api-rule-conflict-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "2b12ff4b3a3eb7f9e3cc0126606cfe3f61cb1b91638cfc9df22762bb665cc23f",
+      "taskId": "fixture-answer-api-rule-conflict",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "4/4 required facts matched"
+      },
+      "inputTokens": 647,
+      "output": {
+        "answer": "snake_case; camelCase; root; subtree",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-api-rule-conflict-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "2b12ff4b3a3eb7f9e3cc0126606cfe3f61cb1b91638cfc9df22762bb665cc23f",
+      "taskId": "fixture-answer-api-rule-conflict",
+      "toolCalls": 12,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "4/4 required facts matched"
+      },
+      "inputTokens": 1250,
+      "output": {
+        "answer": "snake_case; camelCase; root; subtree",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-api-rule-conflict-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "2b12ff4b3a3eb7f9e3cc0126606cfe3f61cb1b91638cfc9df22762bb665cc23f",
+      "taskId": "fixture-answer-api-rule-conflict",
+      "toolCalls": 12,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "4/4 required facts matched"
+      },
+      "inputTokens": 1250,
+      "output": {
+        "answer": "snake_case; camelCase; root; subtree",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-api-rule-conflict-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "2b12ff4b3a3eb7f9e3cc0126606cfe3f61cb1b91638cfc9df22762bb665cc23f",
+      "taskId": "fixture-answer-api-rule-conflict",
+      "toolCalls": 12,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "4/4 required facts matched"
+      },
+      "inputTokens": 1250,
+      "output": {
+        "answer": "snake_case; camelCase; root; subtree",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-api-rule-conflict-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "605507a345b20ea6e557687e26f74d3ebfca0ede31f76b3d62e96c890f16841b",
+      "taskId": "fixture-answer-legacy-billing",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1107,
+      "output": {
+        "answer": "src/legacy-billing.ts; missing; stale",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-legacy-billing-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "605507a345b20ea6e557687e26f74d3ebfca0ede31f76b3d62e96c890f16841b",
+      "taskId": "fixture-answer-legacy-billing",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1107,
+      "output": {
+        "answer": "src/legacy-billing.ts; missing; stale",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-legacy-billing-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "605507a345b20ea6e557687e26f74d3ebfca0ede31f76b3d62e96c890f16841b",
+      "taskId": "fixture-answer-legacy-billing",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1107,
+      "output": {
+        "answer": "src/legacy-billing.ts; missing; stale",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-legacy-billing-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "605507a345b20ea6e557687e26f74d3ebfca0ede31f76b3d62e96c890f16841b",
+      "taskId": "fixture-answer-legacy-billing",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 640,
+      "output": {
+        "answer": "src/legacy-billing.ts; missing; stale",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-legacy-billing-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "605507a345b20ea6e557687e26f74d3ebfca0ede31f76b3d62e96c890f16841b",
+      "taskId": "fixture-answer-legacy-billing",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 640,
+      "output": {
+        "answer": "src/legacy-billing.ts; missing; stale",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-legacy-billing-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "605507a345b20ea6e557687e26f74d3ebfca0ede31f76b3d62e96c890f16841b",
+      "taskId": "fixture-answer-legacy-billing",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 640,
+      "output": {
+        "answer": "src/legacy-billing.ts; missing; stale",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-legacy-billing-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "605507a345b20ea6e557687e26f74d3ebfca0ede31f76b3d62e96c890f16841b",
+      "taskId": "fixture-answer-legacy-billing",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1115,
+      "output": {
+        "answer": "src/legacy-billing.ts; missing; stale",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-legacy-billing-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "605507a345b20ea6e557687e26f74d3ebfca0ede31f76b3d62e96c890f16841b",
+      "taskId": "fixture-answer-legacy-billing",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1115,
+      "output": {
+        "answer": "src/legacy-billing.ts; missing; stale",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-legacy-billing-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "605507a345b20ea6e557687e26f74d3ebfca0ede31f76b3d62e96c890f16841b",
+      "taskId": "fixture-answer-legacy-billing",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "3/3 required facts matched"
+      },
+      "inputTokens": 1115,
+      "output": {
+        "answer": "src/legacy-billing.ts; missing; stale",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 19,
+      "responseId": "mock-fixture-answer-legacy-billing-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "taskId": "fixture-judge-auth-drift",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 979,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      },
+      "outputTokens": 27,
+      "responseId": "mock-fixture-judge-auth-drift-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "taskId": "fixture-judge-auth-drift",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 979,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      },
+      "outputTokens": 27,
+      "responseId": "mock-fixture-judge-auth-drift-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "taskId": "fixture-judge-auth-drift",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 979,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      },
+      "outputTokens": 27,
+      "responseId": "mock-fixture-judge-auth-drift-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "taskId": "fixture-judge-auth-drift",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 647,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      },
+      "outputTokens": 27,
+      "responseId": "mock-fixture-judge-auth-drift-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "taskId": "fixture-judge-auth-drift",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 647,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      },
+      "outputTokens": 27,
+      "responseId": "mock-fixture-judge-auth-drift-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "taskId": "fixture-judge-auth-drift",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 647,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      },
+      "outputTokens": 27,
+      "responseId": "mock-fixture-judge-auth-drift-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "taskId": "fixture-judge-auth-drift",
+      "toolCalls": 11,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 1075,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      },
+      "outputTokens": 27,
+      "responseId": "mock-fixture-judge-auth-drift-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "taskId": "fixture-judge-auth-drift",
+      "toolCalls": 11,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 1075,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      },
+      "outputTokens": 27,
+      "responseId": "mock-fixture-judge-auth-drift-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "taskId": "fixture-judge-auth-drift",
+      "toolCalls": 11,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 1075,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      },
+      "outputTokens": 27,
+      "responseId": "mock-fixture-judge-auth-drift-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "taskId": "fixture-judge-instruction-doc-drift",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 2222,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      },
+      "outputTokens": 26,
+      "responseId": "mock-fixture-judge-instruction-doc-drift-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "taskId": "fixture-judge-instruction-doc-drift",
+      "toolCalls": 9,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 2222,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      },
+      "outputTokens": 26,
+      "responseId": "mock-fixture-judge-instruction-doc-drift-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "taskId": "fixture-judge-instruction-doc-drift",
+      "toolCalls": 9,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 2222,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      },
+      "outputTokens": 26,
+      "responseId": "mock-fixture-judge-instruction-doc-drift-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "taskId": "fixture-judge-instruction-doc-drift",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 639,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      },
+      "outputTokens": 26,
+      "responseId": "mock-fixture-judge-instruction-doc-drift-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "taskId": "fixture-judge-instruction-doc-drift",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 639,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      },
+      "outputTokens": 26,
+      "responseId": "mock-fixture-judge-instruction-doc-drift-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "taskId": "fixture-judge-instruction-doc-drift",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 639,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      },
+      "outputTokens": 26,
+      "responseId": "mock-fixture-judge-instruction-doc-drift-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "taskId": "fixture-judge-instruction-doc-drift",
+      "toolCalls": 11,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 1048,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      },
+      "outputTokens": 26,
+      "responseId": "mock-fixture-judge-instruction-doc-drift-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "taskId": "fixture-judge-instruction-doc-drift",
+      "toolCalls": 11,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 1048,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      },
+      "outputTokens": 26,
+      "responseId": "mock-fixture-judge-instruction-doc-drift-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "taskId": "fixture-judge-instruction-doc-drift",
+      "toolCalls": 11,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "2/2 expected, 0 unexpected"
+      },
+      "inputTokens": 1048,
+      "output": {
+        "answer": "",
+        "files": [],
+        "findings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      },
+      "outputTokens": 26,
+      "responseId": "mock-fixture-judge-instruction-doc-drift-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "taskId": "real-answer-github-permissions",
+      "toolCalls": 8,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "5/5 required facts matched"
+      },
+      "inputTokens": 9021,
+      "output": {
+        "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 29,
+      "responseId": "mock-real-answer-github-permissions-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "taskId": "real-answer-github-permissions",
+      "toolCalls": 8,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "5/5 required facts matched"
+      },
+      "inputTokens": 9021,
+      "output": {
+        "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 29,
+      "responseId": "mock-real-answer-github-permissions-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "taskId": "real-answer-github-permissions",
+      "toolCalls": 8,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "5/5 required facts matched"
+      },
+      "inputTokens": 9021,
+      "output": {
+        "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 29,
+      "responseId": "mock-real-answer-github-permissions-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "taskId": "real-answer-github-permissions",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "5/5 required facts matched"
+      },
+      "inputTokens": 29938,
+      "output": {
+        "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 29,
+      "responseId": "mock-real-answer-github-permissions-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "taskId": "real-answer-github-permissions",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "5/5 required facts matched"
+      },
+      "inputTokens": 29938,
+      "output": {
+        "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 29,
+      "responseId": "mock-real-answer-github-permissions-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "taskId": "real-answer-github-permissions",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "5/5 required facts matched"
+      },
+      "inputTokens": 29938,
+      "output": {
+        "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 29,
+      "responseId": "mock-real-answer-github-permissions-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "taskId": "real-answer-github-permissions",
+      "toolCalls": 13,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "5/5 required facts matched"
+      },
+      "inputTokens": 2149,
+      "output": {
+        "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 29,
+      "responseId": "mock-real-answer-github-permissions-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "taskId": "real-answer-github-permissions",
+      "toolCalls": 13,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "5/5 required facts matched"
+      },
+      "inputTokens": 2149,
+      "output": {
+        "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 29,
+      "responseId": "mock-real-answer-github-permissions-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "taskId": "real-answer-github-permissions",
+      "toolCalls": 13,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "5/5 required facts matched"
+      },
+      "inputTokens": 2149,
+      "output": {
+        "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 29,
+      "responseId": "mock-real-answer-github-permissions-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "202f9b55824f8df16f65a14919a6525865390e9f93a8c428427c6b797e2c6695",
+      "taskId": "real-answer-mcp-contract",
+      "toolCalls": 4,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "6/6 required facts matched"
+      },
+      "inputTokens": 14338,
+      "output": {
+        "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 24,
+      "responseId": "mock-real-answer-mcp-contract-checkout-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "202f9b55824f8df16f65a14919a6525865390e9f93a8c428427c6b797e2c6695",
+      "taskId": "real-answer-mcp-contract",
+      "toolCalls": 4,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "6/6 required facts matched"
+      },
+      "inputTokens": 14338,
+      "output": {
+        "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 24,
+      "responseId": "mock-real-answer-mcp-contract-checkout-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "202f9b55824f8df16f65a14919a6525865390e9f93a8c428427c6b797e2c6695",
+      "taskId": "real-answer-mcp-contract",
+      "toolCalls": 4,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "6/6 required facts matched"
+      },
+      "inputTokens": 14338,
+      "output": {
+        "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 24,
+      "responseId": "mock-real-answer-mcp-contract-checkout-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "202f9b55824f8df16f65a14919a6525865390e9f93a8c428427c6b797e2c6695",
+      "taskId": "real-answer-mcp-contract",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "6/6 required facts matched"
+      },
+      "inputTokens": 29932,
+      "output": {
+        "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 24,
+      "responseId": "mock-real-answer-mcp-contract-full-dump-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "202f9b55824f8df16f65a14919a6525865390e9f93a8c428427c6b797e2c6695",
+      "taskId": "real-answer-mcp-contract",
+      "toolCalls": 0,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "6/6 required facts matched"
+      },
+      "inputTokens": 29932,
+      "output": {
+        "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 24,
+      "responseId": "mock-real-answer-mcp-contract-full-dump-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "202f9b55824f8df16f65a14919a6525865390e9f93a8c428427c6b797e2c6695",
+      "taskId": "real-answer-mcp-contract",
+      "toolCalls": 0,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "6/6 required facts matched"
+      },
+      "inputTokens": 29932,
+      "output": {
+        "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 24,
+      "responseId": "mock-real-answer-mcp-contract-full-dump-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "202f9b55824f8df16f65a14919a6525865390e9f93a8c428427c6b797e2c6695",
+      "taskId": "real-answer-mcp-contract",
+      "toolCalls": 12,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "6/6 required facts matched"
+      },
+      "inputTokens": 2487,
+      "output": {
+        "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 24,
+      "responseId": "mock-real-answer-mcp-contract-data-brain-1",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "202f9b55824f8df16f65a14919a6525865390e9f93a8c428427c6b797e2c6695",
+      "taskId": "real-answer-mcp-contract",
+      "toolCalls": 12,
+      "trial": 2,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "6/6 required facts matched"
+      },
+      "inputTokens": 2487,
+      "output": {
+        "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 24,
+      "responseId": "mock-real-answer-mcp-contract-data-brain-2",
+      "status": "completed",
+      "wallTimeMs": 0
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "202f9b55824f8df16f65a14919a6525865390e9f93a8c428427c6b797e2c6695",
+      "taskId": "real-answer-mcp-contract",
+      "toolCalls": 12,
+      "trial": 3,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "6/6 required facts matched"
+      },
+      "inputTokens": 2487,
+      "output": {
+        "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
+        "files": [],
+        "findings": []
+      },
+      "outputTokens": 24,
+      "responseId": "mock-real-answer-mcp-contract-data-brain-3",
+      "status": "completed",
+      "wallTimeMs": 0
+    }
+  ]
+}

@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "fixture": "drifted-demo",
+  "commitSha": "1111111111111111111111111111111111111111",
+  "findings": [
+    {
+      "id": "F-001",
+      "type": "missing-implementation",
+      "severity": "medium",
+      "grade": "inferred",
+      "summary": "REQ-AUTH-001 has no loginWithGitHub implementation symbol.",
+      "provenance": [
+        {
+          "path": "spec.md",
+          "startLine": 5,
+          "startColumn": 1,
+          "endLine": 5,
+          "endColumn": 89,
+          "excerpt": "- [ ] REQ-AUTH-001: The app MUST implement GitHub OAuth login through `loginWithGitHub`."
+        }
+      ]
+    },
+    {
+      "id": "F-002",
+      "type": "missing-test",
+      "severity": "medium",
+      "grade": "inferred",
+      "summary": "REQ-AUTH-003 has implementation metadata but no passing CI test mapping.",
+      "provenance": [
+        {
+          "path": "spec.md",
+          "startLine": 7,
+          "startColumn": 1,
+          "endLine": 7,
+          "endColumn": 85,
+          "excerpt": "- [x] REQ-AUTH-003: The app MUST record an audit event after every successful login."
+        }
+      ]
+    },
+    {
+      "id": "F-003",
+      "type": "stale-doc",
+      "severity": "medium",
+      "grade": "inferred",
+      "summary": "The documented legacyCharge symbol and source path do not exist.",
+      "provenance": [
+        {
+          "path": "spec.md",
+          "startLine": 15,
+          "startColumn": 1,
+          "endLine": 15,
+          "endColumn": 70,
+          "excerpt": "`src/legacy-billing.ts#legacyCharge` implements subscription billing."
+        }
+      ]
+    },
+    {
+      "id": "F-004",
+      "type": "contradicting-instructions",
+      "severity": "medium",
+      "grade": "inferred",
+      "summary": "Root and API-subtree response key conventions conflict.",
+      "provenance": [
+        {
+          "path": "AGENTS.md",
+          "startLine": 5,
+          "startColumn": 1,
+          "endLine": 5,
+          "endColumn": 67,
+          "excerpt": "- All API responses in this fixture MUST use snake_case JSON keys."
+        },
+        {
+          "path": "src/api/AGENTS.md",
+          "startLine": 3,
+          "startColumn": 1,
+          "endLine": 3,
+          "endColumn": 66,
+          "excerpt": "- All API responses in this subtree MUST use camelCase JSON keys."
+        }
+      ]
+    },
+    {
+      "id": "F-005",
+      "type": "orphan-doc",
+      "severity": "low",
+      "grade": "inferred",
+      "summary": "ADR-002 has no requirement, code, or test relationship.",
+      "provenance": [
+        {
+          "path": "docs/adr/ADR-002-unused-export.md",
+          "startLine": 9,
+          "startColumn": 1,
+          "endLine": 9,
+          "endColumn": 68,
+          "excerpt": "The system MUST export a weekly CSV snapshot to an archival bucket."
+        }
+      ]
+    },
+    {
+      "id": "F-006",
+      "type": "unproven-claim",
+      "severity": "medium",
+      "grade": "inferred",
+      "summary": "Password reset support is claimed without implementation or test evidence.",
+      "provenance": [
+        {
+          "path": "spec.md",
+          "startLine": 11,
+          "startColumn": 1,
+          "endLine": 11,
+          "endColumn": 65,
+          "excerpt": "The service supports automatic password reset for every account."
+        }
+      ]
+    }
+  ]
+}
+

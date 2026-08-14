@@ -1,0 +1,25 @@
+{
+  "headers": {
+    "content-type": "application/json",
+    "x-github-delivery": "00000000-0000-4000-8000-000000000002",
+    "x-github-event": "check_run",
+    "x-hub-signature-256": "sha256=1b8beae2d2a932309523428a72a16d594f6bd417588663df27fc447bbf0eab29"
+  },
+  "body": {
+    "action": "completed",
+    "check_run": {
+      "id": 9001,
+      "name": "fixture-tests",
+      "head_sha": "1111111111111111111111111111111111111111",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "repository": {
+      "id": 424242,
+      "full_name": "specproof/drifted-demo",
+      "default_branch": "main",
+      "private": true
+    },
+    "installation": { "id": 777 }
+  }
+}

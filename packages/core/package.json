@@ -1,0 +1,37 @@
+{
+  "name": "@specproof/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./byok": "./src/ai/byok.ts",
+    "./receipts": "./src/assurance/receipts.ts",
+    "./stats": "./src/stats/pilot-stats.ts"
+  },
+  "dependencies": {
+    "@flowershow/remark-wiki-link": "3.4.0",
+    "fast-xml-parser": "5.10.1",
+    "mdast-util-to-string": "4.0.0",
+    "picomatch": "4.0.5",
+    "remark-frontmatter": "5.0.0",
+    "remark-gfm": "4.0.1",
+    "remark-parse": "11.0.0",
+    "typescript": "5.9.3",
+    "unified": "11.0.5",
+    "unist-util-visit": "5.1.0",
+    "unist-util-visit-parents": "6.0.2",
+    "yaml": "2.9.0",
+    "zod": "4.4.3"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/mdast": "4.0.4",
+    "@types/picomatch": "4.0.3",
+    "@types/unist": "3.0.3",
+    "tsup": "8.5.1"
+  }
+}

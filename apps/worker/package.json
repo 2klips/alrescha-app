@@ -1,0 +1,19 @@
+{
+  "name": "@specproof/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@specproof/core": "workspace:*",
+    "fflate": "0.8.3",
+    "postgres": "3.4.9"
+  },
+  "devDependencies": {
+    "tsup": "8.5.1",
+    "typescript": "5.9.3"
+  }
+}
