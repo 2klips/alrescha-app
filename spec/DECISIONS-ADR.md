@@ -1,4 +1,19 @@
-﻿# DocsHub 결정 로그
+# DocsHub 결정 로그
+
+## ADR-008 — 1차 구현 검수 결과 반영 (2026-08-14)
+
+**날짜:** 2026-08-14
+**상태:** 채택
+**근거:** `specproof-app/docs/reports/IMPLEMENTATION_REVIEW_2026-08-14.md` (27/27 완료, 테스트 244/244, 벤치마크 실측)
+
+### 결정
+
+1. **제품명 = Arr** (태그라인 "Proof, before merge"). 구현 앱의 리브랜드를 인정하고 마케팅 사이트·문서·메모리를 Arr로 정합화한다. 레포명(`2klips/specproof*`)·도메인 표기·패키지 식별자는 사용자-대면 브랜딩과 분리해 추후 일괄 변경(Pages URL 변경 영향 확인 후).
+2. **구현 브랜치 main 머지** + 보완: `.gitattributes`(`* text=auto eol=lf`)로 CRLF digest 사고 재발 방지, README 상태 갱신, 검증 보고서 수록.
+3. **OQ-001 해소 — `contents:write` 선택 권한 승인:** 인덱스 PR 기능 사용 시에만 요청하는 선택 권한으로 승인, UI에서 이유 설명. WORK_SPEC 가드레일 9의 권한 목록을 개정(선택 권한: pull-requests:write + contents:write). "레포 쓰기는 advisory-only PR 하나뿐" 원칙은 불변.
+4. **벤치마크 정확도 반복 착수:** 게이트 NOT MET(-7.04pp) 원인인 회수 실패 2과제(password-reset, github-permissions) 분석·색인/팩 개선 + judge 채점기 점검을 진행한다. **실모델 재실행은 비용 승인 후.** 게이트 통과 전 효율 주장 게시 금지 유지.
+
+---
 
 ## ADR-007 — 구현 인수인계 체계 (2026-08-09)
 

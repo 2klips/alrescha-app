@@ -103,7 +103,7 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
 6. **MCP 금지 기능:** Sampling·Roots·Logging·프로토콜 세션 사용 금지 (2026-07-28 스펙에서 폐기됨). 레포를 변경하는 MCP tool 금지.
 7. **과금 정직성:** 결정론 분석(스캔·파싱·룰)은 크레딧 소모 0. 실패/스키마 불일치 AI 출력에 과금 금지. 재시도로 이중 과금 금지 (idempotency key).
 8. **거짓 정밀도 금지:** 토큰 추정·비용 추정은 항상 가정(토크나이저·모델)을 명시하고 범위로 표시. 계측 없는 "토큰 N% 절감" 류 주장 금지. 데이터가 부족하면 "증거 부족"을 표시.
-9. **최소 GitHub 권한:** contents:read, checks:read, actions:read, metadata + (선택) pull-requests:write. 각 권한은 요청 시점에 UI에서 이유를 설명한다.
+9. **최소 GitHub 권한:** contents:read, checks:read, actions:read, metadata + (선택, 인덱스 PR 기능 사용 시에만) pull-requests:write·contents:write (ADR-008로 개정 — PR 브랜치 생성에 contents:write가 기술적으로 필요). 각 권한은 요청 시점에 UI에서 이유를 설명하며, "레포 쓰기는 advisory-only PR 하나뿐" 원칙은 불변.
 10. **품질:** 타입/린트/테스트 실패를 억제하거나 테스트를 약화시켜 통과시키지 않는다.
 
 ---
