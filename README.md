@@ -1,6 +1,6 @@
-# specproof-app (Arr)
+# arr-app
 
-**Arr(구 SpecProof) 애플리케이션 구현 레포.** 제품명은 ADR-008에서 Arr로 확정. 기획·홍보는 [2klips/specproof](https://github.com/2klips/specproof), 소개 사이트는 https://2klips.github.io/specproof/.
+**Arr(구 SpecProof) 애플리케이션 구현 레포.** 제품명은 ADR-008에서 Arr로 확정. 기획·홍보는 [2klips/arr](https://github.com/2klips/arr), 소개 사이트는 https://2klips.github.io/arr/.
 
 > SpecProof: GitHub에 푸시하면 기획(스펙·ADR·에이전트 지시문)이 실제 코드와 테스트로 증명됐는지 자동 검증하는 AI 개발 보증 SaaS. 메인 대시보드는 살아있는 세컨드 브레인 그래프(뉴런 발광), 코어는 Data Brain(증거 그래프 DB + LLM Wiki + 색인 + 주문형 MCP 서빙).
 

@@ -1,5 +1,19 @@
 # DocsHub 결정 로그
 
+## ADR-009 — Arr 개명 완료 + Phase 2 연구·개발 아젠다 (2026-08-14)
+
+**날짜:** 2026-08-14
+**상태:** 채택
+
+### 결정
+
+1. **개명 완료:** GitHub 레포 `2klips/arr`(기획·사이트, Pages `2klips.github.io/arr/`)·`2klips/arr-app`(구현), 로컬 폴더 `Project/arr`·`Project/arr-app`. 문서 내 레포 참조 일괄 갱신 (spec 본문의 역사적 "SpecProof" 표기는 유지 — 제품명은 Arr).
+2. **Phase 2 연구·개발 아젠다 8건 채택** — 상세는 `spec/RESEARCH_AGENDA_2026-08-14.md`: ① Data Brain 효율(토큰 최소·정확도·유연성) ② Graph View 디자인 연구 + 에이전트의 그래프 활용 ③ 실질 벤치마크 확대 ④ 레포 URL 등록 + Vercel식 푸시-자동-분석 UX + 로컬 업로드 경로 ⑤ 팀 솔루션(프롬프트 기록·평가·AI 코칭, 기여도, DORA형 + 독자 VIBE 지표 연구, 지표 하네스 주입 효과 검증) ⑥ 프로젝트 점검 대시보드(진척·todo·문제·문서 요약·취약점) ⑦ 디자인 시스템 교체 ⑧ UI 전면 재구성(대시보드=그래프 메인).
+3. **디자인 시스템 "Ink & Seal" 채택 (⑦):** 한국어 우선(관용 영단어는 영어 유지), 다크 기본 + 라이트 지원. 폰트 = Pretendard Variable + IBM Plex Mono. 팔레트 — Dark: bg `#0B0E14`·surface `#141926`·line `#232B3D`·text `#E8ECF4`; Light("종이"): bg `#FAF7F1`·surface `#FFFFFF`·text `#20242E`; 브랜드 주홍(도장) `#FF5A45`(D)/`#D6402E`(L); verified `#3DDC97`/`#1E8A5E`; inferred `#F5B84A`/`#B07A14`; 그래프·정보 blue `#6C9EFF`/`#3B6FDB`. 노드 색 규약(문서 blue·요구사항 주홍·코드 green·테스트 amber) 유지.
+4. **보안 점검 범위(⑥):** 자체 코드 보안 스캐너는 계속 비목표. "취약점 점검"은 ⑴ 드리프트·문서 기반 위험(미검증 주장·권한 문서화 누락) ⑵ 의존성 감사 결과 수집(npm audit/CI 아티팩트 인제스트) 수준으로 정의.
+
+---
+
 ## ADR-008 — 1차 구현 검수 결과 반영 (2026-08-14)
 
 **날짜:** 2026-08-14
