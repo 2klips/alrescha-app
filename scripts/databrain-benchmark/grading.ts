@@ -6,9 +6,13 @@ import type {
 } from "./types";
 
 function normalized(value: string): string {
+  // Underscores and colons collapse to spaces so semantically equal phrasings
+  // ("pull_requests: write", "pull requests write", "pull_requests:write")
+  // grade identically; applied to both sides of every comparison.
   return value
     .normalize("NFKC")
     .toLocaleLowerCase("en-US")
+    .replace(/[_:]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }

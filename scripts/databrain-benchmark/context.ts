@@ -300,7 +300,7 @@ export async function buildArmContext(input: {
   );
   const searchResults = rankedResults.slice(0, 6);
   const selectedArtifactResults = implementationTask
-    ? rankedResults.slice(0, 2)
+    ? rankedResults.slice(0, 3)
     : [
         rankedResults[0],
         rankedResults.find(({ path }) => /\.(?:md|mdc)$/i.test(path)),
@@ -318,12 +318,23 @@ export async function buildArmContext(input: {
     );
     if (additional) selectedArtifactResults.push(additional);
   }
+  if (implementationTask) {
+    // Include one test exemplar so implementation conventions (e.g. how
+    // invalid input is rejected) are visible to the model, mirroring what a
+    // checkout exploration would surface.
+    const testExemplar = rankedResults.find(
+      (result) =>
+        /\.test\.(?:ts|tsx|js|jsx)$/i.test(result.path) &&
+        !selectedArtifactResults.some(({ id }) => id === result.id),
+    );
+    if (testExemplar) selectedArtifactResults.push(testExemplar);
+  }
   const artifactResults = selectedArtifactResults.flatMap((result) => {
     const selected = getWorkspaceArtifact(workspace, {
       id: result.nodeId,
     }).artifact;
     return selected
-      ? [{ content: selected.content.slice(0, 4_000), path: selected.path }]
+      ? [{ content: selected.content.slice(0, 6_000), path: selected.path }]
       : [];
   });
   const pack = selectWorkspaceContextPack(workspace, {
