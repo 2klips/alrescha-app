@@ -33,7 +33,7 @@ export default async function ProgressPage({
             <Network size={18} />
           </span>
           <span>
-            <strong>SpecProof</strong>
+            <strong>Arr</strong>
             <small>2klips/specproof-app · progress ledger</small>
           </span>
         </Link>

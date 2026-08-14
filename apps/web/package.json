@@ -9,6 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@fontsource-variable/archivo": "^5.3.0",
+    "@fontsource-variable/manrope": "^5.3.0",
     "@specproof/core": "workspace:*",
     "@specproof/mcp": "workspace:^",
     "@supabase/ssr": "0.12.4",

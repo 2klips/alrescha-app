@@ -5,7 +5,7 @@ export function PrivacyBoundary() {
         <span className="eyebrow">Stored</span>
         <h2>Metadata-only storage</h2>
         <p>
-          SpecProof stores repository identity, file paths, content digests,
+          Arr stores repository identity, file paths, content digests,
           source spans, extracted requirements, evidence edges, findings, test
           reports, receipts, job status, and minimal audit events.
         </p>

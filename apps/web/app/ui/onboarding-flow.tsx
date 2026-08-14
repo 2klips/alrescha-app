@@ -45,7 +45,7 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
       </div>
       <header className="onboarding-brand">
         <span className="repo-mark"><Network size={18} /></span>
-        <strong>SpecProof</strong>
+        <strong>Arr</strong>
         <span>Project assurance workspace</span>
       </header>
       <ol className="stepper" aria-label="Onboarding progress">
@@ -60,7 +60,7 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
         <section className="onboarding-card" aria-labelledby="onboarding-title">
           <span className="panel-kicker">01 · Identity</span>
           <h1 id="onboarding-title">Start with your repository.</h1>
-          <p>Sign in once. SpecProof creates a private solo workspace, even for public repositories.</p>
+          <p>Sign in once. Arr creates a private solo workspace, even for public repositories.</p>
           <button className="primary-action" onClick={() => setStep(1)} type="button">
             <GitFork size={17} /> Continue with GitHub <ChevronRight size={16} />
           </button>
@@ -84,7 +84,7 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
           <h1 id="permission-title">Read only. Evidence only.</h1>
           <p>
             Choose repositories on GitHub. Access stays scoped to that selection.
-            Source files are fetched transiently; SpecProof stores metadata,
+            Source files are fetched transiently; Arr stores metadata,
             digests, spans, findings, and receipts.
           </p>
           {permissionError ? (

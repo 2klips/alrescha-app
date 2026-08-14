@@ -22,9 +22,9 @@ interface Camera {
 }
 
 const NODE_COLORS = {
-  broken: "#ff5d55",
-  inferred: "#a88bff",
-  verified: "#65b8ff",
+  broken: "#ff5a3c",
+  inferred: "#5f35c9",
+  verified: "#2457f5",
 } as const;
 
 const TYPE_GLYPHS = {

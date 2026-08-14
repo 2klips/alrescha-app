@@ -53,7 +53,7 @@ function AppHeader({ surface }: { surface: AssuranceSurface }) {
     <header className="app-header">
       <Link className="app-identity" href="/">
         <span className="repo-mark"><Network size={18} /></span>
-        <span><strong>SpecProof</strong><small>2klips/specproof-app · bad0551</small></span>
+        <span><strong>Arr</strong><small>2klips/specproof-app · bad0551</small></span>
       </Link>
       <nav aria-label="Assurance surfaces">
         <Link href="/"><LayoutDashboard size={15} />Graph</Link>

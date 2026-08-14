@@ -41,7 +41,7 @@ export default async function ConnectGitHubPage() {
           <li>Metadata: read — identify repository and default branch</li>
         </ul>
         <p>
-          Raw source and installation tokens are not stored. SpecProof stores
+          Raw source and installation tokens are not stored. Arr stores
           metadata, digests, spans, findings, and receipts. Access events are
           retained for 30 days during the pilot.
         </p>
