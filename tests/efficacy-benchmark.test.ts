@@ -190,7 +190,7 @@ describe("F5 efficacy benchmark audit", () => {
         await writeFile(
           page,
           `export default function Page() {
-            return <p>2pp higher accuracy. <a href="/benchmarks/databrain/results.real.md">Report</a></p>;
+            return <p>99pp higher accuracy. <a href="/benchmarks/databrain/results.real.md">Report</a></p>;
           }`,
           "utf8",
         );
