@@ -48,7 +48,7 @@ Wave 0–2 전체와 Wave 3 대부분은 **픽스처 기반 오프라인**으로
 | 항목 | 기본값 | 비고 |
 |---|---|---|
 | 모노레포 | pnpm workspace: `apps/web`(Next.js App Router), `apps/worker`, `packages/core`, `packages/mcp` | core는 DB 비의존 순수 엔진 |
-| 그래프 렌더러 | React Flow → todo 12의 500노드 성능 테스트 미달 시에만 canvas 커스텀 전환 | 전환 시 사유를 evidence에 기록 |
+| 그래프 렌더러 | graphology + d3-force(Web Worker) + Pixi.js v8 — 2026-08-14 그래프 조사로 확정 (React Flow는 힘 그래프 부적합 판명, spec/RESEARCH_GRAPH_DATABRAIN 참조) | 전환 시 사유를 evidence에 기록 |
 | 실시간 채널 | Supabase Realtime broadcast (워크스페이스별 채널) | RLS와 채널 인가 필수 |
 | 잡 큐 | Postgres 자체 구현 — `SELECT ... FOR UPDATE SKIP LOCKED` 클레임 + heartbeat 컬럼 | 외부 큐 서비스 금지 (todo 7 수용 기준이 세부 동작을 요구) |
 | Markdown 파서 | remark/unified 계열 | WORK_SPEC §8 |
