@@ -3,6 +3,8 @@
 import {
   Activity,
   AlertTriangle,
+  Archive,
+  BookmarkPlus,
   Braces,
   CheckCircle2,
   CircleDotDashed,
@@ -308,6 +310,12 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
           >
             <Network size={14} /> Local focus
           </button>
+          <a className="tool-button" href="/app/harness">
+            <BookmarkPlus size={14} /> Harness assets
+          </a>
+          <a className="tool-button" href="/app/library">
+            <Archive size={14} /> Library
+          </a>
         </div>
 
         {model.isClustered ? (

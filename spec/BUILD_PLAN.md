@@ -300,7 +300,7 @@ Use these stable reference IDs in todos. If an implementation worker needs newer
   QA scenarios: happy a scripted MCP session logs three task updates and Playwright sees the board and timeline update with correct states; failure a log_progress call with an oversized summary is rejected with a typed error and no partial todo write. Evidence `.omo/evidence/docshub-product-strategy/task-21.png`.
   Commit: Y | feat(progress): add todo board and frugal work logging
 
-- [ ] 22. Build the personal library (save/browse)
+- [x] 22. Build the personal library (save/browse)
   What to do / Must NOT do: `library_items` flows: "save to library" from the harness dashboard captures type, source (repo/path/commit), content snapshot, and tags; `/app/library` lists items workspace-globally with search and tag filters and shows source provenance; deleting an item never touches the source repo. Must not implement import-into-project, PR generation, team sharing, or any public/marketplace surface; must not store items without source provenance.
   Parallelization: Wave 4 | Blocked by: 4,5,8,13 | Blocks: 19
   References: R1, R2.

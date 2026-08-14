@@ -9,6 +9,8 @@ test.each(DASHBOARD_STATES)("dashboard component renders the %s state", (state) 
   const html = renderToStaticMarkup(createElement(DashboardScreen, { model: buildDashboardViewModel(state) }));
 
   expect(html).toContain("SpecProof project assurance dashboard");
+  expect(html).toContain('href="/app/harness"');
+  expect(html).toContain('href="/app/library"');
   if (state === "loading") expect(html).toContain("Loading evidence index");
   if (state === "empty") expect(html).toContain("Graph canvas ready");
   if (state === "scanning") expect(html).toContain("Building proof spine · 62%");

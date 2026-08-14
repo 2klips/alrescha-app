@@ -85,6 +85,16 @@ export type {
   TodoStatus,
 } from "./progress/todos";
 
+export { createLibrarySnapshot, filterLibraryItems } from "./library/items";
+export type {
+  CreateLibrarySnapshotInput,
+  LibraryFilter,
+  LibraryItem,
+  LibraryItemSource,
+  LibraryItemType,
+  LibrarySnapshot,
+} from "./library/items";
+
 export { buildProgressDashboard } from "./progress/dashboard";
 export type {
   BuildProgressDashboardInput,

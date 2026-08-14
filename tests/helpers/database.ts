@@ -45,6 +45,8 @@ export const RELEASE_HARDENING_MIGRATION =
   "supabase/migrations/202608100009_release_hardening.sql";
 export const PROGRESS_DASHBOARD_MIGRATION =
   "supabase/migrations/202608100010_progress_dashboard.sql";
+export const LIBRARY_MIGRATION =
+  "supabase/migrations/202608100011_personal_library.sql";
 
 export async function createTestDatabase(
   migrations: readonly string[],
