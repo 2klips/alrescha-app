@@ -6,11 +6,11 @@
       "meanScore": 1,
       "passedTrials": 36,
       "passRate": 1,
-      "totalInputTokens": 114834,
+      "totalInputTokens": 125718,
       "totalOutputTokens": 1803,
-      "totalTokens": 116637,
+      "totalTokens": 127521,
       "totalToolCalls": 303,
-      "totalWallTimeMs": 7031,
+      "totalWallTimeMs": 7835,
       "trialCount": 36
     },
     {
@@ -19,11 +19,11 @@
       "meanScore": 1,
       "passedTrials": 36,
       "passRate": 1,
-      "totalInputTokens": 204888,
+      "totalInputTokens": 230772,
       "totalOutputTokens": 1803,
-      "totalTokens": 206691,
+      "totalTokens": 232575,
       "totalToolCalls": 0,
-      "totalWallTimeMs": 7065,
+      "totalWallTimeMs": 7283,
       "trialCount": 36
     },
     {
@@ -32,11 +32,11 @@
       "meanScore": 1,
       "passedTrials": 36,
       "passRate": 1,
-      "totalInputTokens": 54180,
+      "totalInputTokens": 56103,
       "totalOutputTokens": 1803,
-      "totalTokens": 55983,
+      "totalTokens": 57906,
       "totalToolCalls": 378,
-      "totalWallTimeMs": 7143,
+      "totalWallTimeMs": 7432,
       "trialCount": 36
     }
   ],
@@ -46,7 +46,7 @@
     "baselineArm": "checkout",
     "dataBrainArm": "data-brain",
     "targetTokenReductionPercent": 30,
-    "tokenReductionPercent": 52.002366,
+    "tokenReductionPercent": 54.591009,
     "tokenTargetMet": true
   },
   "protocol": {
@@ -60,8 +60,8 @@
     "trialsPerArm": 3
   },
   "run": {
-    "generatedAt": "2026-08-14T14:02:06.770Z",
-    "manifestDigest": "fc9f23049679ab559a610324db1a7b3359a62969fb03374c6871907f89c2a662",
+    "generatedAt": "2026-08-14T14:29:11.600Z",
+    "manifestDigest": "03af75ee450fc9a98c8b27f3606cbfabda2285ae638bf537c75407a2fdc1e373",
     "mode": "dry-run",
     "model": "gpt-5-nano-2025-08-07",
     "tokenizerAssumption": "Mock usage is deterministic ceil((context + prompt) characters / 4) input and serialized-output characters / 4 output."
@@ -96,7 +96,7 @@
       "outputTokens": 125,
       "responseId": "mock-fixture-implement-remaining-session-ms-checkout-1",
       "status": "completed",
-      "wallTimeMs": 602
+      "wallTimeMs": 732
     },
     {
       "arm": "checkout",
@@ -126,7 +126,7 @@
       "outputTokens": 125,
       "responseId": "mock-fixture-implement-remaining-session-ms-checkout-2",
       "status": "completed",
-      "wallTimeMs": 601
+      "wallTimeMs": 732
     },
     {
       "arm": "checkout",
@@ -156,7 +156,7 @@
       "outputTokens": 125,
       "responseId": "mock-fixture-implement-remaining-session-ms-checkout-3",
       "status": "completed",
-      "wallTimeMs": 601
+      "wallTimeMs": 732
     },
     {
       "arm": "full-dump",
@@ -186,7 +186,7 @@
       "outputTokens": 125,
       "responseId": "mock-fixture-implement-remaining-session-ms-full-dump-1",
       "status": "completed",
-      "wallTimeMs": 600
+      "wallTimeMs": 619
     },
     {
       "arm": "full-dump",
@@ -216,7 +216,7 @@
       "outputTokens": 125,
       "responseId": "mock-fixture-implement-remaining-session-ms-full-dump-2",
       "status": "completed",
-      "wallTimeMs": 578
+      "wallTimeMs": 602
     },
     {
       "arm": "full-dump",
@@ -246,7 +246,7 @@
       "outputTokens": 125,
       "responseId": "mock-fixture-implement-remaining-session-ms-full-dump-3",
       "status": "completed",
-      "wallTimeMs": 599
+      "wallTimeMs": 620
     },
     {
       "arm": "data-brain",
@@ -276,7 +276,7 @@
       "outputTokens": 125,
       "responseId": "mock-fixture-implement-remaining-session-ms-data-brain-1",
       "status": "completed",
-      "wallTimeMs": 587
+      "wallTimeMs": 621
     },
     {
       "arm": "data-brain",
@@ -306,7 +306,7 @@
       "outputTokens": 125,
       "responseId": "mock-fixture-implement-remaining-session-ms-data-brain-2",
       "status": "completed",
-      "wallTimeMs": 594
+      "wallTimeMs": 612
     },
     {
       "arm": "data-brain",
@@ -336,7 +336,7 @@
       "outputTokens": 125,
       "responseId": "mock-fixture-implement-remaining-session-ms-data-brain-3",
       "status": "completed",
-      "wallTimeMs": 592
+      "wallTimeMs": 612
     },
     {
       "arm": "checkout",
@@ -366,7 +366,7 @@
       "outputTokens": 126,
       "responseId": "mock-fixture-implement-refresh-session-checkout-1",
       "status": "completed",
-      "wallTimeMs": 585
+      "wallTimeMs": 636
     },
     {
       "arm": "checkout",
@@ -396,7 +396,7 @@
       "outputTokens": 126,
       "responseId": "mock-fixture-implement-refresh-session-checkout-2",
       "status": "completed",
-      "wallTimeMs": 586
+      "wallTimeMs": 636
     },
     {
       "arm": "checkout",
@@ -426,7 +426,7 @@
       "outputTokens": 126,
       "responseId": "mock-fixture-implement-refresh-session-checkout-3",
       "status": "completed",
-      "wallTimeMs": 583
+      "wallTimeMs": 617
     },
     {
       "arm": "full-dump",
@@ -456,7 +456,7 @@
       "outputTokens": 126,
       "responseId": "mock-fixture-implement-refresh-session-full-dump-1",
       "status": "completed",
-      "wallTimeMs": 579
+      "wallTimeMs": 599
     },
     {
       "arm": "full-dump",
@@ -486,7 +486,7 @@
       "outputTokens": 126,
       "responseId": "mock-fixture-implement-refresh-session-full-dump-2",
       "status": "completed",
-      "wallTimeMs": 579
+      "wallTimeMs": 599
     },
     {
       "arm": "full-dump",
@@ -516,7 +516,7 @@
       "outputTokens": 126,
       "responseId": "mock-fixture-implement-refresh-session-full-dump-3",
       "status": "completed",
-      "wallTimeMs": 577
+      "wallTimeMs": 598
     },
     {
       "arm": "data-brain",
@@ -546,7 +546,7 @@
       "outputTokens": 126,
       "responseId": "mock-fixture-implement-refresh-session-data-brain-1",
       "status": "completed",
-      "wallTimeMs": 578
+      "wallTimeMs": 611
     },
     {
       "arm": "data-brain",
@@ -576,7 +576,7 @@
       "outputTokens": 126,
       "responseId": "mock-fixture-implement-refresh-session-data-brain-2",
       "status": "completed",
-      "wallTimeMs": 584
+      "wallTimeMs": 597
     },
     {
       "arm": "data-brain",
@@ -606,7 +606,7 @@
       "outputTokens": 126,
       "responseId": "mock-fixture-implement-refresh-session-data-brain-3",
       "status": "completed",
-      "wallTimeMs": 583
+      "wallTimeMs": 596
     },
     {
       "arm": "checkout",
@@ -636,7 +636,7 @@
       "outputTokens": 68,
       "responseId": "mock-fixture-implement-github-login-checkout-1",
       "status": "completed",
-      "wallTimeMs": 584
+      "wallTimeMs": 639
     },
     {
       "arm": "checkout",
@@ -666,7 +666,7 @@
       "outputTokens": 68,
       "responseId": "mock-fixture-implement-github-login-checkout-2",
       "status": "completed",
-      "wallTimeMs": 566
+      "wallTimeMs": 639
     },
     {
       "arm": "checkout",
@@ -696,7 +696,7 @@
       "outputTokens": 68,
       "responseId": "mock-fixture-implement-github-login-checkout-3",
       "status": "completed",
-      "wallTimeMs": 579
+      "wallTimeMs": 638
     },
     {
       "arm": "full-dump",
@@ -726,7 +726,7 @@
       "outputTokens": 68,
       "responseId": "mock-fixture-implement-github-login-full-dump-1",
       "status": "completed",
-      "wallTimeMs": 605
+      "wallTimeMs": 601
     },
     {
       "arm": "full-dump",
@@ -756,7 +756,7 @@
       "outputTokens": 68,
       "responseId": "mock-fixture-implement-github-login-full-dump-2",
       "status": "completed",
-      "wallTimeMs": 605
+      "wallTimeMs": 595
     },
     {
       "arm": "full-dump",
@@ -786,7 +786,7 @@
       "outputTokens": 68,
       "responseId": "mock-fixture-implement-github-login-full-dump-3",
       "status": "completed",
-      "wallTimeMs": 588
+      "wallTimeMs": 602
     },
     {
       "arm": "data-brain",
@@ -816,7 +816,7 @@
       "outputTokens": 68,
       "responseId": "mock-fixture-implement-github-login-data-brain-1",
       "status": "completed",
-      "wallTimeMs": 596
+      "wallTimeMs": 599
     },
     {
       "arm": "data-brain",
@@ -846,7 +846,7 @@
       "outputTokens": 68,
       "responseId": "mock-fixture-implement-github-login-data-brain-2",
       "status": "completed",
-      "wallTimeMs": 595
+      "wallTimeMs": 613
     },
     {
       "arm": "data-brain",
@@ -876,12 +876,12 @@
       "outputTokens": 68,
       "responseId": "mock-fixture-implement-github-login-data-brain-3",
       "status": "completed",
-      "wallTimeMs": 596
+      "wallTimeMs": 598
     },
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "promptDigest": "00de3669a5ebb5ef9d7a7b789edfd90c3a5c27ebb56fd964dab5958b835331bb",
       "taskId": "fixture-implement-password-reset",
       "toolCalls": 9,
       "trial": 1,
@@ -892,7 +892,7 @@
         "score": 1,
         "summary": "passed"
       },
-      "inputTokens": 863,
+      "inputTokens": 880,
       "output": {
         "answer": "",
         "files": [
@@ -906,12 +906,12 @@
       "outputTokens": 104,
       "responseId": "mock-fixture-implement-password-reset-checkout-1",
       "status": "completed",
-      "wallTimeMs": 581
+      "wallTimeMs": 611
     },
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "promptDigest": "00de3669a5ebb5ef9d7a7b789edfd90c3a5c27ebb56fd964dab5958b835331bb",
       "taskId": "fixture-implement-password-reset",
       "toolCalls": 9,
       "trial": 2,
@@ -922,7 +922,7 @@
         "score": 1,
         "summary": "passed"
       },
-      "inputTokens": 863,
+      "inputTokens": 880,
       "output": {
         "answer": "",
         "files": [
@@ -936,12 +936,12 @@
       "outputTokens": 104,
       "responseId": "mock-fixture-implement-password-reset-checkout-2",
       "status": "completed",
-      "wallTimeMs": 581
+      "wallTimeMs": 611
     },
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "promptDigest": "00de3669a5ebb5ef9d7a7b789edfd90c3a5c27ebb56fd964dab5958b835331bb",
       "taskId": "fixture-implement-password-reset",
       "toolCalls": 9,
       "trial": 3,
@@ -952,7 +952,7 @@
         "score": 1,
         "summary": "passed"
       },
-      "inputTokens": 863,
+      "inputTokens": 880,
       "output": {
         "answer": "",
         "files": [
@@ -966,12 +966,12 @@
       "outputTokens": 104,
       "responseId": "mock-fixture-implement-password-reset-checkout-3",
       "status": "completed",
-      "wallTimeMs": 581
+      "wallTimeMs": 611
     },
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "promptDigest": "00de3669a5ebb5ef9d7a7b789edfd90c3a5c27ebb56fd964dab5958b835331bb",
       "taskId": "fixture-implement-password-reset",
       "toolCalls": 0,
       "trial": 1,
@@ -982,7 +982,7 @@
         "score": 1,
         "summary": "passed"
       },
-      "inputTokens": 677,
+      "inputTokens": 695,
       "output": {
         "answer": "",
         "files": [
@@ -996,12 +996,12 @@
       "outputTokens": 104,
       "responseId": "mock-fixture-implement-password-reset-full-dump-1",
       "status": "completed",
-      "wallTimeMs": 587
+      "wallTimeMs": 627
     },
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "promptDigest": "00de3669a5ebb5ef9d7a7b789edfd90c3a5c27ebb56fd964dab5958b835331bb",
       "taskId": "fixture-implement-password-reset",
       "toolCalls": 0,
       "trial": 2,
@@ -1012,7 +1012,7 @@
         "score": 1,
         "summary": "passed"
       },
-      "inputTokens": 677,
+      "inputTokens": 695,
       "output": {
         "answer": "",
         "files": [
@@ -1026,12 +1026,12 @@
       "outputTokens": 104,
       "responseId": "mock-fixture-implement-password-reset-full-dump-2",
       "status": "completed",
-      "wallTimeMs": 582
+      "wallTimeMs": 607
     },
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "promptDigest": "00de3669a5ebb5ef9d7a7b789edfd90c3a5c27ebb56fd964dab5958b835331bb",
       "taskId": "fixture-implement-password-reset",
       "toolCalls": 0,
       "trial": 3,
@@ -1042,7 +1042,7 @@
         "score": 1,
         "summary": "passed"
       },
-      "inputTokens": 677,
+      "inputTokens": 695,
       "output": {
         "answer": "",
         "files": [
@@ -1056,12 +1056,12 @@
       "outputTokens": 104,
       "responseId": "mock-fixture-implement-password-reset-full-dump-3",
       "status": "completed",
-      "wallTimeMs": 586
+      "wallTimeMs": 614
     },
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "promptDigest": "00de3669a5ebb5ef9d7a7b789edfd90c3a5c27ebb56fd964dab5958b835331bb",
       "taskId": "fixture-implement-password-reset",
       "toolCalls": 10,
       "trial": 1,
@@ -1072,7 +1072,7 @@
         "score": 1,
         "summary": "passed"
       },
-      "inputTokens": 1390,
+      "inputTokens": 1424,
       "output": {
         "answer": "",
         "files": [
@@ -1086,12 +1086,12 @@
       "outputTokens": 104,
       "responseId": "mock-fixture-implement-password-reset-data-brain-1",
       "status": "completed",
-      "wallTimeMs": 623
+      "wallTimeMs": 628
     },
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "promptDigest": "00de3669a5ebb5ef9d7a7b789edfd90c3a5c27ebb56fd964dab5958b835331bb",
       "taskId": "fixture-implement-password-reset",
       "toolCalls": 10,
       "trial": 2,
@@ -1102,7 +1102,7 @@
         "score": 1,
         "summary": "passed"
       },
-      "inputTokens": 1390,
+      "inputTokens": 1424,
       "output": {
         "answer": "",
         "files": [
@@ -1116,12 +1116,12 @@
       "outputTokens": 104,
       "responseId": "mock-fixture-implement-password-reset-data-brain-2",
       "status": "completed",
-      "wallTimeMs": 590
+      "wallTimeMs": 673
     },
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bb321719e9b6380853036c5e9e36541119a9ffabd2bb7d5ead9880b9a7f66fd1",
+      "promptDigest": "00de3669a5ebb5ef9d7a7b789edfd90c3a5c27ebb56fd964dab5958b835331bb",
       "taskId": "fixture-implement-password-reset",
       "toolCalls": 10,
       "trial": 3,
@@ -1132,7 +1132,7 @@
         "score": 1,
         "summary": "passed"
       },
-      "inputTokens": 1390,
+      "inputTokens": 1424,
       "output": {
         "answer": "",
         "files": [
@@ -1146,7 +1146,7 @@
       "outputTokens": 104,
       "responseId": "mock-fixture-implement-password-reset-data-brain-3",
       "status": "completed",
-      "wallTimeMs": 623
+      "wallTimeMs": 672
     },
     {
       "arm": "checkout",
@@ -1171,7 +1171,7 @@
       "outputTokens": 18,
       "responseId": "mock-fixture-answer-session-policy-checkout-1",
       "status": "completed",
-      "wallTimeMs": 1
+      "wallTimeMs": 0
     },
     {
       "arm": "checkout",
@@ -1546,7 +1546,7 @@
       "outputTokens": 16,
       "responseId": "mock-fixture-answer-audit-schema-data-brain-1",
       "status": "completed",
-      "wallTimeMs": 1
+      "wallTimeMs": 0
     },
     {
       "arm": "data-brain",
@@ -1621,7 +1621,7 @@
       "outputTokens": 19,
       "responseId": "mock-fixture-answer-api-rule-conflict-checkout-1",
       "status": "completed",
-      "wallTimeMs": 0
+      "wallTimeMs": 1
     },
     {
       "arm": "checkout",
@@ -2051,7 +2051,7 @@
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "promptDigest": "3abd78801d9e25a0e9ae566616341a15633ce1fad16c198ea95dc17f870cf2e2",
       "taskId": "fixture-judge-auth-drift",
       "toolCalls": 9,
       "trial": 1,
@@ -2062,7 +2062,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 979,
+      "inputTokens": 974,
       "output": {
         "answer": "",
         "files": [],
@@ -2079,7 +2079,7 @@
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "promptDigest": "3abd78801d9e25a0e9ae566616341a15633ce1fad16c198ea95dc17f870cf2e2",
       "taskId": "fixture-judge-auth-drift",
       "toolCalls": 9,
       "trial": 2,
@@ -2090,7 +2090,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 979,
+      "inputTokens": 974,
       "output": {
         "answer": "",
         "files": [],
@@ -2107,7 +2107,7 @@
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "promptDigest": "3abd78801d9e25a0e9ae566616341a15633ce1fad16c198ea95dc17f870cf2e2",
       "taskId": "fixture-judge-auth-drift",
       "toolCalls": 9,
       "trial": 3,
@@ -2118,7 +2118,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 979,
+      "inputTokens": 974,
       "output": {
         "answer": "",
         "files": [],
@@ -2135,7 +2135,7 @@
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "promptDigest": "3abd78801d9e25a0e9ae566616341a15633ce1fad16c198ea95dc17f870cf2e2",
       "taskId": "fixture-judge-auth-drift",
       "toolCalls": 0,
       "trial": 1,
@@ -2146,7 +2146,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 647,
+      "inputTokens": 704,
       "output": {
         "answer": "",
         "files": [],
@@ -2163,7 +2163,7 @@
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "promptDigest": "3abd78801d9e25a0e9ae566616341a15633ce1fad16c198ea95dc17f870cf2e2",
       "taskId": "fixture-judge-auth-drift",
       "toolCalls": 0,
       "trial": 2,
@@ -2174,7 +2174,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 647,
+      "inputTokens": 704,
       "output": {
         "answer": "",
         "files": [],
@@ -2191,7 +2191,7 @@
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "promptDigest": "3abd78801d9e25a0e9ae566616341a15633ce1fad16c198ea95dc17f870cf2e2",
       "taskId": "fixture-judge-auth-drift",
       "toolCalls": 0,
       "trial": 3,
@@ -2202,7 +2202,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 647,
+      "inputTokens": 704,
       "output": {
         "answer": "",
         "files": [],
@@ -2219,7 +2219,7 @@
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "promptDigest": "3abd78801d9e25a0e9ae566616341a15633ce1fad16c198ea95dc17f870cf2e2",
       "taskId": "fixture-judge-auth-drift",
       "toolCalls": 11,
       "trial": 1,
@@ -2230,7 +2230,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 1075,
+      "inputTokens": 1304,
       "output": {
         "answer": "",
         "files": [],
@@ -2242,12 +2242,12 @@
       "outputTokens": 27,
       "responseId": "mock-fixture-judge-auth-drift-data-brain-1",
       "status": "completed",
-      "wallTimeMs": 1
+      "wallTimeMs": 0
     },
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "promptDigest": "3abd78801d9e25a0e9ae566616341a15633ce1fad16c198ea95dc17f870cf2e2",
       "taskId": "fixture-judge-auth-drift",
       "toolCalls": 11,
       "trial": 2,
@@ -2258,7 +2258,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 1075,
+      "inputTokens": 1304,
       "output": {
         "answer": "",
         "files": [],
@@ -2275,7 +2275,7 @@
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "aff9d66139c50b0fe8e2d3ebaba3f134ee9110d21acf676a531cd3f355283a23",
+      "promptDigest": "3abd78801d9e25a0e9ae566616341a15633ce1fad16c198ea95dc17f870cf2e2",
       "taskId": "fixture-judge-auth-drift",
       "toolCalls": 11,
       "trial": 3,
@@ -2286,7 +2286,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 1075,
+      "inputTokens": 1304,
       "output": {
         "answer": "",
         "files": [],
@@ -2303,7 +2303,7 @@
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "promptDigest": "7c2ff3f7235fb96ff20f5810397a2eedd1b747be9e55ae4a4ade4a856f19052a",
       "taskId": "fixture-judge-instruction-doc-drift",
       "toolCalls": 9,
       "trial": 1,
@@ -2314,7 +2314,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 2222,
+      "inputTokens": 2276,
       "output": {
         "answer": "",
         "files": [],
@@ -2331,7 +2331,7 @@
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "promptDigest": "7c2ff3f7235fb96ff20f5810397a2eedd1b747be9e55ae4a4ade4a856f19052a",
       "taskId": "fixture-judge-instruction-doc-drift",
       "toolCalls": 9,
       "trial": 2,
@@ -2342,7 +2342,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 2222,
+      "inputTokens": 2276,
       "output": {
         "answer": "",
         "files": [],
@@ -2359,7 +2359,7 @@
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "promptDigest": "7c2ff3f7235fb96ff20f5810397a2eedd1b747be9e55ae4a4ade4a856f19052a",
       "taskId": "fixture-judge-instruction-doc-drift",
       "toolCalls": 9,
       "trial": 3,
@@ -2370,7 +2370,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 2222,
+      "inputTokens": 2276,
       "output": {
         "answer": "",
         "files": [],
@@ -2387,7 +2387,7 @@
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "promptDigest": "7c2ff3f7235fb96ff20f5810397a2eedd1b747be9e55ae4a4ade4a856f19052a",
       "taskId": "fixture-judge-instruction-doc-drift",
       "toolCalls": 0,
       "trial": 1,
@@ -2398,7 +2398,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 639,
+      "inputTokens": 696,
       "output": {
         "answer": "",
         "files": [],
@@ -2415,7 +2415,7 @@
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "promptDigest": "7c2ff3f7235fb96ff20f5810397a2eedd1b747be9e55ae4a4ade4a856f19052a",
       "taskId": "fixture-judge-instruction-doc-drift",
       "toolCalls": 0,
       "trial": 2,
@@ -2426,7 +2426,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 639,
+      "inputTokens": 696,
       "output": {
         "answer": "",
         "files": [],
@@ -2443,7 +2443,7 @@
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "promptDigest": "7c2ff3f7235fb96ff20f5810397a2eedd1b747be9e55ae4a4ade4a856f19052a",
       "taskId": "fixture-judge-instruction-doc-drift",
       "toolCalls": 0,
       "trial": 3,
@@ -2454,7 +2454,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 639,
+      "inputTokens": 696,
       "output": {
         "answer": "",
         "files": [],
@@ -2471,7 +2471,7 @@
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "promptDigest": "7c2ff3f7235fb96ff20f5810397a2eedd1b747be9e55ae4a4ade4a856f19052a",
       "taskId": "fixture-judge-instruction-doc-drift",
       "toolCalls": 11,
       "trial": 1,
@@ -2482,7 +2482,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 1048,
+      "inputTokens": 1390,
       "output": {
         "answer": "",
         "files": [],
@@ -2499,7 +2499,7 @@
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "promptDigest": "7c2ff3f7235fb96ff20f5810397a2eedd1b747be9e55ae4a4ade4a856f19052a",
       "taskId": "fixture-judge-instruction-doc-drift",
       "toolCalls": 11,
       "trial": 2,
@@ -2510,7 +2510,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 1048,
+      "inputTokens": 1390,
       "output": {
         "answer": "",
         "files": [],
@@ -2527,7 +2527,7 @@
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "27513e577a44d4c72d73eb45095d4ac4e4b3a266dcb812472c5978a4eb4b363d",
+      "promptDigest": "7c2ff3f7235fb96ff20f5810397a2eedd1b747be9e55ae4a4ade4a856f19052a",
       "taskId": "fixture-judge-instruction-doc-drift",
       "toolCalls": 11,
       "trial": 3,
@@ -2538,7 +2538,7 @@
         "score": 1,
         "summary": "2/2 expected, 0 unexpected"
       },
-      "inputTokens": 1048,
+      "inputTokens": 1390,
       "output": {
         "answer": "",
         "files": [],
@@ -2555,7 +2555,7 @@
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "promptDigest": "8ad3b20302fe01c48746d9ee6f0a447427cd4d0e0a8841a55bff614067ed2993",
       "taskId": "real-answer-github-permissions",
       "toolCalls": 8,
       "trial": 1,
@@ -2566,7 +2566,7 @@
         "score": 1,
         "summary": "5/5 required facts matched"
       },
-      "inputTokens": 9402,
+      "inputTokens": 12934,
       "output": {
         "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
         "files": [],
@@ -2580,7 +2580,7 @@
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "promptDigest": "8ad3b20302fe01c48746d9ee6f0a447427cd4d0e0a8841a55bff614067ed2993",
       "taskId": "real-answer-github-permissions",
       "toolCalls": 8,
       "trial": 2,
@@ -2591,7 +2591,7 @@
         "score": 1,
         "summary": "5/5 required facts matched"
       },
-      "inputTokens": 9402,
+      "inputTokens": 12934,
       "output": {
         "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
         "files": [],
@@ -2605,7 +2605,7 @@
     {
       "arm": "checkout",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "promptDigest": "8ad3b20302fe01c48746d9ee6f0a447427cd4d0e0a8841a55bff614067ed2993",
       "taskId": "real-answer-github-permissions",
       "toolCalls": 8,
       "trial": 3,
@@ -2616,7 +2616,7 @@
         "score": 1,
         "summary": "5/5 required facts matched"
       },
-      "inputTokens": 9402,
+      "inputTokens": 12934,
       "output": {
         "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
         "files": [],
@@ -2630,7 +2630,7 @@
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "promptDigest": "8ad3b20302fe01c48746d9ee6f0a447427cd4d0e0a8841a55bff614067ed2993",
       "taskId": "real-answer-github-permissions",
       "toolCalls": 0,
       "trial": 1,
@@ -2641,7 +2641,7 @@
         "score": 1,
         "summary": "5/5 required facts matched"
       },
-      "inputTokens": 30881,
+      "inputTokens": 35138,
       "output": {
         "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
         "files": [],
@@ -2655,7 +2655,7 @@
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "promptDigest": "8ad3b20302fe01c48746d9ee6f0a447427cd4d0e0a8841a55bff614067ed2993",
       "taskId": "real-answer-github-permissions",
       "toolCalls": 0,
       "trial": 2,
@@ -2666,7 +2666,7 @@
         "score": 1,
         "summary": "5/5 required facts matched"
       },
-      "inputTokens": 30881,
+      "inputTokens": 35138,
       "output": {
         "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
         "files": [],
@@ -2680,7 +2680,7 @@
     {
       "arm": "full-dump",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "promptDigest": "8ad3b20302fe01c48746d9ee6f0a447427cd4d0e0a8841a55bff614067ed2993",
       "taskId": "real-answer-github-permissions",
       "toolCalls": 0,
       "trial": 3,
@@ -2691,7 +2691,7 @@
         "score": 1,
         "summary": "5/5 required facts matched"
       },
-      "inputTokens": 30881,
+      "inputTokens": 35138,
       "output": {
         "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
         "files": [],
@@ -2705,7 +2705,7 @@
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "promptDigest": "8ad3b20302fe01c48746d9ee6f0a447427cd4d0e0a8841a55bff614067ed2993",
       "taskId": "real-answer-github-permissions",
       "toolCalls": 13,
       "trial": 1,
@@ -2716,7 +2716,7 @@
         "score": 1,
         "summary": "5/5 required facts matched"
       },
-      "inputTokens": 2140,
+      "inputTokens": 2178,
       "output": {
         "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
         "files": [],
@@ -2730,7 +2730,7 @@
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "promptDigest": "8ad3b20302fe01c48746d9ee6f0a447427cd4d0e0a8841a55bff614067ed2993",
       "taskId": "real-answer-github-permissions",
       "toolCalls": 13,
       "trial": 2,
@@ -2741,7 +2741,7 @@
         "score": 1,
         "summary": "5/5 required facts matched"
       },
-      "inputTokens": 2140,
+      "inputTokens": 2178,
       "output": {
         "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
         "files": [],
@@ -2755,7 +2755,7 @@
     {
       "arm": "data-brain",
       "model": "gpt-5-nano-2025-08-07",
-      "promptDigest": "bf55a05e27bbf3dacb9b1e9619f3dbef3fcffcd723e3fa093ad405bc6f83e2fd",
+      "promptDigest": "8ad3b20302fe01c48746d9ee6f0a447427cd4d0e0a8841a55bff614067ed2993",
       "taskId": "real-answer-github-permissions",
       "toolCalls": 13,
       "trial": 3,
@@ -2766,7 +2766,7 @@
         "score": 1,
         "summary": "5/5 required facts matched"
       },
-      "inputTokens": 2140,
+      "inputTokens": 2178,
       "output": {
         "answer": "contents:read; checks:read; actions:read; metadata:read; pull_requests:write",
         "files": [],
@@ -2791,7 +2791,7 @@
         "score": 1,
         "summary": "6/6 required facts matched"
       },
-      "inputTokens": 14535,
+      "inputTokens": 14565,
       "output": {
         "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
         "files": [],
@@ -2816,7 +2816,7 @@
         "score": 1,
         "summary": "6/6 required facts matched"
       },
-      "inputTokens": 14535,
+      "inputTokens": 14565,
       "output": {
         "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
         "files": [],
@@ -2841,7 +2841,7 @@
         "score": 1,
         "summary": "6/6 required facts matched"
       },
-      "inputTokens": 14535,
+      "inputTokens": 14565,
       "output": {
         "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
         "files": [],
@@ -2866,7 +2866,7 @@
         "score": 1,
         "summary": "6/6 required facts matched"
       },
-      "inputTokens": 30876,
+      "inputTokens": 35115,
       "output": {
         "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
         "files": [],
@@ -2891,7 +2891,7 @@
         "score": 1,
         "summary": "6/6 required facts matched"
       },
-      "inputTokens": 30876,
+      "inputTokens": 35115,
       "output": {
         "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
         "files": [],
@@ -2916,7 +2916,7 @@
         "score": 1,
         "summary": "6/6 required facts matched"
       },
-      "inputTokens": 30876,
+      "inputTokens": 35115,
       "output": {
         "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
         "files": [],
@@ -2941,7 +2941,7 @@
         "score": 1,
         "summary": "6/6 required facts matched"
       },
-      "inputTokens": 2979,
+      "inputTokens": 2977,
       "output": {
         "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
         "files": [],
@@ -2966,7 +2966,7 @@
         "score": 1,
         "summary": "6/6 required facts matched"
       },
-      "inputTokens": 2979,
+      "inputTokens": 2977,
       "output": {
         "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
         "files": [],
@@ -2991,7 +2991,7 @@
         "score": 1,
         "summary": "6/6 required facts matched"
       },
-      "inputTokens": 2979,
+      "inputTokens": 2977,
       "output": {
         "answer": "2026-07-28; stateless; Sampling; Roots; Logging; session",
         "files": [],
