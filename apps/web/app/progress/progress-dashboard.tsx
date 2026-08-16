@@ -1,4 +1,4 @@
-import type { ProgressDashboard, ProgressTodo } from "@specproof/core";
+import type { ProgressDashboard, ProgressTodo } from "@arr/core";
 import {
   Activity,
   AlertOctagon,

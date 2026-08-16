@@ -1,4 +1,4 @@
-import { createLibrarySnapshot, type LibraryItem } from "@specproof/core";
+import { createLibrarySnapshot, type LibraryItem } from "@arr/core";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";

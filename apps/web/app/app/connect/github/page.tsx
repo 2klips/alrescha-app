@@ -1,4 +1,4 @@
-import { githubInstallationUrl } from "@specproof/core";
+import { githubInstallationUrl } from "@arr/core";
 import { redirect } from "next/navigation";
 
 import { getCurrentUserId } from "../../../../lib/auth/current-user";

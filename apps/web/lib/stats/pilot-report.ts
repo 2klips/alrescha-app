@@ -4,7 +4,7 @@ import {
   type PilotReceiptSnapshot,
   type PilotRunMeasurement,
   type PilotStatsReport,
-} from "@specproof/core/stats";
+} from "@arr/core/stats";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface ReceiptRow {

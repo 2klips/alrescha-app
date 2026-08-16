@@ -1,4 +1,4 @@
-import { filterLibraryItems, type LibraryItem } from "@specproof/core";
+import { filterLibraryItems, type LibraryItem } from "@arr/core";
 import {
   Archive,
   ExternalLink,

@@ -8,7 +8,7 @@
  * caught mid-layout and the picture is a pile of dots at the origin.
  *
  * Usage:
- *   pnpm --filter @specproof/web build
+ *   pnpm --filter @arr/web build
  *   node --import tsx scripts/capture-readme-shot.ts
  */
 

@@ -9,7 +9,7 @@ import {
   type JudgmentProvider,
   type JudgmentKind,
   type JudgmentTargetState,
-} from "@specproof/core";
+} from "@arr/core";
 
 import type { JobHandler } from "./worker";
 

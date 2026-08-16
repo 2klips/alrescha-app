@@ -68,15 +68,15 @@ importers:
 
   apps/web:
     dependencies:
+      '@arr/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@arr/mcp':
+        specifier: workspace:^
+        version: link:../../packages/mcp
       '@fontsource/ibm-plex-mono':
         specifier: 5.3.0
         version: 5.3.0
-      '@specproof/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@specproof/mcp':
-        specifier: workspace:^
-        version: link:../../packages/mcp
       '@supabase/ssr':
         specifier: 0.12.4
         version: 0.12.4(@supabase/supabase-js@2.112.2)
@@ -129,7 +129,7 @@ importers:
 
   apps/worker:
     dependencies:
-      '@specproof/core':
+      '@arr/core':
         specifier: workspace:*
         version: link:../../packages/core
       fflate:
@@ -212,12 +212,12 @@ importers:
 
   packages/mcp:
     dependencies:
+      '@arr/core':
+        specifier: workspace:^
+        version: link:../core
       '@modelcontextprotocol/server':
         specifier: 2.0.0
         version: 2.0.0
-      '@specproof/core':
-        specifier: workspace:^
-        version: link:../core
       zod:
         specifier: 4.4.3
         version: 4.4.3

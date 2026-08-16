@@ -1,7 +1,7 @@
 import {
   createHostedMcpEndpoint,
   type HostedMcpEndpoint,
-} from "@specproof/mcp";
+} from "@arr/mcp";
 
 import { createAdminClient } from "../supabase/admin";
 import { SupabaseMcpStore } from "./supabase-store";

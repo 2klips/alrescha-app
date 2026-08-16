@@ -1,7 +1,7 @@
 import type {
   GitHubOnboardingStore,
   GitHubRepositoryChoice,
-} from "@specproof/core";
+} from "@arr/core";
 
 import { createAdminClient } from "../supabase/admin";
 import { recordSecurityAuditEvent } from "../security/audit";

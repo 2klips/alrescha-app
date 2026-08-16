@@ -1,4 +1,4 @@
-import type { LibraryItemType } from "@specproof/core";
+import type { LibraryItemType } from "@arr/core";
 import { redirect } from "next/navigation";
 
 import { HarnessAssetCard } from "../../harness/harness-asset-card";

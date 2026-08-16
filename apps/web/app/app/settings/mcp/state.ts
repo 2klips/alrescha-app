@@ -1,5 +1,5 @@
-import type { MinimalIndexProposalFile } from "@specproof/core";
-import type { SelectedContextPack } from "@specproof/mcp";
+import type { MinimalIndexProposalFile } from "@arr/core";
+import type { SelectedContextPack } from "@arr/mcp";
 
 export interface IssueMcpTokenState {
   error: string | null;

@@ -5,7 +5,7 @@ import {
   type GitHubPermissionLevel,
   type GitHubRepositoryChoice,
   type VerifiedGitHubInstallation,
-} from "@specproof/core";
+} from "@arr/core";
 
 function encoded(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");

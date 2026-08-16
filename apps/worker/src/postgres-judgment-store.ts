@@ -5,8 +5,8 @@ import type {
   JudgmentOutput,
   JudgmentProvider,
   JudgmentTargetState,
-} from "@specproof/core";
-import type { ByokKeyEnvelope } from "@specproof/core/byok";
+} from "@arr/core";
+import type { ByokKeyEnvelope } from "@arr/core/byok";
 
 import type { JudgmentJobStore } from "./judgment-job";
 import { JudgmentProviderLoader, type ByokKeyStore } from "./provider-loader";

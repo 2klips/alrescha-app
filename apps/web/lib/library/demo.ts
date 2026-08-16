@@ -1,4 +1,4 @@
-import { createLibrarySnapshot, type LibraryItem } from "@specproof/core";
+import { createLibrarySnapshot, type LibraryItem } from "@arr/core";
 
 const REVIEW_AUTH_CONTENT = `---
 name: review-auth

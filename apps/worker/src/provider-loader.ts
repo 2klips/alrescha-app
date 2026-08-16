@@ -1,5 +1,5 @@
-import { decryptByokKey, type ByokKeyEnvelope } from "@specproof/core/byok";
-import type { JudgmentProvider } from "@specproof/core";
+import { decryptByokKey, type ByokKeyEnvelope } from "@arr/core/byok";
+import type { JudgmentProvider } from "@arr/core";
 
 import {
   AnthropicJudgmentProvider,

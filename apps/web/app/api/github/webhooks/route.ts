@@ -1,4 +1,4 @@
-import { handleGitHubWebhook } from "@specproof/core";
+import { handleGitHubWebhook } from "@arr/core";
 
 import { createGitHubWebhookStore } from "../../../../lib/github/webhook-store";
 

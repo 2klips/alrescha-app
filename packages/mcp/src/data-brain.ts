@@ -3,7 +3,7 @@ import {
   type ContextDocument,
   type ContextDocumentKind,
   type ContextTargetAgent,
-} from "@specproof/core";
+} from "@arr/core";
 
 import type {
   McpArtifactData,

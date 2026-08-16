@@ -1,4 +1,4 @@
-import type { InTotoStatement } from "@specproof/core/receipts";
+import type { InTotoStatement } from "@arr/core/receipts";
 
 import type { EvidenceGrade } from "../dashboard/graph-model";
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { JudgmentValidationError } from "@specproof/core";
+import { JudgmentValidationError } from "@arr/core";
 
 import type { ClaimedJob, WorkerQueue } from "./queue";
 import { runWorkerOnce } from "./worker";

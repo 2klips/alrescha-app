@@ -27,7 +27,7 @@
  * the chunk set is whatever the browser really asked for.
  *
  * Usage:
- *   pnpm --filter @specproof/web build
+ *   pnpm --filter @arr/web build
  *   node --import tsx scripts/measure-route-bundle.ts [--budget 450] [route ...]
  *
  * Exits non-zero if any measured route exceeds the budget at the `idle` tier.

@@ -2,7 +2,7 @@ import type {
   PreviousScannedArtifact,
   RepositoryScanPlan,
   ScannedArtifact,
-} from "@specproof/core";
+} from "@arr/core";
 import type postgres from "postgres";
 
 interface PreviousArtifactRow {

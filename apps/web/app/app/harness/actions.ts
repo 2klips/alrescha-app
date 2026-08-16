@@ -5,7 +5,7 @@ import {
   createLibrarySnapshot,
   requestInstallationToken,
   type LibraryItemType,
-} from "@specproof/core";
+} from "@arr/core";
 import { revalidatePath } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 

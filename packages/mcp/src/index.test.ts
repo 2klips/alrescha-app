@@ -4,7 +4,7 @@ import { MCP_PACKAGE_NAME } from "./index";
 
 describe("mcp package", () => {
   it("exposes a stable package identity", () => {
-    expect(MCP_PACKAGE_NAME).toBe("@specproof/mcp");
+    expect(MCP_PACKAGE_NAME).toBe("@arr/mcp");
   });
 });
 

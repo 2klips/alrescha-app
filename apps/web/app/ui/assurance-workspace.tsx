@@ -1,6 +1,6 @@
 "use client";
 
-import { verifyInTotoStatement, type ReceiptVerification } from "@specproof/core/receipts";
+import { verifyInTotoStatement, type ReceiptVerification } from "@arr/core/receipts";
 import {
   Activity,
   AlertTriangle,

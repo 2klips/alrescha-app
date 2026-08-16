@@ -18,7 +18,7 @@ import {
   type McpStore,
   type McpWorkspaceData,
   type PublicMcpTokenRecord,
-} from "@specproof/mcp";
+} from "@arr/mcp";
 
 type Row = Record<string, unknown>;
 

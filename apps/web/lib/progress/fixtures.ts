@@ -2,7 +2,7 @@ import {
   buildProgressDashboard,
   type ProgressDashboard,
   type ProgressTodo,
-} from "@specproof/core";
+} from "@arr/core";
 
 export type DemoProgressState = "empty" | "partial" | "full";
 

@@ -3,7 +3,7 @@ import {
   type RepositorySource,
   type RepositoryTree,
   type RepositoryTreeEntry,
-} from "@specproof/core";
+} from "@arr/core";
 
 type JsonRecord = Record<string, unknown>;
 

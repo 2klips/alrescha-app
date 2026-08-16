@@ -7,12 +7,12 @@ import {
   proposeMinimalIndexPullRequest,
   requestInstallationToken,
   type ContextTargetAgent,
-} from "@specproof/core";
+} from "@arr/core";
 import {
   MCP_SCOPES,
   selectWorkspaceContextPack,
   type McpScope,
-} from "@specproof/mcp";
+} from "@arr/mcp";
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 

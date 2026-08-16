@@ -1,4 +1,4 @@
-import type { JudgmentProvider, JudgmentRequest } from "@specproof/core";
+import type { JudgmentProvider, JudgmentRequest } from "@arr/core";
 
 type Fetch = (
   input: string | URL | Request,

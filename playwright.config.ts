@@ -14,7 +14,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "pnpm --filter @specproof/web dev",
+    command: "pnpm --filter @arr/web dev",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     url: "http://127.0.0.1:3000",

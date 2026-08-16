@@ -3,7 +3,7 @@ import {
   GITHUB_READ_ONLY_PERMISSIONS,
   requestInstallationToken,
   selectGitHubRepository,
-} from "@specproof/core";
+} from "@arr/core";
 import { NextResponse } from "next/server";
 
 import { getCurrentUserId } from "../../../../lib/auth/current-user";

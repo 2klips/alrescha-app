@@ -1,4 +1,4 @@
-import { prepareGitHubOnboarding } from "@specproof/core";
+import { prepareGitHubOnboarding } from "@arr/core";
 import { NextResponse } from "next/server";
 
 import {

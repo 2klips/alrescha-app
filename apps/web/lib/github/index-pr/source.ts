@@ -1,4 +1,4 @@
-import { GITHUB_API_VERSION } from "@specproof/core";
+import { GITHUB_API_VERSION } from "@arr/core";
 
 export interface MinimalIndexSource {
   readonly agentsContent: string | null;

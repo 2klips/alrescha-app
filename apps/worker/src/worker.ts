@@ -1,5 +1,5 @@
 import type { ClaimedJob, JobKind, WorkerQueue } from "./queue";
-import { JudgmentValidationError } from "@specproof/core";
+import { JudgmentValidationError } from "@arr/core";
 
 export interface JobContext {
   readonly heartbeat: () => Promise<boolean>;

@@ -1,4 +1,4 @@
-import type { GitHubWebhookStore, PersistedGitHubWebhookEvent } from "@specproof/core";
+import type { GitHubWebhookStore, PersistedGitHubWebhookEvent } from "@arr/core";
 
 import { createAdminClient } from "../supabase/admin";
 

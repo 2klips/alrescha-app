@@ -1,4 +1,4 @@
-import type { LibraryItem, LibrarySnapshot } from "@specproof/core";
+import type { LibraryItem, LibrarySnapshot } from "@arr/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Row = Record<string, unknown>;

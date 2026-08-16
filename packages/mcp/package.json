@@ -1,5 +1,5 @@
 {
-  "name": "@specproof/mcp",
+  "name": "@arr/mcp",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/server": "2.0.0",
-    "@specproof/core": "workspace:^",
+    "@arr/core": "workspace:^",
     "zod": "4.4.3"
   }
 }
