@@ -69,3 +69,12 @@
 - 임시 결정: 두 카드를 레일·인스펙터 사이 "빈 통로"에 고정 배치했다(힘 패널 = 우하단 `right: 22.5rem`, 근거 패널 = 좌상단 `left: 17.5rem`). 통로 폭은 레일 16rem·인스펙터 21rem에 묶여 있으므로 이 세 수치는 함께 움직여야 한다. 힘 패널은 `max-height: min(20rem, calc(100% - 12rem))` + 내부 스크롤로 낮은 뷰포트에서 제어 스트립을 침범하지 않게 했다.
 - 근거: `tests/e2e/dashboard-hud.spec.ts`, `tests/e2e/brain-map.spec.ts`, `.omo/evidence/phase2a/task-7.md`
 - 상태: open (HUD를 워크스페이스 그리드의 형제로 끌어올리면 통로 상수가 사라진다 — Wave 4 이후 정리 후보)
+
+## OQ-008 — 두 테마 화면 순회에서 빠지는 라우트: `/auth/*`(500)와 `/app/*`(인증 필요)
+
+- 발견: Phase 2A Task 8 / `tests/e2e/screens-theme.spec.ts`
+- 내용: todo 8 수용 기준은 "Playwright가 각 화면을 두 테마로 순회"다. 그런데 두 종류의 라우트가 이 환경에서 순회 불가다. ⑴ `/app/*`는 살아 있는 Supabase 세션이 필요하다. ⑵ `/auth/login`·`/auth/auth-code-error`는 **500**을 반환한다 — 테마 부트 스크립트조차 실행되지 않아 `data-theme`이 비어 있다. `apps/web/app/auth`의 마지막 커밋은 `ca3a0d0`(Phase 2A 이전)이므로 이번 단계의 회귀가 아니라 환경 변수 공백이다.
+- 임시 결정: 순회 대상에서 두 라우트군을 빼고 공개 라우트 10개만 검증했다(대시보드·findings·lint·receipts·progress·harness·library·evidence 상세·onboarding·404). 해당 화면의 카피 변환 자체는 `tests/korean-strings.test.ts`가 파일 단위로 강제하고, 컴포넌트 렌더링은 각 화면의 vitest가 덮는다. 브라우저 상의 테마 확인은 Supabase가 붙는 Wave 4로 넘긴다.
+- 부수 관찰: 테마 토글은 대시보드·assurance 화면·progress에만 있다. `/graph`, `/harness`, `/library`, `/onboarding`에는 헤더 토글이 없어 그 화면에서는 테마를 바꿀 수 없다(저장된 설정은 따른다). 계획 todo 2의 수용 기준은 3개 화면만 요구하므로 이번 범위에서 추가하지 않았다.
+- 근거: `tests/e2e/screens-theme.spec.ts`, `.omo/evidence/phase2a/task-8.md`
+- 상태: open (Wave 4에서 Supabase 연결 후 `/auth/*`·`/app/*` 순회 추가, 헤더 토글 확산 여부 결정)

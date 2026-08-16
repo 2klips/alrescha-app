@@ -7,7 +7,12 @@ import {
 } from "@modelcontextprotocol/client";
 import { expect, test } from "@playwright/test";
 
-import { ASSURANCE } from "../../apps/web/lib/strings";
+import {
+  ASSURANCE,
+  DASHBOARD,
+  GRAPH,
+  ONBOARDING,
+} from "../../apps/web/lib/strings";
 
 import {
   buildMinimalIndexProposalFiles,
@@ -268,33 +273,36 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
 
   await test.step("sign up and install the mocked least-privilege GitHub App", async () => {
     await page.goto("/onboarding");
-    await expect(page.getByText("private solo workspace")).toBeVisible();
-    await page.getByRole("button", { name: "Continue with GitHub" }).click();
+    await expect(page.getByText(ONBOARDING.identity.body)).toBeVisible();
+    await page.getByRole("button", { name: ONBOARDING.identity.cta }).click();
     await expect(
-      page.getByRole("heading", { name: "Read only. Evidence only." }),
+      page.getByRole("heading", { name: ONBOARDING.permission.title }),
     ).toBeVisible();
     for (const permission of [
-      "Contents · read",
-      "Checks · read",
-      "Actions · read",
-      "Metadata · read",
+      ONBOARDING.permission.scopes.contents.title,
+      ONBOARDING.permission.scopes.checks.title,
+      ONBOARDING.permission.scopes.actions.title,
+      ONBOARDING.permission.scopes.metadata.title,
     ]) {
       await expect(page.getByText(permission)).toBeVisible();
     }
-    await page.getByRole("button", { name: "Install GitHub App" }).click();
+    await page.getByRole("button", { name: ONBOARDING.permission.cta }).click();
   });
 
   await test.step("select the fixture repository and watch its first metadata-only scan", async () => {
     await page.getByRole("button", { name: /2klips\/specproof-app/ }).click();
     await expect(
-      page.getByRole("heading", { name: "Building proof spine" }),
+      page.getByRole("heading", { name: ONBOARDING.scan.title }),
     ).toBeVisible();
-    await expect(page.getByText("metadata-only evidence graph")).toBeVisible();
-    await page.getByRole("button", { name: "Open evidence graph" }).click();
+    await expect(page.getByText(ONBOARDING.scan.body)).toBeVisible();
+    await page.getByRole("button", { name: ONBOARDING.scan.cta }).click();
     await expect(page.getByTestId("brain-map-stage")).toBeVisible();
-    await page.getByRole("button", { name: /Unresolved/ }).click();
+    await page
+      .getByRole("button", { name: DASHBOARD.metrics.unresolved })
+      .first()
+      .click();
     await expect(page.getByTestId("metric-evidence")).toContainText(
-      "latest deterministic analysis",
+      DASHBOARD.metricEvidence.unresolved[2],
     );
   });
 
@@ -320,7 +328,7 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
   await test.step("inspect the grounded depth-two graph", async () => {
     await page.goto("/graph?node=req-auth");
     await expect(
-      page.getByRole("heading", { name: "Evidence neighborhood" }),
+      page.getByRole("heading", { name: GRAPH.heading }),
     ).toBeVisible();
     await expect(page.locator(".provenance-card .grade-badge")).toBeVisible();
     await expect(page.locator("[data-canvas-nodes='4']")).toBeVisible();
@@ -388,10 +396,14 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
   await test.step("verify the current receipt and capture browser evidence", async () => {
     await page.goto("/receipts?receipt=receipt-current");
     await expect(page.getByTestId("receipt-verdict-locked")).toBeVisible();
-    await page.getByRole("button", { name: "Verify receipt digest" }).click();
-    await expect(page.getByText("Digest verified")).toBeVisible();
+    await page
+      .getByRole("button", { name: ASSURANCE.receipts.verifyAction })
+      .click();
+    await expect(
+      page.getByText(ASSURANCE.receipts.verification.verified),
+    ).toBeVisible();
     await expect(page.getByTestId("receipt-verdict")).toContainText(
-      "3 verified · 1 inferred",
+      ASSURANCE.receipts.verdict.counts(3, 1),
     );
     const evidenceDirectory = path.resolve(
       ".omo/evidence/docshub-product-strategy/final",

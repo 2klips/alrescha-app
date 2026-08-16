@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { SETTINGS } from "../../../../lib/strings";
 import {
   createMinimalIndexProposal,
   requestContextPackPreview,
@@ -33,30 +34,30 @@ export function ContextTools({
         className="mcp-settings-card"
         aria-labelledby="context-pack-title"
       >
-        <div className="eyebrow">Graph-selected · load on demand</div>
-        <h2 id="context-pack-title">Compose context pack</h2>
+        <div className="eyebrow">{SETTINGS.mcp.contextPack.eyebrow}</div>
+        <h2 id="context-pack-title">{SETTINGS.mcp.contextPack.title}</h2>
         <form action={contextAction} className="mcp-token-form">
-          <label htmlFor="context-task">Task</label>
+          <label htmlFor="context-task">{SETTINGS.mcp.contextPack.taskLabel}</label>
           <textarea
             id="context-task"
             maxLength={1_000}
             name="taskDescription"
-            placeholder="Implement GitHub OAuth login and prove REQ-AUTH-001"
+            placeholder={SETTINGS.mcp.contextPack.taskPlaceholder}
             required
             rows={4}
           />
           <div className="context-form-row">
             <label>
-              Target agent
+              {SETTINGS.mcp.contextPack.targetAgentLabel}
               <select defaultValue="codex" name="targetAgent">
-                <option value="codex">Codex</option>
-                <option value="claude-code">Claude Code</option>
-                <option value="cursor">Cursor</option>
-                <option value="generic">Generic agent</option>
+                <option value="codex">{SETTINGS.mcp.contextPack.agents.codex}</option>
+                <option value="claude-code">{SETTINGS.mcp.contextPack.agents.claudeCode}</option>
+                <option value="cursor">{SETTINGS.mcp.contextPack.agents.cursor}</option>
+                <option value="generic">{SETTINGS.mcp.contextPack.agents.generic}</option>
               </select>
             </label>
             <label>
-              Token budget
+              {SETTINGS.mcp.contextPack.tokenBudgetLabel}
               <input
                 defaultValue={2_000}
                 max={32_000}
@@ -67,7 +68,7 @@ export function ContextTools({
             </label>
           </div>
           <button className="button" disabled={contextPending} type="submit">
-            {contextPending ? "Composing…" : "Compose context pack"}
+            {contextPending ? SETTINGS.mcp.contextPack.composing : SETTINGS.mcp.contextPack.compose}
           </button>
         </form>
         {contextState.error ? (
@@ -79,12 +80,12 @@ export function ContextTools({
           <div className="context-pack-result" role="status">
             <div className="context-result-meta">
               <strong>
-                {contextState.pack.estimatedTokens} estimated tokens
+                {SETTINGS.mcp.contextPack.estimatedTokens(contextState.pack.estimatedTokens)}
               </strong>
               <span>{contextState.pack.targetAgent}</span>
             </div>
             <p>{contextState.pack.assumption}</p>
-            <h3>Reading order</h3>
+            <h3>{SETTINGS.mcp.contextPack.readingOrderTitle}</h3>
             <ol>
               {contextState.pack.readingOrder.map((entry) => (
                 <li key={entry.id}>
@@ -96,7 +97,7 @@ export function ContextTools({
             {contextState.pack.omitted.length > 0 ? (
               <details>
                 <summary>
-                  {contextState.pack.omitted.length} ranked omissions
+                  {SETTINGS.mcp.contextPack.omissions(contextState.pack.omitted.length)}
                 </summary>
                 <ol>
                   {contextState.pack.omitted.map((entry) => (
@@ -109,7 +110,7 @@ export function ContextTools({
               </details>
             ) : null}
             <details>
-              <summary>Formatted pack</summary>
+              <summary>{SETTINGS.mcp.contextPack.formattedPack}</summary>
               <pre>{contextState.pack.text}</pre>
             </details>
           </div>
@@ -120,17 +121,17 @@ export function ContextTools({
         className="mcp-settings-card"
         aria-labelledby="minimal-index-title"
       >
-        <div className="eyebrow">Advisory only · never direct commit</div>
-        <h2 id="minimal-index-title">Minimal agent index</h2>
+        <div className="eyebrow">{SETTINGS.mcp.minimalIndex.eyebrow}</div>
+        <h2 id="minimal-index-title">{SETTINGS.mcp.minimalIndex.title}</h2>
         <p>
-          Propose a bounded managed section in <code>AGENTS.md</code> and a
-          one-line
-          <code> CLAUDE.md</code> wrapper when absent. Repository document
-          bodies stay out.
+          <code>{SETTINGS.mcp.minimalIndex.agentsFile}</code>
+          {SETTINGS.mcp.minimalIndex.bodyMid}
+          <code>{SETTINGS.mcp.minimalIndex.claudeFile}</code>
+          {SETTINGS.mcp.minimalIndex.bodySuffix}
         </p>
         <form action={proposalAction}>
           <button className="button" disabled={proposalPending} type="submit">
-            {proposalPending ? "Preparing diff…" : "Create advisory PR"}
+            {proposalPending ? SETTINGS.mcp.minimalIndex.preparing : SETTINGS.mcp.minimalIndex.create}
           </button>
         </form>
         {proposalState.error ? (
@@ -140,24 +141,24 @@ export function ContextTools({
         ) : null}
         {proposalState.status === "up_to_date" ? (
           <p className="context-success" role="status">
-            Managed index is already current.
+            {SETTINGS.mcp.minimalIndex.upToDate}
           </p>
         ) : null}
         {proposalState.url ? (
           <p className="context-success" role="status">
-            Proposal opened: <a href={proposalState.url}>view pull request</a>
+            {SETTINGS.mcp.minimalIndex.proposalOpenedPrefix}
+            <a href={proposalState.url}>{SETTINGS.mcp.minimalIndex.viewPr}</a>
           </p>
         ) : null}
         {proposalState.status === "permission_required" ? (
           <div className="permission-fallback" role="status">
-            <strong>{proposalState.missingPermission} required</strong>
-            <p>
-              Automatic proposal is paused. Review the diff below, grant the
-              optional permission, or copy the managed files manually.
-            </p>
-            {proposalState.missingPermission === "pull_requests:write" ? (
+            <strong>
+              {SETTINGS.mcp.minimalIndex.permissionRequired(proposalState.missingPermission ?? "")}
+            </strong>
+            <p>{SETTINGS.mcp.minimalIndex.permissionPausedBody}</p>
+            {proposalState.missingPermission === SETTINGS.mcp.minimalIndex.prWritePermission ? (
               <a className="secondary-button" href="/app/connect/github">
-                Grant pull request permission
+                {SETTINGS.mcp.minimalIndex.grantPrPermission}
               </a>
             ) : null}
           </div>
@@ -165,7 +166,7 @@ export function ContextTools({
         {proposalState.files.length > 0 ? (
           <div className="proposal-diff">
             <div className="context-result-meta">
-              <h3>Diff-only proposal</h3>
+              <h3>{SETTINGS.mcp.minimalIndex.diffOnlyProposalTitle}</h3>
               <span>{proposalState.repository}</span>
             </div>
             {proposalState.files.map((file) => (
@@ -173,22 +174,19 @@ export function ContextTools({
                 <h4>{file.path}</h4>
                 <div className="diff-columns">
                   <div>
-                    <span>Current</span>
-                    <pre>{file.before ?? "(new file)"}</pre>
+                    <span>{SETTINGS.mcp.minimalIndex.current}</span>
+                    <pre>{file.before ?? SETTINGS.mcp.minimalIndex.newFilePlaceholder}</pre>
                   </div>
                   <div>
-                    <span>Proposed</span>
+                    <span>{SETTINGS.mcp.minimalIndex.proposed}</span>
                     <pre>{file.after}</pre>
                   </div>
                 </div>
               </article>
             ))}
             <details>
-              <summary>Copy files manually</summary>
-              <p>
-                Copy only the proposed bytes shown above. Existing bytes outside
-                managed markers remain unchanged.
-              </p>
+              <summary>{SETTINGS.mcp.minimalIndex.copyManually}</summary>
+              <p>{SETTINGS.mcp.minimalIndex.copyManuallyBody}</p>
             </details>
           </div>
         ) : null}

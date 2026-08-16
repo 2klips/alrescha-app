@@ -5,9 +5,16 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 import * as ASSURANCE_MODULE from "../apps/web/lib/strings/assurance";
+import * as AUTH_MODULE from "../apps/web/lib/strings/auth";
 import * as COMMON_MODULE from "../apps/web/lib/strings/common";
 import * as DASHBOARD_MODULE from "../apps/web/lib/strings/dashboard";
+import * as GRAPH_MODULE from "../apps/web/lib/strings/graph";
+import * as HARNESS_MODULE from "../apps/web/lib/strings/harness";
+import * as LIBRARY_MODULE from "../apps/web/lib/strings/library";
+import * as ONBOARDING_MODULE from "../apps/web/lib/strings/onboarding";
 import * as PROGRESS_MODULE from "../apps/web/lib/strings/progress";
+import * as SETTINGS_MODULE from "../apps/web/lib/strings/settings";
+import * as STATS_MODULE from "../apps/web/lib/strings/stats";
 import { CONVENTIONAL_ENGLISH_TERMS } from "../apps/web/lib/strings/terms";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -17,6 +24,7 @@ const repoRoot = fileURLToPath(new URL("..", import.meta.url));
  * These are checked for stray literals on every run.
  */
 const CONVERTED_SCREENS = [
+  // Wave 1–2 (todo 3)
   "apps/web/app/ui/brain-map.tsx",
   "apps/web/app/ui/brain-map-stage.tsx",
   "apps/web/app/ui/dashboard-screen.tsx",
@@ -26,14 +34,7 @@ const CONVERTED_SCREENS = [
   "apps/web/app/ui/theme-toggle.tsx",
   "apps/web/app/progress/page.tsx",
   "apps/web/app/progress/progress-dashboard.tsx",
-];
-
-/**
- * Screens still holding inline copy. Phase 2A todo 8 restyles these and must
- * convert them at the same time. Listed here so the debt is visible and so a
- * newly added screen cannot slip past unclassified.
- */
-const PENDING_SCREENS = [
+  // Wave 3 (todo 8)
   "apps/web/app/ui/onboarding-flow.tsx",
   "apps/web/app/ui/graph-detail.tsx",
   "apps/web/app/harness/harness-asset-card.tsx",
@@ -54,7 +55,23 @@ const PENDING_SCREENS = [
   "apps/web/app/app/stats/pilot-stats-dashboard.tsx",
   "apps/web/app/auth/auth-code-error/page.tsx",
   "apps/web/app/auth/login/page.tsx",
+  "apps/web/app/auth/login/sign-in-button.tsx",
 ];
+
+/**
+ * Screens still holding inline copy. Phase 2A todo 8 emptied this list; it stays
+ * so a newly added screen cannot slip past unclassified, and so the debt is
+ * visible again the moment one reappears.
+ */
+const PENDING_SCREENS: string[] = [];
+
+/**
+ * A file that deliberately inlines user-facing copy, kept outside `apps/` so it
+ * can never be rendered. It is the detector's positive control: before todo 8 it
+ * was the backlog of unconverted screens, and an empty backlog would otherwise
+ * turn that check into a tautology.
+ */
+const STRAY_LITERAL_FIXTURE = "fixtures/design/stray-literal-sample.tsx";
 
 /** Punctuation, separators and symbols that carry no language. */
 const NEUTRAL = /[\s\d·…—–→←⇒↔\-_/\\:;,.!?%()[\]{}<>+*&#@'"`|=~^$]/g;
@@ -92,6 +109,15 @@ const TECHNICAL_TOKENS = [
   "Phase",
   "Statement",
   "Predicate",
+  // Identifiers the product shows verbatim: fixture repositories, route paths,
+  // requirement codes and environment variable names. These are addresses, not
+  // sentences — translating one would break the thing it names.
+  "drifted-demo",
+  "fixtures",
+  "api",
+  "mcp",
+  "REQ-AUTH-001",
+  "BYOK_ENCRYPTION_KEY",
 ];
 
 function collectStrings(module: object, path = ""): Array<[string, string]> {
@@ -164,8 +190,9 @@ function findStrayLiterals(file: string): StrayLiteral[] {
 
   // JSX text nodes: content between a closing `>` and the next tag `<`, on one
   // line, with no operators — that shape excludes TS generics (`useState<T>(…)`)
-  // and ternaries, which are not copy.
-  for (const match of source.matchAll(/>[ \t]*([^<>{}\n;=()?:]*[A-Za-z가-힣][^<>{}\n;=()?:]*)[ \t]*<[/A-Za-z]/g)) {
+  // and ternaries, which are not copy. The `(?<!=)` guard drops arrow-function
+  // return types too (`=> void | Promise<void>` is not a text node).
+  for (const match of source.matchAll(/(?<!=)>[ \t]*([^<>{}\n;=()?:]*[A-Za-z가-힣][^<>{}\n;=()?:]*)[ \t]*<[/A-Za-z]/g)) {
     const text = (match[1] ?? "").trim();
     if (text) stray.push({ file, value: text });
   }
@@ -182,13 +209,21 @@ function findStrayLiterals(file: string): StrayLiteral[] {
 describe("korean-first copy policy", () => {
   const modules = {
     ASSURANCE: ASSURANCE_MODULE.ASSURANCE,
+    AUTH: AUTH_MODULE.AUTH,
     BRAND: COMMON_MODULE.BRAND,
     NAV: COMMON_MODULE.NAV,
     THEME: COMMON_MODULE.THEME,
     GRADE: COMMON_MODULE.GRADE,
     ACTION: COMMON_MODULE.ACTION,
+    NOT_FOUND: COMMON_MODULE.NOT_FOUND,
     DASHBOARD: DASHBOARD_MODULE.DASHBOARD,
+    GRAPH: GRAPH_MODULE.GRAPH,
+    HARNESS: HARNESS_MODULE.HARNESS,
+    LIBRARY: LIBRARY_MODULE.LIBRARY,
+    ONBOARDING: ONBOARDING_MODULE.ONBOARDING,
     PROGRESS: PROGRESS_MODULE.PROGRESS,
+    SETTINGS: SETTINGS_MODULE.SETTINGS,
+    STATS: STATS_MODULE.STATS,
   };
   const entries = Object.entries(modules).flatMap(([name, value]) =>
     collectStrings(value, name),
@@ -232,9 +267,19 @@ describe("string centralization", () => {
   });
 
   test("the detector actually fires on an inline literal", () => {
-    // A pending screen is the honest positive control: it still has inline copy.
-    const stray = PENDING_SCREENS.flatMap((file) => findStrayLiterals(file));
-    expect(stray.length).toBeGreaterThan(0);
+    const stray = findStrayLiterals(STRAY_LITERAL_FIXTURE);
+
+    expect(stray.map((entry) => entry.value).sort()).toEqual([
+      "Deliberate stray heading",
+      "Deliberate stray label",
+      "Deliberate stray placeholder",
+    ]);
+  });
+
+  test("no screen is left unconverted", () => {
+    // The backlog is empty as of todo 8. Re-adding a file here is a deliberate
+    // act, and this assertion is what makes it deliberate.
+    expect(PENDING_SCREENS).toEqual([]);
   });
 
   test("every screen is classified as converted or pending", () => {

@@ -3,15 +3,15 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { DASHBOARD } from "../../apps/web/lib/strings";
+import { DASHBOARD, ONBOARDING } from "../../apps/web/lib/strings";
 
 test("fresh user completes the seeded demo repository journey", async ({ page }) => {
   await page.goto("/onboarding");
-  await page.getByRole("button", { name: "Try seeded demo" }).click();
+  await page.getByRole("button", { name: ONBOARDING.identity.demoCta }).click();
   await expect(page.getByText("fixtures/drifted-demo")).toBeVisible();
   await page.getByRole("button", { name: /specproof\/drifted-demo/ }).click();
-  await expect(page.getByRole("heading", { name: "Building proof spine" })).toBeVisible();
-  await page.getByRole("button", { name: "Open evidence graph" }).click();
+  await expect(page.getByRole("heading", { name: ONBOARDING.scan.title })).toBeVisible();
+  await page.getByRole("button", { name: ONBOARDING.scan.cta }).click();
   await expect(page.getByRole("heading", { level: 1, name: "specproof/drifted-demo" })).toBeVisible();
   await expect(page.getByTestId("brain-map-stage")).toBeVisible();
 });

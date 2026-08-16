@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { SETTINGS } from "../../../../lib/strings";
 import { ContextTools } from "./context-tools";
 
 describe("context and index settings", () => {
@@ -27,16 +28,16 @@ describe("context and index settings", () => {
       }),
     );
 
-    expect(html).toContain("Compose context pack");
+    expect(html).toContain(SETTINGS.mcp.contextPack.compose);
     expect(html).toContain('name="targetAgent"');
     expect(html).toContain('value="claude-code"');
     expect(html).toContain('value="codex"');
     expect(html).toContain('value="cursor"');
-    expect(html).toContain("Create advisory PR");
-    expect(html).toContain("Diff-only proposal");
-    expect(html).toContain("Grant pull request permission");
-    expect(html).toContain("Copy files manually");
-    expect(html).toContain("AGENTS.md");
+    expect(html).toContain(SETTINGS.mcp.minimalIndex.create);
+    expect(html).toContain(SETTINGS.mcp.minimalIndex.diffOnlyProposalTitle);
+    expect(html).toContain(SETTINGS.mcp.minimalIndex.grantPrPermission);
+    expect(html).toContain(SETTINGS.mcp.minimalIndex.copyManually);
+    expect(html).toContain(SETTINGS.mcp.minimalIndex.agentsFile);
     expect(html).not.toContain("commit to main");
   });
 });

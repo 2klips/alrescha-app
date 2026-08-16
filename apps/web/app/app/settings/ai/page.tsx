@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { createAdminClient } from "../../../../lib/supabase/admin";
+import { SETTINGS } from "../../../../lib/strings";
 import { createClient } from "../../../../lib/supabase/server";
 import {
   AiUsageSettings,
@@ -35,7 +36,7 @@ export default async function AiSettingsPage() {
     .limit(1)
     .single();
   if (workspace.error || !workspace.data) {
-    throw new Error("Personal workspace is unavailable.");
+    throw new Error(SETTINGS.errors.workspaceUnavailable);
   }
 
   const ledgerResult = await client
@@ -44,13 +45,13 @@ export default async function AiSettingsPage() {
     .eq("workspace_id", workspace.data.id)
     .order("created_at", { ascending: false })
     .limit(100);
-  if (ledgerResult.error) throw new Error("Credit usage is unavailable.");
+  if (ledgerResult.error) throw new Error(SETTINGS.errors.creditUsageUnavailable);
 
   const keyResult = await createAdminClient()
     .from("workspace_ai_keys")
     .select("provider")
     .eq("workspace_id", workspace.data.id);
-  if (keyResult.error) throw new Error("BYOK configuration is unavailable.");
+  if (keyResult.error) throw new Error(SETTINGS.errors.byokConfigUnavailable);
 
   const ledger: CreditLedgerView[] = (
     (ledgerResult.data ?? []) as CreditLedgerRow[]
@@ -68,15 +69,12 @@ export default async function AiSettingsPage() {
   return (
     <main className="mcp-settings-shell">
       <header>
-        <div className="eyebrow">AI judgments · inferred only</div>
-        <h1>Judgment usage</h1>
+        <div className="eyebrow">{SETTINGS.ai.eyebrow}</div>
+        <h1>{SETTINGS.ai.title}</h1>
         <p>
-          AI confirms ambiguous drift candidates. Successful platform runs use
-          credits; failed or schema-invalid runs are refunded. BYOK bypasses
-          credits. A judgment runs only after your explicit provider choice;
-          inferred output, provenance, job status, and ledger entries remain
-          until workspace deletion. Raw source and plaintext keys are not
-          stored. Review <a href="/app/settings/privacy">privacy &amp; retention</a>.
+          {SETTINGS.ai.introPrefix}
+          <a href="/app/settings/privacy">{SETTINGS.privacy.linkLabel}</a>
+          {SETTINGS.ai.introSuffix}
         </p>
       </header>
       <AiUsageSettings

@@ -3,17 +3,17 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { DASHBOARD } from "../../apps/web/lib/strings";
+import { DASHBOARD, ONBOARDING } from "../../apps/web/lib/strings";
 
 test("onboards through mocked GitHub into the fixture evidence graph", async ({ page }) => {
   await page.goto("/onboarding");
-  await page.getByRole("button", { name: "Continue with GitHub" }).click();
-  await expect(page.getByRole("heading", { name: "Read only. Evidence only." })).toBeVisible();
-  await expect(page.getByText("Contents · read")).toBeVisible();
-  await page.getByRole("button", { name: "Install GitHub App" }).click();
+  await page.getByRole("button", { name: ONBOARDING.identity.cta }).click();
+  await expect(page.getByRole("heading", { name: ONBOARDING.permission.title })).toBeVisible();
+  await expect(page.getByText(ONBOARDING.permission.scopes.contents.title)).toBeVisible();
+  await page.getByRole("button", { name: ONBOARDING.permission.cta }).click();
   await page.getByRole("button", { name: /2klips\/specproof-app/ }).click();
-  await expect(page.getByRole("heading", { name: "Building proof spine" })).toBeVisible();
-  await page.getByRole("button", { name: "Open evidence graph" }).click();
+  await expect(page.getByRole("heading", { name: ONBOARDING.scan.title })).toBeVisible();
+  await page.getByRole("button", { name: ONBOARDING.scan.cta }).click();
 
   await expect(page.getByTestId("brain-map-stage")).toBeVisible();
   await expect(page.getByText(DASHBOARD.ci.present)).toBeVisible();
@@ -21,12 +21,12 @@ test("onboards through mocked GitHub into the fixture evidence graph", async ({ 
 
 test("recovers from a mocked GitHub permission error", async ({ page }) => {
   await page.goto("/onboarding?permission=error");
-  await page.getByRole("button", { name: "Continue with GitHub" }).click();
+  await page.getByRole("button", { name: ONBOARDING.identity.cta }).click();
 
   await expect(page.locator(".permission-error")).toContainText("contents:read");
-  await expect(page.getByRole("button", { name: "Install GitHub App" })).toBeDisabled();
-  await page.getByRole("button", { name: "Review permission" }).click();
-  await expect(page.getByRole("button", { name: "Install GitHub App" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: ONBOARDING.permission.cta })).toBeDisabled();
+  await page.getByRole("button", { name: ONBOARDING.permission.error.action }).click();
+  await expect(page.getByRole("button", { name: ONBOARDING.permission.cta })).toBeEnabled();
 });
 
 test("links every HUD metric to visible provenance and filters graph", async ({ page }) => {

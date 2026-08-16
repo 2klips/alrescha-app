@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { githubAppEnvironment } from "../../../../lib/github/env";
 import { createGitHubInstallState } from "../../../../lib/github/state";
+import { SETTINGS } from "../../../../lib/strings";
 import { createClient } from "../../../../lib/supabase/server";
 
 export default async function ConnectGitHubPage() {
@@ -15,7 +16,7 @@ export default async function ConnectGitHubPage() {
   const supabase = await createClient();
   const workspaceResult = await supabase.from("workspaces").select("id").limit(1).single();
   if (workspaceResult.error || !workspaceResult.data) {
-    throw new Error("Personal workspace is unavailable.");
+    throw new Error(SETTINGS.errors.workspaceUnavailable);
   }
 
   const environment = githubAppEnvironment();
@@ -28,28 +29,39 @@ export default async function ConnectGitHubPage() {
   return (
     <main>
       <section className="shell" aria-labelledby="connect-title">
-        <div className="eyebrow">GitHub App connection</div>
-        <h1 id="connect-title">Connect a repository.</h1>
-        <p>
-          The default connection is read-only. You choose exactly which public
-          or private repositories the GitHub App may access.
-        </p>
+        <div className="eyebrow">{SETTINGS.connect.github.eyebrow}</div>
+        <h1 id="connect-title">{SETTINGS.connect.github.title}</h1>
+        <p>{SETTINGS.connect.github.intro}</p>
         <ul>
-          <li>Contents: read — transiently fetch specs, instructions, and code</li>
-          <li>Checks: read — collect commit-linked verification results</li>
-          <li>Actions: read — fetch selected test-report artifacts</li>
-          <li>Metadata: read — identify repository and default branch</li>
+          <li>
+            <code>{SETTINGS.connect.github.permissions.contentsRead.scope}</code>
+            {" — "}
+            {SETTINGS.connect.github.permissions.contentsRead.description}
+          </li>
+          <li>
+            <code>{SETTINGS.connect.github.permissions.checksRead.scope}</code>
+            {" — "}
+            {SETTINGS.connect.github.permissions.checksRead.description}
+          </li>
+          <li>
+            <code>{SETTINGS.connect.github.permissions.actionsRead.scope}</code>
+            {" — "}
+            {SETTINGS.connect.github.permissions.actionsRead.description}
+          </li>
+          <li>
+            <code>{SETTINGS.connect.github.permissions.metadataRead.scope}</code>
+            {" — "}
+            {SETTINGS.connect.github.permissions.metadataRead.description}
+          </li>
         </ul>
+        <p>{SETTINGS.connect.github.storageNote}</p>
+        <a className="button" href={installationUrl}>{SETTINGS.connect.github.install}</a>
         <p>
-          Raw source and installation tokens are not stored. Arr stores
-          metadata, digests, spans, findings, and receipts. Access events are
-          retained for 30 days during the pilot.
-        </p>
-        <a className="button" href={installationUrl}>Install GitHub App</a>
-        <p>
-          PR proposals are off by default. Enabling them requests only
-          <code> pull_requests:write</code>. Review the full boundary in
-          {" "}<a href="/app/settings/privacy">Privacy &amp; data boundary</a>.
+          {SETTINGS.connect.github.prNotePrefix}
+          <code>{SETTINGS.connect.github.prWritePermission}</code>
+          {SETTINGS.connect.github.prNoteMid}
+          <a href="/app/settings/privacy">{SETTINGS.privacy.linkLabel}</a>
+          {SETTINGS.connect.github.prNoteSuffix}
         </p>
       </section>
     </main>

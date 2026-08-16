@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { HarnessAssetCard } from "../../harness/harness-asset-card";
 import { getCurrentUserId } from "../../../lib/auth/current-user";
+import { HARNESS } from "../../../lib/strings";
 import { createClient } from "../../../lib/supabase/server";
 import { saveHarnessAsset } from "./actions";
 
@@ -95,18 +96,15 @@ export default async function HarnessPage() {
   return (
     <main className="harness-shell">
       <header className="harness-hero">
-        <p>Repository harness · source-backed assets</p>
-        <h1>Save what already works.</h1>
-        <span>
-          Capture an exact instruction snapshot for reuse. The source repository
-          stays untouched.
-        </span>
+        <p>{HARNESS.live.kicker}</p>
+        <h1>{HARNESS.title}</h1>
+        <span>{HARNESS.live.lead}</span>
       </header>
-      <section className="harness-assets" aria-label="Harness assets">
+      <section className="harness-assets" aria-label={HARNESS.ariaAssets}>
         {assets.length === 0 ? (
           <div className="library-empty">
-            <h2>No instruction assets indexed</h2>
-            <p>Run a repository scan, then return to the harness.</p>
+            <h2>{HARNESS.empty.title}</h2>
+            <p>{HARNESS.empty.body}</p>
           </div>
         ) : (
           assets.map((asset) => (

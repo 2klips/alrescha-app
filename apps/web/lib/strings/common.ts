@@ -44,3 +44,10 @@ export const ACTION = {
   close: "닫기",
   search: "검색",
 } as const;
+
+export const NOT_FOUND = {
+  eyebrow: "404 · 알 수 없는 경로",
+  title: "여기엔 아무것도 없습니다.",
+  body: "이 경로는 Arr 워크스페이스 밖에 있습니다.",
+  cta: "앱으로 돌아가기",
+} as const;

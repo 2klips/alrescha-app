@@ -801,6 +801,9 @@ a {
   font: 0.65rem var(--font-mono);
   gap: 0.4rem;
   position: relative;
+  /* Korean step labels are single short words where the English ones were two;
+     without this the flex item wraps them one character per line. */
+  white-space: nowrap;
 }
 
 .stepper li::after {

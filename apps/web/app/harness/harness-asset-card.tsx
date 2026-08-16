@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { useActionState } from "react";
 
+import { HARNESS } from "../../lib/strings";
+
 export interface HarnessAsset {
   readonly digest: string;
   readonly id: string;
@@ -35,10 +37,10 @@ async function saveDemoAsset(
 ): Promise<SaveLibraryActionState> {
   return state.status === "saved" || state.status === "duplicate"
     ? {
-        notice: "Already saved — existing digest reused.",
+        notice: HARNESS.notices.duplicate,
         status: "duplicate",
       }
-    : { notice: "Saved immutable snapshot.", status: "saved" };
+    : { notice: HARNESS.notices.saved, status: "saved" };
 }
 
 export function HarnessAssetCard({
@@ -78,17 +80,17 @@ export function HarnessAssetCard({
       </a>
       <form action={formAction} className="harness-save-form">
         <input name="assetId" type="hidden" value={asset.id} />
-        <label htmlFor={`tags-${asset.id}`}>Tags</label>
+        <label htmlFor={`tags-${asset.id}`}>{HARNESS.card.tagsLabel}</label>
         <input
           defaultValue={asset.tags.join(", ")}
           id={`tags-${asset.id}`}
           maxLength={400}
           name="tags"
-          placeholder="auth, review"
+          placeholder={HARNESS.card.tagsPlaceholder}
         />
         <button disabled={pending} type="submit">
           {saved ? <CopyCheck size={15} /> : <BookmarkPlus size={15} />}
-          {pending ? "Saving…" : "Save to library"}
+          {pending ? HARNESS.card.saving : HARNESS.card.save}
         </button>
       </form>
       <div className="harness-save-result" data-save-status={state.status}>
@@ -98,7 +100,7 @@ export function HarnessAssetCard({
         </p>
         {saved ? (
           <a href={demo ? "/library?saved=1" : "/app/library"}>
-            Browse library
+            {HARNESS.card.browseLibrary}
           </a>
         ) : null}
       </div>

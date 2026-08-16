@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
-import { DASHBOARD } from "../../apps/web/lib/strings";
+import { DASHBOARD, GRAPH } from "../../apps/web/lib/strings";
 
 test("scripted MCP reads pulse the graph and feed focus follows the newest call", async ({ page }) => {
   await page.goto("/");
@@ -43,17 +43,17 @@ test("enters a depth-two graph by node double-click and inspects grounded edges"
     .dblclick();
 
   await expect(page).toHaveURL(/\/graph\?node=req-auth/);
-  await expect(page.getByRole("region", { name: "Depth-two evidence detail graph" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Evidence neighborhood" })).toBeVisible();
+  await expect(page.getByRole("region", { name: GRAPH.regionLabel })).toBeVisible();
+  await expect(page.getByRole("heading", { name: GRAPH.heading })).toBeVisible();
   await expect(page.getByRole("heading", { name: /declares|implements|tests|references/ })).toBeVisible();
-  await expect(page.getByText(/Confidence/)).toBeVisible();
+  await expect(page.getByText(GRAPH.provenance.confidence)).toBeVisible();
   await expect(page.locator(".provenance-card .grade-badge")).toBeVisible();
 
   await expect(page.locator("[data-canvas-nodes='4']")).toBeVisible();
-  await page.getByRole("checkbox", { name: "Show orphan artifacts" }).check();
+  await page.getByRole("checkbox", { name: GRAPH.inspector.orphanToggleLabel }).check();
   await expect(page.locator("[data-canvas-nodes='5']")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Related findings" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Source record/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: GRAPH.footer.relatedFindings })).toBeVisible();
+  await expect(page.getByRole("link", { name: new RegExp(GRAPH.footer.sourceRecord) })).toBeVisible();
 });
 
 test("renders nonblank local graph pixels at desktop and mobile sizes", async ({ page }) => {

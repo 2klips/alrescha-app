@@ -94,7 +94,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Acceptance: existing dashboard tests green with updated selectors; Playwright screenshot evidence for dark and light; every HUD number still click-throughs to its evidence surface (navigation tests).
   Commit: feat(dashboard): ink-and-seal hud restyle
 
-- [ ] 8. Remaining screens restyle
+- [x] 8. Remaining screens restyle
   Findings (+detail drawer), harness, evidence detail graph (tokens-themed; note renderer choice), receipts (in-toto viewer), progress (todo board + timeline), library, settings (mcp/ai/privacy), stats, auth, not-found — restyled to tokens in both themes, Korean-first strings from todo 3; verified/inferred badges use the semantic tokens everywhere.
   Acceptance: existing feature tests green; Playwright walks each screen in both themes without unthemed-color lint violations; evidence screenshots per screen.
   Commit: feat(ui): restyle all screens to ink-and-seal

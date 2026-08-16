@@ -1,3 +1,5 @@
+import { SETTINGS } from "../../../../lib/strings";
+
 export interface CreditLedgerView {
   readonly amount: number;
   readonly createdAt: string;
@@ -10,7 +12,9 @@ export interface CreditLedgerView {
 export type AiProviderName = "anthropic" | "openai";
 
 function providerLabel(provider: AiProviderName): string {
-  return provider === "openai" ? "OpenAI" : "Anthropic";
+  return provider === "openai"
+    ? SETTINGS.ai.byok.providerNames.openai
+    : SETTINGS.ai.byok.providerNames.anthropic;
 }
 
 export function AiUsageSettings({
@@ -31,16 +35,16 @@ export function AiUsageSettings({
         className="mcp-settings-card"
         aria-labelledby="credit-usage-title"
       >
-        <h2 id="credit-usage-title">Credit usage</h2>
+        <h2 id="credit-usage-title">{SETTINGS.ai.creditUsage.heading}</h2>
         <div className="credit-meter">
-          <strong>{balance} credits</strong>
-          <span>{used} used</span>
+          <strong>{SETTINGS.ai.creditUsage.balance(balance)}</strong>
+          <span>{SETTINGS.ai.creditUsage.used(used)}</span>
         </div>
         {balance <= 0 ? (
           <div className="credit-warning" role="status">
-            <strong>Judgments paused</strong>
-            <p>Add credits or configure BYOK, then retry the judgment.</p>
-            <p>Deterministic scans and drift analysis keep working.</p>
+            <strong>{SETTINGS.ai.creditUsage.pausedTitle}</strong>
+            <p>{SETTINGS.ai.creditUsage.pausedBody}</p>
+            <p>{SETTINGS.ai.creditUsage.pausedNote}</p>
           </div>
         ) : null}
         <ul className="credit-ledger-list">
@@ -52,7 +56,7 @@ export function AiUsageSettings({
                 {entry.amount}
               </strong>
               <time dateTime={entry.createdAt}>
-                {entry.createdAt.slice(0, 16).replace("T", " ")} UTC
+                {SETTINGS.ai.creditUsage.timestamp(entry.createdAt)}
               </time>
             </li>
           ))}
@@ -60,18 +64,15 @@ export function AiUsageSettings({
       </section>
 
       <section className="mcp-settings-card" aria-labelledby="byok-title">
-        <h2 id="byok-title">Bring your own key</h2>
-        <p>
-          BYOK judgments bypass credits. Keys are encrypted at rest and never
-          displayed or logged.
-        </p>
+        <h2 id="byok-title">{SETTINGS.ai.byok.heading}</h2>
+        <p>{SETTINGS.ai.byok.intro}</p>
         <form action={saveByokKey} className="byok-key-form">
-          <label htmlFor="ai-provider">Provider</label>
+          <label htmlFor="ai-provider">{SETTINGS.ai.byok.providerFieldLabel}</label>
           <select id="ai-provider" name="provider">
-            <option value="anthropic">Anthropic</option>
-            <option value="openai">OpenAI</option>
+            <option value="anthropic">{SETTINGS.ai.byok.providerNames.anthropic}</option>
+            <option value="openai">{SETTINGS.ai.byok.providerNames.openai}</option>
           </select>
-          <label htmlFor="ai-provider-key">Provider API key</label>
+          <label htmlFor="ai-provider-key">{SETTINGS.ai.byok.apiKeyFieldLabel}</label>
           <input
             autoComplete="new-password"
             id="ai-provider-key"
@@ -81,7 +82,7 @@ export function AiUsageSettings({
             type="password"
           />
           <button className="button" type="submit">
-            Encrypt and save
+            {SETTINGS.ai.byok.submit}
           </button>
         </form>
         <ul className="byok-provider-list">
@@ -90,8 +91,8 @@ export function AiUsageSettings({
               <strong>{providerLabel(provider)}</strong>
               <span>
                 {configuredProviders.includes(provider)
-                  ? `${providerLabel(provider)} BYOK configured`
-                  : "Not configured"}
+                  ? SETTINGS.ai.byok.configured(providerLabel(provider))
+                  : SETTINGS.ai.byok.notConfigured}
               </span>
             </li>
           ))}

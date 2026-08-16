@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { BRAND, DASHBOARD } from "../../apps/web/lib/strings";
+import { BRAND, DASHBOARD, NOT_FOUND } from "../../apps/web/lib/strings";
 
 test("opens the Arr app shell", async ({ page }) => {
   await page.goto("/");
@@ -20,9 +20,9 @@ test("shows the not-found surface for an unknown route", async ({ page }) => {
 
   expect(response?.status()).toBe(404);
   await expect(
-    page.getByRole("heading", { level: 1, name: "Nothing here." }),
+    page.getByRole("heading", { level: 1, name: NOT_FOUND.title }),
   ).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Return to app shell" }),
+    page.getByRole("link", { name: NOT_FOUND.cta }),
   ).toBeVisible();
 });

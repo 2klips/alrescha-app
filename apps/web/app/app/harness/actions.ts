@@ -15,6 +15,7 @@ import { createGitHubAppJwt } from "../../../lib/github/api";
 import { githubAppEnvironment } from "../../../lib/github/env";
 import { readHarnessAssetSource } from "../../../lib/github/library-source";
 import { saveLibrarySnapshot } from "../../../lib/library/library-store";
+import { HARNESS } from "../../../lib/strings";
 import { createClient } from "../../../lib/supabase/server";
 
 const SUPPORTED_CLASSIFICATIONS = [
@@ -154,9 +155,9 @@ export async function saveHarnessAsset(
     const saved = await saveLibrarySnapshot(client, workspaceId, snapshot);
     revalidatePath("/app/library");
     return saved.outcome === "saved"
-      ? { notice: "Saved immutable snapshot.", status: "saved" }
+      ? { notice: HARNESS.notices.saved, status: "saved" }
       : {
-          notice: "Already saved — existing digest reused.",
+          notice: HARNESS.notices.duplicate,
           status: "duplicate",
         };
   } catch (error) {
