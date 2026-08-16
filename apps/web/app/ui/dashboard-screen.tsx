@@ -51,6 +51,7 @@ import {
   type PulsePhase,
 } from "../../lib/realtime/access-events";
 import { GraphCanvas } from "./graph-canvas";
+import { ThemeToggle } from "./theme-toggle";
 
 interface DashboardScreenProps {
   model: DashboardViewModel;
@@ -424,10 +425,13 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             </Link>
           ))}
         </nav>
-        <Link className="arr-connect" href="/app/connect/github">
-          <Link2 size={17} />
-          Connect repo
-        </Link>
+        <span className="header-actions">
+          <ThemeToggle />
+          <Link className="arr-connect" href="/app/connect/github">
+            <Link2 size={17} />
+            Connect repo
+          </Link>
+        </span>
       </header>
 
       <div className="arr-workspace">

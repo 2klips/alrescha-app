@@ -88,7 +88,8 @@
   --danger: var(--brand);
   --panel: color-mix(in srgb, var(--surface) 94%, transparent);
   --panel-soft: color-mix(in srgb, var(--surface) 88%, transparent);
-  --panel-shadow: color-mix(in srgb, #000000 32%, transparent);
+  --shadow-color: #000000;
+  --panel-shadow: color-mix(in srgb, var(--shadow-color) 32%, transparent);
   --tint-accent: color-mix(in srgb, var(--accent) 10%, transparent);
   --tint-verified: color-mix(in srgb, var(--verified) 10%, transparent);
   --tint-inferred: color-mix(in srgb, var(--inferred) 10%, transparent);
@@ -142,5 +143,6 @@
   --on-accent: #ffffff;
   --on-verified: #ffffff;
 
-  --panel-shadow: color-mix(in srgb, #20242e 14%, transparent);
+  --shadow-color: #20242e;
+  --panel-shadow: color-mix(in srgb, var(--shadow-color) 14%, transparent);
 }

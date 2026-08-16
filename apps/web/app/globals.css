@@ -192,7 +192,7 @@ a {
 .hud-panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  box-shadow: 0 14px 36px rgb(0 0 0 / 26%);
+  box-shadow: 0 14px 36px color-mix(in srgb, var(--shadow-color) 26%, transparent);
 }
 
 .repo-hud {
@@ -391,7 +391,7 @@ a {
 .metric-evidence {
   background: var(--panel);
   border: 1px solid var(--line-strong);
-  box-shadow: 0 14px 36px rgb(0 0 0 / 34%);
+  box-shadow: 0 14px 36px color-mix(in srgb, var(--shadow-color) 34%, transparent);
   padding: 1rem;
   top: 22.5rem;
 }
@@ -830,7 +830,7 @@ a {
 .onboarding-card {
   background: color-mix(in srgb, var(--surface) 97%, transparent);
   border: 1px solid var(--line-strong);
-  box-shadow: 0 28px 80px rgb(0 0 0 / 44%);
+  box-shadow: 0 28px 80px color-mix(in srgb, var(--shadow-color) 44%, transparent);
   padding: clamp(1.5rem, 4vw, 2.5rem);
   position: relative;
   width: min(31rem, 100%);
@@ -1083,6 +1083,46 @@ a {
   font: 0.63rem var(--font-mono);
   gap: 0.35rem;
   justify-self: end;
+}
+
+/* Theme control — Ink & Seal dark/light ("paper"), Phase 2A todo 2. */
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.6rem;
+  justify-self: end;
+}
+
+.theme-toggle {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: 0.62rem var(--font-mono);
+  gap: 0.35rem;
+  letter-spacing: 0.08em;
+  min-height: 2rem;
+  padding: 0.35rem 0.55rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.arr-topbar .theme-toggle {
+  background: var(--arr-paper);
+  border-color: var(--arr-line);
+  color: var(--arr-muted);
+}
+
+.arr-topbar .theme-toggle:hover {
+  border-color: var(--arr-blue);
+  color: var(--arr-ink);
 }
 
 .assurance-main {

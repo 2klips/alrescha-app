@@ -12,6 +12,8 @@ import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import "./globals.css";
 
+import { THEME_INIT_SCRIPT } from "../lib/theme/theme-preference";
+
 export const metadata: Metadata = {
   description: "Trace every software claim to implementation and verified test evidence.",
   title: "Arr · Proof, before merge",
@@ -19,7 +21,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Stamps data-theme before the first paint — without this the dark
+            default would flash on a light-theme reload (Phase 2A todo 2). */}
+        <script
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+          id="arr-theme-init"
+        />
+      </head>
       <body>{children}</body>
     </html>
   );

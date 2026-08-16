@@ -64,7 +64,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Acceptance: lint rule fails on a seeded violation fixture and passes on the codebase; both themes produce defined values for every semantic token (unit test walks the token list); fonts load without layout shift (font-display swap + size-adjust documented).
   Commit: feat(ui): add ink-and-seal tokens, fonts, and theme base
 
-- [ ] 2. Theme toggle and persistence
+- [x] 2. Theme toggle and persistence
   Header toggle (dark default; first visit honors prefers-color-scheme, then persisted in localStorage); no flash-of-wrong-theme (inline script sets `data-theme` before hydration); all shared primitives (buttons, chips, cards, tables, banners, badges, code snippets) restyled from tokens in both themes.
   Acceptance: Playwright toggles theme on dashboard/findings/receipts and asserts token-derived computed styles + persistence across reload; no-flash verified via init-script presence test.
   Commit: feat(ui): theme toggle with persistence

@@ -13,6 +13,7 @@ import {
   buildDemoProgressReport,
   type DemoProgressState,
 } from "../../lib/progress/fixtures";
+import { ThemeToggle } from "../ui/theme-toggle";
 import { ProgressDashboardView } from "./progress-dashboard";
 
 function parseState(value: string | string[] | undefined): DemoProgressState {
@@ -59,9 +60,12 @@ export default async function ProgressPage({
             Receipts
           </Link>
         </nav>
-        <span className="commit-chip">
-          <GitBranch size={13} />
-          main · sourced state
+        <span className="header-actions">
+          <span className="commit-chip">
+            <GitBranch size={13} />
+            main · sourced state
+          </span>
+          <ThemeToggle />
         </span>
       </header>
       <nav

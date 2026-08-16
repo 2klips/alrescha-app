@@ -40,6 +40,7 @@ import {
   type ReceiptFixture,
   type SourceFixture,
 } from "../../lib/assurance/fixtures";
+import { ThemeToggle } from "./theme-toggle";
 
 type AssuranceSurface = "findings" | "lint" | "receipts";
 
@@ -62,7 +63,10 @@ function AppHeader({ surface }: { surface: AssuranceSurface }) {
         <Link href="/progress"><Activity size={15} />Progress</Link>
         <Link aria-current={surface === "receipts" ? "page" : undefined} href="/receipts"><ReceiptText size={15} />Receipts</Link>
       </nav>
-      <span className="commit-chip"><GitBranch size={13} />main · clean scan</span>
+      <span className="header-actions">
+        <span className="commit-chip"><GitBranch size={13} />main · clean scan</span>
+        <ThemeToggle />
+      </span>
     </header>
   );
 }
