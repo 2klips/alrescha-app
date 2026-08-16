@@ -230,7 +230,7 @@ export interface ReceiptFixture {
 export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-10T13:42:00.000Z",
-    expectedDigest: "8b8e940fe1b20a3c2c7a7b260a988fb2cf0f093ee84ec7b356481a8b5cd95d59",
+    expectedDigest: "e039d2e653fce7e4891eed208875fedd07daec8c203419e1ce2617f85ab3d784",
     id: "receipt-current",
     label: "bad0551 · deterministic analysis",
     stale: false,
@@ -238,7 +238,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   },
   {
     createdAt: "2026-08-09T17:08:00.000Z",
-    expectedDigest: "8b8e940fe1b20a3c2c7a7b260a988fb2cf0f093ee84ec7b356481a8b5cd95d59",
+    expectedDigest: "e039d2e653fce7e4891eed208875fedd07daec8c203419e1ce2617f85ab3d784",
     id: "receipt-tampered",
     label: "bad0551 · tampered fixture",
     stale: false,
@@ -249,7 +249,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   },
   {
     createdAt: "2026-08-08T09:12:00.000Z",
-    expectedDigest: "47440141a41d2d46f8ae922da2fcf6be4d0a5633eb42b3d927e319de3e30b27b",
+    expectedDigest: "40bc6190015cf895dff4094d119426516aa72fa6e426c40d825d0a438587db57",
     id: "receipt-previous",
     label: "e9101b5 · previous analysis",
     stale: true,
