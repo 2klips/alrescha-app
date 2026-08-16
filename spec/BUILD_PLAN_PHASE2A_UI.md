@@ -104,7 +104,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Acceptance: perf + bundle reports committed as evidence; all suites green; contrast report shows no AA failures for standard text.
   Commit: test(ui): perf bundle and a11y gates
 
-- [ ] 10. Handoff artifacts
+- [x] 10. Handoff artifacts
   `docs/design-tokens.md` (final token table for the marketing-site restyle), updated screenshots in README, CHANGELOG entry, evidence index for this phase.
   Acceptance: docs build/lint green; README shows current dark-theme dashboard screenshot.
   Commit: docs(ui): phase 2a handoff artifacts
