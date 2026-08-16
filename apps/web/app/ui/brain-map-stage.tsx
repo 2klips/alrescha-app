@@ -29,7 +29,11 @@ const BrainMap = dynamic(
 );
 
 export interface BrainMapStageProps {
+  /** Nodes carrying the residual afterglow tint. */
+  afterglow?: ReadonlySet<string>;
   data: GraphData;
+  /** Node id → 0…1 neuron-glow intensity (see `lib/graph/glow.ts`). */
+  glow?: ReadonlyMap<string, number>;
   onEdgeSelect?: (edge: GraphEdge) => void;
   onNodeSelect?: (node: GraphNode) => void;
   seed?: number;
@@ -39,7 +43,9 @@ export interface BrainMapStageProps {
 }
 
 export function BrainMapStage({
+  afterglow,
   data,
+  glow,
   onEdgeSelect,
   onNodeSelect,
   seed,
@@ -58,13 +64,16 @@ export function BrainMapStage({
       aria-label={DASHBOARD.canvasLabel(data.nodes.length)}
       className="brain-map-stage"
       data-canvas-nodes={data.nodes.length}
+      data-glow-active={glow ? glow.size : 0}
       data-lod={lod.level}
       data-testid="brain-map-stage"
       role="img"
     >
       <BrainMap
+        {...(afterglow ? { afterglow } : {})}
         data={data}
         forceConfig={forceConfig}
+        {...(glow ? { glow } : {})}
         onLodChange={(level, labels) =>
           setLod({ labels, level: level as LodLevel })
         }

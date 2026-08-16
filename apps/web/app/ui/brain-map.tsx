@@ -25,8 +25,12 @@ import type { ForceConfig } from "../../lib/graph/simulation-protocol";
 import { readDesignToken, readRendererPalette } from "../../lib/theme/tokens";
 
 export interface BrainMapProps {
+  /** Nodes carrying the residual afterglow tint. */
+  afterglow?: ReadonlySet<string>;
   data: GraphData;
   forceConfig?: Partial<ForceConfig>;
+  /** Node id → 0…1 neuron-glow intensity, updated in place every batch. */
+  glow?: ReadonlyMap<string, number>;
   onLodChange?: (lod: string, labelCount: number) => void;
   seed?: number;
   selectedNodeId?: string | null;
@@ -37,8 +41,10 @@ const MIN_SCALE = 0.15;
 const MAX_SCALE = 4;
 
 export function BrainMap({
+  afterglow,
   data,
   forceConfig,
+  glow,
   onLodChange,
   seed,
   selectedNodeId,
@@ -194,6 +200,11 @@ export function BrainMap({
   useEffect(() => {
     engineRef.current?.setSelectedNode(selectedNodeId ?? null);
   }, [selectedNodeId]);
+
+  // Glow is an in-place attribute write: no `setData`, no reheat, no relayout.
+  useEffect(() => {
+    engineRef.current?.setGlow(glow ?? new Map(), afterglow ?? new Set());
+  }, [afterglow, glow]);
 
   return <canvas className="brain-map-canvas" ref={canvasRef} />;
 }

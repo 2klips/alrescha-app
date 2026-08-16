@@ -44,6 +44,8 @@ export interface Viewport {
 export const DEFAULT_VIEWPORT: Viewport = { height: 800, width: 1200 };
 
 export interface RenderNode {
+  /** Residual tint on a recently-touched node. */
+  afterglow: boolean;
   alpha: number;
   /** Evidence grade shown as a badge — Near zoom only. */
   badge: EvidenceGrade | null;
@@ -149,6 +151,8 @@ export function degreeMap(data: GraphData): Map<string, number> {
 }
 
 export interface FrameInput {
+  /** Nodes carrying the residual afterglow tint. */
+  afterglow?: ReadonlySet<string>;
   /** `nodeId → community key`; required for supernode collapse. */
   assignment?: ReadonlyMap<string, string>;
   camera?: Camera;
@@ -218,6 +222,7 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
       screenY: viewport.height / 2 + camera.y + position.y * camera.scale,
     });
     return {
+      afterglow: input.afterglow?.has(node.id) ?? false,
       alpha: 1,
       badge: badges ? node.grade : null,
       clusterCount: node.clusterCount ?? null,

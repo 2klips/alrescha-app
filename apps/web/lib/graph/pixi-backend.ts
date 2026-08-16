@@ -195,6 +195,12 @@ export async function createPixiBackend(
       for (const node of frame.nodes) {
         nodeLayer.circle(node.x, node.y, node.radius);
         nodeLayer.fill({ alpha: node.alpha, color: node.color });
+        if (node.afterglow) {
+          // Residual tint: a node an agent read recently stays warm without
+          // holding the full additive pulse.
+          nodeLayer.circle(node.x, node.y, node.radius + 2);
+          nodeLayer.stroke({ alpha: 0.35, color: node.color, width: 1 });
+        }
         if (node.selected || node.ring) {
           nodeLayer.circle(node.x, node.y, node.radius + 4);
           nodeLayer.stroke({

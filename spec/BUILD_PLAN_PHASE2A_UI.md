@@ -84,7 +84,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Acceptance: unit tests for grid label selection determinism and LOD thresholds; Playwright zooms through the 3 levels asserting label-count bands and badge visibility at Near; panel values persist across reload; a 3,500-node synthetic fixture shows supernodes at Far and raw nodes when expanded.
   Commit: feat(graph): lod labels clustering and force panel
 
-- [ ] 6. Neuron glow shader layer
+- [x] 6. Neuron glow shader layer
   Rebuild glow on per-node `glowIntensity` attributes with time-uniform pulse (shader or additive glow sprites — document choice), ~1.5s exponential decay, afterglow tint, additive edge propagation for touched edges; 100ms event coalescing; drift overlays (red rings, red dashed broken-evidence edges) rendered in the same pass; realtime feed wiring unchanged.
   Acceptance: deterministic test hook injects a scripted event stream — assertions on intensity state machine (pulse→decay→afterglow), coalescing under a 50-events/s burst (single batched update per window, no re-layout calls), and cross-workspace isolation intact (existing realtime tests stay green).
   Commit: feat(graph): shader neuron glow and drift overlays

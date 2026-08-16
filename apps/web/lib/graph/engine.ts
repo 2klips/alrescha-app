@@ -118,6 +118,13 @@ export interface GraphEngine {
   /** The render plan for the current instant, without painting it. */
   frame(): RenderFrame;
   framesReceived(): number;
+  /** Node id → 0…1 neuron-glow intensity currently applied. */
+  glow(): ReadonlyMap<string, number>;
+  /**
+   * Test hook: how many times the layout has been (re)started. Applying glow
+   * must never increment it — visual state and layout are separate systems.
+   */
+  layoutRestarts(): number;
   /** Build and hand the current frame to the backend. */
   paint(): void;
   positions(): ReadonlyMap<string, Position>;
@@ -126,6 +133,11 @@ export interface GraphEngine {
   setCamera(camera: Camera): void;
   setData(data: GraphData): void;
   setForceConfig(partial: Partial<ForceConfig>): void;
+  /** In-place visual update — never touches the simulation. */
+  setGlow(
+    intensities: ReadonlyMap<string, number>,
+    afterglow?: ReadonlySet<string>,
+  ): void;
   setPalette(palette: GraphPalette): void;
   setSelectedNode(nodeId: string | null): void;
   setTextFadeThreshold(value: number): void;
@@ -152,6 +164,9 @@ export async function createGraphEngine(
   let textFadeThreshold = options.textFadeThreshold ?? 0;
   let ready = false;
   let disposed = false;
+  let layoutRestarts = 0;
+  let glow: ReadonlyMap<string, number> = new Map();
+  let afterglow: ReadonlySet<string> = new Set();
   const buffer: PositionBuffer = createPositionBuffer();
 
   // Community detection runs once per graph, not per frame: collapsing is a
@@ -173,14 +188,17 @@ export async function createGraphEngine(
   });
 
   worker.postMessage(createStartMessage(data, config, options.seed ?? 1));
+  layoutRestarts += 1;
   backend.setPalette(palette);
 
   function frame(): RenderFrame {
     return buildRenderFrame({
+      afterglow,
       assignment,
       camera,
       data,
       expanded,
+      glow,
       palette,
       positions: buffer.at(now()),
       selectedNodeId,
@@ -211,6 +229,8 @@ export async function createGraphEngine(
     forceConfig: () => ({ ...config }),
     frame,
     framesReceived: () => buffer.frames(),
+    glow: () => new Map(glow),
+    layoutRestarts: () => layoutRestarts,
     paint() {
       if (disposed) return;
       backend.render(frame());
@@ -230,12 +250,17 @@ export async function createGraphEngine(
       assignment = communityAssignment(next, { seed: options.seed ?? 1 });
       expanded.clear();
       buffer.reset();
-      if (!disposed)
-        worker.postMessage(createStartMessage(next, config, options.seed ?? 1));
+      if (disposed) return;
+      worker.postMessage(createStartMessage(next, config, options.seed ?? 1));
+      layoutRestarts += 1;
     },
     setForceConfig(partial) {
       config = clampForceConfig({ ...config, ...partial });
       if (!disposed) worker.postMessage({ config, type: "config" });
+    },
+    setGlow(intensities, nextAfterglow) {
+      glow = intensities;
+      afterglow = nextAfterglow ?? new Set();
     },
     setPalette(next) {
       palette = next;
