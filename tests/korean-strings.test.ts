@@ -20,6 +20,7 @@ const CONVERTED_SCREENS = [
   "apps/web/app/ui/brain-map.tsx",
   "apps/web/app/ui/brain-map-stage.tsx",
   "apps/web/app/ui/dashboard-screen.tsx",
+  "apps/web/app/ui/graph-force-panel.tsx",
   "apps/web/app/ui/assurance-workspace.tsx",
   "apps/web/app/ui/graph-canvas.tsx",
   "apps/web/app/ui/theme-toggle.tsx",

@@ -14,6 +14,15 @@ import type {
   GraphNode,
 } from "../dashboard/graph-model";
 import type { DesignToken } from "../theme/tokens";
+import { collapseGraph, shouldCollapse } from "./clustering";
+import {
+  nodePixelSize,
+  resolveLod,
+  selectLabels,
+  showsStatusBadges,
+  type LabelCandidate,
+  type LodLevel,
+} from "./lod";
 import type { Position } from "./simulation-protocol";
 
 /** `readRendererPalette()` output: token → `0xRRGGBB`. */
@@ -32,8 +41,14 @@ export interface Viewport {
   width: number;
 }
 
+export const DEFAULT_VIEWPORT: Viewport = { height: 800, width: 1200 };
+
 export interface RenderNode {
   alpha: number;
+  /** Evidence grade shown as a badge — Near zoom only. */
+  badge: EvidenceGrade | null;
+  /** Number of collapsed members, or null for a raw node. */
+  clusterCount: number | null;
   color: number;
   /** 0..1 neuron-glow intensity (todo 6 drives it; 0 keeps the node calm). */
   glow: number;
@@ -76,6 +91,7 @@ export interface RenderFrame {
   edges: RenderEdge[];
   labelColor: number;
   labels: RenderLabel[];
+  lod: LodLevel;
   nodes: RenderNode[];
 }
 
@@ -133,34 +149,82 @@ export function degreeMap(data: GraphData): Map<string, number> {
 }
 
 export interface FrameInput {
+  /** `nodeId → community key`; required for supernode collapse. */
+  assignment?: ReadonlyMap<string, string>;
   camera?: Camera;
   data: GraphData;
+  /** Communities the user clicked open. */
+  expanded?: ReadonlySet<string>;
   /** Node id → 0..1 glow intensity. */
   glow?: ReadonlyMap<string, number>;
   palette: GraphPalette;
   positions: ReadonlyMap<string, Position>;
   selectedNodeId?: string | null;
+  /** 0…1 label fade slider. */
+  textFadeThreshold?: number;
+  viewport?: Viewport;
 }
 
 /**
- * Build one frame. Nodes without a simulated position fall back to the layout
- * baked into the fixture, so the first frame is never a pile at the origin.
+ * Build one frame:
+ *   positions → LOD level → (optional) community collapse → nodes/edges →
+ *   grid label selection.
+ *
+ * Nodes without a simulated position fall back to the layout baked into the
+ * fixture, so the first frame is never a pile at the origin. Collapse happens
+ * here, at frame time, from centroids — the simulation keeps running on the
+ * raw graph, which is what "visual aggregation, no re-layout" means.
  */
 export function buildRenderFrame(input: FrameInput): RenderFrame {
   const camera = input.camera ?? DEFAULT_CAMERA;
-  const degrees = degreeMap(input.data);
+  const viewport = input.viewport ?? DEFAULT_VIEWPORT;
   const glow = input.glow;
-  const placed = new Map<string, Position>();
 
-  const nodes: RenderNode[] = input.data.nodes.map((node) => {
-    const position = input.positions.get(node.id) ?? { x: node.x, y: node.y };
+  const rawDegrees = degreeMap(input.data);
+  const lod = resolveLod(
+    input.data.nodes.map((node) =>
+      nodeRadius(rawDegrees.get(node.id) ?? 0, node.clusterCount),
+    ),
+    camera.scale,
+  );
+
+  const collapsed =
+    input.assignment && shouldCollapse(input.data.nodes.length, lod)
+      ? collapseGraph({
+          assignment: input.assignment,
+          data: input.data,
+          ...(input.expanded ? { expanded: input.expanded } : {}),
+          positions: input.positions,
+        })
+      : { data: input.data, positions: input.positions };
+
+  const data = collapsed.data;
+  const degrees = data === input.data ? rawDegrees : degreeMap(data);
+  const badges = showsStatusBadges(lod);
+  const placed = new Map<string, Position>();
+  const candidates: LabelCandidate[] = [];
+
+  const nodes: RenderNode[] = data.nodes.map((node) => {
+    const position = collapsed.positions.get(node.id) ?? { x: node.x, y: node.y };
     placed.set(node.id, position);
+    const degree = degrees.get(node.id) ?? 0;
+    const radius = nodeRadius(degree, node.clusterCount);
+    candidates.push({
+      degree,
+      id: node.id,
+      label: node.label,
+      pixelSize: nodePixelSize(radius, camera.scale),
+      screenX: viewport.width / 2 + camera.x + position.x * camera.scale,
+      screenY: viewport.height / 2 + camera.y + position.y * camera.scale,
+    });
     return {
       alpha: 1,
+      badge: badges ? node.grade : null,
+      clusterCount: node.clusterCount ?? null,
       color: resolveColor(input.palette, nodeColorToken(node.type)),
       glow: glow?.get(node.id) ?? 0,
       id: node.id,
-      radius: nodeRadius(degrees.get(node.id) ?? 0, node.clusterCount),
+      radius,
       ring: node.findingCount > 0,
       selected: node.id === input.selectedNodeId,
       x: position.x,
@@ -169,7 +233,7 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
   });
 
   const edges: RenderEdge[] = [];
-  for (const edge of input.data.edges) {
+  for (const edge of data.edges) {
     const source = placed.get(edge.source);
     const target = placed.get(edge.target);
     if (!source || !target) continue;
@@ -191,12 +255,38 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     });
   }
 
+  const selected = new Set(
+    selectLabels(candidates, {
+      lod,
+      ...(input.textFadeThreshold === undefined
+        ? {}
+        : { textFadeThreshold: input.textFadeThreshold }),
+      viewport,
+    }),
+  );
+  const byId = new Map(candidates.map((candidate) => [candidate.id, candidate]));
+  const labelAlpha = 1 - (input.textFadeThreshold ?? 0) * 0.25;
+  const labels: RenderLabel[] = [];
+  for (const node of nodes) {
+    if (!selected.has(node.id)) continue;
+    const candidate = byId.get(node.id);
+    if (!candidate) continue;
+    labels.push({
+      alpha: labelAlpha,
+      id: node.id,
+      text: candidate.label,
+      x: node.x + node.radius + 5,
+      y: node.y,
+    });
+  }
+
   return {
     camera,
     driftColor: resolveColor(input.palette, "danger"),
     edges,
     labelColor: resolveColor(input.palette, "text"),
-    labels: [],
+    labels,
+    lod,
     nodes,
   };
 }

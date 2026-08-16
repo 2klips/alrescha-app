@@ -58,6 +58,24 @@ export const DASHBOARD = {
     },
   },
 
+  /** Obsidian식 힘 파라미터 HUD 카드 (Phase 2A todo 5) */
+  forcePanel: {
+    title: "Graph 힘",
+    aria: "Graph 힘 파라미터",
+    expand: "힘 패널 펼치기",
+    collapse: "힘 패널 접기",
+    reset: "기본값 복원",
+    centerStrength: "중앙 인력",
+    repelStrength: "반발력",
+    linkStrength: "링크 인력",
+    linkDistance: "링크 거리",
+    textFadeThreshold: "라벨 페이드",
+    lodLevels: { far: "원경", mid: "중경", near: "근경" },
+    /** `줌 단계 <원경|중경|근경> · 라벨 <n>개` */
+    lodStatus: (level: string, labels: number) =>
+      `줌 단계 ${level} · 라벨 ${labels}개`,
+  },
+
   ci: {
     present: "CI 증거 · bad0551에서 테스트 78건 verified",
     missing: "이 commit에는 CI 리포트가 없습니다 — 테스트 링크는 inferred로 남습니다.",

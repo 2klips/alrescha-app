@@ -79,7 +79,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Acceptance: unit tests for worker message protocol and force-config application; mount/unmount ×10 leaves no WebGL context-lost errors and no detached worker (test hook counters); 500-node fixture renders with stable positions (deterministic seed for tests).
   Commit: feat(graph): worker-simulated pixi graph engine
 
-- [ ] 5. LOD, labels, clustering, and force panel
+- [x] 5. LOD, labels, clustering, and force panel
   3-level zoom LOD per research spec (Far/Mid/Near as defined in Scope); grid-cell label selection (degree-weighted, one per cell) with text-fade-threshold slider; force parameter HUD panel (collapsible, persisted); community-detection supernode collapse (louvain, folder fallback) at Far zoom for >3,000-node graphs (visual aggregation only, expand-on-click, no re-layout).
   Acceptance: unit tests for grid label selection determinism and LOD thresholds; Playwright zooms through the 3 levels asserting label-count bands and badge visibility at Near; panel values persist across reload; a 3,500-node synthetic fixture shows supernodes at Far and raw nodes when expanded.
   Commit: feat(graph): lod labels clustering and force panel

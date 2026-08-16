@@ -9,12 +9,16 @@
  */
 
 import type { GraphData } from "../dashboard/graph-model";
+import { communityAssignment } from "./clustering";
+import type { LodLevel } from "./lod";
 import {
   buildRenderFrame,
   type Camera,
   type GraphPalette,
   type RenderFrame,
+  type Viewport,
   DEFAULT_CAMERA,
+  DEFAULT_VIEWPORT,
 } from "./render-frame";
 import { createPositionBuffer, type PositionBuffer } from "./position-buffer";
 import {
@@ -97,10 +101,17 @@ export interface GraphEngineOptions {
   now?: () => number;
   palette: GraphPalette;
   seed?: number;
+  textFadeThreshold?: number;
+  viewport?: Viewport;
 }
 
 export interface GraphEngine {
   camera(): Camera;
+  /** Community keys the user has clicked open. */
+  expanded(): ReadonlySet<string>;
+  /** Toggle a community between supernode and raw members. */
+  toggleCommunity(community: string): void;
+  lod(): LodLevel;
   disposed(): boolean;
   dispose(): void;
   forceConfig(): ForceConfig;
@@ -117,6 +128,8 @@ export interface GraphEngine {
   setForceConfig(partial: Partial<ForceConfig>): void;
   setPalette(palette: GraphPalette): void;
   setSelectedNode(nodeId: string | null): void;
+  setTextFadeThreshold(value: number): void;
+  setViewport(viewport: Viewport): void;
 }
 
 export async function createGraphEngine(
@@ -135,9 +148,16 @@ export async function createGraphEngine(
   let camera: Camera = { ...DEFAULT_CAMERA };
   let palette = options.palette;
   let selectedNodeId: string | null = null;
+  let viewport: Viewport = options.viewport ?? DEFAULT_VIEWPORT;
+  let textFadeThreshold = options.textFadeThreshold ?? 0;
   let ready = false;
   let disposed = false;
   const buffer: PositionBuffer = createPositionBuffer();
+
+  // Community detection runs once per graph, not per frame: collapsing is a
+  // display decision, the assignment is a property of the structure.
+  let assignment = communityAssignment(data, { seed: options.seed ?? 1 });
+  const expanded = new Set<string>();
 
   worker.setMessageHandler((raw) => {
     if (disposed) return;
@@ -157,16 +177,26 @@ export async function createGraphEngine(
 
   function frame(): RenderFrame {
     return buildRenderFrame({
+      assignment,
       camera,
       data,
+      expanded,
       palette,
       positions: buffer.at(now()),
       selectedNodeId,
+      textFadeThreshold,
+      viewport,
     });
   }
 
   return {
     camera: () => ({ ...camera }),
+    expanded: () => new Set(expanded),
+    lod: () => frame().lod,
+    toggleCommunity(community) {
+      if (expanded.has(community)) expanded.delete(community);
+      else expanded.add(community);
+    },
     dispose() {
       if (disposed) return;
       disposed = true;
@@ -188,6 +218,7 @@ export async function createGraphEngine(
     positions: () => buffer.at(now()),
     ready: () => ready,
     resize(width, height) {
+      viewport = { height, width };
       if (!disposed) backend.resize(width, height);
     },
     setCamera(next) {
@@ -196,6 +227,8 @@ export async function createGraphEngine(
     setData(next) {
       data = next;
       nodeIds = next.nodes.map((node) => node.id);
+      assignment = communityAssignment(next, { seed: options.seed ?? 1 });
+      expanded.clear();
       buffer.reset();
       if (!disposed)
         worker.postMessage(createStartMessage(next, config, options.seed ?? 1));
@@ -210,6 +243,12 @@ export async function createGraphEngine(
     },
     setSelectedNode(nodeId) {
       selectedNodeId = nodeId;
+    },
+    setTextFadeThreshold(value) {
+      textFadeThreshold = Math.min(1, Math.max(0, value));
+    },
+    setViewport(next) {
+      viewport = next;
     },
   };
 }
