@@ -74,7 +74,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Acceptance: a test enumerates JSX text nodes (or lint rule) to catch stray hardcoded user-facing literals outside string modules on the reworked screens; snapshot review of key screens' copy committed as evidence.
   Commit: refactor(ui): centralize korean-first strings
 
-- [ ] 4. Graph engine core: worker simulation + Pixi renderer
+- [x] 4. Graph engine core: worker simulation + Pixi renderer
   Implement graphology model + d3-force in a Web Worker (configurable center/repel/link forces + link distance; positions posted as transferable Float32Array at ~30Hz, interpolated on main thread); Pixi v8 stage rendering nodes (type-colored via tokens accessor), edges, selection; `dynamic(ssr:false)` mount; full disposal on unmount (worker terminate + Pixi destroy + context release). React Flow removed from the brain-map route.
   Acceptance: unit tests for worker message protocol and force-config application; mount/unmount ×10 leaves no WebGL context-lost errors and no detached worker (test hook counters); 500-node fixture renders with stable positions (deterministic seed for tests).
   Commit: feat(graph): worker-simulated pixi graph engine

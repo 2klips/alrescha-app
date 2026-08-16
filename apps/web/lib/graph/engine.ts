@@ -1,0 +1,215 @@
+/**
+ * Brain-map engine lifecycle (Phase 2A todo 4).
+ *
+ * Owns exactly two disposable resources — the simulation Worker and the
+ * renderer backend — and counts both, because the acceptance criterion for
+ * this todo is "mount/unmount ×10 leaves no detached worker and no lost GPU
+ * context". Both are injected, so the whole lifecycle is testable in node with
+ * no Worker and no WebGL.
+ */
+
+import type { GraphData } from "../dashboard/graph-model";
+import {
+  buildRenderFrame,
+  type Camera,
+  type GraphPalette,
+  type RenderFrame,
+  DEFAULT_CAMERA,
+} from "./render-frame";
+import { createPositionBuffer, type PositionBuffer } from "./position-buffer";
+import {
+  clampForceConfig,
+  createStartMessage,
+  parseWorkerMessage,
+  type ForceConfig,
+  type Position,
+} from "./simulation-protocol";
+
+/** Minimal Worker surface — a real `Worker` is adapted by `wrapWorker`. */
+export interface SimulationWorkerLike {
+  postMessage(message: unknown, transfer?: Transferable[]): void;
+  setMessageHandler(handler: (data: unknown) => void): void;
+  terminate(): void;
+}
+
+export function wrapWorker(worker: Worker): SimulationWorkerLike {
+  return {
+    postMessage: (message, transfer) =>
+      transfer && transfer.length > 0
+        ? worker.postMessage(message, transfer)
+        : worker.postMessage(message),
+    setMessageHandler: (handler) => {
+      worker.onmessage = (event: MessageEvent) => handler(event.data);
+    },
+    terminate: () => worker.terminate(),
+  };
+}
+
+/** What the Pixi adapter must implement. */
+export interface GraphBackend {
+  destroy(): void;
+  render(frame: RenderFrame): void;
+  resize(width: number, height: number): void;
+  setPalette(palette: GraphPalette): void;
+}
+
+export interface EngineCounters {
+  backendsCreated: number;
+  backendsDestroyed: number;
+  /** Incremented from the backend's `webglcontextlost` handler. */
+  contextLosses: number;
+  workersCreated: number;
+  workersTerminated: number;
+}
+
+const counters: EngineCounters = {
+  backendsCreated: 0,
+  backendsDestroyed: 0,
+  contextLosses: 0,
+  workersCreated: 0,
+  workersTerminated: 0,
+};
+
+/** Test hook: live resource counters for the leak assertions. */
+export function readEngineCounters(): EngineCounters {
+  return { ...counters };
+}
+
+export function resetEngineCounters(): void {
+  counters.backendsCreated = 0;
+  counters.backendsDestroyed = 0;
+  counters.contextLosses = 0;
+  counters.workersCreated = 0;
+  counters.workersTerminated = 0;
+}
+
+/** Called by the renderer backend when the GPU drops the context. */
+export function recordContextLoss(): void {
+  counters.contextLosses += 1;
+}
+
+export interface GraphEngineOptions {
+  createBackend: () => GraphBackend | Promise<GraphBackend>;
+  createWorker: () => SimulationWorkerLike;
+  data: GraphData;
+  forceConfig?: Partial<ForceConfig>;
+  /** Injected for tests; defaults to `Date.now`. */
+  now?: () => number;
+  palette: GraphPalette;
+  seed?: number;
+}
+
+export interface GraphEngine {
+  camera(): Camera;
+  disposed(): boolean;
+  dispose(): void;
+  forceConfig(): ForceConfig;
+  /** The render plan for the current instant, without painting it. */
+  frame(): RenderFrame;
+  framesReceived(): number;
+  /** Build and hand the current frame to the backend. */
+  paint(): void;
+  positions(): ReadonlyMap<string, Position>;
+  ready(): boolean;
+  resize(width: number, height: number): void;
+  setCamera(camera: Camera): void;
+  setData(data: GraphData): void;
+  setForceConfig(partial: Partial<ForceConfig>): void;
+  setPalette(palette: GraphPalette): void;
+  setSelectedNode(nodeId: string | null): void;
+}
+
+export async function createGraphEngine(
+  options: GraphEngineOptions,
+): Promise<GraphEngine> {
+  const now = options.now ?? (() => Date.now());
+  const backend = await options.createBackend();
+  counters.backendsCreated += 1;
+
+  const worker = options.createWorker();
+  counters.workersCreated += 1;
+
+  let data = options.data;
+  let nodeIds = data.nodes.map((node) => node.id);
+  let config = clampForceConfig(options.forceConfig);
+  let camera: Camera = { ...DEFAULT_CAMERA };
+  let palette = options.palette;
+  let selectedNodeId: string | null = null;
+  let ready = false;
+  let disposed = false;
+  const buffer: PositionBuffer = createPositionBuffer();
+
+  worker.setMessageHandler((raw) => {
+    if (disposed) return;
+    const message = parseWorkerMessage(raw);
+    if (!message) return;
+    if (message.type === "ready") {
+      ready = true;
+      return;
+    }
+    if (message.type === "positions") {
+      buffer.push(nodeIds, message.positions, now());
+    }
+  });
+
+  worker.postMessage(createStartMessage(data, config, options.seed ?? 1));
+  backend.setPalette(palette);
+
+  function frame(): RenderFrame {
+    return buildRenderFrame({
+      camera,
+      data,
+      palette,
+      positions: buffer.at(now()),
+      selectedNodeId,
+    });
+  }
+
+  return {
+    camera: () => ({ ...camera }),
+    dispose() {
+      if (disposed) return;
+      disposed = true;
+      worker.postMessage({ type: "stop" });
+      worker.terminate();
+      counters.workersTerminated += 1;
+      backend.destroy();
+      counters.backendsDestroyed += 1;
+      buffer.reset();
+    },
+    disposed: () => disposed,
+    forceConfig: () => ({ ...config }),
+    frame,
+    framesReceived: () => buffer.frames(),
+    paint() {
+      if (disposed) return;
+      backend.render(frame());
+    },
+    positions: () => buffer.at(now()),
+    ready: () => ready,
+    resize(width, height) {
+      if (!disposed) backend.resize(width, height);
+    },
+    setCamera(next) {
+      camera = { ...next };
+    },
+    setData(next) {
+      data = next;
+      nodeIds = next.nodes.map((node) => node.id);
+      buffer.reset();
+      if (!disposed)
+        worker.postMessage(createStartMessage(next, config, options.seed ?? 1));
+    },
+    setForceConfig(partial) {
+      config = clampForceConfig({ ...config, ...partial });
+      if (!disposed) worker.postMessage({ config, type: "config" });
+    },
+    setPalette(next) {
+      palette = next;
+      if (!disposed) backend.setPalette(next);
+    },
+    setSelectedNode(nodeId) {
+      selectedNodeId = nodeId;
+    },
+  };
+}

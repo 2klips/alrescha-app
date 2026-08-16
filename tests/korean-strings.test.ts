@@ -17,6 +17,8 @@ const repoRoot = fileURLToPath(new URL("..", import.meta.url));
  * These are checked for stray literals on every run.
  */
 const CONVERTED_SCREENS = [
+  "apps/web/app/ui/brain-map.tsx",
+  "apps/web/app/ui/brain-map-stage.tsx",
   "apps/web/app/ui/dashboard-screen.tsx",
   "apps/web/app/ui/assurance-workspace.tsx",
   "apps/web/app/ui/graph-canvas.tsx",
