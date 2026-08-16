@@ -1,0 +1,430 @@
+{
+  "schemaVersion": 2,
+  "models": [
+    { "id": "gpt-5-nano-2025-08-07", "provider": "openai" },
+    { "id": "claude-sonnet-5", "provider": "anthropic" }
+  ],
+  "trialsPerArm": 5,
+  "arms": [
+    "checkout",
+    "full-dump",
+    "data-brain"
+  ],
+  "tasks": [
+    {
+      "id": "fixture-implement-remaining-session-ms",
+      "type": "implementation",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "session timeout remaining milliseconds SESSION_TIMEOUT_MS",
+      "prompt": "Implement `remainingSessionMs(session, now)` in `src/session.ts`. Return milliseconds until the existing 30-minute timeout, clamped to zero. Preserve existing exports. Return the complete changed file in `files`.",
+      "grader": {
+        "kind": "test-pass",
+        "testPath": "benchmarks/databrain/graders/remaining-session-ms.test.ts"
+      }
+    },
+    {
+      "id": "fixture-implement-refresh-session",
+      "type": "implementation",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "session expiry refresh lastActivityAt",
+      "prompt": "Implement `refreshSession(session, now)` in `src/session.ts`. Return `null` when the existing session is expired; otherwise return a new Session with `lastActivityAt` set to `now`. Preserve existing exports. Return the complete changed file in `files`.",
+      "grader": {
+        "kind": "test-pass",
+        "testPath": "benchmarks/databrain/graders/refresh-session.test.ts"
+      }
+    },
+    {
+      "id": "fixture-implement-github-login",
+      "type": "implementation",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "REQ-AUTH-001 GitHub OAuth login loginWithGitHub",
+      "prompt": "Implement `loginWithGitHub(code: string)` in new file `src/auth.ts`. It must reject an empty code and otherwise return `/auth/callback?code=` plus the URL-encoded code. No network access. Return the complete new file in `files`.",
+      "grader": {
+        "kind": "test-pass",
+        "testPath": "benchmarks/databrain/graders/github-login.test.ts"
+      }
+    },
+    {
+      "id": "fixture-implement-password-reset",
+      "type": "implementation",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "password reset claim deterministic offline",
+      "prompt": "Implement `createPasswordResetRequest(email: string, now: number)` in new file `src/password-reset.ts`. Trim and lowercase email, reject an empty result, and return `{ email, expiresAt: now + 15 minutes }`. No network or randomness. Return the complete new file in `files`. Throw an Error when the trimmed email is empty (do not return null).",
+      "grader": {
+        "kind": "test-pass",
+        "testPath": "benchmarks/databrain/graders/password-reset.test.ts"
+      }
+    },
+    {
+      "id": "fixture-answer-session-policy",
+      "type": "question-answering",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "REQ-AUTH-002 session expiry boundary timeout",
+      "prompt": "What is the session timeout duration, and at exactly what comparison boundary does expiration occur? Cite the relevant symbol or requirement in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "30 minutes",
+            "30-minute",
+            "1800000"
+          ],
+          [
+            ">=",
+            "greater than or equal",
+            "exact boundary"
+          ],
+          [
+            "SESSION_TIMEOUT_MS",
+            "REQ-AUTH-002"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "fixture-answer-audit-schema",
+      "type": "question-answering",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "successful login audit event schema recordSuccessfulLogin",
+      "prompt": "Which event name and user identifier key are emitted after a successful login? Answer with both exact JSON field values in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "login_succeeded"
+          ],
+          [
+            "user_id"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "fixture-answer-api-rule-conflict",
+      "type": "question-answering",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "API response JSON key rules snake_case camelCase AGENTS",
+      "prompt": "Describe the response-key instruction conflict affecting `src/api/health.ts`. Name both conventions and their applicable instruction scopes in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "snake_case"
+          ],
+          [
+            "camelCase",
+            "camel case"
+          ],
+          [
+            "root",
+            "fixture"
+          ],
+          [
+            "subtree",
+            "src/api"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "fixture-answer-legacy-billing",
+      "type": "question-answering",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "legacyCharge legacy billing retired integration",
+      "prompt": "Is the documented `legacyCharge` implementation present? State the claimed path and the evidence-based status in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "src/legacy-billing.ts"
+          ],
+          [
+            "missing",
+            "does not exist",
+            "absent"
+          ],
+          [
+            "stale",
+            "outdated"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "fixture-judge-auth-drift",
+      "type": "drift-judgment",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "authentication missing implementation password reset unproven claim",
+      "prompt": "Identify authentication/product-claim drift. Return only semantic identifiers formatted `kind:subject` in `findings`; use requirement IDs where present. Allowed kinds: missing-implementation, missing-test, stale-doc, contradicting-instructions, orphan-doc, unproven-claim. Subject: use the requirement ID (e.g. REQ-AUTH-001) when one exists, otherwise the document or topic slug.",
+      "grader": {
+        "kind": "findings-manifest",
+        "expectedFindings": [
+          "missing-implementation:REQ-AUTH-001",
+          "unproven-claim:password-reset"
+        ]
+      }
+    },
+    {
+      "id": "fixture-judge-instruction-doc-drift",
+      "type": "drift-judgment",
+      "repository": "fixtures/drifted-demo",
+      "retrievalQuery": "contradicting instructions API JSON keys orphan ADR-002",
+      "prompt": "Identify instruction and orphan-document drift. Return only semantic identifiers formatted `kind:subject` in `findings`. Allowed kinds: missing-implementation, missing-test, stale-doc, contradicting-instructions, orphan-doc, unproven-claim. Subject: use the requirement ID (e.g. REQ-AUTH-001) when one exists, otherwise the document or topic slug.",
+      "grader": {
+        "kind": "findings-manifest",
+        "expectedFindings": [
+          "contradicting-instructions:api-json-keys",
+          "orphan-doc:ADR-002"
+        ]
+      }
+    },
+    {
+      "id": "real-answer-github-permissions",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "GitHub App read only permissions optional pull request proposals",
+      "prompt": "For this realistic repository, list every default GitHub App permission and the optional write permission for advisory PR proposals in `answer`. Format each permission as a `name:access` pair (e.g. contents:read).",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "contents:read",
+            "contents read"
+          ],
+          [
+            "checks:read",
+            "checks read"
+          ],
+          [
+            "actions:read",
+            "actions read"
+          ],
+          [
+            "metadata:read",
+            "metadata read"
+          ],
+          [
+            "pull_requests:write",
+            "pull requests write"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "real-answer-mcp-contract",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "MCP protocol stateless Sampling Roots Logging sessions forbidden",
+      "prompt": "For this realistic repository, state the hosted MCP protocol version, state model, and forbidden capabilities in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "2026-07-28"
+          ],
+          [
+            "stateless"
+          ],
+          [
+            "Sampling"
+          ],
+          [
+            "Roots"
+          ],
+          [
+            "Logging"
+          ],
+          [
+            "session",
+            "sessions"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "real-answer-job-queue-claim",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "worker job queue claim postgres lease heartbeat stale",
+      "prompt": "For this realistic repository, name the exact SQL locking clause the job queue uses to claim the next job, the Postgres function that performs that claim, and the two job columns that track worker liveness and lease expiry. Answer with the exact identifiers in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "for update skip locked",
+            "skip locked"
+          ],
+          [
+            "claim_next_job"
+          ],
+          [
+            "heartbeat_at"
+          ],
+          [
+            "lease_expires_at"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "real-answer-graph-renderer",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "evidence graph renderer force simulation libraries off main thread",
+      "prompt": "For this realistic repository, name the three graph libraries the evidence graph is rendered with and the execution context that runs the force simulation off the main thread. List all four exact names in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "graphology"
+          ],
+          [
+            "d3-force",
+            "d3 force"
+          ],
+          [
+            "pixi.js",
+            "pixi"
+          ],
+          [
+            "web worker",
+            "webworker"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "real-answer-receipt-statement",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "assurance receipt statement predicate type verification recompute",
+      "prompt": "For this realistic repository, quote the two URI values that identify an assurance receipt statement and its predicate, and name what re-verification recomputes to detect tampering. Put all three values in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "https://in-toto.io/statement/v1",
+            "in-toto.io/statement/v1"
+          ],
+          [
+            "https://arr.dev/receipt/v1",
+            "arr.dev/receipt/v1"
+          ],
+          [
+            "digest",
+            "sha-256",
+            "sha256"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "real-answer-credit-honesty",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "credit reservation settle failed judgment retry double charge",
+      "prompt": "For this realistic repository, state which class of analysis consumes no credits, which ledger event the worker writes when a job fails instead of settling, and the exact request field that stops a retry from charging twice. Answer in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "deterministic"
+          ],
+          [
+            "refund"
+          ],
+          [
+            "idempotency key",
+            "idempotencykey"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "real-answer-index-pr-limits",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "minimal index managed section marker line limit proposal branch",
+      "prompt": "For this realistic repository, state the only write path into a user's repository, the exact begin marker text of the managed section, and the maximum number of lines that section may contain. Answer in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "advisory",
+            "pull request proposal",
+            "pr proposal",
+            "index pr"
+          ],
+          [
+            "arr:begin",
+            "arr begin"
+          ],
+          [
+            "30 lines",
+            "30 line",
+            "<= 30",
+            "at most 30"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "real-answer-evidence-grade-rule",
+      "type": "question-answering",
+      "repository": ".",
+      "retrievalQuery": "evidence grade execution proof severity ceiling AI judgment chain",
+      "prompt": "For this realistic repository, state the label a finding receives when execution evidence exists, the label used when only AI reasoning supports it, and the severity ceiling applied to a chain that never reaches the stronger label. Use the repository's exact labels in `answer`.",
+      "grader": {
+        "kind": "answer-manifest",
+        "requiredFacts": [
+          [
+            "verified"
+          ],
+          [
+            "inferred"
+          ],
+          [
+            "medium"
+          ]
+        ]
+      }
+    },
+    {
+      "id": "real-audit-mcp-tool-surface",
+      "type": "policy-audit",
+      "repository": ".",
+      "retrievalQuery": "hosted MCP server registered tool names read only annotations",
+      "prompt": "For this realistic repository, decide which of the following tool names the hosted MCP server actually registers. Return one identifier formatted `tool:<name>` in `findings` for every name that is registered, and nothing else. Candidates: apply_patch, create_pull_request, delete_finding, get_artifact, get_findings, log_progress, query_brain, record_note, request_context_pack, run_tests, search_index.",
+      "grader": {
+        "kind": "findings-manifest",
+        "expectedFindings": [
+          "tool:get_artifact",
+          "tool:get_findings",
+          "tool:log_progress",
+          "tool:query_brain",
+          "tool:record_note",
+          "tool:request_context_pack",
+          "tool:search_index"
+        ]
+      }
+    },
+    {
+      "id": "real-audit-finding-taxonomy",
+      "type": "policy-audit",
+      "repository": ".",
+      "retrievalQuery": "assurance finding type taxonomy severity evidence grade union",
+      "prompt": "For this realistic repository, decide which of the following finding types exist in the assurance finding taxonomy. Return one identifier formatted `finding-type:<name>` in `findings` for every type that exists, and nothing else. Candidates: contradicting-instructions, duplicate-instruction, flaky-test, insecure-dependency, missing-doc, missing-implementation, missing-test, orphan-doc, stale-doc, unproven-claim.",
+      "grader": {
+        "kind": "findings-manifest",
+        "expectedFindings": [
+          "finding-type:contradicting-instructions",
+          "finding-type:missing-implementation",
+          "finding-type:missing-test",
+          "finding-type:orphan-doc",
+          "finding-type:stale-doc",
+          "finding-type:unproven-claim"
+        ]
+      }
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import { gradeBenchmarkOutput } from "./grading";
 import type { ArmContext } from "./context";
 import type {
   BenchmarkModel,
+  BenchmarkProvider,
   BenchmarkTask,
   BenchmarkTrialResult,
   ImplementationTestRunner,
@@ -18,6 +19,7 @@ export async function runBenchmarkTrial(input: {
   model: BenchmarkModel;
   modelName: string;
   now?: () => number;
+  provider?: BenchmarkProvider;
   runImplementationTests: ImplementationTestRunner;
   task: BenchmarkTask;
   trial: number;
@@ -28,6 +30,7 @@ export async function runBenchmarkTrial(input: {
     arm: input.armContext.arm,
     model: input.modelName,
     promptDigest: promptDigest(input.task.prompt),
+    provider: input.provider ?? "openai",
     taskId: input.task.id,
     toolCalls: input.armContext.toolNames.length,
     trial: input.trial,

@@ -4,7 +4,10 @@ import { join, resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
-import { loadBenchmarkManifest } from "../scripts/databrain-benchmark/manifest";
+import {
+  loadBenchmarkManifest,
+  taskCorpus,
+} from "../scripts/databrain-benchmark/manifest";
 import { gradeBenchmarkOutput } from "../scripts/databrain-benchmark/grading";
 import {
   buildArmContext,
@@ -13,17 +16,48 @@ import {
 import { runBenchmarkTrial } from "../scripts/databrain-benchmark/runner";
 import { runIsolatedImplementationTests } from "../scripts/databrain-benchmark/implementation-runner";
 import {
+  createAnthropicBenchmarkModel,
   createMockBenchmarkModel,
   createOpenAiBenchmarkModel,
 } from "../scripts/databrain-benchmark/model";
-import { runBenchmark } from "../scripts/databrain-benchmark/benchmark";
+import {
+  runBenchmark,
+  type BenchmarkModelExecution,
+} from "../scripts/databrain-benchmark/benchmark";
 import { renderBenchmarkMarkdown } from "../scripts/databrain-benchmark/report";
+import { bootstrapConfidenceInterval } from "../scripts/databrain-benchmark/statistics";
+import { estimateBenchmarkCost } from "../scripts/databrain-benchmark/cost-estimate";
+import type {
+  BenchmarkManifestV2,
+  BenchmarkReportV1,
+  BenchmarkReportV2,
+  BenchmarkTrialResult,
+} from "../scripts/databrain-benchmark/types";
+
+const REPOSITORY_ROOT = resolve(import.meta.dirname, "..");
+
+async function loadV3Manifest(): Promise<BenchmarkManifestV2> {
+  const manifest = await loadBenchmarkManifest(
+    resolve(REPOSITORY_ROOT, "benchmarks/databrain/tasks.v3.json"),
+  );
+  if (manifest.schemaVersion !== 2) throw new Error("expected schema 2");
+  return manifest;
+}
+
+function mockExecution(
+  manifest: BenchmarkManifestV2,
+): BenchmarkModelExecution[] {
+  const mock = createMockBenchmarkModel(manifest);
+  return manifest.models.map((spec) => ({
+    reason: null,
+    runner: mock,
+    spec,
+  }));
+}
 
 describe("Data Brain benchmark", () => {
   it("rejects a pre-registered task without an objective grading manifest", async () => {
-    const directory = await mkdtemp(
-      join(tmpdir(), "arr-bench-manifest-"),
-    );
+    const directory = await mkdtemp(join(tmpdir(), "arr-bench-manifest-"));
     const path = join(directory, "tasks.json");
     await writeFile(
       path,
@@ -51,10 +85,11 @@ describe("Data Brain benchmark", () => {
 
   it("loads 12 tasks, three trials, all grading types, and a realistic repository", async () => {
     const manifest = await loadBenchmarkManifest(
-      resolve(import.meta.dirname, "../benchmarks/databrain/tasks.json"),
+      resolve(REPOSITORY_ROOT, "benchmarks/databrain/tasks.json"),
     );
 
     expect(manifest.arms).toEqual(["checkout", "full-dump", "data-brain"]);
+    expect(manifest.schemaVersion).toBe(1);
     expect(manifest.trialsPerArm).toBe(3);
     expect(manifest.tasks).toHaveLength(12);
     expect(new Set(manifest.tasks.map(({ type }) => type))).toEqual(
@@ -65,10 +100,90 @@ describe("Data Brain benchmark", () => {
     );
   });
 
-  it("rejects a manifest that weakens the pre-registered protocol", async () => {
-    const directory = await mkdtemp(
-      join(tmpdir(), "arr-bench-protocol-"),
+  it("loads the v3 pre-registration with five trials, two providers, and six or more realistic-repository tasks", async () => {
+    const manifest = await loadV3Manifest();
+    const realistic = manifest.tasks.filter(
+      (task) => taskCorpus(task) === "realistic",
     );
+
+    expect(manifest.trialsPerArm).toBe(5);
+    expect(manifest.tasks.length).toBeGreaterThanOrEqual(20);
+    expect(manifest.models.map(({ provider }) => provider)).toEqual([
+      "openai",
+      "anthropic",
+    ]);
+    expect(realistic.length).toBeGreaterThanOrEqual(6);
+    expect(new Set(manifest.tasks.map(({ type }) => type))).toEqual(
+      new Set([
+        "implementation",
+        "question-answering",
+        "drift-judgment",
+        "policy-audit",
+      ]),
+    );
+    expect(
+      manifest.tasks.every(({ grader }) =>
+        ["answer-manifest", "findings-manifest", "test-pass"].includes(
+          grader.kind,
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects a schema-2 manifest that under-covers realistic repositories", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "arr-bench-realistic-"));
+    const path = join(directory, "tasks.json");
+    const tasks = Array.from({ length: 12 }, (_, index) => ({
+      grader: { kind: "answer-manifest", requiredFacts: [["fact"]] },
+      id: `task-${index}`,
+      prompt: "Answer this",
+      repository: index === 0 ? "fixtures/other-demo" : "fixtures/drifted-demo",
+      retrievalQuery: "fact",
+      type: "question-answering",
+    }));
+    await writeFile(
+      path,
+      JSON.stringify({
+        arms: ["checkout", "full-dump", "data-brain"],
+        models: [
+          { id: "gpt-test", provider: "openai" },
+          { id: "claude-test", provider: "anthropic" },
+        ],
+        schemaVersion: 2,
+        tasks,
+        trialsPerArm: 5,
+      }),
+      "utf8",
+    );
+
+    await expect(loadBenchmarkManifest(path)).rejects.toThrow(
+      /at least 6 realistic-repository tasks/i,
+    );
+  });
+
+  it("rejects a schema-2 manifest with a single provider", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "arr-bench-provider-"));
+    const path = join(directory, "tasks.json");
+    const manifest = await loadV3Manifest();
+    await writeFile(
+      path,
+      JSON.stringify({
+        arms: manifest.arms,
+        models: [{ id: "gpt-test", provider: "openai" }],
+        schemaVersion: 2,
+        tasks: manifest.tasks,
+        trialsPerArm: 5,
+      }),
+      "utf8",
+    );
+
+    await expect(loadBenchmarkManifest(path)).rejects.toThrow(
+      /at least two model providers/i,
+    );
+  });
+
+  it("rejects a manifest that weakens the pre-registered protocol", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "arr-bench-protocol-"));
     const path = join(directory, "tasks.json");
     await writeFile(
       path,
@@ -153,6 +268,32 @@ describe("Data Brain benchmark", () => {
     });
   });
 
+  it("penalises a policy audit that returns every candidate", async () => {
+    const manifest = await loadV3Manifest();
+    const task = manifest.tasks.find(
+      ({ id }) => id === "real-audit-finding-taxonomy",
+    );
+    expect(task?.type).toBe("policy-audit");
+    if (task?.grader.kind !== "findings-manifest") throw new Error("grader");
+
+    const grade = await gradeBenchmarkOutput({
+      output: {
+        answer: "",
+        files: [],
+        findings: [
+          ...task.grader.expectedFindings,
+          "finding-type:flaky-test",
+          "finding-type:missing-doc",
+        ],
+      },
+      task,
+    });
+
+    expect(grade.passed).toBe(false);
+    expect(grade.score).toBeGreaterThan(0.6);
+    expect(grade.score).toBeLessThan(1);
+  });
+
   it("grades implementation output only through the isolated test-pass boundary", async () => {
     const grade = await gradeBenchmarkOutput({
       output: {
@@ -182,10 +323,7 @@ describe("Data Brain benchmark", () => {
   });
 
   it("isolates checkout, full-dump, and Data Brain arm context", async () => {
-    const repositoryRoot = resolve(
-      import.meta.dirname,
-      "../fixtures/drifted-demo",
-    );
+    const repositoryRoot = resolve(REPOSITORY_ROOT, "fixtures/drifted-demo");
     const corpus = await loadRepositoryCorpus(repositoryRoot);
     expect(corpus.entries.map(({ path }) => path)).not.toContain(
       "expected-findings.json",
@@ -244,6 +382,7 @@ describe("Data Brain benchmark", () => {
         const times = [100, 145];
         return () => times.shift() ?? 145;
       })(),
+      provider: "anthropic",
       runImplementationTests: async () => ({ output: "unused", passed: false }),
       task,
       trial: 2,
@@ -255,6 +394,7 @@ describe("Data Brain benchmark", () => {
       grade: null,
       inputTokens: 0,
       outputTokens: 0,
+      provider: "anthropic",
       status: "failed",
       taskId: "provider-failure",
       toolCalls: 1,
@@ -307,9 +447,7 @@ describe("Data Brain benchmark", () => {
   });
 
   it("runs implementation grading in a fresh repository copy", async () => {
-    const manifest = await loadBenchmarkManifest(
-      resolve(import.meta.dirname, "../benchmarks/databrain/tasks.json"),
-    );
+    const manifest = await loadV3Manifest();
     const task = manifest.tasks.find(
       ({ id }) => id === "fixture-implement-remaining-session-ms",
     );
@@ -331,36 +469,171 @@ export function remainingSessionMs(session: Session, now: number): number {
         ],
         task: task!,
       },
-      resolve(import.meta.dirname, ".."),
+      REPOSITORY_ROOT,
     );
 
     expect(result.passed).toBe(true);
     expect(result.output).toContain("passed");
   }, 20_000);
 
-  it("runs every pre-registered dry-run trial without aggregating failures away", async () => {
-    const repositoryRoot = resolve(import.meta.dirname, "..");
-    const manifest = await loadBenchmarkManifest(
-      resolve(repositoryRoot, "benchmarks/databrain/tasks.json"),
-    );
+  it("runs every scheduled multi-model trial without aggregating failures away", async () => {
+    const manifest = await loadV3Manifest();
+    const taskIds = [
+      "fixture-answer-session-policy",
+      "real-audit-finding-taxonomy",
+    ];
     const report = await runBenchmark({
-      generatedAt: "2026-08-13T00:00:00.000Z",
+      generatedAt: "2026-08-17T00:00:00.000Z",
       manifest,
       mode: "dry-run",
-      model: createMockBenchmarkModel(manifest),
-      repositoryRoot,
+      models: mockExecution(manifest),
+      overrides: { taskIds },
+      repositoryRoot: REPOSITORY_ROOT,
     });
 
-    expect(report.protocol.expectedTrialCount).toBe(108);
-    expect(report.trials).toHaveLength(108);
+    expect(report.schemaVersion).toBe(2);
+    expect(report.protocol.registeredTrialCount).toBe(
+      manifest.tasks.length * 3 * 5 * 2,
+    );
+    expect(report.protocol.expectedTrialCount).toBe(taskIds.length * 3 * 5 * 2);
+    expect(report.trials).toHaveLength(taskIds.length * 3 * 5 * 2);
     expect(report.trials.every(({ status }) => status === "completed")).toBe(
       true,
     );
-    expect(report.aggregates).toHaveLength(3);
-    expect(report.aggregates.every(({ trialCount }) => trialCount === 36)).toBe(
-      true,
+    expect(new Set(report.trials.map(({ model }) => model))).toEqual(
+      new Set(manifest.models.map(({ id }) => id)),
+    );
+    expect(new Set(report.trials.map(({ provider }) => provider))).toEqual(
+      new Set(["openai", "anthropic"]),
+    );
+    // Three pooled arm rows plus three per executed model.
+    expect(report.aggregates).toHaveLength(9);
+    expect(
+      report.aggregates.filter(({ model }) => model === null),
+    ).toHaveLength(3);
+    expect(
+      report.aggregates
+        .filter(({ model }) => model === null)
+        .every(({ trialCount }) => trialCount === taskIds.length * 5 * 2),
+    ).toBe(true);
+    expect(report.hypotheses).toHaveLength(3);
+    expect(report.hypotheses[0]?.model).toBeNull();
+    expect(report.hypotheses[0]?.pairedUnitCount).toBe(taskIds.length * 5 * 2);
+    expect(report.run.overrides).toEqual([`tasks=${[...taskIds].sort().join(",")}`]);
+  }, 120_000);
+
+  it("skips a model that has no API key instead of failing the run", async () => {
+    const manifest = await loadV3Manifest();
+    const executions = mockExecution(manifest).map((execution) =>
+      execution.spec.provider === "anthropic"
+        ? {
+            reason: "ANTHROPIC_API_KEY is not set in this environment.",
+            runner: null,
+            spec: execution.spec,
+          }
+        : execution,
+    );
+    const report = await runBenchmark({
+      manifest,
+      mode: "dry-run",
+      models: executions,
+      overrides: { taskIds: ["fixture-answer-audit-schema"] },
+      repositoryRoot: REPOSITORY_ROOT,
+    });
+
+    expect(report.protocol.expectedTrialCount).toBe(15);
+    expect(report.trials).toHaveLength(15);
+    expect(report.run.models).toEqual([
+      {
+        id: "gpt-5-nano-2025-08-07",
+        provider: "openai",
+        reason: null,
+        status: "executed",
+      },
+      {
+        id: "claude-sonnet-5",
+        provider: "anthropic",
+        reason: "ANTHROPIC_API_KEY is not set in this environment.",
+        status: "skipped",
+      },
+    ]);
+    expect(report.hypotheses).toHaveLength(2);
+    expect(renderBenchmarkMarkdown(report)).toContain(
+      "Skipped model: `claude-sonnet-5`",
     );
   }, 60_000);
+
+  it("refuses to run when every registered model is skipped", async () => {
+    const manifest = await loadV3Manifest();
+
+    await expect(
+      runBenchmark({
+        manifest,
+        mode: "real",
+        models: manifest.models.map((spec) => ({
+          reason: "no key",
+          runner: null,
+          spec,
+        })),
+        repositoryRoot: REPOSITORY_ROOT,
+      }),
+    ).rejects.toThrow(/every registered model was skipped/i);
+  });
+
+  it("records narrowing overrides so a smoke run cannot pass as a release", async () => {
+    const manifest = await loadV3Manifest();
+    const report = await runBenchmark({
+      manifest,
+      mode: "dry-run",
+      models: mockExecution(manifest),
+      overrides: {
+        modelIds: ["gpt-5-nano-2025-08-07"],
+        repeats: 1,
+        taskIds: ["fixture-answer-legacy-billing"],
+      },
+      repositoryRoot: REPOSITORY_ROOT,
+    });
+
+    expect(report.trials).toHaveLength(3);
+    expect(report.run.overrides).toEqual([
+      "tasks=fixture-answer-legacy-billing",
+      "repeats=1",
+      "models=gpt-5-nano-2025-08-07",
+    ]);
+    expect(report.run.models[1]).toMatchObject({
+      status: "skipped",
+    });
+  }, 30_000);
+
+  it("produces a deterministic seeded confidence interval that brackets the mean", () => {
+    const values = [0, 0, 1, 1, 0.5, 0.5, 1, 0, 1, 1];
+    const first = bootstrapConfidenceInterval(
+      values,
+      (sample) => sample.reduce((sum, value) => sum + value, 0) / sample.length,
+      "unit-test",
+    );
+    const second = bootstrapConfidenceInterval(
+      values,
+      (sample) => sample.reduce((sum, value) => sum + value, 0) / sample.length,
+      "unit-test",
+    );
+    const wider = bootstrapConfidenceInterval(
+      values.slice(0, 4),
+      (sample) => sample.reduce((sum, value) => sum + value, 0) / sample.length,
+      "unit-test",
+    );
+
+    expect(first).toEqual(second);
+    expect(first!.lower).toBeLessThan(0.6);
+    expect(first!.upper).toBeGreaterThan(0.6);
+    expect(first!.lower).toBeGreaterThanOrEqual(0);
+    expect(first!.upper).toBeLessThanOrEqual(1);
+    // Fewer observations must not produce a narrower interval.
+    expect(wider!.upper - wider!.lower).toBeGreaterThan(
+      first!.upper - first!.lower,
+    );
+    expect(bootstrapConfidenceInterval([], () => 0, "empty")).toBeNull();
+  });
 
   it("renders assumptions, hypotheses, and every failed trial in the Markdown report", () => {
     const failedTrial = {
@@ -429,6 +702,29 @@ export function remainingSessionMs(session: Session, now: number): number {
     expect(markdown).toContain("./results.real.json");
   });
 
+  it("publishes intervals, per-model rows, and the interval-based gate in schema-2 Markdown", async () => {
+    const manifest = await loadV3Manifest();
+    const report = await runBenchmark({
+      generatedAt: "2026-08-17T00:00:00.000Z",
+      manifest,
+      mode: "dry-run",
+      models: mockExecution(manifest),
+      overrides: { taskIds: ["fixture-answer-audit-schema"] },
+      repositoryRoot: REPOSITORY_ROOT,
+    });
+    const markdown = renderBenchmarkMarkdown(report);
+
+    expect(markdown).toContain("## Model coverage");
+    expect(markdown).toContain("Accuracy 95% CI");
+    expect(markdown).toContain("claude-sonnet-5");
+    expect(markdown).toContain("all models (pooled)");
+    expect(markdown).toContain(report.run.confidenceMethod);
+    expect(markdown).toContain("./results.v3.dry-run.json");
+    expect(markdown).toContain(
+      "Gate is evaluated against the interval, not the point estimate",
+    );
+  }, 60_000);
+
   it("honors provider retry timing and keeps authoritative response usage", async () => {
     const responses = [
       new Response(JSON.stringify({ error: { message: "rate limited" } }), {
@@ -484,5 +780,139 @@ export function remainingSessionMs(session: Session, now: number): number {
       outputTokens: 23,
       responseId: "resp-authoritative",
     });
+  });
+
+  it("reads Anthropic structured tool output and its reported usage", async () => {
+    const responses = [
+      new Response(JSON.stringify({ error: { message: "overloaded" } }), {
+        headers: { "retry-after": "1" },
+        status: 529,
+      }),
+      new Response(
+        JSON.stringify({
+          content: [
+            { text: "thinking", type: "text" },
+            {
+              input: {
+                answer: "graphology, d3-force, pixi.js",
+                files: [],
+                findings: [],
+              },
+              name: "databrain_benchmark_output",
+              type: "tool_use",
+            },
+          ],
+          id: "msg-authoritative",
+          usage: { input_tokens: 4_120, output_tokens: 88 },
+        }),
+        { status: 200 },
+      ),
+    ];
+    const requests: Array<{ body: unknown; init: RequestInit }> = [];
+    const fetchMock = vi.fn(async (_url: string, init: RequestInit) => {
+      requests.push({ body: JSON.parse(String(init.body)), init });
+      return responses.shift()!;
+    });
+    const waits: number[] = [];
+    const model = createAnthropicBenchmarkModel(
+      "test-key",
+      fetchMock as unknown as typeof fetch,
+      async (milliseconds) => {
+        waits.push(milliseconds);
+      },
+    );
+
+    const response = await model.generate({
+      arm: "data-brain",
+      context: "context",
+      model: "claude-sonnet-5",
+      prompt: "prompt",
+      taskId: "anthropic-test",
+      trial: 1,
+    });
+
+    expect(waits).toEqual([1_000]);
+    expect(response).toMatchObject({
+      inputTokens: 4_120,
+      outputTokens: 88,
+      responseId: "msg-authoritative",
+    });
+    const body = requests[0]?.body as Record<string, unknown>;
+    expect(body.model).toBe("claude-sonnet-5");
+    expect(body.tool_choice).toEqual({
+      name: "databrain_benchmark_output",
+      type: "tool",
+    });
+    expect(
+      (requests[0]?.init.headers as Record<string, string>)["anthropic-version"],
+    ).toBe("2023-06-01");
+  });
+
+  it("requires an Anthropic key rather than silently estimating tokens", () => {
+    expect(() => createAnthropicBenchmarkModel("  ")).toThrow(
+      /ANTHROPIC_API_KEY is required/i,
+    );
+  });
+
+  it("derives the projected real-run cost from committed measurements", () => {
+    const baselineTrial = (
+      arm: "checkout" | "data-brain" | "full-dump",
+      inputTokens: number,
+      outputTokens: number,
+    ) => ({
+      arm,
+      error: null,
+      errorMessage: null,
+      grade: { passed: true, score: 1, summary: "ok" },
+      inputTokens,
+      model: "baseline-model",
+      output: null,
+      outputTokens,
+      promptDigest: "a".repeat(64),
+      responseId: "baseline",
+      status: "completed" as const,
+      taskId: "task",
+      toolCalls: 1,
+      trial: 1,
+      wallTimeMs: 1,
+    });
+    const baselineDryRun = {
+      trials: [baselineTrial("checkout", 1_000, 0)],
+    } as unknown as BenchmarkReportV1;
+    const baselineReal = {
+      trials: [baselineTrial("checkout", 1_100, 40)],
+    } as unknown as BenchmarkReportV1;
+    const dryRunTrial = {
+      ...baselineTrial("checkout", 2_000, 0),
+      model: "model-under-test",
+      provider: "openai" as const,
+    } as unknown as BenchmarkTrialResult;
+    const dryRun = {
+      protocol: {
+        arms: ["checkout"],
+        registeredTrialCount: 2,
+        taskCount: 1,
+        trialsPerArm: 5,
+      },
+      run: { models: [{ id: "model-under-test", provider: "openai" }] },
+      trials: [dryRunTrial, { ...dryRunTrial }],
+    } as unknown as BenchmarkReportV2;
+
+    const estimate = estimateBenchmarkCost({
+      baselineDryRun,
+      baselineReal,
+      dryRun,
+    });
+
+    expect(estimate.calibrations[0]?.inputTokenRatio).toBeCloseTo(1.1, 6);
+    expect(estimate.projections[0]).toMatchObject({
+      dryRunInputTokens: 4_000,
+      projectedInputTokens: 4_400,
+      projectedOutputTokens: 80,
+      projectedTotalTokens: 4_480,
+      trialCount: 2,
+    });
+    expect(estimate.projectedTotalTokens).toBe(4_480);
+    expect(estimate.projectedTrialCount).toBe(2);
   });
 });

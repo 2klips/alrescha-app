@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
 import {
@@ -8,26 +7,85 @@ import {
   type RepositoryCorpus,
 } from "./context";
 import { runIsolatedImplementationTests } from "./implementation-runner";
+import {
+  benchmarkManifestDigest,
+  benchmarkManifestModels,
+  taskCorpus,
+} from "./manifest";
 import { runBenchmarkTrial } from "./runner";
+import {
+  BOOTSTRAP_METHOD_DESCRIPTION,
+  bootstrapConfidenceInterval,
+  mean,
+} from "./statistics";
 import type {
   BenchmarkAggregate,
   BenchmarkArm,
-  BenchmarkManifest,
+  BenchmarkHypothesis,
+  BenchmarkManifestV2,
   BenchmarkModel,
-  BenchmarkReport,
+  BenchmarkModelSpec,
+  BenchmarkReportV2,
+  BenchmarkRunModel,
   BenchmarkTrialResult,
 } from "./types";
+
+export const DRY_RUN_TOKEN_ASSUMPTION =
+  "Mock usage is deterministic ceil((context + prompt) characters / 4) input and serialized-output characters / 4 output.";
+export const REAL_TOKEN_ASSUMPTION =
+  "Each provider's own reported usage.input_tokens and usage.output_tokens are authoritative (OpenAI Responses API, Anthropic Messages API); no local tokenizer estimate is substituted.";
+
+const NON_INFERIORITY_MARGIN_PERCENTAGE_POINTS = -5;
+const IMPROVEMENT_GOAL_PERCENTAGE_POINTS = 5;
+const TARGET_TOKEN_REDUCTION_PERCENT = 30;
+
+export interface BenchmarkModelExecution {
+  /** `null` marks the model as skipped; `reason` must then explain why. */
+  readonly reason: string | null;
+  readonly runner: BenchmarkModel | null;
+  readonly spec: BenchmarkModelSpec;
+}
+
+export interface BenchmarkOverrides {
+  readonly modelIds?: readonly string[] | null;
+  readonly repeats?: number | null;
+  readonly taskIds?: readonly string[] | null;
+}
+
+interface PairedUnit {
+  readonly baselineScore: number;
+  readonly baselineTokens: number;
+  readonly dataBrainScore: number;
+  readonly dataBrainTokens: number;
+}
 
 function round(value: number): number {
   return Number(value.toFixed(6));
 }
 
-function aggregateArm(
-  arm: BenchmarkArm,
+function armTrials(
   trials: readonly BenchmarkTrialResult[],
+  arm: BenchmarkArm,
+  model: string | null,
+): BenchmarkTrialResult[] {
+  return trials.filter(
+    (trial) =>
+      trial.arm === arm && (model === null || trial.model === model),
+  );
+}
+
+export function aggregateBenchmarkArm(
+  trials: readonly BenchmarkTrialResult[],
+  arm: BenchmarkArm,
+  model: string | null,
 ): BenchmarkAggregate {
-  const selected = trials.filter((trial) => trial.arm === arm);
-  const passedTrials = selected.filter((trial) => trial.grade?.passed).length;
+  const selected = armTrials(trials, arm, model);
+  const scores = selected.map((trial) => trial.grade?.score ?? 0);
+  const interval = bootstrapConfidenceInterval(
+    scores,
+    (sample) => mean(sample),
+    `mean-score\u0000${model ?? "all-models"}\u0000${arm}`,
+  );
   const totalInputTokens = selected.reduce(
     (sum, trial) => sum + trial.inputTokens,
     0,
@@ -39,12 +97,18 @@ function aggregateArm(
   return {
     arm,
     failedTrials: selected.filter((trial) => trial.status === "failed").length,
-    meanScore: round(
-      selected.reduce((sum, trial) => sum + (trial.grade?.score ?? 0), 0) /
-        selected.length,
-    ),
-    passedTrials,
-    passRate: round(passedTrials / selected.length),
+    meanScore: selected.length === 0 ? 0 : round(mean(scores)),
+    meanScoreCiLower: interval?.lower ?? null,
+    meanScoreCiUpper: interval?.upper ?? null,
+    model,
+    passRate:
+      selected.length === 0
+        ? 0
+        : round(
+            selected.filter((trial) => trial.grade?.passed).length /
+              selected.length,
+          ),
+    passedTrials: selected.filter((trial) => trial.grade?.passed).length,
     totalInputTokens,
     totalOutputTokens,
     totalTokens: totalInputTokens + totalOutputTokens,
@@ -52,6 +116,126 @@ function aggregateArm(
     totalWallTimeMs: selected.reduce((sum, trial) => sum + trial.wallTimeMs, 0),
     trialCount: selected.length,
   };
+}
+
+/**
+ * Units are matched across arms by (task, model, trial index): every arm sees
+ * the same task with the same prompt, so the accuracy delta and the token
+ * ratio are paired statistics.
+ */
+export function pairedBenchmarkUnits(
+  trials: readonly BenchmarkTrialResult[],
+  model: string | null,
+): PairedUnit[] {
+  const baseline = new Map<string, BenchmarkTrialResult>();
+  const dataBrain = new Map<string, BenchmarkTrialResult>();
+  for (const trial of trials) {
+    if (model !== null && trial.model !== model) continue;
+    const key = `${trial.taskId}\u0000${trial.model}\u0000${trial.trial}`;
+    if (trial.arm === "checkout") baseline.set(key, trial);
+    if (trial.arm === "data-brain") dataBrain.set(key, trial);
+  }
+  return [...baseline.keys()]
+    .sort()
+    .flatMap((key) => {
+      const left = baseline.get(key)!;
+      const right = dataBrain.get(key);
+      return right
+        ? [
+            {
+              baselineScore: left.grade?.score ?? 0,
+              baselineTokens: left.inputTokens + left.outputTokens,
+              dataBrainScore: right.grade?.score ?? 0,
+              dataBrainTokens: right.inputTokens + right.outputTokens,
+            },
+          ]
+        : [];
+    });
+}
+
+function tokenReduction(units: readonly PairedUnit[]): number | null {
+  const baseline = units.reduce((sum, unit) => sum + unit.baselineTokens, 0);
+  if (baseline === 0) return null;
+  const dataBrain = units.reduce((sum, unit) => sum + unit.dataBrainTokens, 0);
+  return (1 - dataBrain / baseline) * 100;
+}
+
+export function evaluateBenchmarkHypothesis(
+  trials: readonly BenchmarkTrialResult[],
+  aggregates: readonly BenchmarkAggregate[],
+  model: string | null,
+): BenchmarkHypothesis {
+  const baseline = aggregates.find(
+    (aggregate) => aggregate.arm === "checkout" && aggregate.model === model,
+  )!;
+  const dataBrain = aggregates.find(
+    (aggregate) => aggregate.arm === "data-brain" && aggregate.model === model,
+  )!;
+  const units = pairedBenchmarkUnits(trials, model);
+  const accuracyDeltaPercentagePoints =
+    units.length === 0
+      ? null
+      : round((dataBrain.meanScore - baseline.meanScore) * 100);
+  const tokenReductionPercent =
+    baseline.totalTokens === 0
+      ? null
+      : round((1 - dataBrain.totalTokens / baseline.totalTokens) * 100);
+  const accuracyInterval = bootstrapConfidenceInterval(
+    units,
+    (sample) =>
+      mean(sample.map((unit) => unit.dataBrainScore - unit.baselineScore)) * 100,
+    `accuracy-delta\u0000${model ?? "all-models"}`,
+  );
+  const tokenInterval = bootstrapConfidenceInterval(
+    units,
+    (sample) => tokenReduction(sample),
+    `token-reduction\u0000${model ?? "all-models"}`,
+  );
+  return {
+    accuracyDeltaCiLowerPercentagePoints: accuracyInterval?.lower ?? null,
+    accuracyDeltaCiUpperPercentagePoints: accuracyInterval?.upper ?? null,
+    accuracyDeltaPercentagePoints,
+    accuracyImprovementGoalMet:
+      accuracyInterval !== null &&
+      accuracyInterval.lower >= IMPROVEMENT_GOAL_PERCENTAGE_POINTS,
+    accuracyNonInferior:
+      accuracyInterval !== null &&
+      accuracyInterval.lower >= NON_INFERIORITY_MARGIN_PERCENTAGE_POINTS,
+    baselineArm: "checkout",
+    dataBrainArm: "data-brain",
+    model,
+    pairedUnitCount: units.length,
+    targetTokenReductionPercent: TARGET_TOKEN_REDUCTION_PERCENT,
+    tokenReductionCiLowerPercent: tokenInterval?.lower ?? null,
+    tokenReductionCiUpperPercent: tokenInterval?.upper ?? null,
+    tokenReductionPercent,
+    tokenTargetMet:
+      tokenInterval !== null &&
+      tokenInterval.lower >= TARGET_TOKEN_REDUCTION_PERCENT,
+  };
+}
+
+export function summarizeBenchmark(
+  trials: readonly BenchmarkTrialResult[],
+  arms: readonly BenchmarkArm[],
+  executedModelIds: readonly string[],
+): {
+  aggregates: BenchmarkAggregate[];
+  hypotheses: BenchmarkHypothesis[];
+} {
+  const aggregates = [
+    ...arms.map((arm) => aggregateBenchmarkArm(trials, arm, null)),
+    ...executedModelIds.flatMap((model) =>
+      arms.map((arm) => aggregateBenchmarkArm(trials, arm, model)),
+    ),
+  ];
+  const hypotheses = [
+    evaluateBenchmarkHypothesis(trials, aggregates, null),
+    ...executedModelIds.map((model) =>
+      evaluateBenchmarkHypothesis(trials, aggregates, model),
+    ),
+  ];
+  return { aggregates, hypotheses };
 }
 
 async function mapWithConcurrency<T, R>(
@@ -69,22 +253,67 @@ async function mapWithConcurrency<T, R>(
     }
   }
   await Promise.all(
-    Array.from(
-      { length: Math.min(Math.max(1, concurrency), values.length) },
-      () => worker(),
+    Array.from({ length: Math.min(Math.max(1, concurrency), values.length) }, () =>
+      worker(),
     ),
   );
   return output;
 }
 
+/**
+ * Any narrowing of the pre-registered protocol is recorded verbatim in the
+ * report so a smoke run can never be mistaken for a publishable release.
+ */
+function describeOverrides(input: {
+  registeredModelCount: number;
+  registeredRepeats: number;
+  registeredTaskCount: number;
+  selectedModelIds: readonly string[];
+  selectedRepeats: number;
+  selectedTaskIds: readonly string[];
+}): string[] {
+  const described: string[] = [];
+  if (input.selectedTaskIds.length !== input.registeredTaskCount) {
+    described.push(`tasks=${[...input.selectedTaskIds].sort().join(",")}`);
+  }
+  if (input.selectedRepeats !== input.registeredRepeats) {
+    described.push(`repeats=${input.selectedRepeats}`);
+  }
+  if (input.selectedModelIds.length !== input.registeredModelCount) {
+    described.push(`models=${[...input.selectedModelIds].sort().join(",")}`);
+  }
+  return described;
+}
+
 export async function runBenchmark(input: {
   concurrency?: number;
   generatedAt?: string;
-  manifest: BenchmarkManifest;
+  manifest: BenchmarkManifestV2;
   mode: "dry-run" | "real";
-  model: BenchmarkModel;
+  models: readonly BenchmarkModelExecution[];
+  overrides?: BenchmarkOverrides;
   repositoryRoot: string;
-}): Promise<BenchmarkReport> {
+  resultsBasename?: string;
+}): Promise<BenchmarkReportV2> {
+  const overrides = input.overrides ?? {};
+  const registeredModels = benchmarkManifestModels(input.manifest);
+  const selectedModels = input.models.filter(
+    ({ spec }) => !overrides.modelIds || overrides.modelIds.includes(spec.id),
+  );
+  const executable = selectedModels.filter(({ runner }) => runner !== null);
+  if (executable.length === 0) {
+    throw new Error(
+      "No benchmark model could be executed; every registered model was skipped.",
+    );
+  }
+  const tasks = input.manifest.tasks.filter(
+    ({ id }) => !overrides.taskIds || overrides.taskIds.includes(id),
+  );
+  if (tasks.length === 0) {
+    throw new Error("No pre-registered benchmark task matched the selection.");
+  }
+  const repeats = overrides.repeats ?? input.manifest.trialsPerArm;
+
   const corpusCache = new Map<string, Promise<RepositoryCorpus>>();
   const contextCache = new Map<string, Promise<ArmContext>>();
   function corpus(repository: string): Promise<RepositoryCorpus> {
@@ -99,7 +328,7 @@ export async function runBenchmark(input: {
     const key = `${taskIndex}:${arm}`;
     const existing = contextCache.get(key);
     if (existing) return existing;
-    const task = input.manifest.tasks[taskIndex]!;
+    const task = tasks[taskIndex]!;
     const built = corpus(task.repository).then((repositoryCorpus) =>
       buildArmContext({
         arm,
@@ -112,14 +341,17 @@ export async function runBenchmark(input: {
     return built;
   }
 
-  const jobs = input.manifest.tasks.flatMap((task, taskIndex) =>
+  const jobs = tasks.flatMap((task, taskIndex) =>
     input.manifest.arms.flatMap((arm) =>
-      Array.from({ length: input.manifest.trialsPerArm }, (_, trialIndex) => ({
-        arm,
-        task,
-        taskIndex,
-        trial: trialIndex + 1,
-      })),
+      executable.flatMap((execution) =>
+        Array.from({ length: repeats }, (_, trialIndex) => ({
+          arm,
+          execution,
+          task,
+          taskIndex,
+          trial: trialIndex + 1,
+        })),
+      ),
     ),
   );
   const trials = await mapWithConcurrency(
@@ -128,8 +360,9 @@ export async function runBenchmark(input: {
     async (job) =>
       runBenchmarkTrial({
         armContext: await context(job.taskIndex, job.arm),
-        model: input.model,
-        modelName: input.manifest.model,
+        model: job.execution.runner!,
+        modelName: job.execution.spec.id,
+        provider: job.execution.spec.provider,
         runImplementationTests: (implementationInput) =>
           runIsolatedImplementationTests(
             implementationInput,
@@ -139,51 +372,73 @@ export async function runBenchmark(input: {
         trial: job.trial,
       }),
   );
-  const aggregates = input.manifest.arms.map((arm) =>
-    aggregateArm(arm, trials),
+
+  const executedModelIds = executable.map(({ spec }) => spec.id);
+  const { aggregates, hypotheses } = summarizeBenchmark(
+    trials,
+    input.manifest.arms,
+    executedModelIds,
   );
-  const baseline = aggregates.find(({ arm }) => arm === "checkout")!;
-  const dataBrain = aggregates.find(({ arm }) => arm === "data-brain")!;
-  const accuracyDeltaPercentagePoints = round(
-    (dataBrain.meanScore - baseline.meanScore) * 100,
-  );
-  const tokenReductionPercent =
-    baseline.totalTokens === 0
-      ? null
-      : round((1 - dataBrain.totalTokens / baseline.totalTokens) * 100);
-  const manifestDigest = createHash("sha256")
-    .update(JSON.stringify(input.manifest), "utf8")
-    .digest("hex");
+  const runModels: BenchmarkRunModel[] = registeredModels.map((spec) => {
+    const execution = selectedModels.find(
+      (candidate) => candidate.spec.id === spec.id,
+    );
+    const skippedReason = execution
+      ? execution.reason
+      : "Excluded by a command-line model override.";
+    return execution && execution.runner
+      ? { id: spec.id, provider: spec.provider, reason: null, status: "executed" }
+      : {
+          id: spec.id,
+          provider: spec.provider,
+          reason: skippedReason ?? "Skipped without a recorded reason.",
+          status: "skipped",
+        };
+  });
 
   return {
     aggregates,
-    hypothesis: {
-      accuracyDeltaPercentagePoints,
-      accuracyNonInferior: accuracyDeltaPercentagePoints >= -5,
-      baselineArm: "checkout",
-      dataBrainArm: "data-brain",
-      targetTokenReductionPercent: 30,
-      tokenReductionPercent,
-      tokenTargetMet:
-        tokenReductionPercent !== null && tokenReductionPercent >= 30,
-    },
+    hypotheses,
     protocol: {
       arms: [...input.manifest.arms],
       expectedTrialCount: jobs.length,
+      fixtureTaskCount: input.manifest.tasks.filter(
+        (task) => taskCorpus(task) === "fixture",
+      ).length,
+      realisticTaskCount: input.manifest.tasks.filter(
+        (task) => taskCorpus(task) === "realistic",
+      ).length,
+      registeredTrialCount:
+        input.manifest.tasks.length *
+        input.manifest.arms.length *
+        input.manifest.trialsPerArm *
+        registeredModels.length,
       taskCount: input.manifest.tasks.length,
       trialsPerArm: input.manifest.trialsPerArm,
     },
     run: {
+      confidenceMethod: BOOTSTRAP_METHOD_DESCRIPTION,
       generatedAt: input.generatedAt ?? new Date().toISOString(),
-      manifestDigest,
+      manifestDigest: benchmarkManifestDigest(input.manifest),
       mode: input.mode,
-      model: input.manifest.model,
+      models: runModels,
+      overrides: describeOverrides({
+        registeredModelCount: registeredModels.length,
+        registeredRepeats: input.manifest.trialsPerArm,
+        registeredTaskCount: input.manifest.tasks.length,
+        selectedModelIds: selectedModels.map(({ spec }) => spec.id),
+        selectedRepeats: repeats,
+        selectedTaskIds: tasks.map(({ id }) => id),
+      }),
+      resultsBasename:
+        input.resultsBasename ??
+        (input.mode === "real" ? "results.v3.real" : "results.v3.dry-run"),
       tokenizerAssumption:
         input.mode === "real"
-          ? "OpenAI Responses API usage.input_tokens and usage.output_tokens are authoritative; no local tokenizer estimate is substituted."
-          : "Mock usage is deterministic ceil((context + prompt) characters / 4) input and serialized-output characters / 4 output.",
+          ? REAL_TOKEN_ASSUMPTION
+          : DRY_RUN_TOKEN_ASSUMPTION,
     },
-    schemaVersion: 1,
+    schemaVersion: 2,
     trials,
   };
 }

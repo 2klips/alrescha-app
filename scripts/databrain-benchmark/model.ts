@@ -1,9 +1,65 @@
 import type {
-  BenchmarkManifest,
   BenchmarkModel,
   BenchmarkModelOutput,
   BenchmarkTask,
 } from "./types";
+
+const BENCHMARK_OUTPUT_SCHEMA = {
+  additionalProperties: false,
+  properties: {
+    answer: { type: "string" },
+    files: {
+      items: {
+        additionalProperties: false,
+        properties: {
+          content: { type: "string" },
+          path: { type: "string" },
+        },
+        required: ["content", "path"],
+        type: "object",
+      },
+      type: "array",
+    },
+    findings: { items: { type: "string" }, type: "array" },
+  },
+  required: ["answer", "files", "findings"],
+  type: "object",
+} as const;
+
+const BENCHMARK_SYSTEM_PROMPT =
+  "Use only the supplied repository context. Complete the task objectively. Return complete changed files without Markdown fences. Put direct answers in answer and semantic drift identifiers in findings.";
+
+const BENCHMARK_OUTPUT_TOOL_NAME = "databrain_benchmark_output";
+
+function redactProviderMessage(message: string): string {
+  return message
+    .replace(/organization\s+\S+/gi, "organization [redacted]")
+    .replace(/sk-ant-[A-Za-z0-9_-]+/g, "[redacted-api-key]")
+    .replace(/sk-[A-Za-z0-9_-]+/g, "[redacted-api-key]");
+}
+
+function retryDelayMilliseconds(input: {
+  attempt: number;
+  message: string;
+  retryAfterHeader: string | null;
+}): number {
+  const retryAfter = Number(input.retryAfterHeader);
+  const messageDelay = input.message.match(/try again in ([\d.]+)(ms|s)/i);
+  const milliseconds =
+    input.retryAfterHeader !== null && Number.isFinite(retryAfter) && retryAfter >= 0
+      ? retryAfter * 1_000
+      : messageDelay
+        ? Number(messageDelay[1]) *
+          (messageDelay[2]?.toLowerCase() === "ms" ? 1 : 1_000)
+        : input.attempt * 500;
+  return Math.min(20_000, Math.max(250, Math.ceil(milliseconds)));
+}
+
+function defaultSleep(milliseconds: number): Promise<void> {
+  return new Promise((resolvePromise) =>
+    setTimeout(resolvePromise, milliseconds),
+  );
+}
 
 const IMPLEMENTATIONS: Record<string, BenchmarkModelOutput["files"]> = {
   "fixture-implement-github-login": [
@@ -86,9 +142,9 @@ function objectiveOutput(task: BenchmarkTask): BenchmarkModelOutput {
   };
 }
 
-export function createMockBenchmarkModel(
-  manifest: BenchmarkManifest,
-): BenchmarkModel {
+export function createMockBenchmarkModel(manifest: {
+  tasks: readonly BenchmarkTask[];
+}): BenchmarkModel {
   const tasks = new Map(manifest.tasks.map((task) => [task.id, task]));
   return {
     async generate(input) {
@@ -118,7 +174,9 @@ interface ResponsesApiBody {
 
 function parseModelOutput(value: unknown): BenchmarkModelOutput {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new TypeError("OpenAI returned an invalid benchmark output object.");
+    throw new TypeError(
+      "The provider returned an invalid benchmark output object.",
+    );
   }
   const output = value as Partial<BenchmarkModelOutput>;
   if (
@@ -135,7 +193,7 @@ function parseModelOutput(value: unknown): BenchmarkModelOutput {
     !output.findings.every((finding) => typeof finding === "string")
   ) {
     throw new TypeError(
-      "OpenAI returned benchmark output that violates the JSON schema.",
+      "The provider returned benchmark output that violates the JSON schema.",
     );
   }
   return output as BenchmarkModelOutput;
@@ -154,10 +212,7 @@ function responseText(body: ResponsesApiBody): string {
 export function createOpenAiBenchmarkModel(
   apiKey: string,
   fetchImplementation: typeof fetch = fetch,
-  sleepImplementation: (milliseconds: number) => Promise<void> = (
-    milliseconds,
-  ) =>
-    new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)),
+  sleepImplementation: (milliseconds: number) => Promise<void> = defaultSleep,
 ): BenchmarkModel {
   if (!apiKey.trim())
     throw new TypeError("OPENAI_API_KEY is required for a real benchmark run.");
@@ -171,8 +226,7 @@ export function createOpenAiBenchmarkModel(
             body: JSON.stringify({
               input: [
                 {
-                  content:
-                    "Use only the supplied repository context. Complete the task objectively. Return complete changed files without Markdown fences. Put direct answers in answer and semantic drift identifiers in findings.",
+                  content: BENCHMARK_SYSTEM_PROMPT,
                   role: "developer",
                 },
                 {
@@ -186,28 +240,8 @@ export function createOpenAiBenchmarkModel(
               store: false,
               text: {
                 format: {
-                  name: "databrain_benchmark_output",
-                  schema: {
-                    additionalProperties: false,
-                    properties: {
-                      answer: { type: "string" },
-                      files: {
-                        items: {
-                          additionalProperties: false,
-                          properties: {
-                            content: { type: "string" },
-                            path: { type: "string" },
-                          },
-                          required: ["content", "path"],
-                          type: "object",
-                        },
-                        type: "array",
-                      },
-                      findings: { items: { type: "string" }, type: "array" },
-                    },
-                    required: ["answer", "files", "findings"],
-                    type: "object",
-                  },
+                  name: BENCHMARK_OUTPUT_TOOL_NAME,
+                  schema: BENCHMARK_OUTPUT_SCHEMA,
                   strict: true,
                   type: "json_schema",
                 },
@@ -238,29 +272,141 @@ export function createOpenAiBenchmarkModel(
             responseId: body.id,
           };
         }
-        const safeMessage = (body.error?.message ?? "request failed")
-          .replace(/organization\s+\S+/gi, "organization [redacted]")
-          .replace(/sk-[A-Za-z0-9_-]+/g, "[redacted-api-key]");
+        const safeMessage = redactProviderMessage(
+          body.error?.message ?? "request failed",
+        );
         lastError = new Error(`OpenAI API ${response.status}: ${safeMessage}`);
         if (response.status !== 429 && response.status < 500) throw lastError;
         if (attempt < 6) {
-          const retryAfter = Number(response.headers.get("retry-after"));
-          const messageDelay = safeMessage.match(
-            /try again in ([\d.]+)(ms|s)/i,
-          );
-          const milliseconds =
-            Number.isFinite(retryAfter) && retryAfter >= 0
-              ? retryAfter * 1_000
-              : messageDelay
-                ? Number(messageDelay[1]) *
-                  (messageDelay[2]?.toLowerCase() === "ms" ? 1 : 1_000)
-                : attempt * 500;
           await sleepImplementation(
-            Math.min(20_000, Math.max(250, Math.ceil(milliseconds))),
+            retryDelayMilliseconds({
+              attempt,
+              message: safeMessage,
+              retryAfterHeader: response.headers.get("retry-after"),
+            }),
           );
         }
       }
       throw lastError ?? new Error("OpenAI request failed after retries.");
+    },
+  };
+}
+
+interface MessagesApiBody {
+  content?: Array<{
+    input?: unknown;
+    name?: string;
+    text?: string;
+    type?: string;
+  }>;
+  error?: { message?: string };
+  id?: string;
+  usage?: { input_tokens?: number; output_tokens?: number };
+}
+
+function messagesToolOutput(body: MessagesApiBody): unknown {
+  for (const block of body.content ?? []) {
+    if (block.type === "tool_use" && block.name === BENCHMARK_OUTPUT_TOOL_NAME) {
+      return block.input;
+    }
+  }
+  throw new TypeError(
+    "Anthropic response did not contain the benchmark output tool call.",
+  );
+}
+
+/**
+ * Anthropic Messages API adapter. Structured output is forced through a single
+ * tool whose input schema is byte-identical to the OpenAI JSON schema, so both
+ * providers answer the same contract. Token accounting uses the provider's own
+ * reported `usage`; no local tokenizer estimate is ever substituted.
+ */
+export function createAnthropicBenchmarkModel(
+  apiKey: string,
+  fetchImplementation: typeof fetch = fetch,
+  sleepImplementation: (milliseconds: number) => Promise<void> = defaultSleep,
+): BenchmarkModel {
+  if (!apiKey.trim()) {
+    throw new TypeError(
+      "ANTHROPIC_API_KEY is required for a real Anthropic benchmark run.",
+    );
+  }
+  return {
+    async generate(input) {
+      let lastError: Error | null = null;
+      for (let attempt = 1; attempt <= 6; attempt += 1) {
+        const response = await fetchImplementation(
+          "https://api.anthropic.com/v1/messages",
+          {
+            body: JSON.stringify({
+              max_tokens: 4_096,
+              messages: [
+                {
+                  content: `# Repository context\n\n${input.context}\n\n# Task\n\n${input.prompt}`,
+                  role: "user",
+                },
+              ],
+              model: input.model,
+              system: BENCHMARK_SYSTEM_PROMPT,
+              tool_choice: { name: BENCHMARK_OUTPUT_TOOL_NAME, type: "tool" },
+              tools: [
+                {
+                  description:
+                    "Return the benchmark result. Every field is required.",
+                  input_schema: BENCHMARK_OUTPUT_SCHEMA,
+                  name: BENCHMARK_OUTPUT_TOOL_NAME,
+                },
+              ],
+            }),
+            headers: {
+              "anthropic-version": "2023-06-01",
+              "content-type": "application/json",
+              "x-api-key": apiKey,
+            },
+            method: "POST",
+          },
+        );
+        const body = (await response.json()) as MessagesApiBody;
+        if (response.ok) {
+          if (
+            typeof body.id !== "string" ||
+            !Number.isInteger(body.usage?.input_tokens) ||
+            !Number.isInteger(body.usage?.output_tokens)
+          ) {
+            throw new TypeError(
+              "Anthropic response omitted id or authoritative token usage.",
+            );
+          }
+          return {
+            inputTokens: body.usage!.input_tokens!,
+            output: parseModelOutput(messagesToolOutput(body)),
+            outputTokens: body.usage!.output_tokens!,
+            responseId: body.id,
+          };
+        }
+        const safeMessage = redactProviderMessage(
+          body.error?.message ?? "request failed",
+        );
+        lastError = new Error(
+          `Anthropic API ${response.status}: ${safeMessage}`,
+        );
+        if (
+          response.status !== 429 &&
+          response.status !== 529 &&
+          response.status < 500
+        )
+          throw lastError;
+        if (attempt < 6) {
+          await sleepImplementation(
+            retryDelayMilliseconds({
+              attempt,
+              message: safeMessage,
+              retryAfterHeader: response.headers.get("retry-after"),
+            }),
+          );
+        }
+      }
+      throw lastError ?? new Error("Anthropic request failed after retries.");
     },
   };
 }
