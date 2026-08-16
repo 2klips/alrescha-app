@@ -1,0 +1,60 @@
+# 외부 프로젝트 점검: graphify · claude-code-handoff (2026-08-16)
+
+**목적:** 두 프로젝트의 장점 중 Arr에 흡수 가능한 것을 판별하고, 반영 위치를 확정한다.
+
+---
+
+## 1. Graphify-Labs/graphify — ★106.9k, Apache-2.0, YC S26
+
+**정체:** `/graphify` 스킬(Claude Code·Cursor·Codex·Gemini) — 코드베이스+문서+PDF를 tree-sitter AST 로컬 파싱으로 지식 그래프화. 벡터 스토어 없음, 모든 엣지에 `EXTRACTED`/`INFERRED` 태그, `graph.html` 시각화 + `explain`/`path`/`query` CLI. 유료 플랫폼(always-on 그래프)을 조기 액세스 중.
+
+### ⚠️ 먼저: 경쟁 인식 (중요)
+
+graphify의 상용 플랫폼("코드·문서·미팅 전반의 always-on 그래프")은 **Arr Data Brain의 직접 경쟁자**다. 10.7만 스타 + YC 자금은 8월 초 조사의 "그래프 지식 경쟁 공백" 판단을 갱신해야 함을 뜻한다. 단, **Arr의 해자는 그대로 유효**: graphify에는 ⑴ 요구사항↔구현↔테스트 드리프트 검증 ⑵ 커밋 연동 영수증(변조 감지) ⑶ CI 실행 증거 기반 verified 등급 ⑷ 푸시-자동-분석 SaaS ⑸ 라이브 발광·팀 지표가 없다. **포지셔닝 문구를 "그래프를 만들어준다"가 아니라 "그래프 위에서 증명한다"로 더 명확히 기울일 것.** 역으로, edge 태깅 `EXTRACTED/INFERRED`가 우리 `verified/inferred`와 수렴한 것은 설계 방향의 강한 외부 검증이다.
+
+### 흡수 항목 (채택)
+
+| # | graphify의 장점 | Arr 반영 위치 | 판단 |
+|---|---|---|---|
+| G1 | **커뮤니티 감지(Leiden) + LLM-free 라벨** — 그래프를 서브시스템으로 자동 분할·색상화 | **Phase 2A todo 5 개정(즉시)**: Far 줌 슈퍼노드 기준을 "폴더/모듈"에서 **"커뮤니티 감지(graphology-communities-louvain) 우선, 폴더 폴백"**으로 교체. 커뮤니티 = 그래프 색상 그룹 옵션 | ✅ 채택 — 시각 품질·탐색성 직접 향상, graphology 생태계에 구현 존재 |
+| G2 | **God nodes** — 최다 연결 개념 표면화 | Phase 2A HUD: "허브 노드 Top 5" 칩(클릭 시 포커스) — todo 7 범위 내 소품 | ✅ 채택 (경량) |
+| G3 | **`path`/`explain` 출력 형식** — 홉 단위 경로 추적, 연결 목록+태그 표기 | MCP 그래프 툴(§2 조사에서 스케치한 `trace_path`/`get_neighbors`)의 **응답 포맷 레퍼런스**로 채택 — 구현 시 graphify CLI 출력 형식 참조 | ✅ 채택 (Phase 2B 설계 입력) |
+| G4 | **rationale 주석(`# NOTE:`/`# WHY:`)·ADR 인용을 1급 노드로** | 스캐너 확장(Phase 2B): 코드의 rationale 주석을 문서형 노드로 추출해 코드↔의도 연결 — Arr의 "증거 그래프" 논지와 정합 | ✅ 채택 (Phase 2B) |
+| G5 | **tree-sitter ~40언어 AST** — 심볼·호출·상속 크로스파일 해석 | 현행 "TS 컴파일러 API + 정규식 폴백"의 언어 확장 경로로 tree-sitter 승격 (IMPLEMENTATION_GUIDE에 '선택 최적화'로 이미 기재 → Phase 2B 우선순위로 상향) | ✅ 채택 (Phase 2B) |
+| G6 | **`graph.html` 단일 파일 익스포트** — 공유 가능한 정적 그래프 스냅샷 | "그래프 스냅샷 내보내기" 기능 후보 — 공유/데모용. RESEARCH_AGENDA §8 후속으로 기록 | 🔶 후보 (우선순위 낮음) |
+| G7 | `/graphify` 한 줄 온보딩 UX | Arr 스킬/최소 인덱스 온보딩 카피 참조 ("한 줄로 시작") | ✅ 참고 채택 |
+
+### 비채택
+
+- 벡터 스토어 배제 노선 자체는 이미 Arr와 동일 (결정론 우선, ADR-002) — 신규 사항 아님.
+- PDF·이미지·비디오 인제스트: Arr 범위 밖 (Git 레포 중심 유지).
+
+---
+
+## 2. Sonovore/claude-code-handoff — ★12, MIT
+
+**정체:** Claude Code용 세션 컨텍스트 보존 훅 세트 — `session-state.md` 라이브 유지(UserPromptSubmit 훅), PreCompact 비상 덤프, `/handoff` 명령(Context/Task/Bug 모드; `current-task.md`, append-only `bug-test-log.md`, `recent-prompts.md`).
+
+### 흡수 항목 (채택)
+
+| # | 장점 | Arr 반영 위치 | 판단 |
+|---|---|---|---|
+| H1 | **핸드오프/세션 파일을 1급 아티팩트로 인식** — `.claude/session-state.md`, `context.md`, `current-task.md` 등 | 스캐너의 `todo_progress` 분류에 핸드오프 파일 패턴 추가 → **MCP 미도입 사용자도 기존 습관만으로 진행 대시보드가 채워짐** (진입 장벽↓) | ✅ 채택 (Phase 2B, 소규모) |
+| H2 | **"다음 컨텍스트가 행동하는 데 필요한 것 우선"** 원칙 — 완료 기록(git 복구 가능)보다 방향·다음 행동 | Arr `log_progress` 양식 지침·컨텍스트 팩 서술 원칙에 반영 + **IMPLEMENTATION_GUIDE §4 세션 종료 보고에도 채택** | ✅ 채택 (문서 개정) |
+| H3 | **append-only 테스트 원장(bug-test-log)** — 확정된 테스트·막다른 길을 재실행하지 않음 | 진행 대시보드의 "발견 문제" 뷰에 '시도·배제 이력' 패턴으로 차용 (Phase 2B §6 점검 대시보드 설계 입력) | ✅ 채택 (설계 입력) |
+| H4 | **`recent-prompts.md` — 로컬 파일 기반 프롬프트 기록** | 팀 기능 5-1의 **프라이버시 선례**: 프롬프트 기록을 "사용자 레포 내 로컬 파일(gitignore 기본) → 팀 옵트인 시에만 동기화"로 설계 — "원문 비저장" 가드레일과의 충돌을 로컬-우선으로 해소하는 실마리 | ✅ 채택 (팀 스펙 설계 입력) |
+| H5 | **PreCompact 비상 덤프 훅** | Arr 온보딩에 "훅 스니펫 팩" 제공 후보: compaction 직전 `log_progress` 자동 호출 예시 — 진행 기록 누락 방지 | 🔶 후보 (Phase 2B) |
+
+### 비채택
+
+- 서브모듈+심링크 설치 방식: Arr는 호스티드 SaaS + 스킬 배포라 해당 없음.
+
+---
+
+## 반영 실행 내역 (이 문서와 함께 커밋)
+
+1. **Phase 2A todo 5 개정** — 클러스터링 기준을 커뮤니티 감지 우선으로 교체 (G1), HUD 허브 노드 칩 추가 (G2, todo 7).
+2. **RESEARCH_AGENDA 개정** — §5-1에 H4(로컬-우선 프롬프트 기록 선례), §6에 H1·H3, §1/§2에 G3·G4·G5 반영, 경쟁 인식 문단 추가.
+3. **IMPLEMENTATION_GUIDE §4** — 세션 종료 보고에 H2 원칙 1줄 추가.
+
+**결론:** graphify는 "우리가 맞는 방향으로 가고 있다"는 검증이자 그래프 축 단독으론 이길 수 없다는 경고 — 보증·영수증·팀 지표와의 결합이 Arr의 생존선이다. claude-code-handoff는 규모는 작지만 H1·H4가 Arr의 실사용 진입 장벽과 프라이버시 난제를 정확히 찌르는 패턴이다.

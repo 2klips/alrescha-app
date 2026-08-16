@@ -19,7 +19,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
 - **Graph engine replacement (brain map):** graphology graph model; d3-force simulation running in a **Web Worker** (positions streamed to main thread via transferable Float32Array); **Pixi.js v8** WebGL renderer mounted with Next.js `dynamic(..., { ssr: false })`; clean disposal on unmount/navigation (no WebGL context leaks — tested).
 - **Force parameter panel** (Obsidian-style, collapsible HUD card): center force, repel force, link force, link distance sliders + **text fade threshold** slider; sensible defaults; persisted per user.
 - **Zoom LOD (3 levels, per research §5-①):** Far = no labels (or top-N hub labels only), nodes as glow dots sized by degree, low-alpha edges; Mid = grid-cell label selection (one best label per screen-space cell, degree-weighted) + text fade threshold; Near (node pixel size > threshold) = all labels + status badges on nodes.
-- **Clustering:** ≤3,000 nodes render raw (Obsidian aesthetic); above that, folder/module supernodes collapse at Far zoom only (visual aggregation — no re-layout), expand on click.
+- **Clustering:** ≤3,000 nodes render raw (Obsidian aesthetic); above that, **community-detection supernodes** (graphology-communities-louvain; folder/module fallback) collapse at Far zoom only (visual aggregation — no re-layout), expand on click; community coloring available as a graph option (absorbed from graphify — REVIEW_EXTERNAL_PROJECTS_2026-08-16.md G1).
 - **Drift/assurance overlay:** red ring on nodes with open findings; red dashed broken-evidence edges; verified/inferred edge tinting from tokens; click-through behavior unchanged from current dashboard (HUD chips, feed, double-click to evidence detail).
 - **Neuron glow layer (rebuilt on shader):** per-node `glowIntensity` attribute updated in-place (never re-layout), time-uniform pulse in shader or additive-blend glow sprites; exponential decay ~1.5s; afterglow tint on recently-touched nodes; edge "propagation" flow on touched edges (additive); access events coalesced in 100ms windows before render; burst-safe (50 events/s stays smooth — tested).
 - **HUD restyle:** repo/metric chips, live activity feed, legend, banners — all restyled to Ink & Seal on the full-bleed graph; feed click-to-focus camera animation kept.
@@ -80,7 +80,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Commit: feat(graph): worker-simulated pixi graph engine
 
 - [ ] 5. LOD, labels, clustering, and force panel
-  3-level zoom LOD per research spec (Far/Mid/Near as defined in Scope); grid-cell label selection (degree-weighted, one per cell) with text-fade-threshold slider; force parameter HUD panel (collapsible, persisted); supernode collapse at Far zoom for >3,000-node graphs (visual aggregation only, expand-on-click, no re-layout).
+  3-level zoom LOD per research spec (Far/Mid/Near as defined in Scope); grid-cell label selection (degree-weighted, one per cell) with text-fade-threshold slider; force parameter HUD panel (collapsible, persisted); community-detection supernode collapse (louvain, folder fallback) at Far zoom for >3,000-node graphs (visual aggregation only, expand-on-click, no re-layout).
   Acceptance: unit tests for grid label selection determinism and LOD thresholds; Playwright zooms through the 3 levels asserting label-count bands and badge visibility at Near; panel values persist across reload; a 3,500-node synthetic fixture shows supernodes at Far and raw nodes when expanded.
   Commit: feat(graph): lod labels clustering and force panel
 
@@ -90,7 +90,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Commit: feat(graph): shader neuron glow and drift overlays
 
 - [ ] 7. Dashboard shell and HUD restyle
-  Full-bleed graph with Ink & Seal HUD: repo/metric chips, live activity feed (click-to-focus kept), legend, CI banner, empty/scanning states — all tokenized, both themes; onboarding-in-graph-area animation restyled.
+  Full-bleed graph with Ink & Seal HUD: repo/metric chips, **hub-nodes Top-5 chip (most-connected nodes, click-to-focus — G2)**, live activity feed (click-to-focus kept), legend, CI banner, empty/scanning states — all tokenized, both themes; onboarding-in-graph-area animation restyled.
   Acceptance: existing dashboard tests green with updated selectors; Playwright screenshot evidence for dark and light; every HUD number still click-throughs to its evidence surface (navigation tests).
   Commit: feat(dashboard): ink-and-seal hud restyle
 
