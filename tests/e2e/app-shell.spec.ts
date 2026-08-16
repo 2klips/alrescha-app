@@ -1,12 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+import { BRAND, DASHBOARD } from "../../apps/web/lib/strings";
+
 test("opens the Arr app shell", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByText("2klips/specproof-app").first()).toBeVisible();
-  await expect(page.getByRole("link", { name: "Arr home" })).toBeVisible();
+  await expect(page.getByRole("link", { name: BRAND.homeLabel })).toBeVisible();
   await expect(
-    page.getByRole("heading", { level: 1, name: "Project proof map" }),
+    page.getByRole("heading", { level: 1, name: DASHBOARD.title }),
   ).toBeVisible();
   await expect(page.getByTestId("evidence-graph-canvas")).toBeVisible();
 });

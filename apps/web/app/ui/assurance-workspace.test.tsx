@@ -2,15 +2,16 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
+import { ASSURANCE } from "../../lib/strings";
 import { AssuranceWorkspace } from "./assurance-workspace";
 
 describe("assurance UI", () => {
   test("keeps inferred labels visible across a finding and its evidence chain", () => {
     const html = renderToStaticMarkup(createElement(AssuranceWorkspace, { surface: "findings" }));
 
-    expect(html).toContain("Evidence chain");
+    expect(html).toContain(ASSURANCE.findings.chain.title);
     expect(html).toContain("grade-badge inferred");
-    expect(html).toContain("Suggested next action");
+    expect(html).toContain(ASSURANCE.findings.action.label);
   });
 
   test("shows lint assumptions and both contradiction source spans", () => {
@@ -25,8 +26,8 @@ describe("assurance UI", () => {
   test("locks receipt verdict until digest verification", () => {
     const html = renderToStaticMarkup(createElement(AssuranceWorkspace, { surface: "receipts" }));
 
-    expect(html).toContain("Not verified");
-    expect(html).toContain("Verdict locked until digest verification succeeds.");
-    expect(html).not.toContain("Verified receipt verdict");
+    expect(html).toContain(ASSURANCE.receipts.verification.pending);
+    expect(html).toContain(ASSURANCE.receipts.verdict.locked);
+    expect(html).not.toContain(ASSURANCE.receipts.verdict.label);
   });
 });

@@ -13,6 +13,7 @@ import {
   buildDemoProgressReport,
   type DemoProgressState,
 } from "../../lib/progress/fixtures";
+import { BRAND, NAV, PROGRESS } from "../../lib/strings";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { ProgressDashboardView } from "./progress-dashboard";
 
@@ -34,43 +35,43 @@ export default async function ProgressPage({
             <Network size={18} />
           </span>
           <span>
-            <strong>Arr</strong>
-            <small>2klips/specproof-app · progress ledger</small>
+            <strong>{BRAND.name}</strong>
+            <small>{PROGRESS.header.repoLine}</small>
           </span>
         </Link>
-        <nav aria-label="Assurance surfaces">
+        <nav aria-label={NAV.ariaSurfaces}>
           <Link href="/">
             <LayoutDashboard size={15} />
-            Graph
+            {NAV.graph}
           </Link>
           <Link href="/findings">
             <FileWarning size={15} />
-            Findings
+            {NAV.findings}
           </Link>
           <Link href="/lint">
             <Braces size={15} />
-            Instruction lint
+            {NAV.lint}
           </Link>
           <Link aria-current="page" href="/progress">
             <Activity size={15} />
-            Progress
+            {NAV.progress}
           </Link>
           <Link href="/receipts">
             <ReceiptText size={15} />
-            Receipts
+            {NAV.receipts}
           </Link>
         </nav>
         <span className="header-actions">
           <span className="commit-chip">
             <GitBranch size={13} />
-            main · sourced state
+            {PROGRESS.header.commitChip}
           </span>
           <ThemeToggle />
         </span>
       </header>
       <nav
         className="progress-state-switcher"
-        aria-label="Demo progress data state"
+        aria-label={PROGRESS.ariaStateSwitcher}
       >
         {(["empty", "partial", "full"] as const).map((option) => (
           <Link

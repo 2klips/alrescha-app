@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { PROGRESS } from "../../lib/strings";
 import { ProgressDashboardView } from "./progress-dashboard";
 
 function render(state: "empty" | "partial" | "full"): string {
@@ -47,21 +48,19 @@ describe("progress dashboard view", () => {
   it("renders an actionable empty state without invented percentages", () => {
     const html = render("empty");
 
-    expect(html).toContain("No tracked progress yet");
-    expect(html).toContain("Not measured");
+    expect(html).toContain(PROGRESS.states.empty.label);
+    expect(html).toContain(PROGRESS.metrics.notMeasured);
     expect(html).not.toContain("0%");
   });
 
   it("renders partial metrics, all status columns, and source labels", () => {
     const html = render("partial");
 
-    expect(html).toContain("Partial evidence");
+    expect(html).toContain(PROGRESS.states.partial.label);
     expect(html).toContain("Evidence graph requirement coverage");
     expect(html).toContain("TODO/progress checkboxes + log_progress events");
-    expect(html).toContain("Open");
-    expect(html).toContain("In progress");
-    expect(html).toContain("Done");
-    expect(html).toContain("Blocked");
+    for (const status of Object.values(PROGRESS.todoBoard.statuses))
+      expect(html, status).toContain(status);
     expect(html).toContain("TODO.md:L4");
     expect(html).toContain("feat: progress");
   });
@@ -69,7 +68,7 @@ describe("progress dashboard view", () => {
   it("renders the full state only from complete report data", () => {
     const html = render("full");
 
-    expect(html).toContain("Fully traced");
+    expect(html).toContain(PROGRESS.states.full.label);
     expect(html.match(/<strong>100%<\/strong>/g)).toHaveLength(2);
   });
 });

@@ -69,7 +69,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Acceptance: Playwright toggles theme on dashboard/findings/receipts and asserts token-derived computed styles + persistence across reload; no-flash verified via init-script presence test.
   Commit: feat(ui): theme toggle with persistence
 
-- [ ] 3. Korean-first string centralization
+- [x] 3. Korean-first string centralization
   Move user-facing strings per app area into typed string modules; sweep to Korean-first copy (conventional English terms stay English: Dashboard, Graph, Findings, Receipt, Data Brain, verified/inferred, MCP); keep existing meaning — this is a copy/i18n-structure task, not a rewrite of semantics.
   Acceptance: a test enumerates JSX text nodes (or lint rule) to catch stray hardcoded user-facing literals outside string modules on the reworked screens; snapshot review of key screens' copy committed as evidence.
   Commit: refactor(ui): centralize korean-first strings

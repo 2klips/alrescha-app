@@ -3,9 +3,11 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { DASHBOARD } from "../../apps/web/lib/strings";
+
 test("scripted MCP reads pulse the graph and feed focus follows the newest call", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Replay MCP session" }).click();
+  await page.getByRole("button", { name: DASHBOARD.activity.replay }).click();
 
   const feed = page.getByRole("feed");
   await expect(feed.getByRole("button")).toHaveCount(5);
@@ -14,7 +16,7 @@ test("scripted MCP reads pulse the graph and feed focus follows the newest call"
   await expect(page.locator(".graph-node.pulse, .graph-node.decay").first()).toBeVisible();
 
   await feed.getByRole("button").first().click();
-  await expect(page.getByRole("complementary", { name: "Selected node" })).toContainText("Idempotent webhooks");
+  await expect(page.getByRole("complementary", { name: DASHBOARD.ariaInspector })).toContainText("Idempotent webhooks");
 
   const evidenceDirectory = path.resolve(".omo/evidence/docshub-product-strategy");
   await mkdir(evidenceDirectory, { recursive: true });

@@ -7,6 +7,8 @@ import {
 } from "@modelcontextprotocol/client";
 import { expect, test } from "@playwright/test";
 
+import { ASSURANCE } from "../../apps/web/lib/strings";
+
 import {
   buildMinimalIndexProposalFiles,
   proposeMinimalIndexPullRequest,
@@ -302,11 +304,11 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
       "exact analyzed commit",
     );
     await expect(
-      page.getByRole("heading", { name: "Evidence chain" }),
+      page.getByRole("heading", { name: ASSURANCE.findings.chain.title }),
     ).toBeVisible();
     await page.goto("/lint");
     await expect(
-      page.getByRole("heading", { name: "Instruction lint" }),
+      page.getByRole("heading", { name: ASSURANCE.lint.title }),
     ).toBeVisible();
     await expect(
       page.getByText(/cl100k_base-compatible tokenizer/),

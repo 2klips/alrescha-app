@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { GraphData, GraphEdge, GraphNode } from "../../lib/dashboard/graph-model";
+import { DASHBOARD } from "../../lib/strings";
 import type { PulsePhase } from "../../lib/realtime/access-events";
 
 interface GraphCanvasProps {
@@ -81,7 +82,7 @@ export function GraphCanvas({
   return (
     <div className="graph-canvas-wrap" data-canvas-nodes={data.nodes.length}>
       <svg
-        aria-label={`Evidence graph with ${data.nodes.length} visible nodes`}
+        aria-label={DASHBOARD.canvasLabel(data.nodes.length)}
         className="graph-canvas"
         data-testid="evidence-graph-canvas"
         onPointerDown={(event) => {
@@ -131,7 +132,7 @@ export function GraphCanvas({
         role="img"
         viewBox="0 0 1000 700"
       >
-        <title>Evidence graph connecting requirements, documents, code, and verified tests</title>
+        <title>{DASHBOARD.canvasTitle}</title>
         <g transform={`translate(${500 + camera.x} ${350 + camera.y}) scale(${camera.scale})`}>
           {mutableData.edges.map((edge) => {
             const source = nodesById.get(edge.source);

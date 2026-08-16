@@ -1,3 +1,5 @@
+import { DASHBOARD } from "../strings";
+
 export type DashboardState =
   | "loading"
   | "empty"
@@ -8,6 +10,7 @@ export type DashboardState =
   | "revoked"
   | "no-ci"
   | "large";
+
 
 export type EvidenceGrade = "verified" | "inferred" | "broken";
 export type GraphNodeType = "requirement" | "document" | "code" | "test";
@@ -334,9 +337,7 @@ export function buildDashboardViewModel(
   const graph = state === "large" ? clusterGraph(source) : forceDirectedLayout(source);
   return {
     ciMessage:
-      state === "no-ci"
-        ? "No CI report for this commit — test links remain inferred."
-        : "CI evidence · 78 tests verified at bad0551",
+      state === "no-ci" ? DASHBOARD.ci.missing : DASHBOARD.ci.present,
     graph,
     isClustered: state === "large",
     metrics: { implementation: 84, tests: state === "no-ci" ? 0 : 71, tokenCost: 1840, unresolved: 4 },
