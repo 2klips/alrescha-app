@@ -86,6 +86,23 @@ export const DASHBOARD = {
   /** `증거 Graph · 노드 <n>개 표시` */
   canvasLabel: (count: number) => `증거 Graph · 노드 ${count}개 표시`,
 
+  /**
+   * Accessible name of one node hit target on the canvas —
+   * `<라벨> · <유형> · <등급>`. Type and grade are product vocabulary and stay
+   * verbatim so the verified/inferred split reads the same everywhere.
+   */
+  nodeSummary: (label: string, type: string, grade: string) =>
+    `${label} · ${type} · ${grade}`,
+
+  /** 가장 많이 연결된 노드 칩 (Phase 2A todo 7, REVIEW G2) */
+  hubs: {
+    kicker: "허브 노드",
+    aria: "가장 많이 연결된 노드",
+    /** `연결 <n>개` */
+    degree: (count: number) => `연결 ${count}개`,
+    empty: "연결된 노드가 아직 없습니다.",
+  },
+
   /** `노드 <n>개를 유형·등급으로 묶었습니다` */
   clusterNote: (count: number) => `노드 ${count}개를 유형·등급으로 묶었습니다`,
 

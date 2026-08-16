@@ -52,4 +52,20 @@
 - 내용: todo 5는 "Playwright가 3단계 줌을 오가며 라벨 개수 밴드와 Near 뱃지 노출을 검증", todo 6은 "글로우 버스트 e2e"를 요구한다. 그런데 Pixi 스테이지를 실제 라우트(대시보드)에 붙이는 일은 todo 7(대시보드 셸·HUD 재스타일)이고, 의존성 매트릭스도 7이 5·6에 **의존**한다고 명시한다. 즉 계획대로면 todo 5·6 시점에 e2e가 붙을 화면이 존재하지 않는다. 또한 현재 e2e(`tests/e2e/live-graph.spec.ts`)는 SVG 렌더러의 `.graph-node.pulse`·`[data-node-id] .node-core` 셀렉터를 검증하므로, HUD 작업 없이 렌더러만 갈아끼우면 기존 e2e가 깨진다.
 - 임시 결정: Wave 2에서는 LOD 밴드·라벨 그리드 선택·뱃지 노출·클러스터 접힘/펼침·글로우 상태 머신·코얼레싱을 **결정론적 vitest 단위 테스트**로 전량 검증하고(엔진은 순수 계층으로 분리되어 있어 캔버스 스크린샷보다 강한 보증), 브라우저 e2e는 todo 7에서 스테이지를 붙일 때 같은 단언을 화면 위에서 재확인하도록 넘긴다. `BrainMapStage`는 `data-lod`, `data-canvas-nodes`, `data-testid="graph-force-panel"`, `data-force-key`, `data-glow-*` 훅을 이미 노출해 두었으므로 todo 7은 셀렉터를 새로 만들 필요가 없다.
 - 근거: `.omo/evidence/phase2a/task-5.md`, `.omo/evidence/phase2a/task-6.md`, `tests/graph-lod.test.ts`, `tests/graph-glow.test.ts`
-- 상태: open (todo 7에서 e2e 이관 완료 시 resolved)
+- 상태: resolved(Phase 2A Task 7 — `tests/e2e/brain-map.spec.ts`가 LOD 3단계·라벨 밴드·힘 패널 영속·글로우 버스트·WebGL 폐기를 실제 캔버스 위에서 검증. `.omo/evidence/phase2a/task-7.md` 참조)
+
+## OQ-006 — 캔버스 노드의 클릭·키보드 접근 수단이 스펙에 없음
+
+- 발견: Phase 2A Task 7 / `apps/web/app/ui/brain-map-stage.tsx`, `spec/WORK_SPEC.md` §5.2-①
+- 내용: WORK_SPEC은 "노드 드래그, 클릭 시 로컬 그래프 포커스, 더블클릭으로 증거 상세 진입"을 요구한다. 그런데 WebGL 캔버스는 접근성 트리도 클릭 타깃도 없다. 캔버스 히트테스트로 포인터만 살리면 키보드·스크린리더 경로가 사라지고, 반대로 sr-only 목록만 두면 마우스 경로가 사라진다. 스펙은 어느 쪽도 규정하지 않는다.
+- 임시 결정: **투명 DOM 히트 레이어** 하나로 통합했다. 노드당 버튼 1개(`data-node-id`, 이름 = `라벨 · 유형 · 등급`)를 렌더러의 화면 변환으로 10Hz마다 해당 노드 위에 배치한다. 포인터·키보드·보조기술·e2e가 모두 같은 요소를 쓴다. 노드 수가 많아지면 차수 상위 `HIT_TARGET_LIMIT = 600`개로 제한하며(렌더러는 전부 그린다), 이 상한은 3,000노드 이상에서 Far 줌 슈퍼노드 접기와 함께 재검토가 필요하다. 노드 드래그는 이번 범위에서 구현하지 않았다(기존 SVG 대시보드에도 없었고 계획의 "기능 추가 금지"에 걸린다).
+- 근거: `.omo/evidence/phase2a/task-7.md`, `apps/web/app/ui/brain-map-stage.test.tsx`, `tests/e2e/brain-map.spec.ts`
+- 상태: open (Wave 4 a11y 검사에서 히트 레이어 상한과 키보드 순회 비용을 재검증)
+
+## OQ-007 — HUD 카드가 레일·인스펙터와 다른 스태킹 컨텍스트에 있음
+
+- 발견: Phase 2A Task 7 / `apps/web/app/globals.css` (`.graph-force-panel`, `.arr-metric-evidence`)
+- 내용: 전면 그래프 구성상 그래프 플레이트(`.arr-proof-panel`)가 워크스페이스 전 셀을 덮고, 레일·인스펙터·활동 피드가 그 위에 반투명 패널로 얹힌다. 그래프 안쪽에 사는 카드(힘 패널, 지표 근거 패널)는 z-index를 아무리 올려도 레일·인스펙터 **아래**로 깔린다 — 서로 다른 스태킹 컨텍스트이기 때문이다. 실제로 힘 패널의 접기 버튼과 근거 패널의 닫기 버튼이 클릭 불가 상태였다(Playwright가 잡아냄).
+- 임시 결정: 두 카드를 레일·인스펙터 사이 "빈 통로"에 고정 배치했다(힘 패널 = 우하단 `right: 22.5rem`, 근거 패널 = 좌상단 `left: 17.5rem`). 통로 폭은 레일 16rem·인스펙터 21rem에 묶여 있으므로 이 세 수치는 함께 움직여야 한다. 힘 패널은 `max-height: min(20rem, calc(100% - 12rem))` + 내부 스크롤로 낮은 뷰포트에서 제어 스트립을 침범하지 않게 했다.
+- 근거: `tests/e2e/dashboard-hud.spec.ts`, `tests/e2e/brain-map.spec.ts`, `.omo/evidence/phase2a/task-7.md`
+- 상태: open (HUD를 워크스페이스 그리드의 형제로 끌어올리면 통로 상수가 사라진다 — Wave 4 이후 정리 후보)

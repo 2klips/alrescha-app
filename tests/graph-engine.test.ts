@@ -531,3 +531,96 @@ describe("engine lifecycle", () => {
     engine.dispose();
   });
 });
+
+describe("camera focus (Phase 2A todo 7)", () => {
+  function harness(): {
+    backend: GraphBackend;
+    emit: (message: unknown) => void;
+    worker: SimulationWorkerLike;
+  } {
+    let handler: ((data: unknown) => void) | null = null;
+    return {
+      backend: {
+        destroy() {},
+        render() {},
+        resize() {},
+        setPalette() {},
+      },
+      emit: (message) => handler?.(message),
+      worker: {
+        postMessage: () => {},
+        setMessageHandler: (next) => {
+          handler = next;
+        },
+        terminate: () => {},
+      },
+    };
+  }
+
+  async function engineOn(data: GraphData) {
+    resetEngineCounters();
+    const { backend, emit, worker } = harness();
+    const engine = await createGraphEngine({
+      createBackend: () => backend,
+      createWorker: () => worker,
+      data,
+      palette: PALETTE,
+    });
+    return { emit, engine };
+  }
+
+  test("centres the camera on a node using its fixture position before any frame", async () => {
+    const data = fixture(15);
+    const target = data.nodes[3] as GraphData["nodes"][number];
+    const { engine } = await engineOn(data);
+
+    expect(engine.focusNode(target.id)).toBe(true);
+    expect(engine.camera()).toEqual({
+      scale: 1,
+      x: -target.x,
+      y: -target.y,
+    });
+    engine.dispose();
+  });
+
+  test("follows the simulated position once the worker has sent one", async () => {
+    const data = fixture(3);
+    const { emit, engine } = await engineOn(data);
+    emit({
+      alpha: 0.1,
+      positions: encodePositions([
+        { x: 10, y: 20 },
+        { x: -40, y: 55 },
+        { x: 0, y: 0 },
+      ]),
+      revision: 1,
+      type: "positions",
+    });
+    engine.setCamera({ scale: 2, x: 0, y: 0 });
+
+    expect(engine.focusNode((data.nodes[1] as { id: string }).id)).toBe(true);
+    // Scale is preserved and the offset is in screen pixels, not world units.
+    expect(engine.camera()).toEqual({ scale: 2, x: 80, y: -110 });
+    engine.dispose();
+  });
+
+  test("reports an unknown node instead of moving the camera somewhere invented", async () => {
+    const { engine } = await engineOn(fixture(5));
+    const before = engine.camera();
+
+    expect(engine.focusNode("not-a-node")).toBe(false);
+    expect(engine.camera()).toEqual(before);
+    engine.dispose();
+  });
+
+  test("focusing never restarts the layout", async () => {
+    const data = fixture(8);
+    const { engine } = await engineOn(data);
+    const restarts = engine.layoutRestarts();
+
+    engine.focusNode((data.nodes[0] as { id: string }).id);
+
+    expect(engine.layoutRestarts()).toBe(restarts);
+    engine.dispose();
+  });
+});

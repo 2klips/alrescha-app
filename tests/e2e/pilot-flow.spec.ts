@@ -291,7 +291,7 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
     ).toBeVisible();
     await expect(page.getByText("metadata-only evidence graph")).toBeVisible();
     await page.getByRole("button", { name: "Open evidence graph" }).click();
-    await expect(page.getByTestId("evidence-graph-canvas")).toBeVisible();
+    await expect(page.getByTestId("brain-map-stage")).toBeVisible();
     await page.getByRole("button", { name: /Unresolved/ }).click();
     await expect(page.getByTestId("metric-evidence")).toContainText(
       "latest deterministic analysis",

@@ -13,7 +13,7 @@
  * throw the layout away.
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 import type { GraphData } from "../../lib/dashboard/graph-model";
 import {
@@ -28,38 +28,79 @@ export interface BrainMapProps {
   /** Nodes carrying the residual afterglow tint. */
   afterglow?: ReadonlySet<string>;
   data: GraphData;
+  /** Camera target — the activity feed's "fly to this node" gesture. */
+  focusNodeId?: string | null;
   forceConfig?: Partial<ForceConfig>;
   /** Node id → 0…1 neuron-glow intensity, updated in place every batch. */
   glow?: ReadonlyMap<string, number>;
+  /**
+   * The DOM hit layer owned by `BrainMapStage`. WebGL has no accessibility
+   * tree and no click targets, so the stage renders one button per node and
+   * this component keeps them parked over their painted node.
+   */
+  hitLayer?: RefObject<HTMLDivElement | null>;
   onLodChange?: (lod: string, labelCount: number) => void;
   seed?: number;
   selectedNodeId?: string | null;
   textFadeThreshold?: number;
+  /** The element the canvas is mounted into and gestures are bound to. */
+  viewport: RefObject<HTMLDivElement | null>;
 }
 
 const MIN_SCALE = 0.15;
 const MAX_SCALE = 4;
 
+/**
+ * Hit targets are pointer/keyboard affordances, not pixels — syncing them at
+ * 10Hz keeps them under the finger without paying a DOM write per node per
+ * frame.
+ */
+const HIT_LAYER_SYNC_MS = 100;
+
+/** Smallest comfortable click target, whatever the node's painted radius. */
+const MIN_HIT_SIZE = 20;
+
 export function BrainMap({
   afterglow,
   data,
+  focusNodeId,
   forceConfig,
   glow,
+  hitLayer,
   onLodChange,
   seed,
   selectedNodeId,
   textFadeThreshold,
+  viewport: viewportRef,
 }: BrainMapProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<GraphEngine | null>(null);
   const latest = useRef({ data, forceConfig, seed, textFadeThreshold });
   latest.current = { data, forceConfig, seed, textFadeThreshold };
   const started = useRef(false);
+  const hitLayerRef = useRef(hitLayer);
+  hitLayerRef.current = hitLayer;
+  /*
+   * Callbacks are read through a ref, never through the effect's dependency
+   * list. `onLodChange` fires whenever the label set changes, which re-renders
+   * the parent and hands us a fresh closure — as a dependency that would tear
+   * the engine down and rebuild it on nearly every frame.
+   */
+  const onLodChangeRef = useRef(onLodChange);
+  onLodChangeRef.current = onLodChange;
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const host = canvas.parentElement ?? canvas;
+    const host = viewportRef.current;
+    if (!host) return;
+    /*
+     * A canvas is created per mount and removed on dispose, rather than being
+     * a JSX element React keeps across mounts. Two `Application.init()` calls
+     * on one canvas — which is exactly what a remount (React StrictMode, HMR,
+     * route return) produces — race for the same WebGL context and leave Pixi
+     * rendering into a lost one.
+     */
+    const canvas = document.createElement("canvas");
+    canvas.className = "brain-map-canvas";
+    host.prepend(canvas);
     const initial = latest.current;
     let disposed = false;
     let engine: GraphEngine | null = null;
@@ -68,6 +109,39 @@ export function BrainMap({
     const bounds = host.getBoundingClientRect();
     const width = Math.max(1, Math.round(bounds.width));
     const height = Math.max(1, Math.round(bounds.height));
+    let viewport = { height, width };
+
+    /**
+     * Park each hit target over the node it stands for, using exactly the
+     * screen transform the renderer uses, so the DOM affordance and the painted
+     * node can never drift apart.
+     */
+    function syncHitLayer(created: GraphEngine) {
+      const layer = hitLayerRef.current?.current;
+      if (!layer) return;
+      const painted = new Map(
+        created.frame().nodes.map((node) => [node.id, node]),
+      );
+      const scale = created.camera().scale;
+      const camera = created.camera();
+      for (const target of layer.querySelectorAll<HTMLElement>("[data-node-id]")) {
+        const node = painted.get(target.dataset.nodeId ?? "");
+        if (!node) {
+          target.hidden = true;
+          continue;
+        }
+        target.hidden = false;
+        // Rounded to whole pixels: once the simulation has cooled its residual
+        // motion is sub-pixel, and an unrounded write would keep nudging the
+        // element forever — a target that never stops moving is a target a
+        // pointer (and Playwright's stability check) can never settle on.
+        const size = Math.round(Math.max(MIN_HIT_SIZE, node.radius * 2 * scale));
+        target.style.left = `${Math.round(viewport.width / 2 + camera.x + node.x * scale)}px`;
+        target.style.top = `${Math.round(viewport.height / 2 + camera.y + node.y * scale)}px`;
+        target.style.width = `${size}px`;
+        target.style.height = `${size}px`;
+      }
+    }
 
     void createGraphEngine({
       createBackend: async () => {
@@ -104,12 +178,23 @@ export function BrainMap({
       engineRef.current = created;
       started.current = true;
       let reportedLod = "";
+      let reportedLabels = -1;
+      let syncedAt = 0;
       const paint = () => {
         const frame = created.frame();
         created.paint();
-        if (frame.lod !== reportedLod) {
-          reportedLod = frame.lod;
-          onLodChange?.(frame.lod, frame.labels.length);
+        // Both the hit layer and the LOD report are React-visible work, so they
+        // run on one throttled tick rather than once per painted frame: the
+        // label set churns while the simulation settles.
+        const stamp = performance.now();
+        if (stamp - syncedAt >= HIT_LAYER_SYNC_MS) {
+          syncedAt = stamp;
+          syncHitLayer(created);
+          if (frame.lod !== reportedLod || frame.labels.length !== reportedLabels) {
+            reportedLod = frame.lod;
+            reportedLabels = frame.labels.length;
+            onLodChangeRef.current?.(frame.lod, frame.labels.length);
+          }
         }
         frameHandle = window.requestAnimationFrame(paint);
       };
@@ -129,10 +214,11 @@ export function BrainMap({
     const resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
-      engine?.resize(
-        Math.max(1, Math.round(entry.contentRect.width)),
-        Math.max(1, Math.round(entry.contentRect.height)),
-      );
+      viewport = {
+        height: Math.max(1, Math.round(entry.contentRect.height)),
+        width: Math.max(1, Math.round(entry.contentRect.width)),
+      };
+      engine?.resize(viewport.width, viewport.height);
     });
     resizeObserver.observe(host);
 
@@ -149,8 +235,10 @@ export function BrainMap({
       });
     };
     let dragging = false;
-    const onPointerDown = () => {
-      dragging = true;
+    // Panning starts on the canvas only: a press that lands on a hit target is
+    // the user reaching for a node, not for the background.
+    const onPointerDown = (event: PointerEvent) => {
+      dragging = event.target === canvas;
     };
     const onPointerUp = () => {
       dragging = false;
@@ -165,25 +253,30 @@ export function BrainMap({
         y: current.y + event.movementY,
       });
     };
-    canvas.addEventListener("wheel", onWheel, { passive: false });
-    canvas.addEventListener("pointerdown", onPointerDown);
-    canvas.addEventListener("pointermove", onPointerMove);
+    // Listeners live on the host, not the canvas: the hit layer sits on top of
+    // the canvas, and zoom must keep working while the pointer is over a node.
+    host.addEventListener("wheel", onWheel, { passive: false });
+    host.addEventListener("pointerdown", onPointerDown);
+    host.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
 
     return () => {
       disposed = true;
       started.current = false;
       window.cancelAnimationFrame(frameHandle);
-      canvas.removeEventListener("wheel", onWheel);
-      canvas.removeEventListener("pointerdown", onPointerDown);
-      canvas.removeEventListener("pointermove", onPointerMove);
+      host.removeEventListener("wheel", onWheel);
+      host.removeEventListener("pointerdown", onPointerDown);
+      host.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       themeObserver.disconnect();
       resizeObserver.disconnect();
       engine?.dispose();
       engineRef.current = null;
+      canvas.remove();
     };
-  }, [onLodChange]);
+    // Mount once. Every prop change is applied *into* the live engine below;
+    // rebuilding it would restart the simulation and throw the layout away.
+  }, []);
 
   useEffect(() => {
     if (started.current) engineRef.current?.setData(data);
@@ -201,12 +294,19 @@ export function BrainMap({
     engineRef.current?.setSelectedNode(selectedNodeId ?? null);
   }, [selectedNodeId]);
 
+  // Camera moves are not layout moves: focusing re-aims the view and leaves the
+  // simulation running exactly as it was.
+  useEffect(() => {
+    if (focusNodeId) engineRef.current?.focusNode(focusNodeId);
+  }, [focusNodeId]);
+
   // Glow is an in-place attribute write: no `setData`, no reheat, no relayout.
   useEffect(() => {
     engineRef.current?.setGlow(glow ?? new Map(), afterglow ?? new Set());
   }, [afterglow, glow]);
 
-  return <canvas className="brain-map-canvas" ref={canvasRef} />;
+  // The canvas is owned by the effect above, not by React's reconciler.
+  return null;
 }
 
 export default BrainMap;

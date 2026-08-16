@@ -89,7 +89,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Acceptance: deterministic test hook injects a scripted event stream — assertions on intensity state machine (pulse→decay→afterglow), coalescing under a 50-events/s burst (single batched update per window, no re-layout calls), and cross-workspace isolation intact (existing realtime tests stay green).
   Commit: feat(graph): shader neuron glow and drift overlays
 
-- [ ] 7. Dashboard shell and HUD restyle
+- [x] 7. Dashboard shell and HUD restyle
   Full-bleed graph with Ink & Seal HUD: repo/metric chips, **hub-nodes Top-5 chip (most-connected nodes, click-to-focus — G2)**, live activity feed (click-to-focus kept), legend, CI banner, empty/scanning states — all tokenized, both themes; onboarding-in-graph-area animation restyled.
   Acceptance: existing dashboard tests green with updated selectors; Playwright screenshot evidence for dark and light; every HUD number still click-throughs to its evidence surface (navigation tests).
   Commit: feat(dashboard): ink-and-seal hud restyle

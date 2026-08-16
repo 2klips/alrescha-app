@@ -1,17 +1,23 @@
 "use client";
 
 /**
- * SSR-safe host for the brain map (Phase 2A todos 4–5).
+ * SSR-safe host for the brain map (Phase 2A todos 4–5, mounted by todo 7).
  *
  * The WebGL renderer is `dynamic(..., { ssr: false })`; the surrounding markup
  * is plain DOM so the graph keeps a keyboard- and screen-reader-reachable
  * representation of every node and edge even before (or without) WebGL. The
  * force panel lives here because it owns the persisted settings that the
  * renderer consumes.
+ *
+ * A canvas has no accessibility tree and no click targets, so the stage also
+ * renders a transparent **hit layer** — one button per node, parked over its
+ * painted position by `BrainMap`. That single layer serves the pointer, the
+ * keyboard, assistive technology and the e2e suite, which is why the node
+ * affordance is DOM rather than canvas hit-testing.
  */
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import type {
   GraphData,
@@ -28,13 +34,24 @@ const BrainMap = dynamic(
   { ssr: false },
 );
 
+/**
+ * Upper bound on DOM hit targets. Past this the graph is a constellation to
+ * navigate by camera, not a list to tab through, and the highest-degree nodes
+ * are the ones worth reaching; the renderer still paints every node.
+ */
+export const HIT_TARGET_LIMIT = 600;
+
 export interface BrainMapStageProps {
   /** Nodes carrying the residual afterglow tint. */
   afterglow?: ReadonlySet<string>;
   data: GraphData;
+  /** Camera target — the activity feed's "fly to this node" gesture. */
+  focusNodeId?: string | null;
   /** Node id → 0…1 neuron-glow intensity (see `lib/graph/glow.ts`). */
   glow?: ReadonlyMap<string, number>;
   onEdgeSelect?: (edge: GraphEdge) => void;
+  /** Double-click / Enter on a node — the drill-down to evidence detail. */
+  onNodeActivate?: (node: GraphNode) => void;
   onNodeSelect?: (node: GraphNode) => void;
   seed?: number;
   selectedNodeId?: string | null;
@@ -42,11 +59,29 @@ export interface BrainMapStageProps {
   showForcePanel?: boolean;
 }
 
+/** The nodes that get a DOM hit target: highest degree first, capped. */
+export function hitTargets(data: GraphData, limit = HIT_TARGET_LIMIT): GraphNode[] {
+  if (data.nodes.length <= limit) return [...data.nodes];
+  const degrees = new Map<string, number>();
+  for (const edge of data.edges) {
+    degrees.set(edge.source, (degrees.get(edge.source) ?? 0) + 1);
+    degrees.set(edge.target, (degrees.get(edge.target) ?? 0) + 1);
+  }
+  return [...data.nodes]
+    .sort((left, right) => {
+      const delta = (degrees.get(right.id) ?? 0) - (degrees.get(left.id) ?? 0);
+      return delta === 0 ? left.id.localeCompare(right.id) : delta;
+    })
+    .slice(0, limit);
+}
+
 export function BrainMapStage({
   afterglow,
   data,
+  focusNodeId,
   glow,
   onEdgeSelect,
+  onNodeActivate,
   onNodeSelect,
   seed,
   selectedNodeId,
@@ -58,6 +93,9 @@ export function BrainMapStage({
     level: "near",
   });
   const forceConfig = useMemo(() => forceConfigOf(settings), [settings]);
+  const hitLayerRef = useRef<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const targets = useMemo(() => hitTargets(data), [data]);
 
   return (
     <div
@@ -66,21 +104,57 @@ export function BrainMapStage({
       data-canvas-nodes={data.nodes.length}
       data-glow-active={glow ? glow.size : 0}
       data-lod={lod.level}
+      data-lod-labels={lod.labels}
       data-testid="brain-map-stage"
-      role="img"
+      role="group"
     >
-      <BrainMap
-        {...(afterglow ? { afterglow } : {})}
-        data={data}
-        forceConfig={forceConfig}
-        {...(glow ? { glow } : {})}
-        onLodChange={(level, labels) =>
-          setLod({ labels, level: level as LodLevel })
-        }
-        {...(seed === undefined ? {} : { seed })}
-        selectedNodeId={selectedNodeId ?? null}
-        textFadeThreshold={settings.textFadeThreshold}
-      />
+      <div className="brain-map-viewport" ref={viewportRef}>
+        <BrainMap
+          {...(afterglow ? { afterglow } : {})}
+          data={data}
+          {...(focusNodeId === undefined ? {} : { focusNodeId })}
+          forceConfig={forceConfig}
+          {...(glow ? { glow } : {})}
+          hitLayer={hitLayerRef}
+          onLodChange={(level, labels) =>
+            setLod({ labels, level: level as LodLevel })
+          }
+          {...(seed === undefined ? {} : { seed })}
+          selectedNodeId={selectedNodeId ?? null}
+          textFadeThreshold={settings.textFadeThreshold}
+          viewport={viewportRef}
+        />
+        {/* Positions below are the pre-simulation fixture layout; `BrainMap`
+            takes over as soon as the renderer produces its first frame. */}
+        <div
+          className="brain-map-hits"
+          data-testid="brain-map-hits"
+          ref={hitLayerRef}
+        >
+          {targets.map((node) => (
+            <button
+              aria-label={DASHBOARD.nodeSummary(node.label, node.type, node.grade)}
+              aria-pressed={node.id === selectedNodeId}
+              className="brain-map-hit"
+              data-grade={node.grade}
+              data-node-id={node.id}
+              key={node.id}
+              onClick={() => onNodeSelect?.(node)}
+              onDoubleClick={() => onNodeActivate?.(node)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+                event.preventDefault();
+                onNodeActivate?.(node);
+              }}
+              style={{
+                left: `calc(50% + ${node.x}px)`,
+                top: `calc(50% + ${node.y}px)`,
+              }}
+              type="button"
+            />
+          ))}
+        </div>
+      </div>
       {showForcePanel ? (
         <GraphForcePanel
           labelCount={lod.labels}
@@ -90,11 +164,6 @@ export function BrainMapStage({
         />
       ) : null}
       <div aria-live="polite" className="sr-only">
-        {data.nodes.map((node) => (
-          <button key={node.id} onClick={() => onNodeSelect?.(node)} type="button">
-            {node.label}, {node.type}, {node.grade}
-          </button>
-        ))}
         {data.edges.map((edge) => (
           <button key={edge.id} onClick={() => onEdgeSelect?.(edge)} type="button">
             {edge.provenance.relation}: {edge.source} to {edge.target},{" "}

@@ -10,7 +10,9 @@ test("opens the Arr app shell", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: DASHBOARD.title }),
   ).toBeVisible();
-  await expect(page.getByTestId("evidence-graph-canvas")).toBeVisible();
+  // The dashboard renders the WebGL brain map (Phase 2A todo 7); the SVG
+  // `evidence-graph-canvas` now exists only on the evidence-detail route.
+  await expect(page.getByTestId("brain-map-stage")).toBeVisible();
 });
 
 test("shows the not-found surface for an unknown route", async ({ page }) => {

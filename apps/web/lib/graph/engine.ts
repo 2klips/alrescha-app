@@ -114,6 +114,11 @@ export interface GraphEngine {
   lod(): LodLevel;
   disposed(): boolean;
   dispose(): void;
+  /**
+   * Centre the camera on a node without disturbing the layout — the feed's
+   * "click an event, fly to the node" gesture. Returns false for an unknown id.
+   */
+  focusNode(nodeId: string): boolean;
   forceConfig(): ForceConfig;
   /** The render plan for the current instant, without painting it. */
   frame(): RenderFrame;
@@ -226,6 +231,18 @@ export async function createGraphEngine(
       buffer.reset();
     },
     disposed: () => disposed,
+    focusNode(nodeId) {
+      const simulated = buffer.at(now()).get(nodeId);
+      const fallback = data.nodes.find((node) => node.id === nodeId);
+      const position = simulated ?? (fallback ? { x: fallback.x, y: fallback.y } : null);
+      if (!position) return false;
+      camera = {
+        scale: camera.scale,
+        x: -position.x * camera.scale,
+        y: -position.y * camera.scale,
+      };
+      return true;
+    },
     forceConfig: () => ({ ...config }),
     frame,
     framesReceived: () => buffer.frames(),

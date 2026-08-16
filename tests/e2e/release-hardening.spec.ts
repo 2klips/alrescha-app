@@ -13,7 +13,7 @@ test("fresh user completes the seeded demo repository journey", async ({ page })
   await expect(page.getByRole("heading", { name: "Building proof spine" })).toBeVisible();
   await page.getByRole("button", { name: "Open evidence graph" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "specproof/drifted-demo" })).toBeVisible();
-  await expect(page.getByTestId("evidence-graph-canvas")).toBeVisible();
+  await expect(page.getByTestId("brain-map-stage")).toBeVisible();
 });
 
 test("revoked GitHub installation preserves evidence and gives recovery guidance", async ({ page }) => {
@@ -32,5 +32,5 @@ test("revoked GitHub installation preserves evidence and gives recovery guidance
     path: path.join(evidenceDirectory, "task-19.png"),
   });
   await page.getByRole("button", { name: DASHBOARD.states.revoked.viewStored }).click();
-  await expect(page.getByTestId("evidence-graph-canvas")).toBeVisible();
+  await expect(page.getByTestId("brain-map-stage")).toBeVisible();
 });

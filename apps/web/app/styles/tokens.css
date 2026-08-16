@@ -102,19 +102,6 @@
   --ok: var(--verified);
   --warn: var(--inferred);
   --broken: var(--danger);
-
-  /* Landing surface (app/page.tsx) — mapped onto the light "paper" ramp
-     because the marketing shell is intentionally a light instrument. */
-  --arr-ink: #20242e;
-  --arr-muted: #5b6272;
-  --arr-line: #e3ddd0;
-  --arr-polar: #faf7f1;
-  --arr-paper: #ffffff;
-  --arr-blue: #3b6fdb;
-  --arr-blue-soft: #eef2fb;
-  --arr-coral: #d6402e;
-  --arr-mint: #1e8a5e;
-  --arr-amber: #b07a14;
 }
 
 [data-theme="light"] {

@@ -31,6 +31,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   filterGraph,
   focusLocalGraph,
+  topHubNodes,
   type DashboardViewModel,
   type EvidenceGrade,
   type GraphFilters,
@@ -38,20 +39,22 @@ import {
   type GraphNodeType,
 } from "../../lib/dashboard/graph-model";
 import {
+  glowAfterglowNodes,
+  glowFromRealtime,
+} from "../../lib/graph/glow";
+import {
   DEMO_REVOKED_TOKEN_ID,
   DEMO_WORKSPACE_ID,
   createDemoAccessEvents,
   createBrowserWorkspaceRealtimeSource,
   createRealtimeGraphState,
   dispatchBrowserAccessEvent,
-  pulsePhaseAt,
   reduceAccessEventBatch,
   relativeEventTime,
   subscribeWorkspaceRealtime,
-  type PulsePhase,
 } from "../../lib/realtime/access-events";
 import { BRAND, DASHBOARD, GRADE, NAV } from "../../lib/strings";
-import { GraphCanvas } from "./graph-canvas";
+import { BrainMapStage } from "./brain-map-stage";
 import { ThemeToggle } from "./theme-toggle";
 
 interface DashboardScreenProps {
@@ -231,6 +234,47 @@ function MetricEvidence({
   );
 }
 
+/**
+ * Top-5 most-connected nodes (REVIEW_EXTERNAL_PROJECTS G2). The brain map's
+ * entry points: a click selects the node and flies the camera to it, which is
+ * the same gesture the activity feed uses.
+ */
+function HubChips({
+  hubs,
+  onFocus,
+  selectedNodeId,
+}: {
+  hubs: readonly { degree: number; node: GraphNode }[];
+  onFocus: (node: GraphNode) => void;
+  selectedNodeId: string | null;
+}) {
+  return (
+    <div className="arr-hubs" aria-label={DASHBOARD.hubs.aria}>
+      <span className="arr-kicker">{DASHBOARD.hubs.kicker}</span>
+      {hubs.length === 0 ? (
+        <small>{DASHBOARD.hubs.empty}</small>
+      ) : (
+        <ol>
+          {hubs.map(({ degree, node }) => (
+            <li key={node.id}>
+              <button
+                aria-pressed={node.id === selectedNodeId}
+                data-hub-node={node.id}
+                onClick={() => onFocus(node)}
+                type="button"
+              >
+                <i className={node.type} />
+                <span>{node.label}</span>
+                <small>{DASHBOARD.hubs.degree(degree)}</small>
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
 function requirementCode(node: GraphNode): string {
   if (node.id.startsWith("req-"))
     return `${node.id.replace("req-", "REQ-").toUpperCase()}-001`;
@@ -300,12 +344,18 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
       "permission-error",
       "revoked",
     ].includes(model.state);
-  const pulseStates = useMemo(() => {
-    const phases: Record<string, PulsePhase> = {};
-    for (const [nodeId, pulse] of Object.entries(realtime.pulses))
-      phases[nodeId] = pulsePhaseAt(pulse, clock);
-    return phases;
-  }, [clock, realtime.pulses]);
+  const hubs = useMemo(() => topHubNodes(model.graph), [model.graph]);
+  // The renderer takes continuous intensity, not phases: `glowFromRealtime`
+  // inherits the reducer's workspace and revoked-token filtering, so a
+  // cross-workspace read still cannot light a node (see lib/graph/glow.ts).
+  const glow = useMemo(
+    () => glowFromRealtime(realtime, clock),
+    [clock, realtime],
+  );
+  const afterglow = useMemo(
+    () => glowAfterglowNodes(realtime.pulses, clock),
+    [clock, realtime.pulses],
+  );
 
   useEffect(() => {
     if (realtime.feed.length === 0) return;
@@ -432,6 +482,14 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
               value={Number((model.metrics.tokenCost / 1000).toFixed(1))}
             />
           </div>
+          <HubChips
+            hubs={hubs}
+            onFocus={(node) => {
+              setSelectedNode(node);
+              setCameraFocusNodeId(node.id);
+            }}
+            selectedNodeId={selectedNode?.id ?? null}
+          />
           <div className="arr-rail-links">
             <Link href="/app/harness">
               <BookmarkPlus size={15} />
@@ -571,16 +629,18 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             {blocked ? (
               <StatusSurface model={model} onRetry={() => setRecovered(true)} />
             ) : (
-              <GraphCanvas
+              <BrainMapStage
+                afterglow={afterglow}
                 data={visibleGraph}
                 focusNodeId={cameraFocusNodeId}
-                onNodeDoubleClick={(node) =>
+                glow={glow}
+                onNodeActivate={(node) =>
                   window.location.assign(
                     `/graph?node=${encodeURIComponent(node.id)}`,
                   )
                 }
                 onNodeSelect={setSelectedNode}
-                pulseStates={pulseStates}
+                selectedNodeId={selectedNode?.id ?? null}
               />
             )}
             {model.isClustered ? (

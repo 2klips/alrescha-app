@@ -13,7 +13,17 @@ test("scripted MCP reads pulse the graph and feed focus follows the newest call"
   await expect(feed.getByRole("button")).toHaveCount(5);
   await expect(feed.getByText("private-other-repo.ts")).toHaveCount(0);
   await expect(feed.getByText("revoked-secret.md")).toHaveCount(0);
-  await expect(page.locator(".graph-node.pulse, .graph-node.decay").first()).toBeVisible();
+  // WebGL leaves no per-node DOM to assert on, so the stage publishes how many
+  // nodes are currently lit (Phase 2A todo 7 replaces `.graph-node.pulse`).
+  await expect
+    .poll(async () =>
+      Number(
+        await page
+          .getByTestId("brain-map-stage")
+          .getAttribute("data-glow-active"),
+      ),
+    )
+    .toBeGreaterThan(0);
 
   await feed.getByRole("button").first().click();
   await expect(page.getByRole("complementary", { name: DASHBOARD.ariaInspector })).toContainText("Idempotent webhooks");
@@ -26,7 +36,11 @@ test("scripted MCP reads pulse the graph and feed focus follows the newest call"
 
 test("enters a depth-two graph by node double-click and inspects grounded edges", async ({ page }) => {
   await page.goto("/");
-  await page.locator("[data-node-id='req-auth'] .node-core").dblclick();
+  // The brain map's DOM hit layer is the node affordance over the canvas.
+  await page
+    .getByTestId("brain-map-hits")
+    .locator("[data-node-id='req-auth']")
+    .dblclick();
 
   await expect(page).toHaveURL(/\/graph\?node=req-auth/);
   await expect(page.getByRole("region", { name: "Depth-two evidence detail graph" })).toBeVisible();

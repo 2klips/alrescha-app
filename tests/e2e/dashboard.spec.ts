@@ -15,7 +15,7 @@ test("onboards through mocked GitHub into the fixture evidence graph", async ({ 
   await expect(page.getByRole("heading", { name: "Building proof spine" })).toBeVisible();
   await page.getByRole("button", { name: "Open evidence graph" }).click();
 
-  await expect(page.getByTestId("evidence-graph-canvas")).toBeVisible();
+  await expect(page.getByTestId("brain-map-stage")).toBeVisible();
   await expect(page.getByText(DASHBOARD.ci.present)).toBeVisible();
 });
 
