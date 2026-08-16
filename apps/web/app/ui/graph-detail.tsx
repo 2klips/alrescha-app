@@ -20,6 +20,7 @@ import {
   graphEdgesWithDisplayableProvenance,
   inspectEdgeProvenance,
 } from "../../lib/dashboard/local-graph";
+import { GRAPH } from "../../lib/strings";
 import { GraphCanvas } from "./graph-canvas";
 
 interface GraphDetailProps {
@@ -47,11 +48,11 @@ export function GraphDetail({ initialNodeId }: GraphDetailProps) {
   return (
     <main className="graph-detail-shell">
       <header className="graph-detail-header">
-        <Link href="/"><ArrowLeft size={15} />Back to project graph</Link>
-        <span><Network size={16} /><h1>Evidence neighborhood</h1><small>depth 2 · {localGraph.nodes.length} nodes</small></span>
-        <span className="commit-chip"><GitBranch size={13} />bad0551</span>
+        <Link href="/"><ArrowLeft size={15} />{GRAPH.back}</Link>
+        <span><Network size={16} /><h1>{GRAPH.heading}</h1><small>{GRAPH.depthLabel(localGraph.nodes.length)}</small></span>
+        <span className="commit-chip"><GitBranch size={13} />{GRAPH.commitChip}</span>
       </header>
-      <section className="local-graph-stage" aria-label="Depth-two evidence detail graph">
+      <section className="local-graph-stage" aria-label={GRAPH.regionLabel}>
         <div className="local-graph-canvas">
           <GraphCanvas
             data={localGraph}
@@ -60,34 +61,34 @@ export function GraphDetail({ initialNodeId }: GraphDetailProps) {
             onNodeSelect={setSelectedNode}
             selectedEdgeId={selectedEdge?.id ?? null}
           />
-          <div className="local-graph-label"><Orbit size={14} />Local graph · depth 2 · layout frozen</div>
+          <div className="local-graph-label"><Orbit size={14} />{GRAPH.canvas.label}</div>
         </div>
 
         <aside className="provenance-inspector">
-          <header><span className="panel-kicker">Selected node</span><h2>{selectedNode?.label ?? "Evidence edge"}</h2><code>{selectedNode?.path}</code></header>
+          <header><span className="panel-kicker">{GRAPH.inspector.kicker}</span><h2>{selectedNode?.label ?? GRAPH.inspector.fallbackTitle}</h2><code>{selectedNode?.path}</code></header>
           <div className="orphan-toggle">
-            <label><input checked={includeOrphans} onChange={(event) => setIncludeOrphans(event.target.checked)} type="checkbox" /><span>Show orphan artifacts</span></label>
-            <small>Orphans have no provenance edge and never appear in edge detail.</small>
+            <label><input checked={includeOrphans} onChange={(event) => setIncludeOrphans(event.target.checked)} type="checkbox" /><span>{GRAPH.inspector.orphanToggleLabel}</span></label>
+            <small>{GRAPH.inspector.orphanToggleNote}</small>
           </div>
 
           <section className="provenance-card" aria-labelledby="provenance-title">
-            <span className="panel-kicker">Edge provenance</span>
-            <h2 id="provenance-title">{provenance?.relation ?? "Select an evidence edge"}</h2>
+            <span className="panel-kicker">{GRAPH.provenance.kicker}</span>
+            <h2 id="provenance-title">{provenance?.relation ?? GRAPH.provenance.fallbackTitle}</h2>
             {provenance ? (
               <>
                 <dl>
-                  <div><dt>Span</dt><dd>{provenance.sourcePath}:{provenance.startLine}-{provenance.endLine}</dd></div>
-                  <div><dt>Confidence</dt><dd>{Math.round(provenance.confidence * 100)}%</dd></div>
-                  <div><dt>Evidence grade</dt><dd><span className={`grade-badge ${provenance.grade}`}>{provenance.grade}</span></dd></div>
-                  <div><dt>Relation</dt><dd>{provenance.relation}</dd></div>
+                  <div><dt>{GRAPH.provenance.span}</dt><dd>{provenance.sourcePath}:{provenance.startLine}-{provenance.endLine}</dd></div>
+                  <div><dt>{GRAPH.provenance.confidence}</dt><dd>{Math.round(provenance.confidence * 100)}%</dd></div>
+                  <div><dt>{GRAPH.provenance.grade}</dt><dd><span className={`grade-badge ${provenance.grade}`}>{provenance.grade}</span></dd></div>
+                  <div><dt>{GRAPH.provenance.relation}</dt><dd>{provenance.relation}</dd></div>
                 </dl>
-                <p><ShieldCheck size={14} />Provenance complete. Hover detail never falls back to an ungrounded edge.</p>
+                <p><ShieldCheck size={14} />{GRAPH.provenance.complete}</p>
               </>
-            ) : <p>No displayable provenance in this neighborhood.</p>}
+            ) : <p>{GRAPH.provenance.empty}</p>}
           </section>
 
           <section className="edge-index">
-            <span className="panel-kicker">Visible evidence edges</span>
+            <span className="panel-kicker">{GRAPH.edgeIndex.kicker}</span>
             <div>
               {displayEdges.map((edge) => (
                 <button aria-pressed={edge.id === selectedEdge?.id} key={edge.id} onClick={() => setSelectedEdgeId(edge.id)} type="button">
@@ -98,8 +99,8 @@ export function GraphDetail({ initialNodeId }: GraphDetailProps) {
           </section>
 
           <footer>
-            <Link href={`/findings?node=${encodeURIComponent(selectedNode?.id ?? rootNode)}`}><FileSearch size={14} />Related findings</Link>
-            <Link href={`/findings?source=${encodeURIComponent(selectedNode?.path ?? "")}`}><Braces size={14} />Source record <ExternalLink size={12} /></Link>
+            <Link href={`/findings?node=${encodeURIComponent(selectedNode?.id ?? rootNode)}`}><FileSearch size={14} />{GRAPH.footer.relatedFindings}</Link>
+            <Link href={`/findings?source=${encodeURIComponent(selectedNode?.path ?? "")}`}><Braces size={14} />{GRAPH.footer.sourceRecord} <ExternalLink size={12} /></Link>
           </footer>
         </aside>
       </section>

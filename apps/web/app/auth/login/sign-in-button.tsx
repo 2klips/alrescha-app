@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { AUTH } from "../../../lib/strings";
 import { createClient } from "../../../lib/supabase/client";
 
 export function SignInButton() {
@@ -18,7 +19,7 @@ export function SignInButton() {
     });
 
     if (signInError) {
-      setError("GitHub 로그인을 시작하지 못했습니다.");
+      setError(AUTH.signIn.error);
       setPending(false);
     }
   }
@@ -26,7 +27,7 @@ export function SignInButton() {
   return (
     <div>
       <button className="button" disabled={pending} onClick={signIn} type="button">
-        {pending ? "GitHub 연결 중…" : "GitHub으로 시작"}
+        {pending ? AUTH.signIn.pending : AUTH.signIn.idle}
       </button>
       {error ? <p role="alert">{error}</p> : null}
     </div>

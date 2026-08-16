@@ -1,4 +1,5 @@
 import { DEMO_LIBRARY_ITEM } from "../../lib/library/demo";
+import { HARNESS } from "../../lib/strings";
 import { HarnessAssetCard } from "./harness-asset-card";
 
 export default function DemoHarnessPage() {
@@ -6,14 +7,11 @@ export default function DemoHarnessPage() {
   return (
     <main className="harness-shell">
       <header className="harness-hero">
-        <p>Drifted demo · repository harness</p>
-        <h1>Save what already works.</h1>
-        <span>
-          This fixture mirrors the authenticated save flow with an exact
-          SKILL.md source commit.
-        </span>
+        <p>{HARNESS.demo.kicker}</p>
+        <h1>{HARNESS.title}</h1>
+        <span>{HARNESS.demo.lead}</span>
       </header>
-      <section className="harness-assets" aria-label="Harness assets">
+      <section className="harness-assets" aria-label={HARNESS.ariaAssets}>
         <HarnessAssetCard asset={{ digest, id, name, source, tags, type }} />
       </section>
     </main>

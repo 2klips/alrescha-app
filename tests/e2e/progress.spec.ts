@@ -3,13 +3,15 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { PROGRESS } from "../../apps/web/lib/strings";
+
 test("shows sourced metrics, four todo states, and newest-first work", async ({
   page,
 }) => {
   await page.goto("/progress");
 
   await expect(
-    page.getByRole("heading", { name: "Partial evidence" }),
+    page.getByRole("heading", { name: PROGRESS.states.partial.label }),
   ).toBeVisible();
   await expect(
     page.getByText("Evidence graph requirement coverage"),
@@ -17,7 +19,7 @@ test("shows sourced metrics, four todo states, and newest-first work", async ({
   await expect(
     page.getByText("TODO/progress checkboxes + log_progress events"),
   ).toBeVisible();
-  for (const heading of ["Open", "In progress", "Done", "Blocked"]) {
+  for (const heading of Object.values(PROGRESS.todoBoard.statuses)) {
     await expect(
       page.getByRole("heading", { name: heading, exact: true }),
     ).toBeVisible();
@@ -45,18 +47,18 @@ test("switches between empty, partial, and fully traced source states", async ({
   await page.getByRole("link", { name: "full", exact: true }).click();
   await expect(page).toHaveURL(/state=full/);
   await expect(
-    page.getByRole("heading", { name: "Fully traced" }),
+    page.getByRole("heading", { name: PROGRESS.states.full.label }),
   ).toBeVisible();
 
   await page.getByRole("link", { name: "empty", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "No tracked progress yet" }),
+    page.getByRole("heading", { name: PROGRESS.states.empty.label }),
   ).toBeVisible();
-  await expect(page.getByText("Not measured")).toHaveCount(2);
+  await expect(page.getByText(PROGRESS.metrics.notMeasured)).toHaveCount(2);
 
   await page.getByRole("link", { name: "partial", exact: true }).click();
   await expect(page).toHaveURL(/\/progress$/);
   await expect(
-    page.getByRole("heading", { name: "Partial evidence" }),
+    page.getByRole("heading", { name: PROGRESS.states.partial.label }),
   ).toBeVisible();
 });

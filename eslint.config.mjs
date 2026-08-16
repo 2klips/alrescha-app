@@ -2,6 +2,12 @@ import eslint from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 
+import noHardcodedHex from "./tools/eslint-rules/no-hardcoded-hex.js";
+
+const arrPlugin = {
+  rules: { "no-hardcoded-hex": noHardcodedHex },
+};
+
 export default tseslint.config(
   {
     ignores: [
@@ -25,6 +31,14 @@ export default tseslint.config(
     },
     rules: {
       "@typescript-eslint/consistent-type-imports": "error",
+    },
+  },
+  {
+    // Ink & Seal (ADR-009-3): colours live only in app/styles/tokens.css.
+    files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
+    plugins: { arr: arrPlugin },
+    rules: {
+      "arr/no-hardcoded-hex": "error",
     },
   },
 );

@@ -4,6 +4,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { HarnessAssetCard } from "../harness/harness-asset-card";
+import { HARNESS } from "../../lib/strings/harness";
+import { LIBRARY } from "../../lib/strings/library";
 import { LibraryBrowser } from "./library-browser";
 
 const AUTH_ITEM: LibraryItem = {
@@ -56,7 +58,7 @@ describe("personal library UI", () => {
     expect(html).toContain(".agents/skills/review-auth/SKILL.md");
     expect(html).toContain("1".repeat(40));
     expect(html).toContain("sha256:");
-    expect(html).toContain("Delete snapshot");
+    expect(html).toContain(LIBRARY.card.deleteSnapshot);
   });
 
   it("offers only save, browse, filter, provenance, and delete scope", () => {
@@ -75,12 +77,14 @@ describe("personal library UI", () => {
     );
     const combined = `${libraryHtml}${harnessHtml}`;
 
-    expect(harnessHtml).toContain("Save to library");
+    expect(harnessHtml).toContain(HARNESS.card.save);
     expect(harnessHtml).toContain("specproof/drifted-demo");
     expect(harnessHtml).toContain("1".repeat(40));
-    expect(combined).not.toMatch(/import into project/i);
-    expect(combined).not.toMatch(/pull request/i);
-    expect(combined).not.toMatch(/team sharing/i);
-    expect(combined).not.toMatch(/marketplace/i);
+    expect(combined).not.toMatch(
+      /import into project|프로젝트로 가져오기|프로젝트에 추가/i,
+    );
+    expect(combined).not.toMatch(/pull request|풀 리퀘스트/i);
+    expect(combined).not.toMatch(/team sharing|팀 공유/i);
+    expect(combined).not.toMatch(/marketplace|마켓플레이스/i);
   });
 });

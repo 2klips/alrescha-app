@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { SETTINGS } from "../../../../lib/strings";
 import { AiUsageSettings } from "./ai-usage-settings";
 
 describe("AI judgment usage settings", () => {
@@ -35,11 +36,10 @@ describe("AI judgment usage settings", () => {
       }),
     );
 
-    expect(html).toContain("38 credits");
-    expect(html).toContain("12 used");
-    expect(html).toContain("OpenAI BYOK configured");
-    expect(html).toContain("BYOK judgments bypass credits");
-    expect(html).toContain("encrypted at rest");
+    expect(html).toContain(SETTINGS.ai.creditUsage.balance(38));
+    expect(html).toContain(SETTINGS.ai.creditUsage.used(12));
+    expect(html).toContain(SETTINGS.ai.byok.configured(SETTINGS.ai.byok.providerNames.openai));
+    expect(html).toContain(SETTINGS.ai.byok.intro);
     expect(html).not.toContain("workspace-provider-secret");
     expect(html).toContain('name="apiKey"');
     expect(html).toContain('type="password"');
@@ -77,10 +77,8 @@ describe("AI judgment usage settings", () => {
       }),
     );
 
-    expect(html).toContain("Judgments paused");
-    expect(html).toContain("Add credits or configure BYOK");
-    expect(html).toContain(
-      "Deterministic scans and drift analysis keep working",
-    );
+    expect(html).toContain(SETTINGS.ai.creditUsage.pausedTitle);
+    expect(html).toContain(SETTINGS.ai.creditUsage.pausedBody);
+    expect(html).toContain(SETTINGS.ai.creditUsage.pausedNote);
   });
 });

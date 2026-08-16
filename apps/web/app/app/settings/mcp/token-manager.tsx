@@ -3,6 +3,7 @@
 import type { PublicMcpTokenRecord } from "@specproof/mcp";
 import { useActionState } from "react";
 
+import { SETTINGS } from "../../../../lib/strings";
 import {
   issueMcpToken,
   revokeMcpToken,
@@ -10,7 +11,9 @@ import {
 import { INITIAL_ISSUE_MCP_TOKEN_STATE } from "./state";
 
 function timestamp(value: string | null): string {
-  return value ? `${value.slice(0, 16).replace("T", " ")} UTC` : "Never";
+  return value
+    ? SETTINGS.mcp.tokens.withUtc(value.slice(0, 16).replace("T", " "))
+    : SETTINGS.mcp.tokens.never;
 }
 
 export function McpTokenManager({
@@ -26,19 +29,19 @@ export function McpTokenManager({
   return (
     <div className="mcp-settings-grid">
       <section className="mcp-settings-card" aria-labelledby="mcp-issue-title">
-        <h2 id="mcp-issue-title">Issue access token</h2>
+        <h2 id="mcp-issue-title">{SETTINGS.mcp.tokens.issueTitle}</h2>
         <form action={issueAction} className="mcp-token-form">
-          <label htmlFor="mcp-token-name">Token name</label>
+          <label htmlFor="mcp-token-name">{SETTINGS.mcp.tokens.nameLabel}</label>
           <input
             autoComplete="off"
             id="mcp-token-name"
             maxLength={80}
             name="name"
-            placeholder="Local coding agent"
+            placeholder={SETTINGS.mcp.tokens.namePlaceholder}
             required
           />
           <fieldset>
-            <legend>Scopes</legend>
+            <legend>{SETTINGS.mcp.tokens.scopesLegend}</legend>
             <label>
               <input
                 defaultChecked
@@ -46,15 +49,15 @@ export function McpTokenManager({
                 type="checkbox"
                 value="mcp:read"
               />
-              Read context and findings
+              {SETTINGS.mcp.tokens.scopeReadLabel}
             </label>
             <label>
               <input name="scopes" type="checkbox" value="mcp:write" />
-              Record progress and notes
+              {SETTINGS.mcp.tokens.scopeWriteLabel}
             </label>
           </fieldset>
           <button className="button" disabled={pending} type="submit">
-            {pending ? "Issuing…" : "Issue token"}
+            {pending ? SETTINGS.mcp.tokens.issuing : SETTINGS.mcp.tokens.issue}
           </button>
         </form>
         {state.error ? (
@@ -64,7 +67,7 @@ export function McpTokenManager({
         ) : null}
         {state.secret ? (
           <div className="mcp-secret" role="status">
-            <strong>Copy now. This token is shown once.</strong>
+            <strong>{SETTINGS.mcp.tokens.secretNotice}</strong>
             <code>{state.secret}</code>
           </div>
         ) : null}
@@ -74,8 +77,8 @@ export function McpTokenManager({
         className="mcp-settings-card"
         aria-labelledby="mcp-token-list-title"
       >
-        <h2 id="mcp-token-list-title">Access tokens</h2>
-        {tokens.length === 0 ? <p>No tokens issued.</p> : null}
+        <h2 id="mcp-token-list-title">{SETTINGS.mcp.tokens.listTitle}</h2>
+        {tokens.length === 0 ? <p>{SETTINGS.mcp.tokens.empty}</p> : null}
         <ul className="mcp-token-list">
           {tokens.map((token) => (
             <li key={token.id}>
@@ -83,15 +86,15 @@ export function McpTokenManager({
                 <strong>{token.name}</strong>
                 <code>{token.tokenPrefix}…</code>
                 <span>{token.scopes.join(", ")}</span>
-                <span>Last used: {timestamp(token.lastUsedAt)}</span>
+                <span>{SETTINGS.mcp.tokens.lastUsed(timestamp(token.lastUsedAt))}</span>
               </div>
               {token.revokedAt ? (
-                <span className="mcp-revoked">Revoked</span>
+                <span className="mcp-revoked">{SETTINGS.mcp.tokens.revoked}</span>
               ) : (
                 <form action={revokeMcpToken}>
                   <input name="tokenId" type="hidden" value={token.id} />
                   <button className="mcp-revoke" type="submit">
-                    Revoke
+                    {SETTINGS.mcp.tokens.revoke}
                   </button>
                 </form>
               )}

@@ -31,6 +31,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   filterGraph,
   focusLocalGraph,
+  topHubNodes,
   type DashboardViewModel,
   type EvidenceGrade,
   type GraphFilters,
@@ -38,19 +39,23 @@ import {
   type GraphNodeType,
 } from "../../lib/dashboard/graph-model";
 import {
+  glowAfterglowNodes,
+  glowFromRealtime,
+} from "../../lib/graph/glow";
+import {
   DEMO_REVOKED_TOKEN_ID,
   DEMO_WORKSPACE_ID,
   createDemoAccessEvents,
   createBrowserWorkspaceRealtimeSource,
   createRealtimeGraphState,
   dispatchBrowserAccessEvent,
-  pulsePhaseAt,
   reduceAccessEventBatch,
   relativeEventTime,
   subscribeWorkspaceRealtime,
-  type PulsePhase,
 } from "../../lib/realtime/access-events";
-import { GraphCanvas } from "./graph-canvas";
+import { BRAND, DASHBOARD, GRADE, NAV } from "../../lib/strings";
+import { BrainMapStage } from "./brain-map-stage";
+import { ThemeToggle } from "./theme-toggle";
 
 interface DashboardScreenProps {
   model: DashboardViewModel;
@@ -60,51 +65,32 @@ type MetricPanel = "implementation" | "tests" | "tokens" | "unresolved";
 
 const TYPE_OPTIONS: readonly { label: string; value: GraphNodeType | "all" }[] =
   [
-    { label: "All nodes", value: "all" },
-    { label: "Requirements", value: "requirement" },
-    { label: "Documents", value: "document" },
-    { label: "Code", value: "code" },
-    { label: "Tests", value: "test" },
+    { label: DASHBOARD.filters.types.all, value: "all" },
+    { label: DASHBOARD.filters.types.requirement, value: "requirement" },
+    { label: DASHBOARD.filters.types.document, value: "document" },
+    { label: DASHBOARD.filters.types.code, value: "code" },
+    { label: DASHBOARD.filters.types.test, value: "test" },
   ];
 
 const GRADE_OPTIONS: readonly {
   label: string;
   value: EvidenceGrade | "all";
 }[] = [
-  { label: "All evidence", value: "all" },
-  { label: "Verified", value: "verified" },
-  { label: "Inferred", value: "inferred" },
-  { label: "Broken", value: "broken" },
+  { label: DASHBOARD.filters.grades.all, value: "all" },
+  { label: DASHBOARD.filters.grades.verified, value: "verified" },
+  { label: DASHBOARD.filters.grades.inferred, value: "inferred" },
+  { label: DASHBOARD.filters.grades.broken, value: "broken" },
 ];
 
 const NAV_ITEMS = [
-  { href: "/", icon: Network, label: "Graph" },
-  { href: "/findings", icon: AlertTriangle, label: "Findings" },
-  { href: "/lint", icon: Braces, label: "Instruction lint" },
-  { href: "/progress", icon: TrendingUp, label: "Progress" },
-  { href: "/receipts", icon: ReceiptText, label: "Receipts" },
+  { href: "/", icon: Network, label: NAV.graph },
+  { href: "/findings", icon: AlertTriangle, label: NAV.findings },
+  { href: "/lint", icon: Braces, label: NAV.lint },
+  { href: "/progress", icon: TrendingUp, label: NAV.progress },
+  { href: "/receipts", icon: ReceiptText, label: NAV.receipts },
 ] as const;
 
-const STATIC_ACTIVITY = [
-  {
-    detail: "Indexed 42 files",
-    meta: "git: bad0551",
-    time: "10:24:31",
-    tool: "search_index",
-  },
-  {
-    detail: "Fetched test results (#8721)",
-    meta: "cache: hit",
-    time: "10:24:28",
-    tool: "get_artifact",
-  },
-  {
-    detail: "Building bounded context pack",
-    meta: "worker: 3",
-    time: "10:24:27",
-    tool: "request_context_pack",
-  },
-] as const;
+const STATIC_ACTIVITY = DASHBOARD.activity.samples;
 
 function MetricChip({
   active,
@@ -147,8 +133,8 @@ function StatusSurface({
     return (
       <div className="graph-state" role="status">
         <LoaderCircle className="spin" size={24} />
-        <strong>Loading evidence index</strong>
-        <span>Resolving graph spans and grades…</span>
+        <strong>{DASHBOARD.states.loading.title}</strong>
+        <span>{DASHBOARD.states.loading.body}</span>
       </div>
     );
   }
@@ -158,10 +144,8 @@ function StatusSurface({
         <span className="pre-scan-orbit">
           <CircleDotDashed size={28} />
         </span>
-        <strong>Graph canvas ready</strong>
-        <span>
-          First scan will trace docs → requirements → code → tests here.
-        </span>
+        <strong>{DASHBOARD.states.empty.title}</strong>
+        <span>{DASHBOARD.states.empty.body}</span>
       </div>
     );
   }
@@ -169,8 +153,8 @@ function StatusSurface({
     return (
       <div className="graph-state" role="status">
         <LoaderCircle className="spin" size={24} />
-        <strong>Building proof spine · 62%</strong>
-        <span>15 artifacts indexed · extracting requirements</span>
+        <strong>{DASHBOARD.states.scanning.title}</strong>
+        <span>{DASHBOARD.states.scanning.body}</span>
         <div className="scan-track">
           <span style={{ width: "62%" }} />
         </div>
@@ -181,17 +165,14 @@ function StatusSurface({
     return (
       <div className="graph-state error-state" role="alert">
         <AlertTriangle size={24} />
-        <h2>GitHub App disconnected</h2>
-        <span>
-          Automatic scans are paused. Stored evidence remains read-only, and no
-          credits are used while disconnected.
-        </span>
+        <h2>{DASHBOARD.states.revoked.title}</h2>
+        <span>{DASHBOARD.states.revoked.body}</span>
         <div className="revoked-actions">
           <Link className="compact-button" href="/app/connect/github">
-            <RotateCcw size={14} /> Reconnect GitHub App
+            <RotateCcw size={14} /> {DASHBOARD.states.revoked.reconnect}
           </Link>
           <button className="compact-button" onClick={onRetry} type="button">
-            View stored evidence
+            {DASHBOARD.states.revoked.viewStored}
           </button>
         </div>
       </div>
@@ -203,19 +184,19 @@ function StatusSurface({
         <AlertTriangle size={24} />
         <strong>
           {model.state === "permission-error"
-            ? "GitHub permission changed"
-            : "Scan stopped before analysis"}
+            ? DASHBOARD.states.permissionError.title
+            : DASHBOARD.states.failed.title}
         </strong>
         <span>
           {model.state === "permission-error"
-            ? "Contents: read is required. No repository data was stored."
-            : "Recorded GitHub response timed out. Existing evidence remains available."}
+            ? DASHBOARD.states.permissionError.body
+            : DASHBOARD.states.failed.body}
         </span>
         <button className="compact-button" onClick={onRetry} type="button">
           <RotateCcw size={14} />{" "}
           {model.state === "permission-error"
-            ? "Review permission"
-            : "Retry scan"}
+            ? DASHBOARD.states.permissionError.action
+            : DASHBOARD.states.failed.action}
         </button>
       </div>
     );
@@ -230,28 +211,7 @@ function MetricEvidence({
   panel: MetricPanel;
   onClose: () => void;
 }) {
-  const content = {
-    unresolved: [
-      "4 open findings",
-      "2 missing-test · 1 stale-doc · 1 unproven-claim",
-      "Source: latest deterministic analysis",
-    ],
-    implementation: [
-      "84% implementation coverage",
-      "11 of 13 active requirements have implementation evidence",
-      "Source: requirement → code edges",
-    ],
-    tests: [
-      "71% test coverage",
-      "10 verified links from parsed CI reports",
-      "Source: bad0551 GitHub Actions report",
-    ],
-    tokens: [
-      "1,840 tokens / turn",
-      "AGENTS.md + nested instructions always loaded",
-      "Assumption: cl100k_base-compatible estimate",
-    ],
-  }[panel];
+  const content = DASHBOARD.metricEvidence[panel];
   return (
     <aside
       className="arr-metric-evidence"
@@ -259,18 +219,59 @@ function MetricEvidence({
       aria-label={`${panel} evidence`}
     >
       <button
-        aria-label="Close evidence"
+        aria-label={DASHBOARD.metricEvidenceClose}
         className="arr-icon-button"
         onClick={onClose}
         type="button"
       >
         <X size={15} />
       </button>
-      <span className="arr-kicker">Metric provenance</span>
+      <span className="arr-kicker">{DASHBOARD.metricEvidenceKicker}</span>
       <strong>{content[0]}</strong>
       <p>{content[1]}</p>
       <small>{content[2]}</small>
     </aside>
+  );
+}
+
+/**
+ * Top-5 most-connected nodes (REVIEW_EXTERNAL_PROJECTS G2). The brain map's
+ * entry points: a click selects the node and flies the camera to it, which is
+ * the same gesture the activity feed uses.
+ */
+function HubChips({
+  hubs,
+  onFocus,
+  selectedNodeId,
+}: {
+  hubs: readonly { degree: number; node: GraphNode }[];
+  onFocus: (node: GraphNode) => void;
+  selectedNodeId: string | null;
+}) {
+  return (
+    <div className="arr-hubs" aria-label={DASHBOARD.hubs.aria}>
+      <span className="arr-kicker">{DASHBOARD.hubs.kicker}</span>
+      {hubs.length === 0 ? (
+        <small>{DASHBOARD.hubs.empty}</small>
+      ) : (
+        <ol>
+          {hubs.map(({ degree, node }) => (
+            <li key={node.id}>
+              <button
+                aria-pressed={node.id === selectedNodeId}
+                data-hub-node={node.id}
+                onClick={() => onFocus(node)}
+                type="button"
+              >
+                <i className={node.type} />
+                <span>{node.label}</span>
+                <small>{DASHBOARD.hubs.degree(degree)}</small>
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
   );
 }
 
@@ -343,12 +344,18 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
       "permission-error",
       "revoked",
     ].includes(model.state);
-  const pulseStates = useMemo(() => {
-    const phases: Record<string, PulsePhase> = {};
-    for (const [nodeId, pulse] of Object.entries(realtime.pulses))
-      phases[nodeId] = pulsePhaseAt(pulse, clock);
-    return phases;
-  }, [clock, realtime.pulses]);
+  const hubs = useMemo(() => topHubNodes(model.graph), [model.graph]);
+  // The renderer takes continuous intensity, not phases: `glowFromRealtime`
+  // inherits the reducer's workspace and revoked-token filtering, so a
+  // cross-workspace read still cannot light a node (see lib/graph/glow.ts).
+  const glow = useMemo(
+    () => glowFromRealtime(realtime, clock),
+    [clock, realtime],
+  );
+  const afterglow = useMemo(
+    () => glowAfterglowNodes(realtime.pulses, clock),
+    [clock, realtime.pulses],
+  );
 
   useEffect(() => {
     if (realtime.feed.length === 0) return;
@@ -384,9 +391,9 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
   }
 
   return (
-    <main className="arr-home" aria-label="Arr project assurance dashboard">
+    <main className="arr-home" aria-label={DASHBOARD.ariaMain}>
       <header className="arr-topbar">
-        <Link className="arr-brand" href="/" aria-label="Arr home">
+        <Link className="arr-brand" href="/" aria-label={BRAND.homeLabel}>
           <Image
             alt=""
             aria-hidden="true"
@@ -396,12 +403,12 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             src="/arr-mark.png"
             width={46}
           />
-          <strong>Arr</strong>
-          <span>Proof, before merge.</span>
+          <strong>{BRAND.name}</strong>
+          <span>{BRAND.tagline}</span>
         </Link>
         <button
           aria-expanded={mobileNavOpen}
-          aria-label="Toggle navigation"
+          aria-label={NAV.toggle}
           className="arr-menu-button"
           onClick={() => setMobileNavOpen((open) => !open)}
           type="button"
@@ -409,7 +416,7 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
           <Menu size={20} />
         </button>
         <nav
-          aria-label="Primary navigation"
+          aria-label={NAV.ariaPrimary}
           className="arr-nav"
           data-open={mobileNavOpen}
         >
@@ -424,62 +431,73 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             </Link>
           ))}
         </nav>
-        <Link className="arr-connect" href="/app/connect/github">
-          <Link2 size={17} />
-          Connect repo
-        </Link>
+        <span className="header-actions">
+          <ThemeToggle />
+          <Link className="arr-connect" href="/app/connect/github">
+            <Link2 size={17} />
+            {NAV.connectRepo}
+          </Link>
+        </span>
       </header>
 
       <div className="arr-workspace">
-        <aside className="arr-repo-rail" aria-label="Repository summary">
+        <aside className="arr-repo-rail" aria-label={DASHBOARD.ariaRepoRail}>
           <div className="arr-repo-block">
-            <span className="arr-kicker">Repository</span>
+            <span className="arr-kicker">{DASHBOARD.repoKicker}</span>
             <strong>
               <Network size={17} />
               {model.repo}
             </strong>
             <small>
               <GitBranch size={12} />
-              main · bad0551
+              {DASHBOARD.repoBranchLine}
             </small>
           </div>
-          <div className="arr-metrics" aria-label="Assurance metrics">
+          <div className="arr-metrics" aria-label={DASHBOARD.ariaMetrics}>
             <MetricChip
               active={metricPanel === "unresolved"}
-              label="open findings"
+              label={DASHBOARD.metrics.unresolved}
               onClick={() => setMetricPanel("unresolved")}
               value={model.metrics.unresolved}
             />
             <MetricChip
               active={metricPanel === "implementation"}
-              label="implementation"
+              label={DASHBOARD.metrics.implementation}
               onClick={() => setMetricPanel("implementation")}
               suffix="%"
               value={model.metrics.implementation}
             />
             <MetricChip
               active={metricPanel === "tests"}
-              label="tests"
+              label={DASHBOARD.metrics.tests}
               onClick={() => setMetricPanel("tests")}
               suffix="%"
               value={model.metrics.tests}
             />
             <MetricChip
               active={metricPanel === "tokens"}
-              label="context"
+              label={DASHBOARD.metrics.tokens}
               onClick={() => setMetricPanel("tokens")}
               suffix="k"
               value={Number((model.metrics.tokenCost / 1000).toFixed(1))}
             />
           </div>
+          <HubChips
+            hubs={hubs}
+            onFocus={(node) => {
+              setSelectedNode(node);
+              setCameraFocusNodeId(node.id);
+            }}
+            selectedNodeId={selectedNode?.id ?? null}
+          />
           <div className="arr-rail-links">
             <Link href="/app/harness">
               <BookmarkPlus size={15} />
-              Harness assets
+              {NAV.harness}
             </Link>
             <Link href="/app/library">
               <Archive size={15} />
-              Evidence library
+              {NAV.library}
             </Link>
           </div>
         </aside>
@@ -487,60 +505,72 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
         <section className="arr-proof-panel" aria-labelledby="proof-map-title">
           <header className="arr-proof-heading">
             <div>
-              <span className="arr-kicker">Current commit · bad0551</span>
-              <h1 id="proof-map-title">Project proof map</h1>
+              <span className="arr-kicker">
+                {DASHBOARD.commitKicker} · bad0551
+              </span>
+              {/*
+                The heading names the map *and* the repository it proves. Before
+                `e0057dc` the h1 was the repo alone; that commit replaced it with
+                the map title, which left every workspace with an identical h1
+                and no connected-repo identity in the page heading. Both halves
+                are here now — the accessible name carries the repo again.
+              */}
+              <h1 id="proof-map-title">
+                {DASHBOARD.title}
+                <span className="arr-proof-repo">{model.repo}</span>
+              </h1>
             </div>
-            <div className="arr-legend" aria-label="Graph legend">
+            <div className="arr-legend" aria-label={DASHBOARD.ariaLegend}>
               <span>
                 <i className="requirement" />
-                Requirement
+                {DASHBOARD.legend.requirement}
               </span>
               <span>
                 <i className="code" />
-                Code
+                {DASHBOARD.legend.code}
               </span>
               <span>
                 <i className="test" />
-                Verified test
+                {DASHBOARD.legend.test}
               </span>
             </div>
           </header>
           <div
             className="arr-metrics arr-metrics-mobile"
-            aria-label="Mobile assurance metrics"
+            aria-label={DASHBOARD.ariaMetricsMobile}
           >
             <MetricChip
               active={metricPanel === "unresolved"}
-              label="open findings"
+              label={DASHBOARD.metrics.unresolved}
               onClick={() => setMetricPanel("unresolved")}
               value={model.metrics.unresolved}
             />
             <MetricChip
               active={metricPanel === "implementation"}
-              label="implementation"
+              label={DASHBOARD.metrics.implementation}
               onClick={() => setMetricPanel("implementation")}
               suffix="%"
               value={model.metrics.implementation}
             />
             <MetricChip
               active={metricPanel === "tests"}
-              label="tests"
+              label={DASHBOARD.metrics.tests}
               onClick={() => setMetricPanel("tests")}
               suffix="%"
               value={model.metrics.tests}
             />
             <MetricChip
               active={metricPanel === "tokens"}
-              label="context"
+              label={DASHBOARD.metrics.tokens}
               onClick={() => setMetricPanel("tokens")}
               suffix="k"
               value={Number((model.metrics.tokenCost / 1000).toFixed(1))}
             />
           </div>
-          <div className="arr-graph-controls" aria-label="Graph controls">
+          <div className="arr-graph-controls" aria-label={DASHBOARD.ariaControls}>
             <label className="arr-search">
               <Search size={15} />
-              <span className="sr-only">Search graph</span>
+              <span className="sr-only">{DASHBOARD.search.label}</span>
               <input
                 onChange={(event) =>
                   setFilters((current) => ({
@@ -548,16 +578,16 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
                     query: event.target.value,
                   }))
                 }
-                placeholder="Search proof map"
+                placeholder={DASHBOARD.search.placeholder}
                 type="search"
                 value={filters.query}
               />
             </label>
             <label className="arr-select">
               <Filter size={14} />
-              <span className="sr-only">Node type</span>
+              <span className="sr-only">{DASHBOARD.filters.typeLabel}</span>
               <select
-                aria-label="Node type"
+                aria-label={DASHBOARD.filters.typeLabel}
                 onChange={(event) =>
                   setFilters((current) => ({
                     ...current,
@@ -575,9 +605,9 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             </label>
             <label className="arr-select">
               <CircleDotDashed size={14} />
-              <span className="sr-only">Evidence grade</span>
+              <span className="sr-only">{DASHBOARD.filters.gradeLabel}</span>
               <select
-                aria-label="Evidence grade"
+                aria-label={DASHBOARD.filters.gradeLabel}
                 onChange={(event) =>
                   setFilters((current) => ({
                     ...current,
@@ -601,7 +631,7 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
               type="button"
             >
               <Network size={14} />
-              Local focus
+              {DASHBOARD.filters.localFocus}
             </button>
           </div>
           <div className="arr-graph-stage">
@@ -609,22 +639,24 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             {blocked ? (
               <StatusSurface model={model} onRetry={() => setRecovered(true)} />
             ) : (
-              <GraphCanvas
+              <BrainMapStage
+                afterglow={afterglow}
                 data={visibleGraph}
                 focusNodeId={cameraFocusNodeId}
-                onNodeDoubleClick={(node) =>
+                glow={glow}
+                onNodeActivate={(node) =>
                   window.location.assign(
                     `/graph?node=${encodeURIComponent(node.id)}`,
                   )
                 }
                 onNodeSelect={setSelectedNode}
-                pulseStates={pulseStates}
+                selectedNodeId={selectedNode?.id ?? null}
               />
             )}
             {model.isClustered ? (
               <div className="arr-cluster-note" role="status">
                 <Braces size={14} />
-                500 nodes grouped by type + grade
+                {DASHBOARD.clusterNote(500)}
               </div>
             ) : null}
             {metricPanel ? (
@@ -647,26 +679,22 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
           </footer>
         </section>
 
-        <aside className="arr-inspector" aria-label="Selected node">
+        <aside className="arr-inspector" aria-label={DASHBOARD.ariaInspector}>
           <header>
-            <span className="arr-kicker">Inspector</span>
+            <span className="arr-kicker">{DASHBOARD.inspector.kicker}</span>
             <span className={`arr-grade ${selectedNode?.grade ?? "inferred"}`}>
-              {selectedNode?.grade ?? "waiting"}
+              {selectedNode?.grade ?? GRADE.waiting}
             </span>
           </header>
           {selectedNode ? (
             <>
               <h2>{requirementCode(selectedNode)}</h2>
-              <p>
-                Trace this claim from requirement to implementation and test
-                evidence.
-              </p>
+              <p>{DASHBOARD.inspector.lead}</p>
               <code className="arr-selected-path">{selectedNode.path}</code>
               {selectedNode.findingCount ? (
                 <span className="arr-finding">
                   <AlertTriangle size={13} />
-                  {selectedNode.findingCount} open{" "}
-                  {selectedNode.findingCount === 1 ? "finding" : "findings"}
+                  {DASHBOARD.inspector.findingCount(selectedNode.findingCount)}
                 </span>
               ) : null}
               <section
@@ -674,7 +702,7 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
                 aria-labelledby="evidence-chain-title"
               >
                 <span className="arr-kicker" id="evidence-chain-title">
-                  Evidence chain
+                  {DASHBOARD.inspector.chainTitle}
                 </span>
                 <ol>
                   {evidenceChain.map((node) => (
@@ -699,7 +727,7 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
               </section>
             </>
           ) : (
-            <p>Select a node to inspect its proof chain.</p>
+            <p>{DASHBOARD.inspector.empty}</p>
           )}
         </aside>
 
@@ -708,13 +736,13 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             <div>
               <span className="arr-live">
                 <Radio size={12} />
-                Live
+                {DASHBOARD.activity.live}
               </span>
-              <h2 id="activity-title">Agent activity</h2>
+              <h2 id="activity-title">{DASHBOARD.activity.title}</h2>
             </div>
             <button onClick={replayMcpSession} type="button">
               <Play size={13} />
-              Replay MCP session
+              {DASHBOARD.activity.replay}
             </button>
           </header>
           <div className="arr-activity-table" role="feed">
@@ -738,7 +766,7 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
                     <span className="arr-activity-dot" />
                     <strong>{event.tool}</strong>
                     <span>{event.targetPath}</span>
-                    <code>live trace</code>
+                    <code>{DASHBOARD.activity.trace}</code>
                   </button>
                 ))
               : STATIC_ACTIVITY.map((event) => (

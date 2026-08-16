@@ -1,3 +1,5 @@
+import { DASHBOARD } from "../strings";
+
 export type DashboardState =
   | "loading"
   | "empty"
@@ -8,6 +10,7 @@ export type DashboardState =
   | "revoked"
   | "no-ci"
   | "large";
+
 
 export type EvidenceGrade = "verified" | "inferred" | "broken";
 export type GraphNodeType = "requirement" | "document" | "code" | "test";
@@ -296,6 +299,36 @@ export function focusLocalGraph(data: GraphData, nodeId: string, depth = 1): Gra
   };
 }
 
+export interface HubNode {
+  degree: number;
+  node: GraphNode;
+}
+
+/**
+ * The most-connected nodes — the HUD's "start here" list (Phase 2A todo 7,
+ * REVIEW_EXTERNAL_PROJECTS G2). Ties break on id so the chip order is a
+ * property of the graph rather than of array order.
+ */
+export function topHubNodes(data: GraphData, limit = 5): HubNode[] {
+  const degrees = new Map<string, number>();
+  for (const node of data.nodes) degrees.set(node.id, 0);
+  for (const edge of data.edges) {
+    if (degrees.has(edge.source))
+      degrees.set(edge.source, (degrees.get(edge.source) as number) + 1);
+    if (degrees.has(edge.target))
+      degrees.set(edge.target, (degrees.get(edge.target) as number) + 1);
+  }
+  return data.nodes
+    .map((node) => ({ degree: degrees.get(node.id) ?? 0, node }))
+    .filter((entry) => entry.degree > 0)
+    .sort((left, right) =>
+      left.degree === right.degree
+        ? left.node.id.localeCompare(right.node.id)
+        : right.degree - left.degree,
+    )
+    .slice(0, limit);
+}
+
 export interface CanvasFramePlan {
   edgeSegments: readonly [number, number, number, number, EvidenceGrade, boolean][];
   nodePoints: readonly [number, number, EvidenceGrade, number][];
@@ -334,9 +367,7 @@ export function buildDashboardViewModel(
   const graph = state === "large" ? clusterGraph(source) : forceDirectedLayout(source);
   return {
     ciMessage:
-      state === "no-ci"
-        ? "No CI report for this commit — test links remain inferred."
-        : "CI evidence · 78 tests verified at bad0551",
+      state === "no-ci" ? DASHBOARD.ci.missing : DASHBOARD.ci.present,
     graph,
     isClustered: state === "large",
     metrics: { implementation: 84, tests: state === "no-ci" ? 0 : 71, tokenCost: 1840, unresolved: 4 },

@@ -3,29 +3,31 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { ACTION } from "../../apps/web/lib/strings/common";
+import { HARNESS } from "../../apps/web/lib/strings/harness";
+import { LIBRARY } from "../../apps/web/lib/strings/library";
+
 test("saves a harness skill, dedupes its digest, and browses exact provenance", async ({
   page,
 }) => {
   await page.goto("/harness");
 
   await expect(
-    page.getByRole("heading", { name: "Save what already works." }),
+    page.getByRole("heading", { name: HARNESS.title }),
   ).toBeVisible();
   await expect(page.getByText("specproof/drifted-demo")).toBeVisible();
   await expect(page.getByText("1".repeat(40))).toBeVisible();
 
-  const save = page.getByRole("button", { name: "Save to library" });
+  const save = page.getByRole("button", { name: HARNESS.card.save });
   await save.click();
-  await expect(page.getByText("Saved immutable snapshot.")).toBeVisible();
+  await expect(page.getByText(HARNESS.notices.saved)).toBeVisible();
   await save.click();
-  await expect(
-    page.getByText("Already saved — existing digest reused."),
-  ).toBeVisible();
+  await expect(page.getByText(HARNESS.notices.duplicate)).toBeVisible();
 
-  await page.getByRole("link", { name: "Browse library" }).click();
+  await page.getByRole("link", { name: HARNESS.card.browseLibrary }).click();
   await expect(page).toHaveURL(/\/library\?saved=1/);
   await expect(
-    page.getByRole("heading", { name: "Personal library" }),
+    page.getByRole("heading", { name: LIBRARY.hero.title }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Review auth" }),
@@ -40,15 +42,17 @@ test("saves a harness skill, dedupes its digest, and browses exact provenance", 
   await expect(
     page.getByRole("heading", { name: "Review auth" }),
   ).toBeVisible();
-  await page.getByLabel("Search snapshots").fill("authentication");
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByLabel(LIBRARY.filters.searchLabel).fill("authentication");
+  await page.getByRole("button", { name: ACTION.search }).click();
   await expect(page).toHaveURL(/query=authentication/);
   await expect(
     page.getByRole("heading", { name: "Review auth" }),
   ).toBeVisible();
 
-  await expect(page.getByText(/import into project/i)).toHaveCount(0);
-  await expect(page.getByText(/pull request/i)).toHaveCount(0);
+  await expect(
+    page.getByText(/import into project|프로젝트로 가져오기|프로젝트에 추가/i),
+  ).toHaveCount(0);
+  await expect(page.getByText(/pull request|풀 리퀘스트/i)).toHaveCount(0);
 
   const evidenceDirectory = path.resolve(
     ".omo/evidence/docshub-product-strategy",

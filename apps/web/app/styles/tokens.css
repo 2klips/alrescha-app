@@ -1,0 +1,169 @@
+/*
+ * Ink & Seal design tokens — ADR-009-3.
+ *
+ * THIS IS THE ONLY FILE IN THE APP ALLOWED TO CONTAIN LITERAL COLOR VALUES.
+ * Everything else (globals.css, components, the Pixi renderer) must read these
+ * custom properties. Enforced by tests/design-tokens.test.ts + the
+ * `arr/no-hardcoded-hex` ESLint rule.
+ *
+ * Dark is the default (`:root`). Light ("paper") is opt-in via
+ * `[data-theme="light"]` which the theme boot script stamps on <html> before
+ * hydration (see app/theme/theme-script.ts).
+ *
+ * Font metric overrides below are measured from the shipped woff2 files
+ * (head.unitsPerEm, hhea.ascender/descender/lineGap) — see
+ * .omo/evidence/phase2a/task-1.md for the measurement method.
+ */
+
+/* Pretendard Variable: unitsPerEm 2048, ascender 1950, descender -494, lineGap 0. */
+@font-face {
+  font-family: "Pretendard Fallback";
+  src:
+    local("Pretendard"), local("Malgun Gothic"), local("Apple SD Gothic Neo"),
+    local("Noto Sans KR"), local("Arial");
+  ascent-override: 95.215%;
+  descent-override: 24.121%;
+  line-gap-override: 0%;
+  size-adjust: 100%;
+  font-display: swap;
+}
+
+/* IBM Plex Mono: unitsPerEm 1000, ascender 1025, descender -275, lineGap 0. */
+@font-face {
+  font-family: "IBM Plex Mono Fallback";
+  src:
+    local("Consolas"), local("Menlo"), local("DejaVu Sans Mono"),
+    local("Courier New");
+  ascent-override: 102.5%;
+  descent-override: 27.5%;
+  line-gap-override: 0%;
+  size-adjust: 100%;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+
+  /* Typography */
+  --font-sans:
+    "Pretendard Variable", Pretendard, "Pretendard Fallback", system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+  --font-mono:
+    "IBM Plex Mono", "IBM Plex Mono Fallback", ui-monospace, SFMono-Regular,
+    Consolas, monospace;
+
+  /* Surfaces — ADR-009-3 dark */
+  --bg: #0b0e14;
+  --surface: #141926;
+  --surface-2: #1b2233;
+  --code-bg: #0f1420;
+  --line: #232b3d;
+  --line-strong: #35405a;
+
+  /* Text
+     `--faint` is the dimmest colour still allowed to carry text: WCAG 2.2 AA
+     (4.5:1) against every surface it lands on, including the `.highlighted`
+     code row. Its pre-Wave-4 value (#5a6478) measured 2.57:1 there — the
+     axe-core audit in tests/e2e/a11y-contrast.spec.ts is what raised it.
+     Ordering `text > muted > faint` still holds (5.00 vs 4.63 worst case). */
+  --text: #e8ecf4;
+  --muted: #8a94a8;
+  --faint: #848ea2;
+
+  /* Identity + status — ADR-009-3 values, used for fills, node colours,
+     borders, tints and (in dark) text. */
+  --brand: #ff5a45;
+  --verified: #3ddc97;
+  --inferred: #f5b84a;
+  --info: #6c9eff;
+
+  /* AA-safe small-text variants of the four status colours.
+     ADR-009-3 fixes the palette above and it is not relitigated here; in the
+     light ("paper") theme those exact values measure 3.2–4.4:1 on paper white,
+     which fails AA for the 9–11px mono badges that use them. So text keeps a
+     darkened sibling while every non-text use (graph nodes, dots, rings, tints,
+     borders) keeps the ADR value. In dark the base colours already clear AA, so
+     these are plain aliases. See OQ-009. */
+  --brand-text: var(--brand);
+  --verified-text: var(--verified);
+  --inferred-text: var(--inferred);
+  --info-text: var(--info);
+
+  /* Contrast pairs for filled controls */
+  --on-brand: #0b0e14;
+  --on-accent: #0b0e14;
+  --on-verified: #0b0e14;
+
+  /* Graph node type colours (ADR-009-3: doc=blue, requirement=vermilion,
+     code=verified green, test=amber) */
+  --node-doc: var(--info);
+  --node-requirement: var(--brand);
+  --node-code: var(--verified);
+  --node-test: var(--inferred);
+
+  /* Derived roles used across the app chrome. */
+  --accent: var(--info);
+  --danger: var(--brand);
+  --panel: color-mix(in srgb, var(--surface) 94%, transparent);
+  --panel-soft: color-mix(in srgb, var(--surface) 88%, transparent);
+  --shadow-color: #000000;
+  --panel-shadow: color-mix(in srgb, var(--shadow-color) 32%, transparent);
+  --tint-accent: color-mix(in srgb, var(--accent) 10%, transparent);
+  --tint-verified: color-mix(in srgb, var(--verified) 10%, transparent);
+  --tint-inferred: color-mix(in srgb, var(--inferred) 10%, transparent);
+  --tint-danger: color-mix(in srgb, var(--danger) 12%, transparent);
+
+  /* Legacy aliases kept so existing rules stay themed while the screen-level
+     restyle lands in Phase 2A todos 7–8. */
+  --ink: var(--text);
+  --panel-strong: var(--surface);
+  --ok: var(--verified);
+  --warn: var(--inferred);
+  --broken: var(--danger);
+
+  /* Text-safe counterparts of the derived roles above. */
+  --accent-text: var(--info-text);
+  --danger-text: var(--brand-text);
+  --ok-text: var(--verified-text);
+  --warn-text: var(--inferred-text);
+  --broken-text: var(--danger-text);
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* Surfaces — ADR-009-3 light ("paper") */
+  --bg: #faf7f1;
+  --surface: #ffffff;
+  --surface-2: #f3efe7;
+  --code-bg: #f3efe7;
+  --line: #e3ddd0;
+  --line-strong: #cfc6b4;
+
+  /* Text — `--faint` raised from #8a8f9e (2.82:1 on --surface-2) to clear AA. */
+  --text: #20242e;
+  --muted: #5b6272;
+  --faint: #666c7b;
+
+  /* Identity + status — ADR-009-3 light ("paper") values, unchanged. */
+  --brand: #d6402e;
+  --verified: #1e8a5e;
+  --inferred: #b07a14;
+  --info: #3b6fdb;
+
+  /* AA-safe small-text variants (worst case measured against #ffffff,
+     #faf7f1, #f3efe7 and the #edf2fc code-highlight row):
+       brand    4.59:1   verified 4.65:1
+       inferred 4.62:1   info     4.68:1 */
+  --brand-text: #c43a2b;
+  --verified-text: #177a52;
+  --inferred-text: #8f6310;
+  --info-text: #3766ca;
+
+  --on-brand: #ffffff;
+  --on-accent: #ffffff;
+  --on-verified: #ffffff;
+
+  --shadow-color: #20242e;
+  --panel-shadow: color-mix(in srgb, var(--shadow-color) 14%, transparent);
+}

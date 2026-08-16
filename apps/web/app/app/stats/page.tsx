@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { STATS } from "../../../lib/strings";
 import { getCurrentUserId } from "../../../lib/auth/current-user";
 import { createClient } from "../../../lib/supabase/server";
 import { loadWorkspacePilotReport } from "../../../lib/stats/pilot-report";
@@ -17,13 +18,9 @@ export default async function PilotStatsPage() {
   return (
     <main className="mcp-settings-shell pilot-stats-shell">
       <header>
-        <div className="eyebrow">Opt-in · measured, never invented</div>
-        <h1>Pilot stats</h1>
-        <p>
-          Receipt-chain movement, deterministic context-token estimates, scan
-          duration, and MCP pack requests. Every delta requires enough observed
-          evidence.
-        </p>
+        <div className="eyebrow">{STATS.page.eyebrow}</div>
+        <h1>{STATS.page.title}</h1>
+        <p>{STATS.page.body}</p>
       </header>
       <PilotStatsDashboard report={report} />
     </main>

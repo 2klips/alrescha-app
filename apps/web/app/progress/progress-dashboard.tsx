@@ -10,34 +10,20 @@ import {
   Link2,
 } from "lucide-react";
 
+import { PROGRESS } from "../../lib/strings";
+
 interface ProgressDashboardViewProps {
   readonly report: ProgressDashboard;
 }
 
 const STATUS_COPY = {
-  blocked: { icon: AlertOctagon, label: "Blocked" },
-  done: { icon: CheckCircle2, label: "Done" },
-  "in-progress": { icon: Activity, label: "In progress" },
-  open: { icon: Circle, label: "Open" },
+  blocked: { icon: AlertOctagon, label: PROGRESS.todoBoard.statuses.blocked },
+  done: { icon: CheckCircle2, label: PROGRESS.todoBoard.statuses.done },
+  "in-progress": { icon: Activity, label: PROGRESS.todoBoard.statuses["in-progress"] },
+  open: { icon: Circle, label: PROGRESS.todoBoard.statuses.open },
 } as const;
 
-const STATE_COPY = {
-  empty: {
-    description:
-      "Scan a TODO/progress document or send one compact log_progress event.",
-    label: "No tracked progress yet",
-  },
-  full: {
-    description:
-      "Every tracked requirement and todo has source-backed completion evidence.",
-    label: "Fully traced",
-  },
-  partial: {
-    description:
-      "Completion remains open or blocked. Counts below come only from stored sources.",
-    label: "Partial evidence",
-  },
-} as const;
+const STATE_COPY = PROGRESS.states;
 
 function sourceLabel(todo: ProgressTodo): string {
   return todo.source.kind === "document"
@@ -63,18 +49,16 @@ function Metric({
       <div>
         <span>{title}</span>
         <strong>
-          {metric.percent === null ? "Not measured" : `${metric.percent}%`}
+          {metric.percent === null ? PROGRESS.metrics.notMeasured : `${metric.percent}%`}
         </strong>
       </div>
       <progress
-        aria-label={`${title}: ${metric.percent === null ? "not measured" : `${metric.percent}%`}`}
+        aria-label={`${title}: ${metric.percent === null ? PROGRESS.metrics.notMeasured : `${metric.percent}%`}`}
         max={metric.total || 1}
         value={metric.completed}
       />
       <footer>
-        <span>
-          {metric.completed} / {metric.total} complete
-        </span>
+        <span>{PROGRESS.metrics.completed(metric.completed, metric.total)}</span>
         <small>
           <Link2 size={11} />
           {metric.sourceLabel}
@@ -96,36 +80,36 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
           <FileCheck2 size={22} />
         </div>
         <div>
-          <p className="progress-kicker">Repository progress ledger</p>
+          <p className="progress-kicker">{PROGRESS.kicker}</p>
           <h1 id="progress-title">{state.label}</h1>
           <p>{state.description}</p>
         </div>
         <span className="source-contract">
           <span />
-          source-backed only
+          {PROGRESS.sourceContract}
         </span>
       </section>
 
-      <section className="progress-metrics" aria-label="Coverage metrics">
+      <section className="progress-metrics" aria-label={PROGRESS.ariaMetrics}>
         <Metric
           metric={report.metrics.requirements}
-          title="Requirement coverage"
+          title={PROGRESS.metrics.requirements}
         />
-        <Metric metric={report.metrics.todos} title="Todo completion" />
+        <Metric metric={report.metrics.todos} title={PROGRESS.metrics.todos} />
       </section>
 
       <section className="progress-section" aria-labelledby="todo-board-title">
         <header className="progress-section-heading">
           <div>
-            <span>Current state</span>
-            <h2 id="todo-board-title">Todo board</h2>
+            <span>{PROGRESS.todoBoard.kicker}</span>
+            <h2 id="todo-board-title">{PROGRESS.todoBoard.title}</h2>
           </div>
           <small>
             {report.columns.reduce(
               (count, column) => count + column.items.length,
               0,
-            )}{" "}
-            sourced items
+            )}
+            {PROGRESS.todoBoard.itemsSuffix}
           </small>
         </header>
         <div className="todo-board">
@@ -144,7 +128,7 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
                 </header>
                 <div className="todo-stack">
                   {column.items.length === 0 ? (
-                    <p className="todo-empty">No sourced items</p>
+                    <p className="todo-empty">{PROGRESS.todoBoard.empty}</p>
                   ) : null}
                   {column.items.map((todo) => (
                     <article className="todo-card" key={todo.id}>
@@ -173,15 +157,15 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
       >
         <header className="progress-section-heading">
           <div>
-            <span>Newest first</span>
-            <h2 id="timeline-title">Recent work</h2>
+            <span>{PROGRESS.timeline.kicker}</span>
+            <h2 id="timeline-title">{PROGRESS.timeline.title}</h2>
           </div>
-          <small>{report.timeline.length} verified events</small>
+          <small>{PROGRESS.timeline.eventCount(report.timeline.length)}</small>
         </header>
         {report.timeline.length === 0 ? (
           <div className="timeline-empty">
             <Clock3 size={18} />
-            <span>No progress events, commits, or resolved findings.</span>
+            <span>{PROGRESS.timeline.empty}</span>
           </div>
         ) : (
           <ol className="progress-timeline">

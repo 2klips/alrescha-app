@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
+import { SETTINGS } from "../../../../lib/strings";
 import { McpTokenManager } from "./token-manager";
 
 describe("MCP token settings", () => {
@@ -37,13 +38,15 @@ describe("MCP token settings", () => {
       }),
     );
 
-    expect(html).toContain("Issue access token");
+    expect(html).toContain(SETTINGS.mcp.tokens.issueTitle);
     expect(html).toContain('name="scopes"');
     expect(html).toContain('value="mcp:read"');
     expect(html).toContain('value="mcp:write"');
     expect(html).toContain("sp_mcp_demo…");
-    expect(html).toContain("Last used: 2026-08-11 10:01 UTC");
-    expect(html).toContain("Revoked");
+    expect(html).toContain(
+      SETTINGS.mcp.tokens.lastUsed(SETTINGS.mcp.tokens.withUtc("2026-08-11 10:01")),
+    );
+    expect(html).toContain(SETTINGS.mcp.tokens.revoked);
     expect(html).not.toContain("tokenHash");
     expect(html).not.toContain("sp_mcp_demo_secret");
   });

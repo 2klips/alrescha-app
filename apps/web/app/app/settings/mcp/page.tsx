@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { SupabaseMcpStore } from "../../../../lib/mcp/supabase-store";
+import { SETTINGS } from "../../../../lib/strings";
 import { createClient } from "../../../../lib/supabase/server";
 import { ContextTools } from "./context-tools";
 import {
@@ -24,7 +25,7 @@ export default async function McpSettingsPage() {
     .limit(1)
     .single();
   if (workspace.error || !workspace.data)
-    throw new Error("Personal workspace is unavailable.");
+    throw new Error(SETTINGS.errors.workspaceUnavailable);
   const tokens = await new SupabaseMcpStore(client).listAccessTokens({
     actorUserId: userId,
     workspaceId: workspace.data.id,
@@ -33,13 +34,12 @@ export default async function McpSettingsPage() {
   return (
     <main className="mcp-settings-shell">
       <header>
-        <div className="eyebrow">Hosted MCP · 2026-07-28</div>
-        <h1>MCP access</h1>
+        <div className="eyebrow">{SETTINGS.mcp.eyebrow}</div>
+        <h1>{SETTINGS.mcp.title}</h1>
         <p>
-          Connect a coding agent to <code>/api/mcp</code> with a scoped bearer
-          token. Compose task-specific context on demand. Repository changes are
-          restricted to reviewed advisory pull requests; sessions, Sampling,
-          Roots, and Logging are unavailable.
+          {SETTINGS.mcp.introPrefix}
+          <code>{SETTINGS.mcp.apiPath}</code>
+          {SETTINGS.mcp.introSuffix}
         </p>
       </header>
       <McpTokenManager tokens={tokens} />

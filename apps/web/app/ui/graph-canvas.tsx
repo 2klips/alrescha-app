@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { GraphData, GraphEdge, GraphNode } from "../../lib/dashboard/graph-model";
+import { DASHBOARD } from "../../lib/strings";
 import type { PulsePhase } from "../../lib/realtime/access-events";
 
 interface GraphCanvasProps {
@@ -21,10 +22,12 @@ interface Camera {
   y: number;
 }
 
+/* Evidence-grade colours come from the Ink & Seal tokens (app/styles/tokens.css)
+   so the SVG renderer and the DOM chrome stay on one palette in both themes. */
 const NODE_COLORS = {
-  broken: "#ff5a3c",
-  inferred: "#5f35c9",
-  verified: "#2457f5",
+  broken: "var(--danger)",
+  inferred: "var(--inferred)",
+  verified: "var(--verified)",
 } as const;
 
 const TYPE_GLYPHS = {
@@ -79,7 +82,7 @@ export function GraphCanvas({
   return (
     <div className="graph-canvas-wrap" data-canvas-nodes={data.nodes.length}>
       <svg
-        aria-label={`Evidence graph with ${data.nodes.length} visible nodes`}
+        aria-label={DASHBOARD.canvasLabel(data.nodes.length)}
         className="graph-canvas"
         data-testid="evidence-graph-canvas"
         onPointerDown={(event) => {
@@ -129,7 +132,7 @@ export function GraphCanvas({
         role="img"
         viewBox="0 0 1000 700"
       >
-        <title>Evidence graph connecting requirements, documents, code, and verified tests</title>
+        <title>{DASHBOARD.canvasTitle}</title>
         <g transform={`translate(${500 + camera.x} ${350 + camera.y}) scale(${camera.scale})`}>
           {mutableData.edges.map((edge) => {
             const source = nodesById.get(edge.source);
@@ -178,7 +181,7 @@ export function GraphCanvas({
                 {selected ? <circle className="node-halo" cx="0" cy="0" r={radius + 12} /> : null}
                 {node.findingCount > 0 ? <circle className="finding-ring" cx="0" cy="0" r={radius + 5} /> : null}
                 <circle className="node-core" cx="0" cy="0" r={radius} style={{ stroke: color }} />
-                <text className="node-glyph" fill={color} textAnchor="middle" x="0" y="3">
+                <text className="node-glyph" style={{ fill: color }} textAnchor="middle" x="0" y="3">
                   {node.clusterCount ?? TYPE_GLYPHS[node.type]}
                 </text>
                 <text className="node-label" x={radius + 9} y="-3">{node.label.length > 25 ? `${node.label.slice(0, 24)}…` : node.label}</text>

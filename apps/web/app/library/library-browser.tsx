@@ -8,6 +8,8 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { ACTION, LIBRARY } from "../../lib/strings";
+
 type DeleteAction = string | ((formData: FormData) => void | Promise<void>);
 
 function filterHref(
@@ -56,29 +58,28 @@ export function LibraryBrowser({
           <Archive aria-hidden="true" size={22} />
         </div>
         <div>
-          <p>Workspace-wide · immutable snapshots</p>
-          <h1>Personal library</h1>
-          <span>
-            Saved instructions stay pinned to exact source commits, even when
-            the repository changes later.
-          </span>
+          <p>{LIBRARY.hero.kicker}</p>
+          <h1>{LIBRARY.hero.title}</h1>
+          <span>{LIBRARY.hero.lead}</span>
         </div>
-        <strong>{items.length.toString().padStart(2, "0")} saved</strong>
+        <strong>
+          {LIBRARY.hero.saved(items.length.toString().padStart(2, "0"))}
+        </strong>
       </header>
 
       <div className="library-layout">
-        <aside className="library-filters" aria-label="Library filters">
+        <aside className="library-filters" aria-label={LIBRARY.filters.aria}>
           <form action={basePath} method="get">
             <label htmlFor="library-query">
               <Search aria-hidden="true" size={14} />
-              Search snapshots
+              {LIBRARY.filters.searchLabel}
             </label>
             <div>
               <input
                 defaultValue={query}
                 id="library-query"
                 name="query"
-                placeholder="name, source, content"
+                placeholder={LIBRARY.filters.searchPlaceholder}
                 type="search"
               />
               {selectedTag ? (
@@ -87,20 +88,20 @@ export function LibraryBrowser({
               {Object.entries(persistentParams).map(([key, value]) => (
                 <input key={key} name={key} type="hidden" value={value} />
               ))}
-              <button type="submit">Search</button>
+              <button type="submit">{ACTION.search}</button>
             </div>
           </form>
 
-          <nav aria-label="Filter by tag">
+          <nav aria-label={LIBRARY.filters.tagAria}>
             <span>
               <Tag aria-hidden="true" size={13} />
-              Tags
+              {LIBRARY.filters.tags}
             </span>
             <a
               aria-current={selectedTag === null ? "page" : undefined}
               href={filterHref(basePath, query, null, persistentParams)}
             >
-              All <small>{items.length}</small>
+              {LIBRARY.filters.all} <small>{items.length}</small>
             </a>
             {allTags.map((tag) => (
               <a
@@ -123,22 +124,22 @@ export function LibraryBrowser({
         >
           <header>
             <div>
-              <span>Snapshot ledger</span>
+              <span>{LIBRARY.results.ledger}</span>
               <h2 id="library-results-title">
-                {selectedTag ? `#${selectedTag}` : "All saved assets"}
+                {selectedTag
+                  ? LIBRARY.results.tagHeading(selectedTag)
+                  : LIBRARY.results.allAssets}
               </h2>
             </div>
-            <small>
-              {filtered.length} result{filtered.length === 1 ? "" : "s"}
-            </small>
+            <small>{LIBRARY.results.count(filtered.length)}</small>
           </header>
 
           {filtered.length === 0 ? (
             <div className="library-empty">
               <Archive aria-hidden="true" size={20} />
-              <h3>No matching snapshots</h3>
-              <p>Clear the filters or save an instruction from the harness.</p>
-              <a href="/harness">Open harness</a>
+              <h3>{LIBRARY.empty.title}</h3>
+              <p>{LIBRARY.empty.body}</p>
+              <a href="/harness">{LIBRARY.empty.openHarness}</a>
             </div>
           ) : (
             <div className="library-stack">
@@ -146,7 +147,7 @@ export function LibraryBrowser({
                 <article className="library-card" key={item.id}>
                   <div
                     className="library-digest-rail"
-                    aria-label={`sha256: ${item.digest}`}
+                    aria-label={LIBRARY.card.digestAria(item.digest)}
                   >
                     <Fingerprint aria-hidden="true" size={13} />
                     <code>sha256:{item.digest}</code>
@@ -185,14 +186,14 @@ export function LibraryBrowser({
                       ))}
                     </div>
                     <details className="library-snapshot">
-                      <summary>View immutable snapshot</summary>
+                      <summary>{LIBRARY.card.viewSnapshot}</summary>
                       <pre>{item.content}</pre>
                     </details>
                     <form action={deleteAction} className="library-delete-form">
                       <input name="itemId" type="hidden" value={item.id} />
                       <button type="submit">
                         <Trash2 aria-hidden="true" size={13} />
-                        Delete snapshot
+                        {LIBRARY.card.deleteSnapshot}
                       </button>
                     </form>
                   </div>

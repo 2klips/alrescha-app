@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentUserId } from "../../../../../lib/auth/current-user";
+import { SETTINGS } from "../../../../../lib/strings";
 import { createClient } from "../../../../../lib/supabase/server";
 
 export default async function SelectRepositoryPage({
@@ -26,13 +27,9 @@ export default async function SelectRepositoryPage({
   return (
     <main>
       <section className="shell" aria-labelledby="repository-title">
-        <div className="eyebrow">Repository selection</div>
-        <h1 id="repository-title">Choose the first repository.</h1>
-        <p>
-          After selection, the transient installation token is scoped to this
-          repository and is never stored. Private source is fetched only while
-          a scan runs; metadata-only evidence is retained.
-        </p>
+        <div className="eyebrow">{SETTINGS.connect.repositories.eyebrow}</div>
+        <h1 id="repository-title">{SETTINGS.connect.repositories.title}</h1>
+        <p>{SETTINGS.connect.repositories.intro}</p>
         {result.data?.map((repository) => (
           <form action="/api/github/repositories" method="post" key={repository.github_repository_id}>
             <input name="installationId" type="hidden" value={repository.installation_id} />
@@ -41,10 +38,7 @@ export default async function SelectRepositoryPage({
           </form>
         ))}
         {!result.data?.length ? (
-          <p role="status">
-            No repositories are available. Reinstall the GitHub App or try the
-            seeded demo from onboarding.
-          </p>
+          <p role="status">{SETTINGS.connect.repositories.empty}</p>
         ) : null}
       </section>
     </main>

@@ -3,22 +3,24 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { DASHBOARD, ONBOARDING } from "../../apps/web/lib/strings";
+
 test("fresh user completes the seeded demo repository journey", async ({ page }) => {
   await page.goto("/onboarding");
-  await page.getByRole("button", { name: "Try seeded demo" }).click();
+  await page.getByRole("button", { name: ONBOARDING.identity.demoCta }).click();
   await expect(page.getByText("fixtures/drifted-demo")).toBeVisible();
   await page.getByRole("button", { name: /specproof\/drifted-demo/ }).click();
-  await expect(page.getByRole("heading", { name: "Building proof spine" })).toBeVisible();
-  await page.getByRole("button", { name: "Open evidence graph" }).click();
+  await expect(page.getByRole("heading", { name: ONBOARDING.scan.title })).toBeVisible();
+  await page.getByRole("button", { name: ONBOARDING.scan.cta }).click();
   await expect(page.getByRole("heading", { level: 1, name: "specproof/drifted-demo" })).toBeVisible();
-  await expect(page.getByTestId("evidence-graph-canvas")).toBeVisible();
+  await expect(page.getByTestId("brain-map-stage")).toBeVisible();
 });
 
 test("revoked GitHub installation preserves evidence and gives recovery guidance", async ({ page }) => {
   await page.goto("/?state=revoked");
-  await expect(page.getByRole("heading", { name: "GitHub App disconnected" })).toBeVisible();
-  await expect(page.getByText("Stored evidence remains read-only")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Reconnect GitHub App" })).toHaveAttribute(
+  await expect(page.getByRole("heading", { name: DASHBOARD.states.revoked.title })).toBeVisible();
+  await expect(page.getByText(DASHBOARD.states.revoked.body)).toBeVisible();
+  await expect(page.getByRole("link", { name: DASHBOARD.states.revoked.reconnect })).toHaveAttribute(
     "href",
     "/app/connect/github",
   );
@@ -29,6 +31,6 @@ test("revoked GitHub installation preserves evidence and gives recovery guidance
     fullPage: true,
     path: path.join(evidenceDirectory, "task-19.png"),
   });
-  await page.getByRole("button", { name: "View stored evidence" }).click();
-  await expect(page.getByTestId("evidence-graph-canvas")).toBeVisible();
+  await page.getByRole("button", { name: DASHBOARD.states.revoked.viewStored }).click();
+  await expect(page.getByTestId("brain-map-stage")).toBeVisible();
 });

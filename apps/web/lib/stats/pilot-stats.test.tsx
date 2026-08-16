@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 
 import { PilotStatsDashboard } from "../../app/app/stats/pilot-stats-dashboard";
+import { STATS } from "../strings";
 import { createPilotStatsExportResponse } from "./export";
 import { buildPilotStatsReport } from "./pilot-report";
 
@@ -149,11 +150,11 @@ describe("pilot stats dashboard", () => {
     });
     const html = renderToStaticMarkup(createElement(PilotStatsDashboard, { report }));
 
-    expect(html).toContain("3 receipts");
-    expect(html).toContain("5 resolved");
-    expect(html).toContain("71.8% lower");
-    expect(html).toContain("4.0 s average");
-    expect(html).toContain("2 MCP pack requests");
+    expect(html).toContain(STATS.toolbar.receiptCount(3));
+    expect(html).toContain(STATS.findings.resolvedOpened(5, 8));
+    expect(html).toContain(STATS.context.reduction(71.8));
+    expect(html).toContain(STATS.scan.average(4_000));
+    expect(html).toContain(STATS.context.packRequests(2));
     expect(html).toContain("deterministic per-document estimates");
     expect(html).toContain('href="/api/stats/export"');
     expect(html).toContain(
@@ -165,11 +166,11 @@ describe("pilot stats dashboard", () => {
     const report = computePilotStats({ enabled: false, packs: [], receipts: [], runs: [] });
     const html = renderToStaticMarkup(createElement(PilotStatsDashboard, { report }));
 
-    expect(html).toContain("Pilot measurement is off");
-    expect(html).toContain("First-party workspace data only");
-    expect(html).toContain("No data is sent to third parties");
-    expect(html).toContain("Enable pilot measurement");
-    expect(html).not.toContain("Export JSON");
+    expect(html).toContain(STATS.consent.title);
+    expect(html).toContain(STATS.consent.scope);
+    expect(html).toContain(STATS.consent.noThirdParty);
+    expect(html).toContain(STATS.consent.enable);
+    expect(html).not.toContain(STATS.toolbar.export);
   });
 
   test("renders insufficient evidence for a single receipt without a fake delta", () => {
@@ -183,9 +184,9 @@ describe("pilot stats dashboard", () => {
     });
     const html = renderToStaticMarkup(createElement(PilotStatsDashboard, { report }));
 
-    expect(html).toContain("Not enough evidence");
-    expect(html).toContain("1 receipt recorded");
-    expect(html).toContain("At least 2 receipts");
+    expect(html).toContain(STATS.insufficient.title);
+    expect(html).toContain(STATS.insufficient.receiptsRecorded(1));
+    expect(html).toContain("Receipt 2건");
     expect(html).not.toContain("0% improvement");
   });
 });

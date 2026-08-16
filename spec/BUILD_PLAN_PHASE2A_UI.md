@@ -59,52 +59,52 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
 ## Todos
 > Implementation + Test = ONE todo. One conventional commit per todo. Evidence under `.omo/evidence/phase2a/task-N.*`.
 
-- [ ] 1. Design tokens, fonts, and theme infrastructure
+- [x] 1. Design tokens, fonts, and theme infrastructure
   Create the single tokens stylesheet with the exact ADR-009-3 palette as CSS variables (semantic names: `--bg`, `--surface`, `--line`, `--text`, `--muted`, `--brand`, `--verified`, `--inferred`, `--info`, `--node-doc/req/code/test`), dark as `:root` default and light via `[data-theme="light"]`; self-host Pretendard Variable (Korean subset) + IBM Plex Mono with `next/font/local`; export a typed TS accessor for the Pixi renderer reading the same variables at runtime. Must not leave any `#hex` outside the tokens file (add the lint rule now, allowlist only tokens.css + generated assets).
   Acceptance: lint rule fails on a seeded violation fixture and passes on the codebase; both themes produce defined values for every semantic token (unit test walks the token list); fonts load without layout shift (font-display swap + size-adjust documented).
   Commit: feat(ui): add ink-and-seal tokens, fonts, and theme base
 
-- [ ] 2. Theme toggle and persistence
+- [x] 2. Theme toggle and persistence
   Header toggle (dark default; first visit honors prefers-color-scheme, then persisted in localStorage); no flash-of-wrong-theme (inline script sets `data-theme` before hydration); all shared primitives (buttons, chips, cards, tables, banners, badges, code snippets) restyled from tokens in both themes.
   Acceptance: Playwright toggles theme on dashboard/findings/receipts and asserts token-derived computed styles + persistence across reload; no-flash verified via init-script presence test.
   Commit: feat(ui): theme toggle with persistence
 
-- [ ] 3. Korean-first string centralization
+- [x] 3. Korean-first string centralization
   Move user-facing strings per app area into typed string modules; sweep to Korean-first copy (conventional English terms stay English: Dashboard, Graph, Findings, Receipt, Data Brain, verified/inferred, MCP); keep existing meaning — this is a copy/i18n-structure task, not a rewrite of semantics.
   Acceptance: a test enumerates JSX text nodes (or lint rule) to catch stray hardcoded user-facing literals outside string modules on the reworked screens; snapshot review of key screens' copy committed as evidence.
   Commit: refactor(ui): centralize korean-first strings
 
-- [ ] 4. Graph engine core: worker simulation + Pixi renderer
+- [x] 4. Graph engine core: worker simulation + Pixi renderer
   Implement graphology model + d3-force in a Web Worker (configurable center/repel/link forces + link distance; positions posted as transferable Float32Array at ~30Hz, interpolated on main thread); Pixi v8 stage rendering nodes (type-colored via tokens accessor), edges, selection; `dynamic(ssr:false)` mount; full disposal on unmount (worker terminate + Pixi destroy + context release). React Flow removed from the brain-map route.
   Acceptance: unit tests for worker message protocol and force-config application; mount/unmount ×10 leaves no WebGL context-lost errors and no detached worker (test hook counters); 500-node fixture renders with stable positions (deterministic seed for tests).
   Commit: feat(graph): worker-simulated pixi graph engine
 
-- [ ] 5. LOD, labels, clustering, and force panel
+- [x] 5. LOD, labels, clustering, and force panel
   3-level zoom LOD per research spec (Far/Mid/Near as defined in Scope); grid-cell label selection (degree-weighted, one per cell) with text-fade-threshold slider; force parameter HUD panel (collapsible, persisted); community-detection supernode collapse (louvain, folder fallback) at Far zoom for >3,000-node graphs (visual aggregation only, expand-on-click, no re-layout).
   Acceptance: unit tests for grid label selection determinism and LOD thresholds; Playwright zooms through the 3 levels asserting label-count bands and badge visibility at Near; panel values persist across reload; a 3,500-node synthetic fixture shows supernodes at Far and raw nodes when expanded.
   Commit: feat(graph): lod labels clustering and force panel
 
-- [ ] 6. Neuron glow shader layer
+- [x] 6. Neuron glow shader layer
   Rebuild glow on per-node `glowIntensity` attributes with time-uniform pulse (shader or additive glow sprites — document choice), ~1.5s exponential decay, afterglow tint, additive edge propagation for touched edges; 100ms event coalescing; drift overlays (red rings, red dashed broken-evidence edges) rendered in the same pass; realtime feed wiring unchanged.
   Acceptance: deterministic test hook injects a scripted event stream — assertions on intensity state machine (pulse→decay→afterglow), coalescing under a 50-events/s burst (single batched update per window, no re-layout calls), and cross-workspace isolation intact (existing realtime tests stay green).
   Commit: feat(graph): shader neuron glow and drift overlays
 
-- [ ] 7. Dashboard shell and HUD restyle
+- [x] 7. Dashboard shell and HUD restyle
   Full-bleed graph with Ink & Seal HUD: repo/metric chips, **hub-nodes Top-5 chip (most-connected nodes, click-to-focus — G2)**, live activity feed (click-to-focus kept), legend, CI banner, empty/scanning states — all tokenized, both themes; onboarding-in-graph-area animation restyled.
   Acceptance: existing dashboard tests green with updated selectors; Playwright screenshot evidence for dark and light; every HUD number still click-throughs to its evidence surface (navigation tests).
   Commit: feat(dashboard): ink-and-seal hud restyle
 
-- [ ] 8. Remaining screens restyle
+- [x] 8. Remaining screens restyle
   Findings (+detail drawer), harness, evidence detail graph (tokens-themed; note renderer choice), receipts (in-toto viewer), progress (todo board + timeline), library, settings (mcp/ai/privacy), stats, auth, not-found — restyled to tokens in both themes, Korean-first strings from todo 3; verified/inferred badges use the semantic tokens everywhere.
   Acceptance: existing feature tests green; Playwright walks each screen in both themes without unthemed-color lint violations; evidence screenshots per screen.
   Commit: feat(ui): restyle all screens to ink-and-seal
 
-- [ ] 9. Performance and regression verification
+- [x] 9. Performance and regression verification
   Perf smoke: 500-node fixture frame budget (document measurement method; p95 simulated frame < 16.7ms), graph-route bundle size budget (<450KB gz or documented exception with follow-up); full vitest suite + full Playwright suite green; axe-core contrast checks on dashboard/findings in both themes (AA for text on bg/surface).
   Acceptance: perf + bundle reports committed as evidence; all suites green; contrast report shows no AA failures for standard text.
   Commit: test(ui): perf bundle and a11y gates
 
-- [ ] 10. Handoff artifacts
+- [x] 10. Handoff artifacts
   `docs/design-tokens.md` (final token table for the marketing-site restyle), updated screenshots in README, CHANGELOG entry, evidence index for this phase.
   Acceptance: docs build/lint green; README shows current dark-theme dashboard screenshot.
   Commit: docs(ui): phase 2a handoff artifacts

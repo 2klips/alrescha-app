@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
+import { SETTINGS } from "../../../../lib/strings";
 import { PrivacyBoundary } from "./privacy-boundary";
 
 export default async function PrivacySettingsPage() {
@@ -9,12 +10,9 @@ export default async function PrivacySettingsPage() {
   return (
     <main className="mcp-settings-shell">
       <header>
-        <div className="eyebrow">Security · privacy · retention</div>
-        <h1>Privacy &amp; data boundary</h1>
-        <p>
-          Exact permissions, persistence, secret handling, retention, and
-          credit behavior for a pilot workspace.
-        </p>
+        <div className="eyebrow">{SETTINGS.privacy.eyebrow}</div>
+        <h1>{SETTINGS.privacy.title}</h1>
+        <p>{SETTINGS.privacy.intro}</p>
       </header>
       <PrivacyBoundary />
     </main>
