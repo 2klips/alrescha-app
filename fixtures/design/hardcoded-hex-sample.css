@@ -1,0 +1,11 @@
+/*
+ * Seeded violation fixture for the Phase 2A hardcoded-colour gate.
+ * This file is intentionally NOT tokenized: tests/design-tokens.test.ts scans it
+ * to prove the scanner actually fails when a raw colour sneaks into a stylesheet.
+ * It is never imported by the app.
+ */
+.seeded-violation {
+  background: #123456;
+  border: 1px solid var(--line);
+  color: #fff;
+}

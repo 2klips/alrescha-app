@@ -59,7 +59,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
 ## Todos
 > Implementation + Test = ONE todo. One conventional commit per todo. Evidence under `.omo/evidence/phase2a/task-N.*`.
 
-- [ ] 1. Design tokens, fonts, and theme infrastructure
+- [x] 1. Design tokens, fonts, and theme infrastructure
   Create the single tokens stylesheet with the exact ADR-009-3 palette as CSS variables (semantic names: `--bg`, `--surface`, `--line`, `--text`, `--muted`, `--brand`, `--verified`, `--inferred`, `--info`, `--node-doc/req/code/test`), dark as `:root` default and light via `[data-theme="light"]`; self-host Pretendard Variable (Korean subset) + IBM Plex Mono with `next/font/local`; export a typed TS accessor for the Pixi renderer reading the same variables at runtime. Must not leave any `#hex` outside the tokens file (add the lint rule now, allowlist only tokens.css + generated assets).
   Acceptance: lint rule fails on a seeded violation fixture and passes on the codebase; both themes produce defined values for every semantic token (unit test walks the token list); fonts load without layout shift (font-display swap + size-adjust documented).
   Commit: feat(ui): add ink-and-seal tokens, fonts, and theme base

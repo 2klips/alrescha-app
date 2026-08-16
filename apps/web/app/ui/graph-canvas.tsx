@@ -21,10 +21,12 @@ interface Camera {
   y: number;
 }
 
+/* Evidence-grade colours come from the Ink & Seal tokens (app/styles/tokens.css)
+   so the SVG renderer and the DOM chrome stay on one palette in both themes. */
 const NODE_COLORS = {
-  broken: "#ff5a3c",
-  inferred: "#5f35c9",
-  verified: "#2457f5",
+  broken: "var(--danger)",
+  inferred: "var(--inferred)",
+  verified: "var(--verified)",
 } as const;
 
 const TYPE_GLYPHS = {
@@ -178,7 +180,7 @@ export function GraphCanvas({
                 {selected ? <circle className="node-halo" cx="0" cy="0" r={radius + 12} /> : null}
                 {node.findingCount > 0 ? <circle className="finding-ring" cx="0" cy="0" r={radius + 5} /> : null}
                 <circle className="node-core" cx="0" cy="0" r={radius} style={{ stroke: color }} />
-                <text className="node-glyph" fill={color} textAnchor="middle" x="0" y="3">
+                <text className="node-glyph" style={{ fill: color }} textAnchor="middle" x="0" y="3">
                   {node.clusterCount ?? TYPE_GLYPHS[node.type]}
                 </text>
                 <text className="node-label" x={radius + 9} y="-3">{node.label.length > 25 ? `${node.label.slice(0, 24)}…` : node.label}</text>
