@@ -106,3 +106,20 @@
 - **남긴 것 (의도적):** ⑶ `spec/`·`docs/adr/`·`docs/reports/`·`benchmarks/`·`CHANGELOG.md`·`.omo/`는 **역사 기록**이므로 손대지 않았다 (`spec/IMPLEMENTATION_GUIDE.md` 제목 포함). README 3행의 "Arr(구 SpecProof)"는 개명 사실을 알리는 문장이지 잔여 네이밍이 아니다 — 푸터는 이미 "© 2026 Arr". ⑷ `.omo/evidence/docshub-product-strategy/` 디렉터리명도 역사 기록이라 유지. `scripts/verify-plan-coverage.ts`의 `<!-- specproof-coverage:start/end -->` 마커는 짝이 되는 마커가 `.omo/plans/docshub-product-strategy.md`(역사 기록)에 있어 함께 바꿀 수 없으므로 그대로 뒀다 — **이 하나가 유일한 잔여 `specproof` 문자열이다.**
 - **판단이 필요한 잔여 항목:** MCP 설정 화면의 대체 호스트명을 `https://app.arr.app`·`https://mcp.arr.app`으로, receipt `predicateType`을 `https://arr.dev/receipt/v1`로 바꿨다. 둘 다 **소유가 확인되지 않은 자리표시자 도메인**이다(이전 `specproof.app`/`specproof.dev`도 마찬가지였다). 실제 도메인이 정해지면 다시 손봐야 한다.
 - 게이트: lint·typecheck 무결점, vitest **416/416**, playwright **49/49**, `pnpm --filter @arr/web build` 성공. 가드레일 재검증 결과는 `.omo/evidence/naming-cleanup.md`.
+
+## OQ-011 — 벤치마크 v3: 신뢰구간 게이트가 v2 결과를 뒤집는다 (기획 판단 필요)
+
+- 발견: 벤치마크 v3 하네스 작업 (RESEARCH_AGENDA §3) / `benchmarks/databrain/tasks.v3.json`, `.omo/evidence/benchmark-v3.md`
+- 내용: v3는 게이트를 **점추정이 아니라 신뢰구간 하한**으로 판정한다 (비열등 = 정확도 Δ 95% CI 하한 ≥ -5pp, 개선 목표 = 하한 ≥ +5pp, 토큰 = 절감률 CI 하한 ≥ 30%). 이 규칙을 **v2 실측 데이터에 그대로 적용해 보면**(같은 시드 부트스트랩, 쌍대 단위 36개) 정확도 Δ = +3.66pp, **95% CI [-6.19, +14.27]pp → 비열등 하한 미달**, 토큰 절감 55.97%, CI [36.71, 67.70]% → 토큰 목표는 통과. 즉 **v2가 "게이트 MET"으로 공개한 근거는 점추정 기준이었고, v3 기준에서는 정확도 쪽이 통과하지 못한다.** 원인은 효과가 사라져서가 아니라 표본이 작아서다(쌍대 단위 36개). v3는 과제 12→20, 반복 3→5, 모델 1→2로 쌍대 단위를 200개까지 늘려 구간을 좁힌다(같은 효과 크기가 유지되면 하한은 대략 -1pp 부근까지 올라온다 — 추정이며 실측 아님).
+- 임시 결정: v2 리포트(`results.real.{json,md}`)와 그 사전등록 매니페스트(`tasks.json`)는 **불변으로 동결**했다. 사후에 판정 규칙을 바꿔 과거 리포트를 다시 채점하지 않는다(ADR-005의 "측정된 그대로 공개"). v3는 별도 사전등록(`tasks.v3.json`, SHA-256은 evidence에 기록)으로 두고, 실제 실행 전까지 F5 감사에서 "pending"으로만 보고한다.
+- 기획 판단이 필요한 것: ⑴ **v2 인용 문구를 그대로 둘 것인가** — 현재 파일럿 통계 화면·리포트는 "정확도 +3.66pp"를 v2 리포트 링크와 함께 인용한다. v3 기준에서 그 수치의 불확실성이 -6.19pp까지 걸친다는 사실을 같이 표기할지, 아니면 v3 실행 결과가 나올 때까지 정확도 주장만 내릴지. ⑵ v3 실행 후 **공개 릴리스를 v3로 교체할지, v2와 병행 게시할지** (F5 감사는 두 릴리스를 모두 검증하도록 확장해 두었다).
+- 근거: `benchmarks/databrain/results.real.json`(v2 원시 시행), `scripts/databrain-benchmark/statistics.ts`(시드 부트스트랩), `.omo/evidence/benchmark-v3.md`
+- 상태: open — v3 실제 실행은 예산 승인 대기(예상 ~8.15M 토큰, 아래 evidence 참조).
+
+## OQ-012 — v3 실레포 과제에 test-pass 채점기가 없다
+
+- 발견: 벤치마크 v3 과제 설계 / `benchmarks/databrain/tasks.v3.json`
+- 내용: 실레포(`.`) 과제 10개는 전부 answer-manifest(8) 또는 findings-manifest(2)다. 구현(test-pass) 과제는 여전히 픽스처 레포에만 있다. 이유는 채점 격리 비용이다 — `runIsolatedImplementationTests`는 과제 레포 디렉터리를 **시행마다 통째로 복사**한 뒤 vitest를 돌리는데, 이 레포는 `.git`·`.next`·`test-results`를 빼도 수백 MB 규모라 시행 60회 복사는 드라이런을 몇 분에서 수십 분으로 늘린다. 따라서 "대규모 코퍼스에서의 검색 난이도"는 실레포 Q&A/감사 과제로 측정하고, "구현 성공률"은 픽스처에서 측정한다.
+- 임시 결정: 현행 유지. 실레포 구현 과제가 필요해지면 ⑴ 복사 대신 스파스 체크아웃/하드링크 복사, 또는 ⑵ 이 레포 안의 자족적 하위 패키지(자체 `vitest.config.ts` 보유)를 별도 realistic 레포로 등록하는 방식이 선택지다.
+- 근거: `scripts/databrain-benchmark/implementation-runner.ts`
+- 상태: open (낮은 우선순위)

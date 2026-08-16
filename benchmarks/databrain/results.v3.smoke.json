@@ -1,0 +1,277 @@
+{
+  "aggregates": [
+    {
+      "arm": "checkout",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": null,
+      "passRate": 1,
+      "passedTrials": 1,
+      "totalInputTokens": 1337,
+      "totalOutputTokens": 233,
+      "totalTokens": 1570,
+      "totalToolCalls": 9,
+      "totalWallTimeMs": 3842,
+      "trialCount": 1
+    },
+    {
+      "arm": "full-dump",
+      "failedTrials": 0,
+      "meanScore": 0,
+      "meanScoreCiLower": 0,
+      "meanScoreCiUpper": 0,
+      "model": null,
+      "passRate": 0,
+      "passedTrials": 0,
+      "totalInputTokens": 720,
+      "totalOutputTokens": 406,
+      "totalTokens": 1126,
+      "totalToolCalls": 0,
+      "totalWallTimeMs": 5522,
+      "trialCount": 1
+    },
+    {
+      "arm": "data-brain",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": null,
+      "passRate": 1,
+      "passedTrials": 1,
+      "totalInputTokens": 1562,
+      "totalOutputTokens": 227,
+      "totalTokens": 1789,
+      "totalToolCalls": 10,
+      "totalWallTimeMs": 4425,
+      "trialCount": 1
+    },
+    {
+      "arm": "checkout",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": "gpt-5-nano-2025-08-07",
+      "passRate": 1,
+      "passedTrials": 1,
+      "totalInputTokens": 1337,
+      "totalOutputTokens": 233,
+      "totalTokens": 1570,
+      "totalToolCalls": 9,
+      "totalWallTimeMs": 3842,
+      "trialCount": 1
+    },
+    {
+      "arm": "full-dump",
+      "failedTrials": 0,
+      "meanScore": 0,
+      "meanScoreCiLower": 0,
+      "meanScoreCiUpper": 0,
+      "model": "gpt-5-nano-2025-08-07",
+      "passRate": 0,
+      "passedTrials": 0,
+      "totalInputTokens": 720,
+      "totalOutputTokens": 406,
+      "totalTokens": 1126,
+      "totalToolCalls": 0,
+      "totalWallTimeMs": 5522,
+      "trialCount": 1
+    },
+    {
+      "arm": "data-brain",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": "gpt-5-nano-2025-08-07",
+      "passRate": 1,
+      "passedTrials": 1,
+      "totalInputTokens": 1562,
+      "totalOutputTokens": 227,
+      "totalTokens": 1789,
+      "totalToolCalls": 10,
+      "totalWallTimeMs": 4425,
+      "trialCount": 1
+    }
+  ],
+  "hypotheses": [
+    {
+      "accuracyDeltaCiLowerPercentagePoints": 0,
+      "accuracyDeltaCiUpperPercentagePoints": 0,
+      "accuracyDeltaPercentagePoints": 0,
+      "accuracyImprovementGoalMet": false,
+      "accuracyNonInferior": true,
+      "baselineArm": "checkout",
+      "dataBrainArm": "data-brain",
+      "model": null,
+      "pairedUnitCount": 1,
+      "targetTokenReductionPercent": 30,
+      "tokenReductionCiLowerPercent": -13.949045,
+      "tokenReductionCiUpperPercent": -13.949045,
+      "tokenReductionPercent": -13.949045,
+      "tokenTargetMet": false
+    },
+    {
+      "accuracyDeltaCiLowerPercentagePoints": 0,
+      "accuracyDeltaCiUpperPercentagePoints": 0,
+      "accuracyDeltaPercentagePoints": 0,
+      "accuracyImprovementGoalMet": false,
+      "accuracyNonInferior": true,
+      "baselineArm": "checkout",
+      "dataBrainArm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "pairedUnitCount": 1,
+      "targetTokenReductionPercent": 30,
+      "tokenReductionCiLowerPercent": -13.949045,
+      "tokenReductionCiUpperPercent": -13.949045,
+      "tokenReductionPercent": -13.949045,
+      "tokenTargetMet": false
+    }
+  ],
+  "protocol": {
+    "arms": [
+      "checkout",
+      "full-dump",
+      "data-brain"
+    ],
+    "expectedTrialCount": 3,
+    "fixtureTaskCount": 10,
+    "realisticTaskCount": 10,
+    "registeredTrialCount": 600,
+    "taskCount": 20,
+    "trialsPerArm": 5
+  },
+  "run": {
+    "confidenceMethod": "Seeded nonparametric bootstrap, percentile method: 2000 resamples with replacement over the per-trial units, 95% interval, mulberry32 PRNG seeded by FNV-1a of the aggregate key. Failed trials stay in the resampling pool with score 0.",
+    "generatedAt": "2026-08-16T15:22:19.738Z",
+    "manifestDigest": "ffffb0a973cef8d6c2946086d136289561961419c7210c52562e1741253bf6ba",
+    "mode": "real",
+    "models": [
+      {
+        "id": "gpt-5-nano-2025-08-07",
+        "provider": "openai",
+        "reason": null,
+        "status": "executed"
+      },
+      {
+        "id": "claude-sonnet-5",
+        "provider": "anthropic",
+        "reason": "Excluded by a command-line model override.",
+        "status": "skipped"
+      }
+    ],
+    "overrides": [
+      "tasks=fixture-implement-remaining-session-ms",
+      "repeats=1",
+      "models=gpt-5-nano-2025-08-07"
+    ],
+    "resultsBasename": "results.v3.smoke",
+    "tokenizerAssumption": "Each provider's own reported usage.input_tokens and usage.output_tokens are authoritative (OpenAI Responses API, Anthropic Messages API); no local tokenizer estimate is substituted."
+  },
+  "schemaVersion": 2,
+  "trials": [
+    {
+      "arm": "checkout",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "provider": "openai",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1337,
+      "output": {
+        "answer": "Implemented remainingSessionMs in src/session.ts to compute milliseconds remaining until session timeout, clamped at zero, preserving existing exports.\n",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\n// Returns how many milliseconds remain before the session expires.\n// If the session has already expired, returns 0.\nexport function remainingSessionMs(session: Session, now: number): number {\n  const remaining = session.lastActivityAt + SESSION_TIMEOUT_MS - now;\n  return remaining > 0 ? remaining : 0;\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": [
+          "Introduced remainingSessionMs function to compute remaining milliseconds until expiry, clamped to zero."
+        ]
+      },
+      "outputTokens": 233,
+      "responseId": "resp_07a595e42d84a07c016a81d5a7085c819a99bf4807179147d7",
+      "status": "completed",
+      "wallTimeMs": 3842
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "provider": "openai",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": false,
+        "score": 0,
+        "summary": "failed"
+      },
+      "inputTokens": 720,
+      "output": {
+        "answer": "Implemented remainingSessionMs in src/session.ts to compute milliseconds remaining until 30-minute timeout, clamped at zero. Preserved existing exports.\n",
+        "files": [
+          {
+            "content": "\"use strict\";\n\n// Existing session utilities\n// This module provides helpers around session validity including timeout logic.\n\nconst SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes\n\nfunction isSessionExpired(lastActivityAt, now) {\n  if (typeof lastActivityAt !== 'number' || typeof now !== 'number') {\n    return true;\n  }\n  const elapsed = now - lastActivityAt;\n  return elapsed >= SESSION_TIMEOUT_MS;\n}\n\n// Returns remaining milliseconds until session expires. If already expired, returns 0.\nfunction remainingSessionMs(session, now) {\n  // session is expected to have a lastActivityAt timestamp in milliseconds\n  const lastActivityAt = session && typeof session.lastActivityAt === 'number' ? session.lastActivityAt : undefined;\n  if (typeof now !== 'number') {\n    // if now is not provided or invalid, use current time\n    now = Date.now();\n  }\n  if (typeof lastActivityAt !== 'number') {\n    return 0;\n  }\n  const elapsed = now - lastActivityAt;\n  const remaining = SESSION_TIMEOUT_MS - elapsed;\n  return remaining > 0 ? remaining : 0;\n}\n\n// Exported API (preserving existing exports)\nmodule.exports = {\n  isSessionExpired,\n  remainingSessionMs,\n};\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": [
+          "Implemented remainingSessionMs to compute time left until 30-minute session timeout, clamped to zero, and preserved exports."
+        ]
+      },
+      "outputTokens": 406,
+      "responseId": "resp_0d961a74262f8d83016a81d5a710cc819ba8adcb0b543eb6b1",
+      "status": "completed",
+      "wallTimeMs": 5522
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5-nano-2025-08-07",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "provider": "openai",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 10,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1562,
+      "output": {
+        "answer": "Implemented remainingSessionMs(session, now) in src/session.ts. It computes the milliseconds remaining until the 30-minute timeout, clamped to zero, and preserves existing exports.\n",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  const remaining = session.lastActivityAt + SESSION_TIMEOUT_MS - now;\n  return remaining > 0 ? remaining : 0;\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": [
+          "Added remainingSessionMs to compute remaining time until timeout, clamped to zero",
+          "Preserved existing exports isSessionExpired and SESSION_TIMEOUT_MS"
+        ]
+      },
+      "outputTokens": 227,
+      "responseId": "resp_0a7975a5a2c58674016a81d5a70ecc87d087822b250d119220",
+      "status": "completed",
+      "wallTimeMs": 4425
+    }
+  ]
+}
