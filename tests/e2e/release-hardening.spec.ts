@@ -9,10 +9,10 @@ test("fresh user completes the seeded demo repository journey", async ({ page })
   await page.goto("/onboarding");
   await page.getByRole("button", { name: ONBOARDING.identity.demoCta }).click();
   await expect(page.getByText("fixtures/drifted-demo")).toBeVisible();
-  await page.getByRole("button", { name: /specproof\/drifted-demo/ }).click();
+  await page.getByRole("button", { name: /arr\/drifted-demo/ }).click();
   await expect(page.getByRole("heading", { name: ONBOARDING.scan.title })).toBeVisible();
   await page.getByRole("button", { name: ONBOARDING.scan.cta }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "specproof/drifted-demo" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "arr/drifted-demo" })).toBeVisible();
   await expect(page.getByTestId("brain-map-stage")).toBeVisible();
 });
 

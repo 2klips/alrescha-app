@@ -20,7 +20,7 @@ export const DEMO_LIBRARY_ITEM: LibraryItem = {
     source: {
       commitSha: "1".repeat(40),
       path: ".agents/skills/review-auth/SKILL.md",
-      repository: "specproof/drifted-demo",
+      repository: "arr/drifted-demo",
     },
     tags: ["auth", "review"],
     type: "skill",

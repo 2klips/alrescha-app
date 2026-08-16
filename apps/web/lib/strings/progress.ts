@@ -5,7 +5,7 @@
  */
 
 export const PROGRESS = {
-  header: { repoLine: "2klips/specproof-app · 진행 원장", commitChip: "main · 출처 있는 상태" },
+  header: { repoLine: "2klips/arr-app · 진행 원장", commitChip: "main · 출처 있는 상태" },
   kicker: "레포 진행 원장",
   sourceContract: "출처가 있는 항목만",
   ariaMetrics: "커버리지 지표",

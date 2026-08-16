@@ -110,16 +110,16 @@ export async function requestContextPackPreview(
 
 function hostedContextUrls(workspaceId: string) {
   const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const configuredMcpEndpoint = process.env.SPECPROOF_MCP_URL;
+  const configuredMcpEndpoint = process.env.ARR_MCP_URL;
   const appUrl = (
     configuredAppUrl?.startsWith("https://")
       ? configuredAppUrl
-      : "https://app.specproof.app"
+      : "https://app.arr.app"
   ).replace(/\/$/, "");
   const mcpEndpoint = (
     configuredMcpEndpoint?.startsWith("https://")
       ? configuredMcpEndpoint
-      : "https://mcp.specproof.app"
+      : "https://mcp.arr.app"
   ).replace(/\/$/, "");
   return {
     dashboardUrl: `${appUrl}/app?workspace=${workspaceId}`,

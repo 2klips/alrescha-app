@@ -15,13 +15,13 @@ describe("context and index settings", () => {
           files: [
             {
               after:
-                "<!-- SPECPROOF:BEGIN (managed — do not edit inside) -->\nindex\n<!-- SPECPROOF:END -->\n",
+                "<!-- ARR:BEGIN (managed — do not edit inside) -->\nindex\n<!-- ARR:END -->\n",
               before: null,
               path: "AGENTS.md",
             },
           ],
           missingPermission: "pull_requests:write",
-          repository: "2klips/specproof-app",
+          repository: "2klips/arr-app",
           status: "permission_required",
           url: null,
         },

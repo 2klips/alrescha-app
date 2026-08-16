@@ -3,7 +3,7 @@
     "content-type": "application/json",
     "x-github-delivery": "00000000-0000-4000-8000-000000000002",
     "x-github-event": "check_run",
-    "x-hub-signature-256": "sha256=1b8beae2d2a932309523428a72a16d594f6bd417588663df27fc447bbf0eab29"
+    "x-hub-signature-256": "sha256=792bb22702a56648cd395891e1c1f40efd22aa026628f50e5077ffd25c4c3509"
   },
   "body": {
     "action": "completed",
@@ -16,7 +16,7 @@
     },
     "repository": {
       "id": 424242,
-      "full_name": "specproof/drifted-demo",
+      "full_name": "arr/drifted-demo",
       "default_branch": "main",
       "private": true
     },

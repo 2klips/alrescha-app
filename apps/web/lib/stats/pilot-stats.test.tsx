@@ -94,10 +94,10 @@ describe("pilot stats JSON export", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-disposition")).toContain("specproof-pilot-stats.json");
+    expect(response.headers.get("content-disposition")).toContain("arr-pilot-stats.json");
     await expect(response.json()).resolves.toEqual({
       report,
-      schemaVersion: "specproof.pilot-stats.v1",
+      schemaVersion: "arr.pilot-stats.v1",
       workspaceId: "workspace-owner",
     });
   });
@@ -158,7 +158,7 @@ describe("pilot stats dashboard", () => {
     expect(html).toContain("deterministic per-document estimates");
     expect(html).toContain('href="/api/stats/export"');
     expect(html).toContain(
-      'href="https://github.com/2klips/specproof-app/blob/main/benchmarks/databrain/results.real.md"',
+      'href="https://github.com/2klips/arr-app/blob/main/benchmarks/databrain/results.real.md"',
     );
   });
 

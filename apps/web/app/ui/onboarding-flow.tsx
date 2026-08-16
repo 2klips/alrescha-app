@@ -38,7 +38,7 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
       <DashboardScreen
         model={buildDashboardViewModel(
           "scanned",
-          seededDemo ? "specproof/drifted-demo" : "2klips/specproof-app",
+          seededDemo ? "arr/drifted-demo" : "2klips/arr-app",
         )}
       />
     );

@@ -86,7 +86,7 @@ function workspaceFixture(): McpWorkspaceData {
             title: "CI evidence missing",
           },
         ],
-        fullName: "2klips/specproof-app",
+        fullName: "2klips/arr-app",
         id: REPOSITORY_ID,
         indexEntries: [
           {
@@ -140,14 +140,14 @@ function workspaceFixture(): McpWorkspaceData {
 
 function createSdkClient(fetch: typeof globalThis.fetch, token: string) {
   const client = new Client(
-    { name: "specproof-contract-test", version: "1.0.0" },
+    { name: "arr-contract-test", version: "1.0.0" },
     {
       cachePartition: token.slice(0, 12),
       versionNegotiation: { mode: { pin: "2026-07-28" } },
     },
   );
   const transport = new StreamableHTTPClientTransport(
-    new URL("https://mcp.specproof.test/mcp"),
+    new URL("https://mcp.arr.test/mcp"),
     {
       authProvider: { token: async () => token },
       fetch,
@@ -198,7 +198,7 @@ describe("hosted MCP contract", () => {
 
     expect(client.getProtocolEra()).toBe("modern");
     expect(client.getServerVersion()).toEqual({
-      name: "specproof",
+      name: "arr",
       version: "0.1.0",
     });
     expect(client.getDiscoverResult()).toMatchObject({
@@ -266,7 +266,7 @@ describe("hosted MCP contract", () => {
     expect(listed.resources).toHaveLength(5);
     expect(
       listed.resources.every((resource) =>
-        resource.uri.startsWith(`specproof://workspace/${WORKSPACE_ID}/`),
+        resource.uri.startsWith(`arr://workspace/${WORKSPACE_ID}/`),
       ),
     ).toBe(true);
     expect(
@@ -276,7 +276,7 @@ describe("hosted MCP contract", () => {
     ).toBe(false);
     await expect(
       client.readResource({
-        uri: `specproof://workspace/${otherWorkspaceId}/overview`,
+        uri: `arr://workspace/${otherWorkspaceId}/overview`,
       }),
     ).rejects.toBeInstanceOf(ProtocolError);
   });
@@ -302,28 +302,28 @@ describe("hosted MCP contract", () => {
     expect(listed.resources.map(({ name, uri }) => ({ name, uri }))).toEqual([
       {
         name: "overview",
-        uri: `specproof://workspace/${WORKSPACE_ID}/overview`,
+        uri: `arr://workspace/${WORKSPACE_ID}/overview`,
       },
       {
         name: "artifacts",
-        uri: `specproof://workspace/${WORKSPACE_ID}/artifacts`,
+        uri: `arr://workspace/${WORKSPACE_ID}/artifacts`,
       },
       {
         name: "findings",
-        uri: `specproof://workspace/${WORKSPACE_ID}/findings`,
+        uri: `arr://workspace/${WORKSPACE_ID}/findings`,
       },
       {
         name: "receipts-summary",
-        uri: `specproof://workspace/${WORKSPACE_ID}/receipts-summary`,
+        uri: `arr://workspace/${WORKSPACE_ID}/receipts-summary`,
       },
       {
         name: "context-packs",
-        uri: `specproof://workspace/${WORKSPACE_ID}/context-packs`,
+        uri: `arr://workspace/${WORKSPACE_ID}/context-packs`,
       },
     ]);
 
     const result = await client.readResource({
-      uri: `specproof://workspace/${WORKSPACE_ID}/findings`,
+      uri: `arr://workspace/${WORKSPACE_ID}/findings`,
     });
     expect(result).toMatchObject({ cacheScope: "private", ttlMs: 60_000 });
     const content = result.contents[0];
@@ -864,7 +864,7 @@ describe("hosted MCP contract", () => {
         },
       );
       const transport = new StreamableHTTPClientTransport(
-        new URL("https://mcp.specproof.test/mcp"),
+        new URL("https://mcp.arr.test/mcp"),
         {
           authProvider: { token: async () => token },
           fetch,

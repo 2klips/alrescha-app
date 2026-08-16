@@ -13,11 +13,11 @@ const statement: InTotoStatement = {
     commitSha: "b".repeat(40),
     evidence: { inferred: 1, verified: 3 },
     previousReceiptDigest: null,
-    repository: "2klips/specproof-app",
+    repository: "2klips/arr-app",
     runId: "run-fixture-12",
   },
-  predicateType: "https://specproof.dev/receipt/v1",
-  subject: [{ digest: { sha256: "a".repeat(64) }, name: "2klips/specproof-app" }],
+  predicateType: "https://arr.dev/receipt/v1",
+  subject: [{ digest: { sha256: "a".repeat(64) }, name: "2klips/arr-app" }],
 };
 
 describe("in-toto-shaped assurance receipts", () => {

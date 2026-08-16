@@ -202,8 +202,8 @@ export type {
 
 export {
   PROGRESS_LOGGING_INSTRUCTION,
-  SPECPROOF_INDEX_BEGIN,
-  SPECPROOF_INDEX_END,
+  ARR_INDEX_BEGIN,
+  ARR_INDEX_END,
   applyManagedIndex,
   buildMinimalIndexProposalFiles,
   renderManagedIndex,

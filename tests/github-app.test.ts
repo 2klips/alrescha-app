@@ -56,13 +56,13 @@ describe("GitHub App connection and webhook ingestion", () => {
     await database.query(
       `insert into public.github_installations
         (id, workspace_id, github_installation_id, account_id, account_login)
-       values ($1, $2, 777, 1001, 'specproof')`,
+       values ($1, $2, 777, 1001, 'arr')`,
       [INSTALLATION_ID, workspaceId],
     );
     await database.query(
       `insert into public.repositories
         (id, workspace_id, full_name, installation_id, github_repository_id, selected_at)
-       values ($1, $2, 'specproof/drifted-demo', $3, 424242, now())`,
+       values ($1, $2, 'arr/drifted-demo', $3, 424242, now())`,
       [REPOSITORY_ID, workspaceId, INSTALLATION_ID],
     );
     const metadata = await json<{ webhookSecret: string }>(resolve(RECORDINGS, "recording-metadata.json"));
@@ -119,10 +119,10 @@ describe("GitHub App connection and webhook ingestion", () => {
     const prepared = await prepareGitHubOnboarding({
       getVerifiedInstallation: async () => ({
         accountId: 1001,
-        accountLogin: "specproof",
+        accountLogin: "arr",
         githubInstallationId: 777,
         permissions: GITHUB_READ_ONLY_PERMISSIONS,
-        repositories: [{ defaultBranch: "main", fullName: "specproof/drifted-demo", githubRepositoryId: 424242 }],
+        repositories: [{ defaultBranch: "main", fullName: "arr/drifted-demo", githubRepositoryId: 424242 }],
       }),
       store: { savePendingInstallation },
       workspaceId,
@@ -130,7 +130,7 @@ describe("GitHub App connection and webhook ingestion", () => {
     const verifyCurrentAccess = vi.fn().mockResolvedValue(undefined);
     const selected = await selectGitHubRepository({
       installationId: prepared.installationId,
-      repository: { defaultBranch: "main", fullName: "specproof/drifted-demo", githubRepositoryId: 424242 },
+      repository: { defaultBranch: "main", fullName: "arr/drifted-demo", githubRepositoryId: 424242 },
       saveSelection: vi.fn().mockResolvedValue({ repositoryId: REPOSITORY_ID }),
       verifyCurrentAccess,
       workspaceId,
@@ -172,7 +172,7 @@ describe("GitHub App connection and webhook ingestion", () => {
         if (
           input.installationId !== 777 ||
           input.repositoryGitHubId !== 424242 ||
-          input.repositoryFullName !== "specproof/drifted-demo"
+          input.repositoryFullName !== "arr/drifted-demo"
         ) {
           return null;
         }

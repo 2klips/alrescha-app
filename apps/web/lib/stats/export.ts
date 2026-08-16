@@ -24,14 +24,14 @@ export async function createPilotStatsExportResponse(
   return Response.json(
     {
       report,
-      schemaVersion: "specproof.pilot-stats.v1",
+      schemaVersion: "arr.pilot-stats.v1",
       workspaceId,
     },
     {
       headers: {
         "Cache-Control": "private, no-store",
         "Content-Disposition":
-          'attachment; filename="specproof-pilot-stats.json"',
+          'attachment; filename="arr-pilot-stats.json"',
       },
     },
   );

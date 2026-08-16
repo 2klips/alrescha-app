@@ -34,7 +34,7 @@ describe("personal library persistence", () => {
         ?.id ?? "";
     await database.query(
       `insert into public.repositories (id, workspace_id, full_name)
-       values ($1, $2, 'specproof/drifted-demo')`,
+       values ($1, $2, 'arr/drifted-demo')`,
       [REPOSITORY_A, workspaceA],
     );
   });
@@ -50,7 +50,7 @@ describe("personal library persistence", () => {
       source: {
         commitSha: "1".repeat(40),
         path: ".agents/skills/review-auth/SKILL.md",
-        repository: "specproof/drifted-demo",
+        repository: "arr/drifted-demo",
       },
       tags: ["auth", "review"],
       type: "skill",
@@ -59,7 +59,7 @@ describe("personal library persistence", () => {
       asAuthenticatedUser(database, USER_A, (transaction) =>
         transaction.query<{ created: boolean; id: string }>(
           `select * from public.save_library_item(
-            $1, $2, 'skill', $3, 'specproof/drifted-demo', $4, $5, $6, $7
+            $1, $2, 'skill', $3, 'arr/drifted-demo', $4, $5, $6, $7
           )`,
           [
             workspaceA,
@@ -124,7 +124,7 @@ describe("personal library persistence", () => {
       asAuthenticatedUser(database, USER_B, (transaction) =>
         transaction.query(
           `select * from public.save_library_item(
-            $1, 'Spoofed', 'skill', 'SKILL.md', 'specproof/drifted-demo',
+            $1, 'Spoofed', 'skill', 'SKILL.md', 'arr/drifted-demo',
             $2, 'spoofed', $3, '{}'
           )`,
           [workspaceA, "3".repeat(40), "a".repeat(64)],

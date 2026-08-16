@@ -13,16 +13,16 @@ describe("minimal agent index", () => {
       "",
       "Keep this exact prefix.",
       "",
-      "<!-- SPECPROOF:BEGIN (managed — do not edit inside) -->",
+      "<!-- ARR:BEGIN (managed — do not edit inside) -->",
       "old managed bytes",
-      "<!-- SPECPROOF:END -->",
+      "<!-- ARR:END -->",
       "",
       "Keep this exact suffix.",
       "",
     ].join("\n");
     const section = renderManagedIndex({
-      dashboardUrl: "https://app.specproof.test/workspaces/ws_demo",
-      mcpEndpoint: "https://mcp.specproof.test",
+      dashboardUrl: "https://app.arr.test/workspaces/ws_demo",
+      mcpEndpoint: "https://mcp.arr.test",
     });
 
     const once = applyManagedIndex(existing, section);
@@ -52,8 +52,8 @@ describe("minimal agent index", () => {
     const proposal = buildMinimalIndexProposalFiles({
       agentsContent: null,
       claudeContent: null,
-      dashboardUrl: "https://app.specproof.test/workspaces/ws_demo",
-      mcpEndpoint: "https://mcp.specproof.test",
+      dashboardUrl: "https://app.arr.test/workspaces/ws_demo",
+      mcpEndpoint: "https://mcp.arr.test",
     });
 
     expect(proposal.files).toEqual([
@@ -74,8 +74,8 @@ describe("minimal agent index", () => {
     const regenerated = buildMinimalIndexProposalFiles({
       agentsContent: proposal.files[0]?.after ?? null,
       claudeContent: proposal.files[1]?.after ?? null,
-      dashboardUrl: "https://app.specproof.test/workspaces/ws_demo",
-      mcpEndpoint: "https://mcp.specproof.test",
+      dashboardUrl: "https://app.arr.test/workspaces/ws_demo",
+      mcpEndpoint: "https://mcp.arr.test",
     });
 
     expect(regenerated.files).toEqual([]);
@@ -84,12 +84,12 @@ describe("minimal agent index", () => {
 
   it("fails closed on incomplete or duplicate managed markers", () => {
     const section = renderManagedIndex({
-      dashboardUrl: "https://app.specproof.test/workspaces/ws_demo",
-      mcpEndpoint: "https://mcp.specproof.test",
+      dashboardUrl: "https://app.arr.test/workspaces/ws_demo",
+      mcpEndpoint: "https://mcp.arr.test",
     });
 
     expect(() =>
-      applyManagedIndex("prefix\n<!-- SPECPROOF:END -->\n", section),
+      applyManagedIndex("prefix\n<!-- ARR:END -->\n", section),
     ).toThrow("exactly one complete");
     expect(() => applyManagedIndex(`${section}\n${section}\n`, section)).toThrow(
       "exactly one complete",

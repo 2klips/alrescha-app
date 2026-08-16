@@ -211,11 +211,11 @@ const CURRENT_STATEMENT: InTotoStatement = {
     commitSha: "b".repeat(40),
     evidence: { inferred: 1, verified: 3 },
     previousReceiptDigest: "9".repeat(64),
-    repository: "2klips/specproof-app",
+    repository: "2klips/arr-app",
     runId: "run-bad0551",
   },
-  predicateType: "https://specproof.dev/receipt/v1",
-  subject: [{ digest: { sha256: "a".repeat(64) }, name: "2klips/specproof-app" }],
+  predicateType: "https://arr.dev/receipt/v1",
+  subject: [{ digest: { sha256: "a".repeat(64) }, name: "2klips/arr-app" }],
 };
 
 export interface ReceiptFixture {

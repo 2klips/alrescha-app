@@ -11,7 +11,7 @@ test("onboards through mocked GitHub into the fixture evidence graph", async ({ 
   await expect(page.getByRole("heading", { name: ONBOARDING.permission.title })).toBeVisible();
   await expect(page.getByText(ONBOARDING.permission.scopes.contents.title)).toBeVisible();
   await page.getByRole("button", { name: ONBOARDING.permission.cta }).click();
-  await page.getByRole("button", { name: /2klips\/specproof-app/ }).click();
+  await page.getByRole("button", { name: /2klips\/arr-app/ }).click();
   await expect(page.getByRole("heading", { name: ONBOARDING.scan.title })).toBeVisible();
   await page.getByRole("button", { name: ONBOARDING.scan.cta }).click();
 

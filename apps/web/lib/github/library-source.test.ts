@@ -20,14 +20,14 @@ describe("library GitHub source reader", () => {
       commitSha: "a".repeat(40),
       fetchImplementation,
       path: ".agents/skills/review auth/SKILL.md",
-      repository: "specproof/drifted-demo",
+      repository: "arr/drifted-demo",
       token: "installation-secret",
     });
 
     expect(content).toBe("# Review auth\n\nCheck OAuth.");
     const [url, request] = fetchImplementation.mock.calls[0] ?? [];
     expect(String(url)).toContain(
-      "/repos/specproof/drifted-demo/contents/.agents/skills/review%20auth/SKILL.md",
+      "/repos/arr/drifted-demo/contents/.agents/skills/review%20auth/SKILL.md",
     );
     expect(String(url)).toContain(`ref=${"a".repeat(40)}`);
     expect(String(url)).not.toContain("installation-secret");

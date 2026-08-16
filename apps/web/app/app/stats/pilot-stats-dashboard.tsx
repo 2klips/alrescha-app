@@ -91,7 +91,7 @@ export function PilotStatsDashboard({
         <p>{report.methodology.scanDuration}</p>
         <p>
           {STATS.methodology.benchmarkPrefix}
-          <a href="https://github.com/2klips/specproof-app/blob/main/benchmarks/databrain/results.real.md">
+          <a href="https://github.com/2klips/arr-app/blob/main/benchmarks/databrain/results.real.md">
             {STATS.methodology.benchmarkLink}
           </a>
           .

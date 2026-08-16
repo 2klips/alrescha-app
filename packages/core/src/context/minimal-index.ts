@@ -1,6 +1,6 @@
-export const SPECPROOF_INDEX_BEGIN =
-  "<!-- SPECPROOF:BEGIN (managed — do not edit inside) -->";
-export const SPECPROOF_INDEX_END = "<!-- SPECPROOF:END -->";
+export const ARR_INDEX_BEGIN =
+  "<!-- ARR:BEGIN (managed — do not edit inside) -->";
+export const ARR_INDEX_END = "<!-- ARR:END -->";
 export const PROGRESS_LOGGING_INSTRUCTION = [
   "- Once per completed task unit, call `log_progress`:",
   '  `{"task":"<todo id/title>","status":"done","summary":"<verified result; max 200 chars>","refs":["<path/commit>"]}`',
@@ -43,13 +43,13 @@ export function renderManagedIndex(input: RenderManagedIndexInput): string {
   const mcpEndpoint = safeHttpsUrl(input.mcpEndpoint, "mcpEndpoint");
 
   return [
-    SPECPROOF_INDEX_BEGIN,
-    "## Project context via SpecProof",
+    ARR_INDEX_BEGIN,
+    "## Project context via Arr",
     "- Before coding, call MCP tool `request_context_pack` with your task description.",
     `- MCP endpoint: ${mcpEndpoint} (token: see project settings)`,
     `- Findings & receipts: ${dashboardUrl}`,
     ...PROGRESS_LOGGING_INSTRUCTION.split("\n"),
-    SPECPROOF_INDEX_END,
+    ARR_INDEX_END,
   ].join("\n");
 }
 
@@ -61,23 +61,20 @@ export function applyManagedIndex(
   existing: string | undefined,
   section: string,
 ): string {
-  if (
-    !section.startsWith(SPECPROOF_INDEX_BEGIN) ||
-    !section.endsWith(SPECPROOF_INDEX_END)
-  ) {
-    throw new TypeError("section must be a complete SpecProof managed index.");
+  if (!section.startsWith(ARR_INDEX_BEGIN) || !section.endsWith(ARR_INDEX_END)) {
+    throw new TypeError("section must be a complete Arr managed index.");
   }
 
   if (section.split("\n").length > 30) {
-    throw new RangeError("SpecProof managed index must not exceed 30 lines.");
+    throw new RangeError("Arr managed index must not exceed 30 lines.");
   }
 
   if (existing === undefined || existing.length === 0) {
     return `${section}\n`;
   }
 
-  const beginCount = occurrences(existing, SPECPROOF_INDEX_BEGIN);
-  const endCount = occurrences(existing, SPECPROOF_INDEX_END);
+  const beginCount = occurrences(existing, ARR_INDEX_BEGIN);
+  const endCount = occurrences(existing, ARR_INDEX_END);
 
   if (beginCount === 0 && endCount === 0) {
     const separator = existing.endsWith("\n\n")
@@ -90,16 +87,15 @@ export function applyManagedIndex(
 
   if (beginCount !== 1 || endCount !== 1) {
     throw new TypeError(
-      "AGENTS.md must contain exactly one complete SpecProof managed index.",
+      "AGENTS.md must contain exactly one complete Arr managed index.",
     );
   }
 
-  const start = existing.indexOf(SPECPROOF_INDEX_BEGIN);
-  const end =
-    existing.indexOf(SPECPROOF_INDEX_END, start) + SPECPROOF_INDEX_END.length;
+  const start = existing.indexOf(ARR_INDEX_BEGIN);
+  const end = existing.indexOf(ARR_INDEX_END, start) + ARR_INDEX_END.length;
 
-  if (end < start + SPECPROOF_INDEX_END.length) {
-    throw new TypeError("SpecProof managed index markers are out of order.");
+  if (end < start + ARR_INDEX_END.length) {
+    throw new TypeError("Arr managed index markers are out of order.");
   }
 
   return `${existing.slice(0, start)}${section}${existing.slice(end)}`;

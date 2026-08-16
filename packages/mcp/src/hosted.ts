@@ -20,7 +20,7 @@ import {
   type McpStore,
 } from "./store";
 
-const SERVER_INFO = { name: "specproof", version: "0.1.0" } as const;
+const SERVER_INFO = { name: "arr", version: "0.1.0" } as const;
 const PRIVATE_TTL_MS = 60_000;
 const READ_ONLY_TOOL = { destructiveHint: false, readOnlyHint: true } as const;
 const WRITE_METADATA_TOOL = {
@@ -124,8 +124,7 @@ function unauthorized(): Response {
     { error: "invalid_token" },
     {
       headers: {
-        "WWW-Authenticate":
-          'Bearer realm="SpecProof MCP", error="invalid_token"',
+        "WWW-Authenticate": 'Bearer realm="Arr MCP", error="invalid_token"',
       },
       status: 401,
     },
@@ -146,7 +145,7 @@ function createServer(
     },
   });
   const resourceUri = (name: string) =>
-    `specproof://workspace/${principal.workspaceId}/${name}`;
+    `arr://workspace/${principal.workspaceId}/${name}`;
   const requireScope = (scope: "mcp:read" | "mcp:write") => {
     if (!principal.scopes.includes(scope)) {
       throw new ProtocolError(-32001, "MCP token lacks required scope", {
@@ -612,7 +611,7 @@ function createServer(
     "search_index",
     {
       annotations: READ_ONLY_TOOL,
-      description: "Search the deterministic SpecProof data index",
+      description: "Search the deterministic Arr data index",
       inputSchema: z.object({
         query: z.string().trim().min(1),
         type_filter: NODE_TYPE_SCHEMA.optional(),

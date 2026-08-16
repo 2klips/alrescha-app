@@ -68,7 +68,7 @@ function mcpWorkspaceFixture(): McpWorkspaceData {
         edges: [],
         evidence: [],
         findings: [],
-        fullName: "2klips/specproof-app",
+        fullName: "2klips/arr-app",
         id: REPOSITORY_ID,
         indexEntries: [
           {
@@ -113,7 +113,7 @@ async function exerciseHostedMcp() {
     { versionNegotiation: { mode: { pin: "2026-07-28" } } },
   );
   const transport = new StreamableHTTPClientTransport(
-    new URL("https://mcp.specproof.test/mcp"),
+    new URL("https://mcp.arr.test/mcp"),
     {
       authProvider: { token: async () => issued.secret },
       fetch: endpoint.fetch,
@@ -170,7 +170,7 @@ async function exerciseJudgmentCreditsAndConsent() {
         )
       ).rows[0]?.id ?? "";
     await database.query(
-      "insert into public.repositories (id, workspace_id, full_name) values ($1, $2, '2klips/specproof-app')",
+      "insert into public.repositories (id, workspace_id, full_name) values ($1, $2, '2klips/arr-app')",
       [repositoryId, workspaceId],
     );
     await database.query(
@@ -290,7 +290,7 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
   });
 
   await test.step("select the fixture repository and watch its first metadata-only scan", async () => {
-    await page.getByRole("button", { name: /2klips\/specproof-app/ }).click();
+    await page.getByRole("button", { name: /2klips\/arr-app/ }).click();
     await expect(
       page.getByRole("heading", { name: ONBOARDING.scan.title }),
     ).toBeVisible();
@@ -351,8 +351,8 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
     const proposalFiles = buildMinimalIndexProposalFiles({
       agentsContent: "# Team rules\n",
       claudeContent: null,
-      dashboardUrl: "https://specproof.test/project/demo",
-      mcpEndpoint: "https://mcp.specproof.test",
+      dashboardUrl: "https://arr.test/project/demo",
+      mcpEndpoint: "https://mcp.arr.test",
     }).files;
     const calls: string[] = [];
     const proposal = await proposeMinimalIndexPullRequest({

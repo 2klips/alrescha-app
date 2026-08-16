@@ -361,7 +361,7 @@ export interface DashboardViewModel {
 
 export function buildDashboardViewModel(
   state: DashboardState,
-  repo = "2klips/specproof-app",
+  repo = "2klips/arr-app",
 ): DashboardViewModel {
   const source = createFixtureGraph(state === "large" ? 500 : BASE_NODES.length);
   const graph = state === "large" ? clusterGraph(source) : forceDirectedLayout(source);

@@ -192,7 +192,7 @@ describe("GitHub CI evidence source", () => {
       return new Response("not found", { status: 404 });
     });
     const source = new GitHubCiEvidenceSource(
-      "specproof",
+      "arr",
       "drifted-demo",
       "installation-token",
       fetchImplementation,

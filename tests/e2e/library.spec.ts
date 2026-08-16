@@ -15,7 +15,7 @@ test("saves a harness skill, dedupes its digest, and browses exact provenance", 
   await expect(
     page.getByRole("heading", { name: HARNESS.title }),
   ).toBeVisible();
-  await expect(page.getByText("specproof/drifted-demo")).toBeVisible();
+  await expect(page.getByText("arr/drifted-demo")).toBeVisible();
   await expect(page.getByText("1".repeat(40))).toBeVisible();
 
   const save = page.getByRole("button", { name: HARNESS.card.save });

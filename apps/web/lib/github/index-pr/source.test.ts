@@ -27,7 +27,7 @@ describe("minimal-index GitHub source reader", () => {
       readMinimalIndexSource({
         branch: "main",
         fetchImplementation,
-        repository: "2klips/specproof-app",
+        repository: "2klips/arr-app",
         token: "installation-token",
       }),
     ).resolves.toEqual({

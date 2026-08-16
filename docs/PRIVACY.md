@@ -1,6 +1,6 @@
 # Privacy and data boundary
 
-SpecProof's pilot uses metadata-only persistence. Repository files are fetched transiently through a short-lived, repository-scoped GitHub installation token. Raw source and installation tokens are not stored.
+Arr's pilot uses metadata-only persistence. Repository files are fetched transiently through a short-lived, repository-scoped GitHub installation token. Raw source and installation tokens are not stored.
 
 ## Stored
 
@@ -27,4 +27,4 @@ BYOK keys are encrypted using `BYOK_ENCRYPTION_KEY`, never returned after save, 
 
 ## Product-impact claims
 
-SpecProof does not claim savings from an isolated observation or pooled customer data. Each user sees only sufficient, opt-in measurements from their workspace with methodology and JSON export at `/app/stats`.
+Arr does not claim savings from an isolated observation or pooled customer data. Each user sees only sufficient, opt-in measurements from their workspace with methodology and JSON export at `/app/stats`.

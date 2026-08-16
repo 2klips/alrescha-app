@@ -1,6 +1,6 @@
 # AGENTS.md — arr-app
 
-This repository implements SpecProof (AI development assurance SaaS). Full product spec lives in `spec/`.
+This repository implements Arr (AI development assurance SaaS). Full product spec lives in `spec/`.
 
 ## Before doing anything
 

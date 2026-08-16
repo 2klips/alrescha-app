@@ -104,7 +104,7 @@ describe("recorded GitHub fixture replay", () => {
     );
     expect(webhooks.map(({ kind }) => kind).sort()).toEqual(["check_run", "push", "workflow_run"]);
     expect(webhooks.every(({ commitSha }) => commitSha === "1".repeat(40))).toBe(true);
-    expect(webhooks.every(({ repository }) => repository === "specproof/drifted-demo")).toBe(true);
+    expect(webhooks.every(({ repository }) => repository === "arr/drifted-demo")).toBe(true);
     expect(artifacts.map(({ name }) => name)).toEqual(["junit-results", "vitest-results"]);
     expect(artifacts.every(({ workflowRunId }) => workflowRunId === 8801)).toBe(true);
   });

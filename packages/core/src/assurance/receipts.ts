@@ -21,7 +21,7 @@ export const specProofReceiptPredicateSchema = z.strictObject({
 export const inTotoStatementSchema = z.strictObject({
   _type: z.literal("https://in-toto.io/Statement/v1"),
   predicate: specProofReceiptPredicateSchema,
-  predicateType: z.literal("https://specproof.dev/receipt/v1"),
+  predicateType: z.literal("https://arr.dev/receipt/v1"),
   subject: z.array(inTotoSubjectSchema).min(1),
 });
 

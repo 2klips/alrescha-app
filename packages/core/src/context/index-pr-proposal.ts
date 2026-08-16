@@ -47,9 +47,9 @@ export type IndexPrProposalResult =
       readonly status: "up_to_date";
     };
 
-const PROPOSAL_TITLE = "docs(agent): add SpecProof minimal context index";
+const PROPOSAL_TITLE = "docs(agent): add Arr minimal context index";
 const PROPOSAL_BODY = [
-  "SpecProof generated this advisory-only proposal.",
+  "Arr generated this advisory-only proposal.",
   "",
   "It adds or refreshes only the bounded managed index and optional CLAUDE.md wrapper.",
   "Review and merge this pull request through the normal repository workflow.",
@@ -93,7 +93,7 @@ export async function proposeMinimalIndexPullRequest(
     };
   }
 
-  const branch = `specproof/minimal-index-${input.baseSha.slice(0, 12)}`;
+  const branch = `arr/minimal-index-${input.baseSha.slice(0, 12)}`;
   await input.github.createProposalBranch({ branch, fromSha: input.baseSha });
 
   for (const file of input.files) {

@@ -10,7 +10,7 @@ describe("advisory minimal-index pull request", () => {
     const files: readonly MinimalIndexProposalFile[] = [
       {
         after:
-          "<!-- SPECPROOF:BEGIN (managed — do not edit inside) -->\nindex\n<!-- SPECPROOF:END -->\n",
+          "<!-- ARR:BEGIN (managed — do not edit inside) -->\nindex\n<!-- ARR:END -->\n",
         before: null,
         path: "AGENTS.md",
       },
@@ -34,31 +34,31 @@ describe("advisory minimal-index pull request", () => {
     });
 
     expect(result).toEqual({
-      branch: "specproof/minimal-index-111111111111",
+      branch: "arr/minimal-index-111111111111",
       files,
       number: 42,
       status: "proposed",
       url: "https://github.test/2klips/demo/pull/42",
     });
     expect(github.createProposalBranch).toHaveBeenCalledWith({
-      branch: "specproof/minimal-index-111111111111",
+      branch: "arr/minimal-index-111111111111",
       fromSha: "1".repeat(40),
     });
     expect(github.writeProposalFile).toHaveBeenNthCalledWith(1, {
-      branch: "specproof/minimal-index-111111111111",
+      branch: "arr/minimal-index-111111111111",
       content: files[0]?.after,
       path: "AGENTS.md",
     });
     expect(github.writeProposalFile).toHaveBeenNthCalledWith(2, {
-      branch: "specproof/minimal-index-111111111111",
+      branch: "arr/minimal-index-111111111111",
       content: files[1]?.after,
       path: "CLAUDE.md",
     });
     expect(github.openProposalPullRequest).toHaveBeenCalledWith({
       base: "main",
       body: expect.stringContaining("advisory-only"),
-      head: "specproof/minimal-index-111111111111",
-      title: "docs(agent): add SpecProof minimal context index",
+      head: "arr/minimal-index-111111111111",
+      title: "docs(agent): add Arr minimal context index",
     });
   });
 

@@ -15,7 +15,7 @@ const AUTH_ITEM: LibraryItem = {
     source: {
       commitSha: "1".repeat(40),
       path: ".agents/skills/review-auth/SKILL.md",
-      repository: "specproof/drifted-demo",
+      repository: "arr/drifted-demo",
     },
     tags: ["auth", "review"],
     type: "skill",
@@ -31,7 +31,7 @@ const DATABASE_ITEM: LibraryItem = {
     source: {
       commitSha: "2".repeat(40),
       path: ".cursor/rules/database.mdc",
-      repository: "specproof/api",
+      repository: "arr/api",
     },
     tags: ["database"],
     type: "rules",
@@ -54,7 +54,7 @@ describe("personal library UI", () => {
     expect(html).toContain('value="oauth"');
     expect(html).toContain("Review auth");
     expect(html).not.toContain("Database rules");
-    expect(html).toContain("specproof/drifted-demo");
+    expect(html).toContain("arr/drifted-demo");
     expect(html).toContain(".agents/skills/review-auth/SKILL.md");
     expect(html).toContain("1".repeat(40));
     expect(html).toContain("sha256:");
@@ -78,7 +78,7 @@ describe("personal library UI", () => {
     const combined = `${libraryHtml}${harnessHtml}`;
 
     expect(harnessHtml).toContain(HARNESS.card.save);
-    expect(harnessHtml).toContain("specproof/drifted-demo");
+    expect(harnessHtml).toContain("arr/drifted-demo");
     expect(harnessHtml).toContain("1".repeat(40));
     expect(combined).not.toMatch(
       /import into project|프로젝트로 가져오기|프로젝트에 추가/i,
