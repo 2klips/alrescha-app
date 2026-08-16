@@ -122,7 +122,7 @@ export class OpenAiJudgmentProvider implements JudgmentProvider {
         store: false,
         text: {
           format: {
-            name: "specproof_judgment",
+            name: "arr_judgment",
             schema: JUDGMENT_JSON_SCHEMA,
             strict: true,
             type: "json_schema",

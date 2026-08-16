@@ -38,7 +38,7 @@ export async function runMigrations(databaseUrl: string): Promise<readonly strin
   const applied: string[] = [];
 
   try {
-    await sql.unsafe("select pg_advisory_lock(hashtext('specproof_migrations'))");
+    await sql.unsafe("select pg_advisory_lock(hashtext('arr_migrations'))");
     await sql.unsafe("create schema if not exists private_migrations");
     await sql.unsafe(`
       create table if not exists private_migrations.schema_migrations (
@@ -75,7 +75,7 @@ export async function runMigrations(databaseUrl: string): Promise<readonly strin
     return applied;
   } finally {
     try {
-      await sql.unsafe("select pg_advisory_unlock(hashtext('specproof_migrations'))");
+      await sql.unsafe("select pg_advisory_unlock(hashtext('arr_migrations'))");
     } finally {
       await sql.end();
     }

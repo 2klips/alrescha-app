@@ -11,7 +11,7 @@ const PLAN = resolve(ROOT, ".omo/plans/docshub-product-strategy.md");
 
 describe("todo evidence coverage", () => {
   it("fails when a mapped todo evidence file does not exist", async () => {
-    const directory = await mkdtemp(join(tmpdir(), "specproof-plan-"));
+    const directory = await mkdtemp(join(tmpdir(), "arr-plan-"));
     const brokenPlan = join(directory, "broken-plan.md");
     const source = await readFile(PLAN, "utf8");
     await writeFile(

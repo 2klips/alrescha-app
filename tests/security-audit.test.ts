@@ -10,7 +10,7 @@ async function withFixture(
   files: Record<string, string>,
   run: (root: string) => Promise<void>,
 ) {
-  const root = await mkdtemp(join(tmpdir(), "specproof-security-"));
+  const root = await mkdtemp(join(tmpdir(), "arr-security-"));
   try {
     for (const [path, source] of Object.entries(files)) {
       const absolute = join(root, path);

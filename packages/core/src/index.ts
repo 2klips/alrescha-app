@@ -122,7 +122,7 @@ export {
   digestInTotoStatement,
   inTotoStatementSchema,
   inTotoSubjectSchema,
-  specProofReceiptPredicateSchema,
+  arrReceiptPredicateSchema,
   verifyInTotoStatement,
 } from "./assurance/receipts";
 export type {

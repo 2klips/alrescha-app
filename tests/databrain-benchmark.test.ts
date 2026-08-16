@@ -22,7 +22,7 @@ import { renderBenchmarkMarkdown } from "../scripts/databrain-benchmark/report";
 describe("Data Brain benchmark", () => {
   it("rejects a pre-registered task without an objective grading manifest", async () => {
     const directory = await mkdtemp(
-      join(tmpdir(), "specproof-bench-manifest-"),
+      join(tmpdir(), "arr-bench-manifest-"),
     );
     const path = join(directory, "tasks.json");
     await writeFile(
@@ -67,7 +67,7 @@ describe("Data Brain benchmark", () => {
 
   it("rejects a manifest that weakens the pre-registered protocol", async () => {
     const directory = await mkdtemp(
-      join(tmpdir(), "specproof-bench-protocol-"),
+      join(tmpdir(), "arr-bench-protocol-"),
     );
     const path = join(directory, "tasks.json");
     await writeFile(

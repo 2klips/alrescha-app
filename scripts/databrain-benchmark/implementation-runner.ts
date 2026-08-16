@@ -64,7 +64,7 @@ export async function runIsolatedImplementationTests(
   const temporaryParent = resolve(resolvedRoot, "node_modules");
   await mkdir(temporaryParent, { recursive: true });
   const temporaryRepository = await mkdtemp(
-    resolve(temporaryParent, ".specproof-databrain-benchmark-"),
+    resolve(temporaryParent, ".arr-databrain-benchmark-"),
   );
 
   try {

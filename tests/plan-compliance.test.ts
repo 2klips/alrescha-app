@@ -10,7 +10,7 @@ const ROOT = resolve(import.meta.dirname, "..");
 const PLAN = resolve(ROOT, ".omo/plans/docshub-product-strategy.md");
 
 async function verifyMutation(mutate: (source: string) => string) {
-  const directory = await mkdtemp(join(tmpdir(), "specproof-compliance-"));
+  const directory = await mkdtemp(join(tmpdir(), "arr-compliance-"));
   const mutatedPlan = join(directory, "mutated-plan.md");
   const source = await readFile(PLAN, "utf8");
   await writeFile(mutatedPlan, mutate(source), "utf8");

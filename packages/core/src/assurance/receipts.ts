@@ -7,7 +7,7 @@ export const inTotoSubjectSchema = z.strictObject({
   name: z.string().min(1),
 });
 
-export const specProofReceiptPredicateSchema = z.strictObject({
+export const arrReceiptPredicateSchema = z.strictObject({
   commitSha: z.string().regex(/^[0-9a-f]{40}$/),
   evidence: z.strictObject({
     inferred: z.number().int().nonnegative(),
@@ -20,7 +20,7 @@ export const specProofReceiptPredicateSchema = z.strictObject({
 
 export const inTotoStatementSchema = z.strictObject({
   _type: z.literal("https://in-toto.io/Statement/v1"),
-  predicate: specProofReceiptPredicateSchema,
+  predicate: arrReceiptPredicateSchema,
   predicateType: z.literal("https://arr.dev/receipt/v1"),
   subject: z.array(inTotoSubjectSchema).min(1),
 });

@@ -13,7 +13,7 @@ async function withBenchmarkFixture(
   mutate: (report: BenchmarkReport) => void,
   run: (root: string) => Promise<void>,
 ) {
-  const root = await mkdtemp(join(tmpdir(), "specproof-benchmark-audit-"));
+  const root = await mkdtemp(join(tmpdir(), "arr-benchmark-audit-"));
 
   try {
     const benchmarkDirectory = join(root, "benchmarks/databrain");

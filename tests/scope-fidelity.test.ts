@@ -97,7 +97,7 @@ async function withFixture(
   files: Record<string, string>,
   run: (root: string) => Promise<void>,
 ) {
-  const root = await mkdtemp(join(tmpdir(), "specproof-scope-"));
+  const root = await mkdtemp(join(tmpdir(), "arr-scope-"));
 
   try {
     for (const [path, source] of Object.entries(files)) {

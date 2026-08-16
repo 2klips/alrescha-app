@@ -61,7 +61,7 @@ describe("machine-checkable guardrails", () => {
   });
 
   it("rejects a fixture importing MCP Sampling with a specific message", async () => {
-    const fixtureRoot = await mkdtemp(join(tmpdir(), "specproof-guardrails-"));
+    const fixtureRoot = await mkdtemp(join(tmpdir(), "arr-guardrails-"));
 
     try {
       const sourceDirectory = join(fixtureRoot, "packages", "mcp", "src");
