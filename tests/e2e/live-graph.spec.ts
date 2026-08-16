@@ -1,12 +1,33 @@
 import { access, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { DASHBOARD, GRAPH } from "../../apps/web/lib/strings";
 
+/**
+ * Block until React has hydrated the element behind `selector`.
+ *
+ * These screens are server-rendered, so their controls are visible, enabled and
+ * clickable before any listener is attached. A click landing in that window is
+ * accepted by the DOM and then thrown away when React commits its own state —
+ * which is how the orphan toggle below could report "checked" while the graph
+ * never changed. React tags every hydrated host node with a `__reactFiber$…`
+ * property, so its presence is the exact signal, rather than a sleep.
+ */
+async function hydrated(page: Page, selector: string): Promise<void> {
+  await page.waitForFunction((target: string) => {
+    const element = document.querySelector(target);
+    return (
+      element !== null &&
+      Object.keys(element).some((key) => key.startsWith("__reactFiber$"))
+    );
+  }, selector);
+}
+
 test("scripted MCP reads pulse the graph and feed focus follows the newest call", async ({ page }) => {
   await page.goto("/");
+  await hydrated(page, "[data-testid='brain-map-stage']");
   await page.getByRole("button", { name: DASHBOARD.activity.replay }).click();
 
   const feed = page.getByRole("feed");
@@ -37,6 +58,7 @@ test("scripted MCP reads pulse the graph and feed focus follows the newest call"
 test("enters a depth-two graph by node double-click and inspects grounded edges", async ({ page }) => {
   await page.goto("/");
   // The brain map's DOM hit layer is the node affordance over the canvas.
+  await hydrated(page, "[data-testid='brain-map-hits']");
   await page
     .getByTestId("brain-map-hits")
     .locator("[data-node-id='req-auth']")
@@ -50,6 +72,7 @@ test("enters a depth-two graph by node double-click and inspects grounded edges"
   await expect(page.locator(".provenance-card .grade-badge")).toBeVisible();
 
   await expect(page.locator("[data-canvas-nodes='4']")).toBeVisible();
+  await hydrated(page, "[data-canvas-nodes]");
   await page.getByRole("checkbox", { name: GRAPH.inspector.orphanToggleLabel }).check();
   await expect(page.locator("[data-canvas-nodes='5']")).toBeVisible();
   await expect(page.getByRole("link", { name: GRAPH.footer.relatedFindings })).toBeVisible();

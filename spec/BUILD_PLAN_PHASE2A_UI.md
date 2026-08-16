@@ -99,7 +99,7 @@ Rebuild the entire arr-app UI on the **Ink & Seal design system** (Korean-first 
   Acceptance: existing feature tests green; Playwright walks each screen in both themes without unthemed-color lint violations; evidence screenshots per screen.
   Commit: feat(ui): restyle all screens to ink-and-seal
 
-- [ ] 9. Performance and regression verification
+- [x] 9. Performance and regression verification
   Perf smoke: 500-node fixture frame budget (document measurement method; p95 simulated frame < 16.7ms), graph-route bundle size budget (<450KB gz or documented exception with follow-up); full vitest suite + full Playwright suite green; axe-core contrast checks on dashboard/findings in both themes (AA for text on bg/surface).
   Acceptance: perf + bundle reports committed as evidence; all suites green; contrast report shows no AA failures for standard text.
   Commit: test(ui): perf bundle and a11y gates

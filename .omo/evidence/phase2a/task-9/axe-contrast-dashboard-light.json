@@ -1,0 +1,235 @@
+{
+  "incomplete": [
+    {
+      "html": "<span class=\"arr-kicker\">레포</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-repo-block > .arr-kicker"
+    },
+    {
+      "html": "<strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-repo-block > strong"
+    },
+    {
+      "html": "<small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-repo-block > small"
+    },
+    {
+      "html": "<strong>4</strong>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(1) > strong"
+    },
+    {
+      "html": "<span>미해소 Findings</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(1) > span"
+    },
+    {
+      "html": "<strong>84<!-- -->%</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(2) > strong"
+    },
+    {
+      "html": "<span>구현 커버리지</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(2) > span"
+    },
+    {
+      "html": "<strong>71<!-- -->%</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(3) > strong"
+    },
+    {
+      "html": "<span>테스트 커버리지</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(3) > span"
+    },
+    {
+      "html": "<strong>1.8<!-- -->k</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(4) > strong"
+    },
+    {
+      "html": "<span>상시 로드</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(4) > span"
+    },
+    {
+      "html": "<span class=\"arr-kicker\">허브 노드</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-hubs > .arr-kicker"
+    },
+    {
+      "html": "<span>repository-access.ts</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-auth\"] > span"
+    },
+    {
+      "html": "<small>연결 2개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-auth\"] > small"
+    },
+    {
+      "html": "<span>ci-reports.ts</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-evidence\"] > span"
+    },
+    {
+      "html": "<small>연결 2개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-evidence\"] > small"
+    },
+    {
+      "html": "<span>context-pack.ts</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-pack\"] > span"
+    },
+    {
+      "html": "<small>연결 2개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-pack\"] > small"
+    },
+    {
+      "html": "<span>webhook.ts</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-webhook\"] > span"
+    },
+    {
+      "html": "<small>연결 2개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-webhook\"] > small"
+    },
+    {
+      "html": "<span>Build plan</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"doc-plan\"] > span"
+    },
+    {
+      "html": "<small>연결 2개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"doc-plan\"] > small"
+    },
+    {
+      "html": "<a href=\"/app/harness\">",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "a[href$=\"harness\"]"
+    },
+    {
+      "html": "<span class=\"arr-kicker\">현재 commit<!-- --> · bad0551</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-proof-heading > div:nth-child(1) > .arr-kicker"
+    },
+    {
+      "html": "<h1 id=\"proof-map-title\">프로젝트 증명 맵<span class=\"arr-proof-repo\">2klips/specproof-app</span></h1>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "#proof-map-title"
+    },
+    {
+      "html": "<span class=\"arr-proof-repo\">2klips/specproof-app</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-proof-repo"
+    },
+    {
+      "html": "<span><i class=\"requirement\"></i>요구사항</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-legend > span:nth-child(1)"
+    },
+    {
+      "html": "<span><i class=\"code\"></i>코드</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-legend > span:nth-child(2)"
+    },
+    {
+      "html": "<span><i class=\"test\"></i>verified 테스트</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-legend > span:nth-child(3)"
+    },
+    {
+      "html": "<footer class=\"arr-ci-note \" role=\"status\">",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "footer"
+    },
+    {
+      "html": "<span class=\"arr-kicker\">Inspector</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "header > .arr-kicker"
+    },
+    {
+      "html": "<span class=\"arr-grade verified\">verified</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-grade"
+    },
+    {
+      "html": "<h2>REQ-AUTH-001</h2>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-inspector > h2"
+    },
+    {
+      "html": "<p>이 주장을 요구사항에서 구현·테스트 증거까지 따라갑니다.</p>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "p"
+    },
+    {
+      "html": "<code class=\"arr-selected-path\">spec/WORK_SPEC.md:118</code>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-selected-path"
+    },
+    {
+      "html": "<span class=\"arr-kicker\" id=\"evidence-chain-title\">증거 체인</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "#evidence-chain-title"
+    },
+    {
+      "html": "<small>requirement</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(1) > div > small"
+    },
+    {
+      "html": "<strong>Tenant-safe auth</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(1) > div > strong"
+    },
+    {
+      "html": "<code>spec/WORK_SPEC.md:118</code>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(1) > div > code"
+    },
+    {
+      "html": "<small>code</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(2) > div > small"
+    },
+    {
+      "html": "<strong>repository-access.ts</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(2) > div > strong"
+    },
+    {
+      "html": "<code>apps/web/lib/auth/repository-access.ts</code>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(2) > div > code"
+    },
+    {
+      "html": "<small>test</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(3) > div > small"
+    },
+    {
+      "html": "<strong>auth-tenancy.test.ts</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(3) > div > strong"
+    },
+    {
+      "html": "<code>tests/auth-tenancy.test.ts</code>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(3) > div > code"
+    }
+  ],
+  "incompleteCount": 45,
+  "passes": 28,
+  "route": "/",
+  "theme": "light",
+  "violationCount": 0,
+  "violations": []
+}

@@ -1076,12 +1076,12 @@ a {
 .app-header nav a[aria-current="page"] {
   background: var(--surface-2);
   border-color: var(--line-strong);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .commit-chip {
   align-items: center;
-  color: var(--ok);
+  color: var(--ok-text);
   display: flex;
   font: 0.63rem var(--font-mono);
   gap: 0.35rem;
@@ -1262,9 +1262,9 @@ a {
   width: fit-content;
 }
 
-.grade-badge.verified { color: var(--verified); }
-.grade-badge.inferred { color: var(--inferred); }
-.grade-badge.broken { color: var(--broken); }
+.grade-badge.verified { color: var(--verified-text); }
+.grade-badge.inferred { color: var(--inferred-text); }
+.grade-badge.broken { color: var(--broken-text); }
 
 .empty-list {
   border: 1px dashed var(--line-strong);
@@ -1311,9 +1311,9 @@ a {
 }
 
 .severity-label.high,
-.severity-label.critical { color: var(--broken); }
-.severity-label.medium { color: var(--warn); }
-.severity-label.low { color: var(--inferred); }
+.severity-label.critical { color: var(--broken-text); }
+.severity-label.medium { color: var(--warn-text); }
+.severity-label.low { color: var(--inferred-text); }
 
 .detail-meta {
   display: flex;
@@ -1456,7 +1456,7 @@ a {
 
 .suggested-action > span {
   align-items: center;
-  color: var(--ok);
+  color: var(--ok-text);
   display: flex;
   font: 0.63rem var(--font-mono);
   gap: 0.4rem;
@@ -3356,6 +3356,16 @@ a {
   margin: 0.4rem 0 0;
 }
 
+/* The repository half of the heading: same h1, quieter voice. */
+.arr-proof-repo {
+  color: var(--muted);
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  margin-top: 0.5rem;
+}
+
 .arr-legend {
   display: flex;
   flex-wrap: wrap;
@@ -3562,8 +3572,14 @@ a {
   bottom: 3.4rem;
   box-shadow: 0 18px 44px var(--panel-shadow);
   /* Capped and scrollable so a short viewport cannot grow the card up into the
-     controls strip — a HUD card that overlaps another control is unusable. */
-  max-height: min(20rem, calc(100% - 12rem));
+     controls strip — a HUD card that overlaps another control is unusable.
+     The reserve is 16rem, not the original 12rem: the controls strip sits a
+     fixed distance below the title band, so anything that makes the heading
+     taller walks the strip down into this card. At 12rem the measured clearance
+     was 4px, which is why `force panel values survive a reload` could
+     intermittently not click the collapse button. brain-map.spec.ts now asserts
+     the two boxes never intersect, so this constant cannot silently rot. */
+  max-height: min(20rem, calc(100% - 16rem));
   overflow-y: auto;
   padding: 0 0.85rem 0.7rem;
   position: absolute;

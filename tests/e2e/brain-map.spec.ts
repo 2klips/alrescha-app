@@ -106,6 +106,12 @@ test("zooming walks the three LOD bands and thins the labels out", async ({
 
 test("force panel values survive a reload", async ({ page }) => {
   await page.goto("/");
+  // The panel is server-rendered, so it is visible and fillable *before* React
+  // attaches its listeners; an input made in that window is silently discarded
+  // when hydration resets the control to its rendered value. Waiting for the
+  // Pixi canvas — which only the `dynamic(ssr:false)` renderer can create —
+  // proves the client bundle has run before the slider is touched.
+  await expect(page.locator(`${STAGE} canvas`)).toBeVisible();
   const panel = page.getByTestId("graph-force-panel");
   await expect(panel).toBeVisible();
 
@@ -135,6 +141,68 @@ test("force panel values survive a reload", async ({ page }) => {
     "true",
   );
 });
+
+/**
+ * Phase 2A todo 9 — the HUD cards must not sit on top of one another.
+ *
+ * OQ-007 parked the force panel in the corridor between the repo rail and the
+ * inspector, clear of the controls strip. That clearance measured 4px, and the
+ * strip's position tracks the height of the title band, so any copy or type
+ * change walks the strip onto the panel's collapse button — which is exactly
+ * how the test above began failing intermittently. Geometry is asserted here so
+ * the next such change fails with a readable reason instead of a flake.
+ */
+const HUD_CLEARANCE_PX = 8;
+
+for (const viewport of [
+  { height: 720, width: 1280 },
+  { height: 900, width: 1440 },
+  { height: 1080, width: 1920 },
+]) {
+  test(`HUD cards stay clear of one another at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await expect(page.getByTestId("graph-force-panel")).toBeVisible();
+
+    const overlap = await page.evaluate(() => {
+      const panel = document
+        .querySelector('[data-testid="graph-force-panel"]')
+        ?.getBoundingClientRect();
+      const controls = document
+        .querySelector(".arr-graph-controls")
+        ?.getBoundingClientRect();
+      if (!panel || !controls) return null;
+      // Positive on an axis means the boxes overlap on that axis.
+      return {
+        horizontal:
+          Math.min(panel.right, controls.right) -
+          Math.max(panel.left, controls.left),
+        vertical:
+          Math.min(panel.bottom, controls.bottom) -
+          Math.max(panel.top, controls.top),
+      };
+    });
+
+    expect(overlap).not.toBeNull();
+    // The two cards share a column, so the separation has to be vertical.
+    expect(
+      (overlap as { vertical: number }).vertical,
+      "force panel overlaps the graph controls strip",
+    ).toBeLessThanOrEqual(-HUD_CLEARANCE_PX);
+
+    // And the collapse control is genuinely reachable, not merely disjoint.
+    await page
+      .getByTestId("graph-force-panel")
+      .getByRole("button", { name: DASHBOARD.forcePanel.collapse })
+      .click({ timeout: 5_000 });
+    await expect(page.getByTestId("graph-force-panel")).toHaveAttribute(
+      "data-collapsed",
+      "true",
+    );
+  });
+}
 
 test("a scripted MCP burst lights nodes and then fades them out", async ({
   page,

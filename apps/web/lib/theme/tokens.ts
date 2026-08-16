@@ -25,12 +25,22 @@ export const SURFACE_TOKENS = [
   "faint",
 ] as const;
 
-/** Identity and evidence-grade colours. */
+/**
+ * Identity and evidence-grade colours.
+ *
+ * The `-text` entries are the AA-safe siblings used when a status colour has to
+ * carry small text; the plain ones stay at the ADR-009-3 values and are what the
+ * graph renderer, dots, rings and tints read. See `tokens.css` and OQ-009.
+ */
 export const STATUS_TOKENS = [
   "brand",
   "verified",
   "inferred",
   "info",
+  "brand-text",
+  "verified-text",
+  "inferred-text",
+  "info-text",
   "accent",
   "danger",
   "on-brand",

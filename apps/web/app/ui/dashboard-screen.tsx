@@ -508,7 +508,17 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
               <span className="arr-kicker">
                 {DASHBOARD.commitKicker} · bad0551
               </span>
-              <h1 id="proof-map-title">{DASHBOARD.title}</h1>
+              {/*
+                The heading names the map *and* the repository it proves. Before
+                `e0057dc` the h1 was the repo alone; that commit replaced it with
+                the map title, which left every workspace with an identical h1
+                and no connected-repo identity in the page heading. Both halves
+                are here now — the accessible name carries the repo again.
+              */}
+              <h1 id="proof-map-title">
+                {DASHBOARD.title}
+                <span className="arr-proof-repo">{model.repo}</span>
+              </h1>
             </div>
             <div className="arr-legend" aria-label={DASHBOARD.ariaLegend}>
               <span>

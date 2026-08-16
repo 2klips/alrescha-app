@@ -28,7 +28,9 @@
 - 내용: 계획은 "Pretendard Variable(한국어 서브셋)을 `next/font/local`로 자체 호스팅"을 요구한다. 두 요구가 상충한다 — `next/font/local`은 `src` 항목당 파일 하나만 받고 `unicode-range`를 표현할 수 없어, 한국어 서브셋 대신 단일 `PretendardVariable.woff2` **2.0MB** 전체를 모든 방문자에게 내려보내야 한다.
 - 임시 결정: `pretendard@1.3.9` 패키지의 동적 서브셋 스타일시트(92개 `unicode-range` 조각)를 node_modules에서 import한다. 이 레포가 이미 Fontsource로 쓰던 방식과 동일하며 CDN 미사용·자체 호스팅·`font-display: swap` 요건을 모두 만족하고 전송량이 훨씬 작다. 레이아웃 시프트는 `next/font`의 자동 폴백 대신 **실측 메트릭 오버라이드**(woff2의 `head`/`hhea` 테이블 직접 측정)로 처리했다.
 - 근거: `apps/web/node_modules/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css`, `.omo/evidence/phase2a/task-1.md`
-- 상태: open (Wave 4 번들 예산 측정 때 재확인 — 그때도 이 선택이 유리하면 계획 문구 개정을 제안)
+- 상태: resolved(Phase 2A Task 9 — 실측으로 선택 확정). 프로덕션 빌드에서 `/`가 실제로 내려받는 폰트는 **woff2 서브셋 12개 285.1KB**, `/findings`는 **7개 156.8KB**다(`scripts/measure-route-bundle.ts`). 단일 `PretendardVariable.woff2` 전체는 2.0MB이므로 동적 서브셋이 첫 방문에서 ~7배 유리하고, 화면마다 실제로 쓰는 유니코드 범위만 받는다. 계획 문구("`next/font/local`로 자체 호스팅")를 "자체 호스팅 + 유니코드 서브셋"으로 개정할 것을 제안한다.
+
+
 
 ## OQ-003 — 라이트 테마 `--muted`·파생 토큰 값이 ADR-009-3에 없음
 
@@ -36,7 +38,7 @@
 - 내용: ADR-009-3은 라이트("종이") 팔레트로 bg·surface·line·text와 브랜드/등급 색만 지정한다. 다크에 있는 `muted`(`#8A94A8`)의 라이트 대응값, 그리고 기존 화면이 쓰는 파생 역할(`--faint`, `--line-strong`, `--surface-2`, `--code-bg`, 채워진 버튼의 대비색)은 정의되어 있지 않다.
 - 임시 결정: 라이트 `--muted: #5B6272` — `#FAF7F1` 배경 대비 **5.63:1**로 WCAG AA(4.5:1) 통과. 나머지 파생값도 같은 램프에서 보간했다(`--faint #8A8F9E`, `--line-strong #CFC6B4`, `--surface-2 #F3EFE7`). 전부 `tokens.css` 한 곳에만 존재하므로 ADR이 값을 확정하면 한 파일 수정으로 끝난다.
 - 근거: WCAG 2.2 대비 계산(상대휘도 0.9320 vs 0.1243), `spec/DECISIONS-ADR.md` ADR-009-3
-- 상태: open (Wave 4 axe-core 대비 검사에서 재검증)
+- 상태: resolved(Phase 2A Task 9). 라이트 `--muted #5B6272`는 axe-core 검사와 토큰 단위 대비 테스트를 모두 통과했다(최악 배경 `--surface-2 #F3EFE7` 기준 **5.33:1**). 다만 같은 램프에서 보간했던 **`--faint`는 두 테마 모두 AA 실패**였다 — 다크 `#5A6478`는 코드 하이라이트 행에서 2.57:1, 라이트 `#8A8F9E`는 `--surface-2`에서 2.82:1. 각각 `#848EA2`(최악 4.63:1), `#666C7B`(최악 4.58:1)로 올렸고 `text > muted > faint` 순서는 유지된다. `tests/design-tokens.test.ts`의 `token contrast` 스위트가 이 성질을 이제 강제한다.
 
 ## OQ-004 — 랜딩 화면의 보라(inferred)·청록(test) 색이 Ink & Seal에서 한 색으로 합쳐짐
 
@@ -60,7 +62,7 @@
 - 내용: WORK_SPEC은 "노드 드래그, 클릭 시 로컬 그래프 포커스, 더블클릭으로 증거 상세 진입"을 요구한다. 그런데 WebGL 캔버스는 접근성 트리도 클릭 타깃도 없다. 캔버스 히트테스트로 포인터만 살리면 키보드·스크린리더 경로가 사라지고, 반대로 sr-only 목록만 두면 마우스 경로가 사라진다. 스펙은 어느 쪽도 규정하지 않는다.
 - 임시 결정: **투명 DOM 히트 레이어** 하나로 통합했다. 노드당 버튼 1개(`data-node-id`, 이름 = `라벨 · 유형 · 등급`)를 렌더러의 화면 변환으로 10Hz마다 해당 노드 위에 배치한다. 포인터·키보드·보조기술·e2e가 모두 같은 요소를 쓴다. 노드 수가 많아지면 차수 상위 `HIT_TARGET_LIMIT = 600`개로 제한하며(렌더러는 전부 그린다), 이 상한은 3,000노드 이상에서 Far 줌 슈퍼노드 접기와 함께 재검토가 필요하다. 노드 드래그는 이번 범위에서 구현하지 않았다(기존 SVG 대시보드에도 없었고 계획의 "기능 추가 금지"에 걸린다).
 - 근거: `.omo/evidence/phase2a/task-7.md`, `apps/web/app/ui/brain-map-stage.test.tsx`, `tests/e2e/brain-map.spec.ts`
-- 상태: open (Wave 4 a11y 검사에서 히트 레이어 상한과 키보드 순회 비용을 재검증)
+- 상태: open — **Wave 4에서 해소하지 못했다.** todo 9의 axe-core 대비 검사는 히트 레이어를 명시적으로 제외했다(투명 버튼이 캔버스 위에 겹쳐 있어 axe가 배경색을 계산할 수 없고, 결과가 violation이 아니라 incomplete로 나온다). `HIT_TARGET_LIMIT = 600`의 키보드 순회 비용도 측정하지 않았다 — 600개 탭 스톱은 스크린리더 사용자에게 실사용 불가에 가깝고, 캔버스 노드용 대체 탐색(검색·허브 칩·방향키 순회)이 필요한지는 여전히 미결이다. Phase 2B a11y 작업으로 넘긴다.
 
 ## OQ-007 — HUD 카드가 레일·인스펙터와 다른 스태킹 컨텍스트에 있음
 
@@ -68,7 +70,8 @@
 - 내용: 전면 그래프 구성상 그래프 플레이트(`.arr-proof-panel`)가 워크스페이스 전 셀을 덮고, 레일·인스펙터·활동 피드가 그 위에 반투명 패널로 얹힌다. 그래프 안쪽에 사는 카드(힘 패널, 지표 근거 패널)는 z-index를 아무리 올려도 레일·인스펙터 **아래**로 깔린다 — 서로 다른 스태킹 컨텍스트이기 때문이다. 실제로 힘 패널의 접기 버튼과 근거 패널의 닫기 버튼이 클릭 불가 상태였다(Playwright가 잡아냄).
 - 임시 결정: 두 카드를 레일·인스펙터 사이 "빈 통로"에 고정 배치했다(힘 패널 = 우하단 `right: 22.5rem`, 근거 패널 = 좌상단 `left: 17.5rem`). 통로 폭은 레일 16rem·인스펙터 21rem에 묶여 있으므로 이 세 수치는 함께 움직여야 한다. 힘 패널은 `max-height: min(20rem, calc(100% - 12rem))` + 내부 스크롤로 낮은 뷰포트에서 제어 스트립을 침범하지 않게 했다.
 - 근거: `tests/e2e/dashboard-hud.spec.ts`, `tests/e2e/brain-map.spec.ts`, `.omo/evidence/phase2a/task-7.md`
-- 상태: open (HUD를 워크스페이스 그리드의 형제로 끌어올리면 통로 상수가 사라진다 — Wave 4 이후 정리 후보)
+- Wave 4 추가 관찰(Task 9): 이 배치는 생각보다 훨씬 취약했다. 1280×720에서 힘 패널 상단과 제어 스트립 사이 **실측 여유는 4px**였다 — `calc(100% - 12rem)`이 제어 스트립을 "플레이트 상단에서 고정 오프셋"으로 가정했는데, 그 오프셋은 사실 **제목 밴드 높이를 따라 움직인다**. 그래서 h1에 한 줄을 더한 것만으로 스트립이 19px 내려와 접기 버튼을 덮었고, `force panel values survive a reload`가 간헐 실패했다. 여유를 `calc(100% - 16rem)`(실측 26px)으로 넓히고, `tests/e2e/brain-map.spec.ts`에 세 해상도에서 두 상자가 교차하지 않고 접기 버튼이 실제로 클릭 가능한지 확인하는 기하 회귀 테스트를 넣었다.
+- 상태: open — 26px 여유도 여전히 상수 튜닝이다. 근본 해법은 처음 제안대로 **HUD를 워크스페이스 그리드의 형제로 끌어올려** 통로 상수(16rem·21rem·22.5rem·16rem)를 없애는 것. Phase 2B 정리 후보.
 
 ## OQ-008 — 두 테마 화면 순회에서 빠지는 라우트: `/auth/*`(500)와 `/app/*`(인증 필요)
 
@@ -77,4 +80,20 @@
 - 임시 결정: 순회 대상에서 두 라우트군을 빼고 공개 라우트 10개만 검증했다(대시보드·findings·lint·receipts·progress·harness·library·evidence 상세·onboarding·404). 해당 화면의 카피 변환 자체는 `tests/korean-strings.test.ts`가 파일 단위로 강제하고, 컴포넌트 렌더링은 각 화면의 vitest가 덮는다. 브라우저 상의 테마 확인은 Supabase가 붙는 Wave 4로 넘긴다.
 - 부수 관찰: 테마 토글은 대시보드·assurance 화면·progress에만 있다. `/graph`, `/harness`, `/library`, `/onboarding`에는 헤더 토글이 없어 그 화면에서는 테마를 바꿀 수 없다(저장된 설정은 따른다). 계획 todo 2의 수용 기준은 3개 화면만 요구하므로 이번 범위에서 추가하지 않았다.
 - 근거: `tests/e2e/screens-theme.spec.ts`, `.omo/evidence/phase2a/task-8.md`
-- 상태: open (Wave 4에서 Supabase 연결 후 `/auth/*`·`/app/*` 순회 추가, 헤더 토글 확산 여부 결정)
+- 상태: open — **Wave 4에서도 해소하지 못했다.** Supabase가 이 환경에 여전히 없어서 `/auth/*`는 500, `/app/*`는 세션 부재로 접근 불가다. 따라서 todo 9의 axe-core 대비 검사도 계획이 지정한 두 화면(`/`, `/findings`)만 덮으며, 인증 화면군의 대비는 **검증되지 않았다**(토큰 단위 대비 테스트가 간접적으로만 덮는다). Supabase 프로젝트가 붙는 Phase D 준비물이 필요하다.
+
+## OQ-009 — ADR-009-3 라이트 팔레트가 작은 텍스트에서 WCAG AA를 통과하지 못함
+
+- 발견: Phase 2A Task 9 / `tests/e2e/a11y-contrast.spec.ts`, `apps/web/app/styles/tokens.css`
+- 내용: axe-core 대비 검사에서 `/findings` 라이트 테마가 **22건 violation**을 냈다. 원인의 대부분은 파생 토큰이 아니라 **ADR-009-3이 못 박은 값 자체**다 — 종이 흰색(`#FFFFFF`/`#FAF7F1`/`#F3EFE7`) 위에서 `--verified #1E8A5E`는 3.77~4.33:1, `--inferred #B07A14`는 3.25~3.72:1, `--brand #D6402E`는 3.95~4.53:1, `--info #3B6FDB`는 4.08~4.68:1이다. 이 색들을 9~11px 모노 뱃지(`.grade-badge`, `.severity-label`, `.commit-chip`)가 텍스트 색으로 쓰기 때문에 AA(4.5:1) 미달이다. 다크 테마의 같은 색들은 전부 4.95:1 이상으로 통과한다.
+- 임시 결정: **ADR 값은 건드리지 않았다**(ADR = WORK_SPEC > 계획). 대신 `tokens.css`에 텍스트 전용 파생 토큰을 추가했다 — `--brand-text #C43A2B`(4.59:1), `--verified-text #177A52`(4.65:1), `--inferred-text #8F6310`(4.62:1), `--info-text #3766CA`(4.68:1). 다크에서는 기본 토큰의 별칭일 뿐이다. 그래프 노드 색·점·링·틴트·테두리는 여전히 ADR 값을 쓰므로 팔레트의 정체성은 그대로고, 텍스트만 어두운 형제 색을 쓴다. 파생 별칭(`--ok-text`, `--warn-text`, `--broken-text`, `--accent-text`)도 같이 뒀다.
+- 근거: `.omo/evidence/phase2a/task-9.md`, `.omo/evidence/phase2a/task-9/axe-contrast-*.json`, `tests/design-tokens.test.ts`(`token contrast` 스위트)
+- 상태: open — ADR-009-3이 "라이트 팔레트는 큰 면적·그래프용, 작은 텍스트는 파생 색"을 명시하도록 개정할지, 아니면 라이트 값 자체를 AA 통과값으로 바꿀지 기획 판단이 필요하다. 마케팅 사이트도 같은 팔레트를 쓰므로 (`docs/design-tokens.md`) 결정이 양쪽에 걸린다.
+
+## OQ-010 — 제품명이 Arr로 바뀐 뒤에도 코드·픽스처·패키지명에 SpecProof가 남아 있음
+
+- 발견: Phase 2A Task 9 / 레포 전역
+- 내용: ADR-008에서 제품명이 **Arr**로 확정되고 레포도 `2klips/arr` · `2klips/arr-app`인데, 코드에는 이전 이름이 광범위하게 남아 있다. ⑴ 워크스페이스 패키지명 `specproof`, `@specproof/web`, `@specproof/core`, `@specproof/mcp`. ⑵ 데모 레포 문자열 `specproof/drifted-demo`와 기본 레포 `2klips/specproof-app`(`apps/web/lib/strings/onboarding.ts`, `apps/web/lib/library/demo.ts`, e2e 스펙 다수). ⑶ `spec/IMPLEMENTATION_GUIDE.md` 제목과 README 푸터의 "© 2026 SpecProof". ⑷ evidence 디렉터리 `.omo/evidence/docshub-product-strategy/`(더 이전 이름). 사용자에게 보이는 ⑵는 온보딩 첫 화면에 그대로 노출된다.
+- 임시 결정: **이번 웨이브에서 고치지 않았다.** 계획의 "기능 추가·삭제 금지"와 "todo 9/10이 요구하는 것 외 변경 금지"에 걸리고, 패키지명 변경은 `pnpm-workspace`·import 경로·픽스처·`tests/plan-compliance.test.ts`의 경로 상수까지 건드리는 별도 작업이다. 다만 발견 사실은 여기에 기록한다.
+- 근거: `apps/web/lib/strings/onboarding.ts:51`, `apps/web/app/ui/onboarding-flow.tsx:41`, `package.json`, `README.md`
+- 상태: open (전용 리네임 할일로 분리 권장 — 사용자 노출 문자열 ⑵부터, 패키지명 ⑴은 마지막에)

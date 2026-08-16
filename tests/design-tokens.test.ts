@@ -204,6 +204,117 @@ describe("ink & seal tokens (ADR-009-3)", () => {
   });
 });
 
+/**
+ * WCAG 2.2 relative luminance / contrast, computed straight from tokens.css.
+ *
+ * The axe-core run in `tests/e2e/a11y-contrast.spec.ts` is the real audit — it
+ * sees what is actually painted. This is its cheap, browserless companion: it
+ * fails the moment a *token* stops being AA-legible on some surface, without
+ * waiting for a screen to happen to use that pairing.
+ */
+function relativeLuminance(hex: string): number {
+  const value = hex.replace("#", "");
+  const expanded =
+    value.length === 3
+      ? value
+          .split("")
+          .map((digit) => digit + digit)
+          .join("")
+      : value;
+  const channels = [0, 2, 4].map((offset) => {
+    const part = Number.parseInt(expanded.slice(offset, offset + 2), 16) / 255;
+    return part <= 0.03928 ? part / 12.92 : ((part + 0.055) / 1.055) ** 2.4;
+  });
+  return (
+    0.2126 * (channels[0] as number) +
+    0.7152 * (channels[1] as number) +
+    0.0722 * (channels[2] as number)
+  );
+}
+
+function contrastRatio(foreground: string, background: string): number {
+  const first = relativeLuminance(foreground);
+  const second = relativeLuminance(background);
+  const [lighter, darker] = first > second ? [first, second] : [second, first];
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+describe("token contrast (WCAG 2.2 AA — Phase 2A todo 9)", () => {
+  const css = readFileSync(TOKENS_CSS, "utf8");
+  const rootBlock = extractBlock(css, ":root");
+  const lightBlock = extractBlock(css, '[data-theme="light"]');
+
+  /** Resolve `--x` to a literal hex, following `var()` aliases. */
+  function resolve(name: string, theme: "dark" | "light"): string {
+    const blocks = theme === "dark" ? [rootBlock] : [lightBlock, rootBlock];
+    for (const block of blocks) {
+      const match = block.match(
+        new RegExp(`${name}:\\s*(#[0-9a-fA-F]{3,8}|var\\(--[a-z0-9-]+\\));`),
+      );
+      if (!match) continue;
+      const value = match[1] as string;
+      return value.startsWith("var(")
+        ? resolve(value.slice(4, -1), theme)
+        : value;
+    }
+    throw new Error(`${name} is not declared for the ${theme} theme`);
+  }
+
+  /** Every surface a token-coloured string of text can land on. */
+  const SURFACES = ["--bg", "--surface", "--surface-2", "--code-bg"] as const;
+
+  /** Tokens that paint text. AA body text needs 4.5:1. */
+  const TEXT_TOKENS = [
+    "--text",
+    "--muted",
+    "--faint",
+    "--brand-text",
+    "--verified-text",
+    "--inferred-text",
+    "--info-text",
+  ] as const;
+
+  test.each(THEMES)("%s: every text token clears 4.5:1 everywhere", (theme) => {
+    const failures: string[] = [];
+    for (const token of TEXT_TOKENS) {
+      for (const surface of SURFACES) {
+        const ratio = contrastRatio(
+          resolve(token, theme),
+          resolve(surface, theme),
+        );
+        if (ratio < 4.5)
+          failures.push(`${token} on ${surface}: ${ratio.toFixed(2)}:1`);
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test.each(THEMES)("%s: the text ramp stays ordered", (theme) => {
+    const on = (token: string) =>
+      contrastRatio(resolve(token, theme), resolve("--surface", theme));
+    // Emphasis must still read as emphasis after the AA correction.
+    expect(on("--text")).toBeGreaterThan(on("--muted"));
+    expect(on("--muted")).toBeGreaterThan(on("--faint"));
+  });
+
+  test.each(THEMES)("%s: filled controls stay legible on their fill", (theme) => {
+    expect(
+      contrastRatio(resolve("--on-brand", theme), resolve("--brand", theme)),
+    ).toBeGreaterThan(3);
+    expect(
+      contrastRatio(
+        resolve("--on-verified", theme),
+        resolve("--verified", theme),
+      ),
+    ).toBeGreaterThan(3);
+  });
+
+  test("the ratio calculation itself is calibrated", () => {
+    expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 5);
+    expect(contrastRatio("#ffffff", "#ffffff")).toBeCloseTo(1, 5);
+  });
+});
+
 describe("hardcoded colour gate", () => {
   test("the codebase contains no colour literals outside the tokens file", () => {
     const findings = scanRepository().map(
