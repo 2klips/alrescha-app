@@ -7,6 +7,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { scanRepository, type RepositoryScanPlan } from "../packages/core/src/index";
 import { createLocalRepositorySource } from "../packages/cli/src/local-source";
+import {
+  buildWorkspaceCommitCards,
+  type CommitCardRunRow,
+} from "../apps/web/lib/commits/commit-cards-report";
 import { GitHubRepositorySource } from "../apps/worker/src/github-repository-source";
 import { ALL_MIGRATIONS, createTestDatabase } from "./helpers/database";
 
@@ -280,7 +284,7 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
       ).rows,
     ).toHaveLength(1);
 
-    // No receipt is claimed for a scan-only ingest (OQ-016).
+    // No receipt is claimed for a scan-only ingest (ADR-015).
     expect(
       (
         await database.query(
@@ -289,6 +293,30 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
         )
       ).rows,
     ).toEqual([]);
+
+    // ADR-015 §4, proven from the stored rows themselves: the exact row the
+    // SQL function wrote — fed through the production card loader's builder —
+    // becomes a graph-only card that carries no receipt and no delta.
+    const storedRun = await database.query<CommitCardRunRow>(
+      `select id, commit_sha, created_at, repository_id, trigger_kind,
+              status, started_at, completed_at
+       from public.runs where id = $1`,
+      [runId],
+    );
+    const cards = buildWorkspaceCommitCards({
+      jobs: [],
+      receipts: [],
+      repositories: [{ full_name: "local/runs", id: repositoryId }],
+      runs: storedRun.rows,
+    });
+    expect(cards).toHaveLength(1);
+    expect(cards[0]).toMatchObject({
+      assurance: "graph-only",
+      findingsDelta: null,
+      receiptId: null,
+      status: "completed",
+      triggerKind: "manual",
+    });
   });
 
   it("ensure_local_repository is idempotent per workspace", async () => {
