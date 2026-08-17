@@ -49,6 +49,8 @@ export const LIBRARY_MIGRATION =
   "supabase/migrations/202608100011_personal_library.sql";
 export const RUN_LIFECYCLE_MIGRATION =
   "supabase/migrations/202608170001_run_lifecycle.sql";
+export const LOCAL_INGEST_MIGRATION =
+  "supabase/migrations/202608170002_local_ingest.sql";
 
 export async function createTestDatabase(
   migrations: readonly string[],

@@ -62,6 +62,20 @@ export type {
   ScannedArtifact,
 } from "./ingest/repository-scanner";
 
+export {
+  MAX_LOCAL_INGEST_BODY_BYTES,
+  handleLocalIngestPreviousState,
+  handleLocalIngestUpload,
+  localIngestPayloadSchema,
+  repositoryScanPlanSchema,
+} from "./ingest/local-ingest";
+export type {
+  LocalIngestPayload,
+  LocalIngestPreviousState,
+  LocalIngestPrincipal,
+  LocalIngestStore,
+} from "./ingest/local-ingest";
+
 export { parseMarkdownStructure } from "./parser/markdown";
 export type {
   MarkdownDiagnostic,

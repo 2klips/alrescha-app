@@ -41,6 +41,8 @@ export const CONVENTIONAL_ENGLISH_TERMS = [
   "GitHub App",
   "GitHub Actions",
   "CI",
+  "CLI",
+  "Git",
   "commit",
   "push",
   "SHA-256",

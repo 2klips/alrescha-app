@@ -20,7 +20,7 @@ export const ONBOARDING = {
     body: "한 번만 로그인하세요. 공개 레포지토리도 Arr가 비공개 단독 워크스페이스를 만듭니다.",
     cta: "GitHub로 계속하기",
     demoCta: "샘플 데모로 시작",
-    note: "로컬 설치 없음. 레포지토리 쓰기 없음.",
+    note: "설치 없이 시작. 레포지토리 쓰기 없음. Git 없이 시작하려면 로컬 인제스트 CLI(메타데이터만 업로드)도 있습니다.",
   },
 
   permission: {
