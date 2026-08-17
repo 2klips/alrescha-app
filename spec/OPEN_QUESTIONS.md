@@ -62,7 +62,7 @@
 - 내용: WORK_SPEC은 "노드 드래그, 클릭 시 로컬 그래프 포커스, 더블클릭으로 증거 상세 진입"을 요구한다. 그런데 WebGL 캔버스는 접근성 트리도 클릭 타깃도 없다. 캔버스 히트테스트로 포인터만 살리면 키보드·스크린리더 경로가 사라지고, 반대로 sr-only 목록만 두면 마우스 경로가 사라진다. 스펙은 어느 쪽도 규정하지 않는다.
 - 임시 결정: **투명 DOM 히트 레이어** 하나로 통합했다. 노드당 버튼 1개(`data-node-id`, 이름 = `라벨 · 유형 · 등급`)를 렌더러의 화면 변환으로 10Hz마다 해당 노드 위에 배치한다. 포인터·키보드·보조기술·e2e가 모두 같은 요소를 쓴다. 노드 수가 많아지면 차수 상위 `HIT_TARGET_LIMIT = 600`개로 제한하며(렌더러는 전부 그린다), 이 상한은 3,000노드 이상에서 Far 줌 슈퍼노드 접기와 함께 재검토가 필요하다. 노드 드래그는 이번 범위에서 구현하지 않았다(기존 SVG 대시보드에도 없었고 계획의 "기능 추가 금지"에 걸린다).
 - 근거: `.omo/evidence/phase2a/task-7.md`, `apps/web/app/ui/brain-map-stage.test.tsx`, `tests/e2e/brain-map.spec.ts`
-- 상태: open — **Wave 4에서 해소하지 못했다.** todo 9의 axe-core 대비 검사는 히트 레이어를 명시적으로 제외했다(투명 버튼이 캔버스 위에 겹쳐 있어 axe가 배경색을 계산할 수 없고, 결과가 violation이 아니라 incomplete로 나온다). `HIT_TARGET_LIMIT = 600`의 키보드 순회 비용도 측정하지 않았다 — 600개 탭 스톱은 스크린리더 사용자에게 실사용 불가에 가깝고, 캔버스 노드용 대체 탐색(검색·허브 칩·방향키 순회)이 필요한지는 여전히 미결이다. Phase 2B a11y 작업으로 넘긴다.
+- 상태: **resolved(Phase 2B todo 14, 2026-08-17)** — ⑴ 히트 레이어를 **roving tabindex** 복합 위젯으로 전환: 탭 정지 600개 → **1개**, 방향키(←→↑↓·Home·End)로 노드 순회, `role="toolbar"` + 한국어 접근 이름. 순회 비용은 `tests/e2e/a11y-keyboard.spec.ts`가 실측해 `.omo/evidence/phase2b/todo-14/keyboard-traversal.json`에 기록. ⑵ axe 감사 범위에 히트 레이어 편입(`a11y-contrast.spec.ts`의 제외 목록에서 제거 — 캔버스만 제외 유지). 버튼은 가시 텍스트가 없어 color-contrast 오판 대상이 아니며, 감사는 위반 0으로 통과.
 
 ## OQ-007 — HUD 카드가 레일·인스펙터와 다른 스태킹 컨텍스트에 있음
 
@@ -71,7 +71,7 @@
 - 임시 결정: 두 카드를 레일·인스펙터 사이 "빈 통로"에 고정 배치했다(힘 패널 = 우하단 `right: 22.5rem`, 근거 패널 = 좌상단 `left: 17.5rem`). 통로 폭은 레일 16rem·인스펙터 21rem에 묶여 있으므로 이 세 수치는 함께 움직여야 한다. 힘 패널은 `max-height: min(20rem, calc(100% - 12rem))` + 내부 스크롤로 낮은 뷰포트에서 제어 스트립을 침범하지 않게 했다.
 - 근거: `tests/e2e/dashboard-hud.spec.ts`, `tests/e2e/brain-map.spec.ts`, `.omo/evidence/phase2a/task-7.md`
 - Wave 4 추가 관찰(Task 9): 이 배치는 생각보다 훨씬 취약했다. 1280×720에서 힘 패널 상단과 제어 스트립 사이 **실측 여유는 4px**였다 — `calc(100% - 12rem)`이 제어 스트립을 "플레이트 상단에서 고정 오프셋"으로 가정했는데, 그 오프셋은 사실 **제목 밴드 높이를 따라 움직인다**. 그래서 h1에 한 줄을 더한 것만으로 스트립이 19px 내려와 접기 버튼을 덮었고, `force panel values survive a reload`가 간헐 실패했다. 여유를 `calc(100% - 16rem)`(실측 26px)으로 넓히고, `tests/e2e/brain-map.spec.ts`에 세 해상도에서 두 상자가 교차하지 않고 접기 버튼이 실제로 클릭 가능한지 확인하는 기하 회귀 테스트를 넣었다.
-- 상태: open — 26px 여유도 여전히 상수 튜닝이다. 근본 해법은 처음 제안대로 **HUD를 워크스페이스 그리드의 형제로 끌어올려** 통로 상수(16rem·21rem·22.5rem·16rem)를 없애는 것. Phase 2B 정리 후보.
+- 상태: **resolved(Phase 2B todo 14, 2026-08-17)** — 처음 제안한 근본 해법 그대로: 두 HUD 카드를 **`.arr-hud-channel`(워크스페이스 그리드의 형제, 가운데 컬럼 점유)**로 승격했다. 그리드가 기하를 소유하므로 카드가 레일·인스펙터와 충돌하는 것이 구조적으로 불가능해졌고, 통로 상수 `right: 22.5rem`/`left: 17.5rem`은 삭제(채널 기준 1.5rem). `BrainMapStage`는 `settings`/`onSettingsChange`/`onLodReport` 프롭으로 외부 HUD에 상태를 위임한다(내부 패널 경로도 하위 호환 유지). 차단 상태에서는 채널이 힘 패널을 렌더하지 않아 복구 버튼을 가리지 않는다(e2e가 잡아낸 회귀를 즉시 수정). 컨트롤 스트립과의 세로 여유(`max-height` reserve)는 남지만 `brain-map.spec.ts` 기하 회귀 테스트가 감시한다.
 
 ## OQ-008 — 두 테마 화면 순회에서 빠지는 라우트: `/auth/*`(500)와 `/app/*`(인증 필요)
 
@@ -81,6 +81,7 @@
 - 부수 관찰: 테마 토글은 대시보드·assurance 화면·progress에만 있다. `/graph`, `/harness`, `/library`, `/onboarding`에는 헤더 토글이 없어 그 화면에서는 테마를 바꿀 수 없다(저장된 설정은 따른다). 계획 todo 2의 수용 기준은 3개 화면만 요구하므로 이번 범위에서 추가하지 않았다.
 - 근거: `tests/e2e/screens-theme.spec.ts`, `.omo/evidence/phase2a/task-8.md`
 - 상태: open — **Wave 4에서도 해소하지 못했다.** Supabase가 이 환경에 여전히 없어서 `/auth/*`는 500, `/app/*`는 세션 부재로 접근 불가다. 따라서 todo 9의 axe-core 대비 검사도 계획이 지정한 두 화면(`/`, `/findings`)만 덮으며, 인증 화면군의 대비는 **검증되지 않았다**(토큰 단위 대비 테스트가 간접적으로만 덮는다). Supabase 프로젝트가 붙는 Phase D 준비물이 필요하다.
+- Phase 2B todo 14 재점검(2026-08-17): 환경 재확인 결과 `.env.local`에는 AI API 키만 있고 Supabase 설정이 없다 — **여전히 사람 준비물 차단**. OQ-006·OQ-007은 해소됐고, 이 항목만 Phase 2B의 알려진 한계로 CHANGELOG에 명기한 채 open으로 남긴다. Supabase 프로젝트가 연결되면 `screens-theme`·`a11y-contrast` 순회에 `/auth/*`·`/app/*`를 추가하는 것이 남은 전부다.
 
 ## OQ-009 — ADR-009-3 라이트 팔레트가 작은 텍스트에서 WCAG AA를 통과하지 못함
 

@@ -96,11 +96,11 @@ MVP는 GitHub App 설치가 유일한 입구다. 공개 전 진입 장벽을 없
 
 ## Wave 5 — 이월 부채 · 최종 게이트
 
-- [ ] **14. Phase 2A 이월 항목 해소**
+- [x] **14. Phase 2A 이월 항목 해소** *(OQ-006·007 해소; OQ-008은 Supabase 사람 준비물 차단 — OPEN_QUESTIONS·CHANGELOG에 명기)*
   OQ-006(캔버스 히트 레이어 axe 대상 편입 + 600 타깃 키보드 순회 비용 측정), OQ-007(HUD 26px 튜닝 상수를 구조적 레이아웃으로), OQ-008(`/auth/*`·`/app/*` 명암비 실검증 — Supabase 기동 포함).
   Commit: `fix(ui): resolve carried-over a11y and layout debt`
 
-- [ ] **15. 최종 검증·핸드오프**
+- [x] **15. 최종 검증·핸드오프**
   전체 vitest/Playwright green, 가드레일 스위트 무변경 증명, 프라이버시 음성 테스트 전수 통과, 신규 화면 문서화, CHANGELOG.
   Commit: `chore(release): phase 2b verification`
 

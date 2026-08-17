@@ -10,6 +10,65 @@ phase.
 
 ## [Unreleased]
 
+### Phase 2B — 등록 플로우 · Data Brain v2 · 점검 · 팀 (2026-08-17)
+
+Plan: `spec/BUILD_PLAN_PHASE2B.md` (15 todos, all delivered). Governing
+decisions: ADR-011 (team privacy), ADR-012 (interval-based claims), ADR-013
+(scope boundary redefinition — local ingest allowed metadata-only, team
+surfaces gated on the ADR-011 negative suite). Per-todo evidence:
+`.omo/evidence/phase2b/`.
+
+#### Added
+
+- **Registration flow**: repository-by-URL onboarding; per-commit analysis
+  cards (`/commits` — status derived from job rows, findings delta from
+  receipts, failure reasons verbatim); `arr push` local ingest CLI
+  (`packages/cli`) that scans locally with the shared deterministic scanner
+  and uploads **metadata only**, enforced by a strict schema that rejects any
+  body-shaped field, authenticated with workspace MCP tokens.
+- **Single persistence path**: `apply_repository_scan` SQL function — the
+  worker (GitHub) and the local-ingest route persist scans through the same
+  atomic implementation, so the two paths cannot produce different graphs.
+- **Run lifecycle** (OQ-014): the job queue now writes `runs.status` /
+  `started_at` / `completed_at` (claim → running; last terminal job →
+  failed > cancelled > succeeded), unblocking the pilot stats screen.
+- **Data Brain v2**: five ID-first MCP graph tools (`search_nodes`,
+  `get_neighbors`, `trace_path`, `get_node_content`, `impact_of`) plus
+  `route_query` (deterministic simple-vs-multi-hop routing with reasons and a
+  fallback); measured token-efficiency techniques behind on/off flags
+  (id-first −14.2% tokens on the dry-run fixture; defaults gated on recall);
+  scanner extensions — rationale comments as first-class graph nodes with
+  provenance edges (the first production `edges` writer), Python/Go symbol
+  extraction (tree-sitter pending OQ-015), handoff/session files classified
+  as `todo_progress`.
+- **Inspection dashboard** (`/inspection`): six widgets, each with a source
+  label and an explicit "증거 부족" empty state; npm-audit ingestion (a
+  collector, provably not a scanner); `inferred`-labelled document summaries;
+  an append-only ruled-out history.
+- **Teams on ADR-011**: roles owner/admin/member/viewer with an invitation
+  lifecycle and an exhaustively tested capability matrix; opt-in local-first
+  prompt capture (double opt-in enforced by a BEFORE trigger even against
+  service-role writes, raw text only behind a separate per-member switch,
+  consent invisible to the team, deletion immediate); prompt coaching with a
+  deterministic anti-shell floor and no-charge-on-failure; VIBE index v0
+  whose metrics render **only** with an adopted Goodhart-gate verdict — the
+  published gate file is all-pending, so none render today; the executable
+  harness-injection experiment (112-trial grid, verdicts published as
+  pending until real models run).
+- **Accessibility/layout debt paid** (todo 14): the canvas hit layer is one
+  roving-tabindex stop with arrow-key traversal (was up to 600 tab stops)
+  and is now inside the axe audit scope; the HUD force/evidence panels moved
+  into a workspace-grid channel, deleting the fragile passage constants.
+
+#### Known limits
+
+- `/auth/*`·`/app/*` contrast verification (OQ-008) still needs a live
+  Supabase project — blocked on that human prerequisite, tracked in
+  `spec/OPEN_QUESTIONS.md`.
+- Benchmark v3 (600 trials), the VIBE injection run (112 trials), and the
+  real-model technique A/B await API credits; every pre-registration is
+  frozen and digest-locked.
+
 ### Phase 2A — full UI rebuild: Ink & Seal + graph-first (2026-08-16)
 
 Plan: `spec/BUILD_PLAN_PHASE2A_UI.md`. Governing decisions: ADR-009 §3 (Ink &
