@@ -6,6 +6,7 @@ import { scanGuardrailFile, type GuardrailRule } from "./adr-guardrails";
 
 export const SCOPE_BOUNDARIES = [
   "raw-source-upload",
+  "client-submitted-assurance",
   "unguarded-team-surface",
   "external-billing",
   "non-github-provider",
@@ -171,6 +172,94 @@ function scanRawSourceUpload(
           source,
           match.index,
           "Raw source-code bodies must not enter transfer payloads; ingest is metadata-only (ADR-013).",
+        ),
+      ]
+    : [];
+}
+
+/**
+ * Blanks comment bodies while preserving every offset, so a boundary regex
+ * reads code only. A prose mention of "receipt" in a migration header is a
+ * design note, not a violation; the reverse — code hidden after a comment on
+ * the same line — still gets scanned because the length never changes.
+ */
+function withoutComments(source: string): string {
+  const blanked = source.split("");
+  let index = 0;
+
+  while (index < blanked.length) {
+    const pair = source.slice(index, index + 2);
+    const isLineComment =
+      (pair === "//" && source[index - 1] !== ":") || pair === "--";
+
+    if (isLineComment) {
+      while (index < blanked.length && blanked[index] !== "\n") {
+        blanked[index++] = " ";
+      }
+      continue;
+    }
+
+    if (pair === "/*") {
+      const end = source.indexOf("*/", index + 2);
+      const stop = end === -1 ? blanked.length : end + 2;
+      while (index < stop) {
+        if (blanked[index] !== "\n") {
+          blanked[index] = " ";
+        }
+        index++;
+      }
+      continue;
+    }
+
+    index++;
+  }
+
+  return blanked.join("");
+}
+
+// ADR-015: assurance (findings/receipts) is issued only from evidence the
+// server observed itself. The ingest path must never accept it from a client —
+// a receipt over submitted findings is a notarization of whatever it was
+// handed, and metadata-only ingest can never re-derive it later.
+const ASSURANCE_IDENTIFIERS =
+  "(?:findings?|receipts?|attestations?|inTotoStatements?|assuranceResults?)";
+const SUBMITTED_ASSURANCE_ACCESS = new RegExp(
+  `\\b(?:body|payload|request|req|submitted|uploaded|client)\\w*\\s*(?:\\.\\s*|\\[\\s*["'])${ASSURANCE_IDENTIFIERS}\\b`,
+  "i",
+);
+const INGEST_ASSURANCE_FIELD = new RegExp(
+  `\\b${ASSURANCE_IDENTIFIERS}\\s*:`,
+  "i",
+);
+const INGEST_ASSURANCE_WRITE = new RegExp(
+  `\\binsert\\s+into\\s+(?:public\\.)?(?:receipts|findings)\\b`,
+  "i",
+);
+const INGEST_PATH_SEGMENT = /(?:^|[-_.])(?:ingest|ingests|upload|uploads|push|pushes)(?:[-_.]|$)/i;
+
+function isIngestPathFile(file: string): boolean {
+  return file.split("/").some((segment) => INGEST_PATH_SEGMENT.test(segment));
+}
+
+function scanClientSubmittedAssurance(
+  file: string,
+  source: string,
+): readonly ScopeFinding[] {
+  const code = withoutComments(source);
+  const match =
+    SUBMITTED_ASSURANCE_ACCESS.exec(code) ??
+    (isIngestPathFile(file)
+      ? (INGEST_ASSURANCE_FIELD.exec(code) ?? INGEST_ASSURANCE_WRITE.exec(code))
+      : null);
+
+  return match
+    ? [
+        findingAt(
+          "client-submitted-assurance",
+          file,
+          code,
+          match.index,
+          "Findings and receipts must come from server-observed evidence; the ingest path stays graph-only (ADR-015).",
         ),
       ]
     : [];
@@ -410,6 +499,7 @@ export async function verifyScopeBoundaries(
 
     const source = await readFile(absolute, "utf8");
     findings.push(...scanRawSourceUpload(file, source));
+    findings.push(...scanClientSubmittedAssurance(file, source));
     findings.push(...scanTeamSurface(file, missingInvariants));
     findings.push(...scanExternalBilling(file, source));
     findings.push(...scanNonGithubProvider(file, source));

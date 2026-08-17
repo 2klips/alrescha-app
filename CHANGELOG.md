@@ -39,7 +39,7 @@ surfaces gated on the ADR-011 negative suite). Per-todo evidence:
   (id-first −14.2% tokens on the dry-run fixture; defaults gated on recall);
   scanner extensions — rationale comments as first-class graph nodes with
   provenance edges (the first production `edges` writer), Python/Go symbol
-  extraction (tree-sitter pending OQ-015), handoff/session files classified
+  extraction (tree-sitter declined — ADR-014), handoff/session files classified
   as `todo_progress`.
 - **Inspection dashboard** (`/inspection`): six widgets, each with a source
   label and an explicit "증거 부족" empty state; npm-audit ingestion (a
@@ -59,6 +59,21 @@ surfaces gated on the ADR-011 negative suite). Per-todo evidence:
   roving-tabindex stop with arrow-key traversal (was up to 600 tab stops)
   and is now inside the axe audit scope; the HUD force/evidence panels moved
   into a workspace-grid channel, deleting the fragile passage constants.
+
+#### Post-phase decisions
+
+- **ADR-014** (OQ-015): tree-sitter declined — an optional parser dependency
+  would let the same commit yield different symbols per environment, breaking
+  the ADR-013 CLI/GitHub equivalence. Artifacts now record which engine read
+  them (`metadata.symbolEngine`).
+- **ADR-015** (OQ-016): assurance is issued only from server-observed
+  evidence, so the metadata-only local ingest path stays **graph-only** — it
+  records a run but never findings or a receipt. Commit cards carry an
+  `assurance` scope (`full` / `graph-only`) and say why a receipt is absent
+  rather than showing an unexplained blank; a twelfth scope boundary
+  (`client-submitted-assurance`) keeps the ingest path from accepting
+  client-computed findings later. CI-artifact partial assurance is deferred,
+  not rejected — it needs provenance attestation (OIDC) first.
 
 #### Known limits
 

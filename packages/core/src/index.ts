@@ -299,6 +299,7 @@ export type {
   CommitAnalysisCard,
   CommitAnalysisJobStep,
   CommitAnalysisStatus,
+  CommitAssuranceScope,
   CommitFindingsDelta,
 } from "./runs/analysis-cards";
 

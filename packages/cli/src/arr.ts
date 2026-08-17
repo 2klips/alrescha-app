@@ -71,6 +71,7 @@ export async function main(argv: readonly string[]): Promise<number> {
   switch (outcome.status) {
     case "uploaded":
       console.log(CLI_MESSAGES.uploaded(outcome));
+      console.log(CLI_MESSAGES.graphOnly);
       console.log(CLI_MESSAGES.githubNudge);
       return 0;
     case "unchanged":

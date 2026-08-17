@@ -39,6 +39,9 @@ export const COMMITS = {
     /** `+<opened> / -<resolved>` — receipt에 기록된 발견 델타 */
     delta: (opened: number, resolved: number) => `+${opened} / -${resolved}`,
     deltaPending: "델타 없음",
+    /** ADR-015: 로컬 인제스트 카드는 보증 범위를 스스로 밝힌다. */
+    graphOnlyBadge: "그래프 전용",
+    graphOnlyDelta: "측정 안 함",
     /** `열린 Findings <n>건` */
     openTotal: (total: number) => `열린 Findings ${total}건`,
   },
@@ -67,5 +70,14 @@ export const COMMITS = {
     failureNotRecorded: "사유가 기록되지 않았습니다.",
     receiptAction: "Receipt 보기",
     receiptMissing: "Receipt 없음",
+    /** ADR-015 §4 — 부재의 이유를 카드가 직접 말한다. */
+    assuranceLabel: "보증 범위",
+    assuranceScopes: {
+      full: "전체 — 서버가 본문을 분석해 Findings와 Receipt를 발급합니다.",
+      "graph-only":
+        "그래프 전용 — 로컬 인제스트는 메타데이터만 보내므로 서버가 Findings를 산출할 수 없고, 근거 없는 Receipt는 발급하지 않습니다.",
+    },
+    graphOnlyReceipt: "발급 안 함 — 그래프 전용 인제스트",
+    assuranceUpgradeAction: "GitHub 연결하고 보증 받기",
   },
 } as const;

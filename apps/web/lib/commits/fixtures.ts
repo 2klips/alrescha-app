@@ -10,8 +10,9 @@ const REPOSITORY = "2klips/arr-app";
 /**
  * Demo data covering every card status at once — the shape a workspace shows
  * after a few pushes: one queued, one mid-analysis, one failed (with the
- * worker's stored error verbatim), and two completed commits whose receipts
- * carry the findings delta. Receipt ids reference the existing receipt demo
+ * worker's stored error verbatim), two completed commits whose receipts
+ * carry the findings delta, and one graph-only local ingest (ADR-015) that
+ * has no receipt by design. Receipt ids reference the existing receipt demo
  * fixtures so the card's receipt link resolves on `/receipts`.
  */
 export function buildDemoCommitCards(
@@ -137,6 +138,17 @@ export function buildDemoCommitCards(
         id: "run-04",
         repository: REPOSITORY,
         triggerKind: "push",
+      },
+      // `arr push` — metadata only, so no jobs and no receipt (ADR-015).
+      {
+        commitSha: "10ca1de5c7b3a92f4e6d1c8b0a5f3e7d2c9b4a61",
+        completedAt: "2026-08-17T09:30:06.200Z",
+        createdAt: "2026-08-17T09:30:04.000Z",
+        id: "run-local-01",
+        repository: REPOSITORY,
+        startedAt: "2026-08-17T09:30:04.000Z",
+        status: "succeeded",
+        triggerKind: "manual",
       },
       {
         commitSha: "dead10cc5b7e3a19f4c6d2e8b0a5f3c7d1e9b4a6",

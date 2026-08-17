@@ -28,6 +28,14 @@ const FORBIDDEN_CASES: readonly ForbiddenCase[] = [
     }`,
   },
   {
+    boundary: "client-submitted-assurance",
+    file: "apps/web/app/api/ingest/local/route.ts",
+    source: `export async function POST(request: Request) {
+      const payload = await request.json();
+      return store({ receipt: payload.receipt });
+    }`,
+  },
+  {
     boundary: "unguarded-team-surface",
     file: "apps/web/app/teams/page.tsx",
     source: `export default function TeamsPage() {
@@ -150,6 +158,26 @@ describe("MVP scope fidelity", () => {
         export async function pushProject(client: any, metadata: object) {
           return client.upload({ metadata });
         }`,
+      },
+      async (root) => {
+        const report = await verifyScopeBoundaries(root);
+
+        expect(report.findings).toEqual([]);
+        expect(report.status).toBe("pass");
+      },
+    );
+  });
+
+  it("accepts a graph-only ingest route, and keeps prose about the gap legal (ADR-015)", async () => {
+    await withFixture(
+      {
+        "apps/web/app/api/ingest/local/route.ts": `export async function POST(request: Request) {
+          const payload = await request.json();
+          return applyScan({ artifacts: payload.artifacts });
+        }`,
+        "supabase/migrations/202608170007_local_ingest_run.sql": `-- No receipt is produced: a receipt asserts evidence about findings,
+-- and metadata-only ingest cannot produce either (ADR-015).
+create function public.record_local_ingest_run() returns uuid as $$ $$ language sql;`,
       },
       async (root) => {
         const report = await verifyScopeBoundaries(root);

@@ -28,6 +28,14 @@ export type CommitAnalysisStatus =
   | "completed"
   | "failed";
 
+/**
+ * How much this run can be trusted to assert (ADR-015). `full` runs are
+ * analyzed server-side from transiently fetched bodies, so findings and a
+ * receipt are possible. `graph-only` runs came through the metadata-only local
+ * ingest path — the server never saw the bodies, so it must not claim either.
+ */
+export type CommitAssuranceScope = "full" | "graph-only";
+
 export type AnalysisRunStatus =
   | "pending"
   | "running"
@@ -80,6 +88,7 @@ export interface CommitAnalysisJobStep {
 }
 
 export interface CommitAnalysisCard {
+  readonly assurance: CommitAssuranceScope;
   readonly commitSha: string;
   readonly createdAt: string;
   readonly durationMs: number | null;
@@ -195,6 +204,18 @@ function deriveDurationMs(
   return duration < 0 ? null : duration;
 }
 
+/**
+ * A job row exists only when the worker was asked to analyze fetched bodies,
+ * so a job-less run is exactly the local ingest path (ADR-015 §3). Derived
+ * from the same stored signal the duration uses — not from a second column
+ * that could drift out of step with it.
+ */
+function deriveAssurance(
+  jobs: readonly AnalysisJobInput[],
+): CommitAssuranceScope {
+  return jobs.length === 0 ? "graph-only" : "full";
+}
+
 function matchReceipt(
   run: AnalysisRunInput,
   receipts: readonly AnalysisReceiptInput[],
@@ -223,6 +244,7 @@ export function buildCommitAnalysisCards(
       const status = deriveStatus(jobs, run.status);
       const receipt = matchReceipt(run, input.receipts);
       return {
+        assurance: deriveAssurance(jobs),
         commitSha: run.commitSha,
         createdAt: run.createdAt,
         durationMs: deriveDurationMs(status, jobs, run),

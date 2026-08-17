@@ -79,9 +79,18 @@ function DurationValue({ card }: { card: CommitAnalysisCard }) {
 }
 
 function DeltaValue({ card }: { card: CommitAnalysisCard }) {
-  return card.findingsDelta === null ? (
-    <span className="commit-not-measured">{COMMITS.card.deltaPending}</span>
-  ) : (
+  if (card.findingsDelta === null) {
+    // ADR-015 §4: a graph-only run has no delta *by design*, which is a
+    // different fact from "not measured yet". The card says which one it is.
+    return (
+      <span className="commit-not-measured">
+        {card.assurance === "graph-only"
+          ? COMMITS.card.graphOnlyDelta
+          : COMMITS.card.deltaPending}
+      </span>
+    );
+  }
+  return (
     <span className="commit-delta">
       <strong>
         {COMMITS.card.delta(
@@ -126,12 +135,28 @@ function CommitDetail({ card }: { card: CommitAnalysisCard }) {
             <DeltaValue card={card} />
           </dd>
         </div>
+        <div className="commit-assurance-cell">
+          <dt>{COMMITS.detail.assuranceLabel}</dt>
+          <dd data-assurance={card.assurance}>
+            <span className="commit-assurance-scope">
+              {COMMITS.detail.assuranceScopes[card.assurance]}
+            </span>
+            {card.assurance === "graph-only" ? (
+              <Link className="commit-assurance-upgrade" href="/onboarding">
+                {COMMITS.detail.assuranceUpgradeAction}
+                <ChevronRight size={12} />
+              </Link>
+            ) : null}
+          </dd>
+        </div>
         <div>
           <dt>{COMMITS.detail.receiptLabel}</dt>
           <dd>
             {card.receiptId === null ? (
               <span className="commit-not-measured">
-                {COMMITS.detail.receiptMissing}
+                {card.assurance === "graph-only"
+                  ? COMMITS.detail.graphOnlyReceipt
+                  : COMMITS.detail.receiptMissing}
               </span>
             ) : (
               <Link
@@ -206,6 +231,7 @@ export function CommitAnalysisBoard({
                   className="commit-card"
                   data-run-id={card.runId}
                   data-card-status={card.status}
+                  data-assurance={card.assurance}
                   href={cardHref(card, stateQuery)}
                 >
                   <span className="commit-card-sha">
@@ -214,6 +240,11 @@ export function CommitAnalysisBoard({
                   </span>
                   <StatusBadge status={card.status} />
                   <span className="commit-card-meta">
+                    {card.assurance === "graph-only" ? (
+                      <span className="commit-assurance-badge">
+                        {COMMITS.card.graphOnlyBadge}
+                      </span>
+                    ) : null}
                     <DurationValue card={card} />
                     <DeltaValue card={card} />
                   </span>

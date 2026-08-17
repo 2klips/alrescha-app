@@ -254,6 +254,28 @@ describe("job-less runs (local ingest)", () => {
     expect(cards[0]).toMatchObject({ durationMs: null, status: "pending" });
   });
 
+  it("marks the run graph-only so the card can explain the missing receipt (ADR-015)", () => {
+    const cards = buildCommitAnalysisCards({
+      jobs: [],
+      receipts: [],
+      runs: [localRun],
+    });
+    expect(cards[0]).toMatchObject({
+      assurance: "graph-only",
+      findingsDelta: null,
+      receiptId: null,
+    });
+  });
+
+  it("keeps a job-backed run at full assurance", () => {
+    const cards = buildCommitAnalysisCards({
+      jobs: [job({ kind: "scan", status: "succeeded" })],
+      receipts: [],
+      runs: [RUN],
+    });
+    expect(cards[0]!.assurance).toBe("full");
+  });
+
   it("keeps jobs authoritative when a run has them", () => {
     const cards = buildCommitAnalysisCards({
       jobs: [

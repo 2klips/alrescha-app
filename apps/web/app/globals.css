@@ -4524,6 +4524,45 @@ a {
   text-decoration: underline;
 }
 
+/* ADR-015: the assurance scope is a first-class card fact, not a footnote. */
+.commit-assurance-badge {
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.08em;
+  padding: 0.14rem 0.4rem;
+  text-transform: uppercase;
+}
+
+.commit-detail-grid .commit-assurance-cell {
+  grid-column: 1 / -1;
+}
+
+.commit-detail-grid dd[data-assurance] {
+  gap: 0.35rem;
+}
+
+.commit-assurance-scope {
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.commit-assurance-upgrade {
+  align-items: center;
+  color: var(--accent-text);
+  display: inline-flex;
+  font-size: 0.76rem;
+  gap: 0.3rem;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.commit-assurance-upgrade:hover {
+  text-decoration: underline;
+}
+
 .commit-failure {
   background: var(--tint-danger);
   border: 1px solid var(--line);
