@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   SCOPE_BOUNDARIES,
+  TEAM_PRIVACY_INVARIANTS,
+  TEAM_PRIVACY_TEST_FILE,
   type ScopeBoundary,
   verifyScopeBoundaries,
 } from "../scripts/verify-scope-boundaries";
@@ -18,14 +20,15 @@ interface ForbiddenCase {
 
 const FORBIDDEN_CASES: readonly ForbiddenCase[] = [
   {
-    boundary: "local-cli",
-    file: "apps/web/app/cli/page.tsx",
-    source: `export default function CliPage() {
-      return <main><h1>Install the local CLI</h1></main>;
+    boundary: "raw-source-upload",
+    file: "packages/cli/src/push.ts",
+    source: `#!/usr/bin/env node
+    export async function pushProject(client: any, fileContents: string) {
+      return client.upload({ fileContents });
     }`,
   },
   {
-    boundary: "team-ui",
+    boundary: "unguarded-team-surface",
     file: "apps/web/app/teams/page.tsx",
     source: `export default function TeamsPage() {
       return <main><h1>Manage team members</h1></main>;
@@ -135,6 +138,75 @@ describe("MVP scope fidelity", () => {
       });
     },
   );
+
+  it("accepts a metadata-only local CLI (ADR-013 — the boundary moved off CLI existence)", async () => {
+    await withFixture(
+      {
+        "packages/cli/package.json": `{
+          "name": "@arr/cli",
+          "bin": { "arr": "./dist/push.js" }
+        }`,
+        "packages/cli/src/push.ts": `#!/usr/bin/env node
+        export async function pushProject(client: any, metadata: object) {
+          return client.upload({ metadata });
+        }`,
+      },
+      async (root) => {
+        const report = await verifyScopeBoundaries(root);
+
+        expect(report.findings).toEqual([]);
+        expect(report.status).toBe("pass");
+      },
+    );
+  });
+
+  it("accepts a team surface once the ADR-011 negative privacy suite exists", async () => {
+    const teamsPage = `export default function TeamsPage() {
+      return <main><h1>Manage team members</h1></main>;
+    }`;
+    const privacySuite = TEAM_PRIVACY_INVARIANTS.map(
+      (marker) => `it("${marker}", () => {});`,
+    ).join("\n");
+
+    await withFixture(
+      {
+        "apps/web/app/teams/page.tsx": teamsPage,
+        [TEAM_PRIVACY_TEST_FILE]: privacySuite,
+      },
+      async (root) => {
+        const report = await verifyScopeBoundaries(root);
+
+        expect(report.findings).toEqual([]);
+        expect(report.status).toBe("pass");
+      },
+    );
+  });
+
+  it("still rejects a team surface when the privacy suite misses an invariant", async () => {
+    const partialSuite = TEAM_PRIVACY_INVARIANTS.slice(1)
+      .map((marker) => `it("${marker}", () => {});`)
+      .join("\n");
+
+    await withFixture(
+      {
+        "apps/web/app/teams/page.tsx": `export default function TeamsPage() {
+          return <main><h1>Manage team members</h1></main>;
+        }`,
+        [TEAM_PRIVACY_TEST_FILE]: partialSuite,
+      },
+      async (root) => {
+        const report = await verifyScopeBoundaries(root);
+
+        expect(report.findings).toEqual([
+          expect.objectContaining({
+            boundary: "unguarded-team-surface",
+            message: expect.stringContaining(TEAM_PRIVACY_INVARIANTS[0]),
+          }),
+        ]);
+        expect(report.status).toBe("fail");
+      },
+    );
+  });
 
   it("accepts the current MVP product surface", async () => {
     const report = await verifyScopeBoundaries(

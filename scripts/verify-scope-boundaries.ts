@@ -5,8 +5,8 @@ import { fileURLToPath } from "node:url";
 import { scanGuardrailFile, type GuardrailRule } from "./adr-guardrails";
 
 export const SCOPE_BOUNDARIES = [
-  "local-cli",
-  "team-ui",
+  "raw-source-upload",
+  "unguarded-team-surface",
   "external-billing",
   "non-github-provider",
   "marketplace",
@@ -144,31 +144,71 @@ async function collectRootProductFiles(root: string): Promise<string[]> {
   return files;
 }
 
-function scanLocalCli(file: string, source: string): readonly ScopeFinding[] {
-  const route = /(?:^|\/)(?:cli|command-line)(?:\/|\.|$)/i.exec(file);
-  const manifestBin = file.endsWith("package.json")
-    ? /"bin"\s*:/i.exec(source)
-    : null;
-  const shebang = /^#!.*\b(?:node|deno|bun)\b/im.exec(source);
-  const match = route ?? manifestBin ?? shebang;
+// ADR-013: local CLI surfaces are allowed; the boundary is the raw-source
+// body itself — ingest must stay metadata-only in every transfer direction.
+const RAW_BODY_IDENTIFIERS =
+  "(?:rawCode|rawSource|sourceCode|codeBody|fileContents?|fileBody|fileText)";
+const RAW_UPLOAD_CALL = new RegExp(
+  `\\b(?:upload|send|post|submit|transmit|push|ingest)\\w*\\s*\\([^;]{0,240}\\b${RAW_BODY_IDENTIFIERS}\\b`,
+  "i",
+);
+const RAW_UPLOAD_PAYLOAD = new RegExp(
+  `\\b(?:payload|body|request|formData)\\w*\\s*[:=]\\s*\\{[^}]{0,240}\\b${RAW_BODY_IDENTIFIERS}\\b`,
+  "i",
+);
 
-  if (!match) {
-    return [];
-  }
+function scanRawSourceUpload(
+  file: string,
+  source: string,
+): readonly ScopeFinding[] {
+  const match = RAW_UPLOAD_CALL.exec(source) ?? RAW_UPLOAD_PAYLOAD.exec(source);
 
-  return [
-    findingAt(
-      "local-cli",
-      file,
-      route ? file : source,
-      match.index,
-      "A reachable local CLI surface is outside the MVP scope.",
-    ),
-  ];
+  return match
+    ? [
+        findingAt(
+          "raw-source-upload",
+          file,
+          source,
+          match.index,
+          "Raw source-code bodies must not enter transfer payloads; ingest is metadata-only (ADR-013).",
+        ),
+      ]
+    : [];
 }
 
-function scanTeamUi(file: string): readonly ScopeFinding[] {
+// ADR-013: team surfaces are allowed only once the ADR-011 negative privacy
+// suite exists and covers every required invariant marker.
+export const TEAM_PRIVACY_TEST_FILE = "tests/team-privacy.test.ts";
+export const TEAM_PRIVACY_INVARIANTS = [
+  "ADR-011:no-capture-without-consent",
+  "ADR-011:no-raw-prompt-in-access-events",
+  "ADR-011:no-consent-status-exposure",
+] as const;
+
+async function missingTeamPrivacyInvariants(
+  root: string,
+): Promise<readonly string[]> {
+  let suite: string;
+
+  try {
+    suite = await readFile(resolve(root, TEAM_PRIVACY_TEST_FILE), "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return TEAM_PRIVACY_INVARIANTS;
+    }
+
+    throw error;
+  }
+
+  return TEAM_PRIVACY_INVARIANTS.filter((marker) => !suite.includes(marker));
+}
+
+function scanTeamSurface(
+  file: string,
+  missingInvariants: readonly string[],
+): readonly ScopeFinding[] {
   if (
+    missingInvariants.length === 0 ||
     !/(?:^|\/)(?:team|teams|organization|organizations|members)(?:\/|\.|$)/i.test(
       file,
     )
@@ -178,11 +218,11 @@ function scanTeamUi(file: string): readonly ScopeFinding[] {
 
   return [
     {
-      boundary: "team-ui",
+      boundary: "unguarded-team-surface",
       column: 1,
       file,
       line: 1,
-      message: "Team and organization UI is outside the single-user MVP scope.",
+      message: `Team surfaces require the ADR-011 negative privacy suite (${TEAM_PRIVACY_TEST_FILE}); missing: ${missingInvariants.join(", ")}.`,
     },
   ];
 }
@@ -362,14 +402,15 @@ export async function verifyScopeBoundaries(
     ).flat(),
     ...(await collectRootProductFiles(root)),
   ].filter((absolute) => !isTestFile(normalized(relative(root, absolute))));
+  const missingInvariants = await missingTeamPrivacyInvariants(root);
   const findings: ScopeFinding[] = [];
 
   for (const absolute of files) {
     const file = normalized(relative(root, absolute));
 
     const source = await readFile(absolute, "utf8");
-    findings.push(...scanLocalCli(file, source));
-    findings.push(...scanTeamUi(file));
+    findings.push(...scanRawSourceUpload(file, source));
+    findings.push(...scanTeamSurface(file, missingInvariants));
     findings.push(...scanExternalBilling(file, source));
     findings.push(...scanNonGithubProvider(file, source));
     findings.push(...scanMarketplace(file, source));
