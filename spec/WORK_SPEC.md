@@ -346,6 +346,13 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
   - `get_findings(filter?)` → 발견 목록(증거 등급 라벨 포함 — MCP 응답에서도 inferred 라벨 생략 금지).
   - `log_progress({task, status, summary, refs?})` → 구조화 작업 기록 (ADR-006 양식): `task`(짧은 제목 또는 기존 todo id), `status`(started|progress|done|blocked), `summary`(≤200자), `refs`(경로/커밋, 선택). **호출당 목표 ≤150 토큰** — 진행 대시보드(§5.2-⑧)의 데이터 소스. 양식은 스킬/최소 인덱스에 "작업 단위 완료 시 1회" 지침으로 포함.
   - `record_note(text, target?)` → 사용자 확인용 노트.
+  - **그래프 순회 tool 5종 (Phase 2B todo 4, ID-first — 응답은 노드 id·유형·경로만, 본문은 `get_node_content`로 명시 요청):**
+    - `search_nodes(query, type_filter?)` → `search_index`와 같은 결정론 랭킹에서 발췌를 제거한 ID-first 검색. 역할 분담: `search_index` = 발췌 포함 텍스트 진입점, `search_nodes` = 그래프 순회 진입점.
+    - `get_neighbors(node_id, depth≤2, relations?)` → 양방향 이웃(노드+엣지). 파생 엣지(요구사항↔출처 아티팩트)는 `derived` 표시.
+    - `trace_path(from_node_id, to_node_id, max_depth≤6)` → 최단 증거 경로 + graphify식 `explain` 행.
+    - `get_node_content(node_id)` → ID-first 순회 뒤의 명시적 2단계 본문 — 저장된 내용만(원본 코드 비저장 불변).
+    - `impact_of(node_id, depth≤2)` → 직접 의존/피의존 엣지 + 깊이 제한 이행 폐쇄.
+  - `route_query(question)` → 결정론 질의 라우팅 (Phase 2B todo 5): 단순 조회→검색, 멀티홉·관계형→그래프. 응답에 매칭 신호·근거·폴백 경로 포함. 질문 원문은 저장하지 않는다.
   - **레포를 변경하는 tool 없음.**
 - **Access 이벤트 (발광 소스):** 모든 read성 tool/resource 호출은 대상 노드 ID들과 함께 `access_events`에 기록되고 워크스페이스 실시간 채널로 브로드캐스트된다 → 대시보드 그래프 발광(§5.2-①). 기록 실패가 tool 응답을 막아선 안 된다(fire-and-forget). 이벤트에는 프롬프트/작업 내용 원문을 저장하지 않는다 — tool명·대상·타임스탬프만.
 - 에러: 스키마 불일치 입력은 typed error, 부분 상태 저장 금지.

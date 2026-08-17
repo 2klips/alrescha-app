@@ -6,6 +6,8 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
+import { routeQuery } from "@arr/core";
+
 import {
   getWorkspaceArtifact,
   getWorkspaceFindings,
@@ -13,6 +15,13 @@ import {
   searchWorkspaceIndex,
   selectWorkspaceContextPack,
 } from "./data-brain";
+import {
+  collectNeighbors,
+  getNodeContent,
+  impactOf,
+  searchWorkspaceNodes,
+  tracePath,
+} from "./graph-tools";
 import {
   createUlid,
   type McpPackMeasurement,
@@ -413,6 +422,146 @@ function createServer(
     },
   );
 
+  const GRAPH_NODE_SCHEMA = z.object({
+    id: z.string(),
+    path: z.string().nullable(),
+    repositoryId: z.string(),
+    type: NODE_TYPE_SCHEMA,
+  });
+  const GRAPH_EDGE_SCHEMA = z.object({
+    derived: z.boolean(),
+    relation: RELATION_SCHEMA,
+    sourceNodeId: z.string(),
+    targetNodeId: z.string(),
+  });
+
+  server.registerTool(
+    "get_neighbors",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "ID-first neighborhood of a node (depth 1-2): node ids, types, paths, and connecting edges. No bodies — fetch content explicitly with get_node_content.",
+      inputSchema: z.object({
+        depth: z.union([z.literal(1), z.literal(2)]).optional(),
+        node_id: z.string().trim().min(1),
+        relations: z.array(RELATION_SCHEMA).max(7).optional(),
+      }),
+      outputSchema: z.object({
+        edges: z.array(GRAPH_EDGE_SCHEMA),
+        found: z.boolean(),
+        nodes: z.array(GRAPH_NODE_SCHEMA),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ depth, node_id, relations }) => {
+      const workspace = await readWorkspace();
+      const result = collectNeighbors(
+        workspace,
+        node_id,
+        depth ?? 1,
+        relations,
+      );
+      emitAccessEvent(
+        store,
+        principal,
+        "get_neighbors",
+        result ? result.nodes.map(({ id }) => id) : [],
+      );
+      return toolResult({
+        edges: result?.edges ?? [],
+        found: result !== null,
+        nodes: result?.nodes ?? [],
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
+    "get_node_content",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "The explicit second step after ID-first traversal: stored content for one node id (artifacts return their stored summary — raw source bodies are never persisted).",
+      inputSchema: z.object({ node_id: z.string().trim().min(1) }),
+      outputSchema: z.object({
+        node: z
+          .object({
+            content: z.string(),
+            id: z.string(),
+            kind: z.string(),
+            path: z.string().nullable(),
+            repositoryId: z.string(),
+            type: NODE_TYPE_SCHEMA,
+          })
+          .nullable(),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ node_id }) => {
+      const workspace = await readWorkspace();
+      const node = getNodeContent(workspace, node_id);
+      emitAccessEvent(
+        store,
+        principal,
+        "get_node_content",
+        node ? [node.id] : [],
+      );
+      return toolResult({ node, workspaceId: principal.workspaceId });
+    },
+  );
+
+  server.registerTool(
+    "impact_of",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "ID-first impact report for a node: direct dependents (edges into it), direct dependencies (edges out of it), and the depth-limited transitive closure.",
+      inputSchema: z.object({
+        depth: z.union([z.literal(1), z.literal(2)]).optional(),
+        node_id: z.string().trim().min(1),
+      }),
+      outputSchema: z.object({
+        found: z.boolean(),
+        impact: z
+          .object({
+            dependencies: z.object({
+              edges: z.array(GRAPH_EDGE_SCHEMA),
+              nodeIds: z.array(z.string()),
+            }),
+            dependents: z.object({
+              edges: z.array(GRAPH_EDGE_SCHEMA),
+              nodeIds: z.array(z.string()),
+            }),
+            transitiveNodeIds: z.array(z.string()),
+          })
+          .nullable(),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ depth, node_id }) => {
+      const workspace = await readWorkspace();
+      const impact = impactOf(workspace, node_id, depth ?? 2);
+      emitAccessEvent(
+        store,
+        principal,
+        "impact_of",
+        impact
+          ? [
+              node_id,
+              ...impact.dependents.nodeIds,
+              ...impact.dependencies.nodeIds,
+              ...impact.transitiveNodeIds,
+            ]
+          : [],
+      );
+      return toolResult({
+        found: impact !== null,
+        impact,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
   server.registerTool(
     "log_progress",
     {
@@ -608,6 +757,41 @@ function createServer(
   );
 
   server.registerTool(
+    "route_query",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "Deterministic query routing: simple lookups go to text search, multi-hop or relational questions go to the graph tools. The decision carries its matched signals and a fallback for when the chosen route returns nothing.",
+      inputSchema: z.object({
+        question: z.string().trim().min(1).max(1_000),
+      }),
+      outputSchema: z.object({
+        fallback: z.object({
+          reason: z.string(),
+          route: z.enum(["graph", "search"]),
+          tools: z.array(z.string()),
+        }),
+        matchedSignals: z.array(z.string()),
+        reason: z.string(),
+        recommendedTools: z.array(z.string()),
+        route: z.enum(["graph", "search"]),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ question }) => {
+      requireScope("mcp:read");
+      const decision = routeQuery(question);
+      // The access event records only the tool name and timestamp — the
+      // question text itself is never stored (WORK_SPEC §11).
+      emitAccessEvent(store, principal, "route_query", []);
+      return toolResult({
+        ...decision,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
     "search_index",
     {
       annotations: READ_ONLY_TOOL,
@@ -655,6 +839,95 @@ function createServer(
       return toolResult({
         query,
         results,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
+    "search_nodes",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "ID-first node search — the same deterministic ranking as search_index with excerpts stripped: node ids, types, paths, and neighbor ids only. search_index remains the text entry point; this is the graph entry point.",
+      inputSchema: z.object({
+        query: z.string().trim().min(1),
+        type_filter: NODE_TYPE_SCHEMA.optional(),
+      }),
+      outputSchema: z.object({
+        query: z.string(),
+        results: z.array(
+          z.object({
+            neighborIds: z.array(z.string()),
+            nodeId: z.string(),
+            path: z.string(),
+            rank: z.string(),
+            repositoryId: z.string(),
+            score: z.number(),
+            type: NODE_TYPE_SCHEMA,
+          }),
+        ),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ query, type_filter }) => {
+      const workspace = await readWorkspace();
+      const results = searchWorkspaceNodes(workspace, query, type_filter);
+      emitAccessEvent(
+        store,
+        principal,
+        "search_nodes",
+        results.map(({ nodeId }) => nodeId),
+      );
+      return toolResult({
+        query,
+        results,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
+    "trace_path",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "ID-first shortest evidence path between two nodes (max depth 6), with graphify-style explain lines per hop. Derived edges are marked with *.",
+      inputSchema: z.object({
+        from_node_id: z.string().trim().min(1),
+        max_depth: z.number().int().min(1).max(6).optional(),
+        to_node_id: z.string().trim().min(1),
+      }),
+      outputSchema: z.object({
+        found: z.boolean(),
+        path: z
+          .object({
+            edges: z.array(GRAPH_EDGE_SCHEMA),
+            explain: z.array(z.string()),
+            hops: z.number(),
+            nodeIds: z.array(z.string()),
+          })
+          .nullable(),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ from_node_id, max_depth, to_node_id }) => {
+      const workspace = await readWorkspace();
+      const path = tracePath(
+        workspace,
+        from_node_id,
+        to_node_id,
+        max_depth ?? 4,
+      );
+      emitAccessEvent(
+        store,
+        principal,
+        "trace_path",
+        path ? [...path.nodeIds] : [],
+      );
+      return toolResult({
+        found: path !== null,
+        path,
         workspaceId: principal.workspaceId,
       });
     },

@@ -361,11 +361,17 @@ describe("hosted MCP contract", () => {
     expect(listed.tools.map(({ name }) => name)).toEqual([
       "get_artifact",
       "get_findings",
+      "get_neighbors",
+      "get_node_content",
+      "impact_of",
       "log_progress",
       "query_brain",
       "record_note",
       "request_context_pack",
+      "route_query",
       "search_index",
+      "search_nodes",
+      "trace_path",
     ]);
     expect(
       listed.tools.every(
@@ -906,5 +912,244 @@ describe("hosted MCP contract", () => {
     await owner.client.listResources();
     expect(ownerRequests).toBe(3);
     expect(sawSessionHeader).toBe(false);
+  });
+
+  it("traverses the fixture chain ID-first; bodies come only from the explicit second step", async () => {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Graph traversal",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const doc = "01K287J3D18V7A1MZG9E8D1Y11";
+    const requirement = "01K287J3D18V7A1MZG9E8D1Y21";
+    const code = "01K287J3D18V7A1MZG9E8D1Y12";
+
+    const search = await client.callTool({
+      arguments: { query: "CI evidence policy" },
+      name: "search_nodes",
+    });
+    expect(search.structuredContent).toMatchObject({
+      results: [
+        { nodeId: doc, rank: "exact", type: "artifact" },
+        { nodeId: requirement, rank: "graph-neighbor", type: "requirement" },
+      ],
+    });
+
+    const neighbors = await client.callTool({
+      arguments: { depth: 2, node_id: doc },
+      name: "get_neighbors",
+    });
+    const neighborhood = neighbors.structuredContent as {
+      edges: { derived: boolean; relation: string }[];
+      nodes: { id: string }[];
+    };
+    expect(neighborhood.nodes.map(({ id }) => id).sort()).toEqual(
+      [doc, requirement, code].sort(),
+    );
+    expect(
+      neighborhood.edges.some(
+        (edge) => edge.derived && edge.relation === "references",
+      ),
+    ).toBe(true);
+
+    const traced = await client.callTool({
+      arguments: { from_node_id: doc, to_node_id: code },
+      name: "trace_path",
+    });
+    expect(traced.structuredContent).toMatchObject({
+      found: true,
+      path: {
+        explain: [
+          `${doc} -references*-> ${requirement}`,
+          `${requirement} -implements-> ${code}`,
+        ],
+        hops: 2,
+        nodeIds: [doc, requirement, code],
+      },
+    });
+
+    const impact = await client.callTool({
+      arguments: { node_id: code },
+      name: "impact_of",
+    });
+    expect(impact.structuredContent).toMatchObject({
+      found: true,
+      impact: { dependents: { nodeIds: [requirement] } },
+    });
+
+    // ID-first: none of the traversal responses carries stored text.
+    const traversalJson = JSON.stringify([
+      search.structuredContent,
+      neighbors.structuredContent,
+      traced.structuredContent,
+      impact.structuredContent,
+    ]);
+    expect(traversalJson).not.toContain("Every active requirement");
+    expect(traversalJson).not.toContain("excerpt");
+    expect(traversalJson).not.toContain('"content"');
+
+    // The explicit second step is where content appears.
+    const content = await client.callTool({
+      arguments: { node_id: requirement },
+      name: "get_node_content",
+    });
+    expect(content.structuredContent).toMatchObject({
+      node: {
+        content: "Every active requirement needs same-commit test evidence.",
+        id: requirement,
+        type: "requirement",
+      },
+    });
+  });
+
+  it("emits access events for every graph tool without storing the question", async () => {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Graph events",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const doc = "01K287J3D18V7A1MZG9E8D1Y11";
+    const code = "01K287J3D18V7A1MZG9E8D1Y12";
+    await client.callTool({
+      arguments: { question: "private routing question about spec/auth.md" },
+      name: "route_query",
+    });
+    await client.callTool({
+      arguments: { query: "CI evidence" },
+      name: "search_nodes",
+    });
+    await client.callTool({
+      arguments: { node_id: doc },
+      name: "get_neighbors",
+    });
+    await client.callTool({
+      arguments: { from_node_id: doc, to_node_id: code },
+      name: "trace_path",
+    });
+    await client.callTool({ arguments: { node_id: code }, name: "impact_of" });
+    await client.callTool({
+      arguments: { node_id: doc },
+      name: "get_node_content",
+    });
+
+    await vi.waitFor(() =>
+      expect(store.accessEventsForWorkspace(WORKSPACE_ID)).toHaveLength(6),
+    );
+    const events = store.accessEventsForWorkspace(WORKSPACE_ID);
+    expect(events.map(({ tool }) => tool)).toEqual([
+      "route_query",
+      "search_nodes",
+      "get_neighbors",
+      "trace_path",
+      "impact_of",
+      "get_node_content",
+    ]);
+    expect(events[0]?.targetNodeIds).toEqual([]);
+    for (const event of events.slice(1)) {
+      expect(event.targetNodeIds.length).toBeGreaterThan(0);
+    }
+    expect(JSON.stringify(events)).not.toContain("private routing question");
+  });
+
+  it("keeps graph traversal tenant-scoped: another workspace's node ids resolve to nothing", async () => {
+    const otherWorkspaceId = "01K287J3D18V7A1MZG9E8D1XW2";
+    const otherUserId = "20000000-0000-4000-8000-000000000002";
+    const store = new InMemoryMcpStore({
+      workspaces: [
+        workspaceFixture(),
+        { id: otherWorkspaceId, ownerUserId: otherUserId, repositories: [] },
+      ],
+    });
+    const issued = await store.issueAccessToken({
+      actorUserId: otherUserId,
+      name: "Other tenant",
+      scopes: ["mcp:read"],
+      workspaceId: otherWorkspaceId,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const foreignNode = "01K287J3D18V7A1MZG9E8D1Y11";
+    const neighbors = await client.callTool({
+      arguments: { node_id: foreignNode },
+      name: "get_neighbors",
+    });
+    expect(neighbors.structuredContent).toMatchObject({
+      found: false,
+      nodes: [],
+    });
+    const content = await client.callTool({
+      arguments: { node_id: foreignNode },
+      name: "get_node_content",
+    });
+    expect(content.structuredContent).toMatchObject({ node: null });
+  });
+
+  it("routes by question shape and always carries a fallback", async () => {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Router",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const simple = await client.callTool({
+      arguments: { question: "크레딧 단가 문서 찾아줘" },
+      name: "route_query",
+    });
+    expect(simple.structuredContent).toMatchObject({
+      fallback: { route: "graph" },
+      route: "search",
+    });
+
+    const relational = await client.callTool({
+      arguments: { question: "spec/auth.md와 연결된 코드 영역은?" },
+      name: "route_query",
+    });
+    const decision = relational.structuredContent as {
+      fallback: { route: string; tools: string[] };
+      matchedSignals: string[];
+      recommendedTools: string[];
+      route: string;
+    };
+    expect(decision.route).toBe("graph");
+    expect(decision.matchedSignals).toContain("connection");
+    expect(decision.recommendedTools).toContain("trace_path");
+    // The misroute escape hatch: an empty graph result falls back to search.
+    expect(decision.fallback.route).toBe("search");
+    expect(decision.fallback.tools).toContain("search_index");
   });
 });

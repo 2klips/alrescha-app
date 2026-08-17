@@ -296,6 +296,9 @@ export type {
   CommitFindingsDelta,
 } from "./runs/analysis-cards";
 
+export { routeQuery } from "./brain/query-router";
+export type { QueryRoute, QueryRoutingDecision } from "./brain/query-router";
+
 export { parseNpmAuditReport } from "./inspection/dependency-audit";
 export type {
   DependencyAdvisory,
