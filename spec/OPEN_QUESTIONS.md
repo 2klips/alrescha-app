@@ -131,3 +131,11 @@
 - 필요한 결정: ⑴ ADR 개정으로 local-cli 경계를 해제하고, 금지 대상을 "CLI 존재"에서 **"원본 코드 전송/저장"**으로 교체할지 (todo 3의 Must NOT과 raw-code-persistence 가드레일이 이미 후자를 커버) ⑵ 아니면 todo 3을 재연기할지. ⑴ 선택 시 가드레일 개정은 삭제가 아니라 대체여야 하며(약화 금지), 위반 심기 테스트로 새 경계를 재증명해야 한다.
 - 임시 결정: todo 3은 착수하지 않고 보류. Wave 1의 todo 1은 완료, todo 2는 이 결정과 무관하게 진행 가능.
 - 상태: resolved(ADR-013 — ⑴ 채택. 로컬 인제스트는 메타데이터만으로 허용, local-cli 경계를 `raw-source-upload`(원본 코드 전송 금지)로, team-ui 경계를 `unguarded-team-surface`(ADR-011 음성 테스트 마커 3종 없이는 팀 표면 추가 금지)로 교체. **구현 완료** — 위반 심기 재증명 포함, `.omo/evidence/phase2b/adr-013-guardrail.md` 참조. WORK_SPEC 비목표 개정은 §16에 반영 — OQ 본문이 "§12"로 지칭한 섹션의 현행 번호는 §16이다. todo 3 착수 가능)
+
+## OQ-014 — `runs.status`·`started_at`·`completed_at`을 쓰는 프로덕션 경로가 없다
+
+- 발견: Phase 2B todo 2 (커밋별 분석 카드) / `supabase/migrations/202608100002_evidence_graph_domain.sql:186-208`, `202608100004_worker_credit_lifecycle.sql`
+- 내용: `runs` 테이블은 `status('pending'→'running'→'succeeded'/'failed'/'cancelled')`·`started_at`·`completed_at`을 정의하지만, **어떤 프로덕션 코드도 이 컬럼들을 갱신하지 않는다.** webhook 인제스트는 `pending`으로 생성만 하고, `claim_next_job`/`finish_job`은 `jobs` 행만 만진다. 유일한 writer는 설치 해지 경로(`202608100009:213-219`, `cancelled` 설정)다. 그 결과 ⑴ `apps/web/lib/stats/pilot-report.ts:169-173`은 `status='succeeded'`인 run을 조회하므로 실데이터에서는 **구조적으로 빈 화면**이다(현재는 e2e 시드가 직접 넣은 행만 잡힌다). ⑵ todo 2의 커밋 카드도 run 상태를 신뢰할 수 없어 **잡 상태에서 유도**하도록 구현했다.
+- 임시 결정: 커밋 카드는 `jobs`의 상태·타임스탬프에서 상태/소요 시간을 유도한다(`packages/core/src/runs/analysis-cards.ts`). 이는 데이터 정합상 안전하지만, `runs` 컬럼들은 여전히 죽은 상태다.
+- 필요한 결정: ⑴ `finish_job`/`claim_next_job`이 소속 run의 상태를 함께 전이시키는 마이그레이션을 추가할지(pilot-report가 살아난다), ⑵ 아니면 `runs.status`를 파생 뷰로 대체하고 컬럼을 폐기할지. ⑴이면 "run의 모든 잡 종료 시 성공/실패 판정" 규칙을 SQL로 명문화해야 한다.
+- 상태: open

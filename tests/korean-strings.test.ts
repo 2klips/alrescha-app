@@ -6,6 +6,7 @@ import { describe, expect, test } from "vitest";
 
 import * as ASSURANCE_MODULE from "../apps/web/lib/strings/assurance";
 import * as AUTH_MODULE from "../apps/web/lib/strings/auth";
+import * as COMMITS_MODULE from "../apps/web/lib/strings/commits";
 import * as COMMON_MODULE from "../apps/web/lib/strings/common";
 import * as DASHBOARD_MODULE from "../apps/web/lib/strings/dashboard";
 import * as GRAPH_MODULE from "../apps/web/lib/strings/graph";
@@ -34,6 +35,9 @@ const CONVERTED_SCREENS = [
   "apps/web/app/ui/theme-toggle.tsx",
   "apps/web/app/progress/page.tsx",
   "apps/web/app/progress/progress-dashboard.tsx",
+  // Phase 2B (todo 2)
+  "apps/web/app/commits/page.tsx",
+  "apps/web/app/commits/commit-cards.tsx",
   // Wave 3 (todo 8)
   "apps/web/app/ui/onboarding-flow.tsx",
   "apps/web/app/ui/graph-detail.tsx",
@@ -225,6 +229,7 @@ describe("korean-first copy policy", () => {
     GRADE: COMMON_MODULE.GRADE,
     ACTION: COMMON_MODULE.ACTION,
     NOT_FOUND: COMMON_MODULE.NOT_FOUND,
+    COMMITS: COMMITS_MODULE.COMMITS,
     DASHBOARD: DASHBOARD_MODULE.DASHBOARD,
     GRAPH: GRAPH_MODULE.GRAPH,
     HARNESS: HARNESS_MODULE.HARNESS,

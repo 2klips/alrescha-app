@@ -18,6 +18,7 @@ import type { FullConfig } from "@playwright/test";
 /** Every route any spec navigates to. `/onboarding` also warms the dashboard. */
 const ROUTES = [
   "/",
+  "/commits",
   "/findings",
   "/graph?node=req-auth",
   "/harness",

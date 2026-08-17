@@ -18,6 +18,7 @@ export const NAV = {
   findings: "Findings",
   lint: "지시문 린트",
   progress: "진행",
+  commits: "commit 분석",
   receipts: "Receipts",
   harness: "하네스 자산",
   library: "증거 라이브러리",

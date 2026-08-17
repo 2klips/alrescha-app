@@ -9,6 +9,7 @@
 export { ASSURANCE } from "./assurance";
 export { AUTH } from "./auth";
 export { ACTION, BRAND, GRADE, NAV, NOT_FOUND, THEME } from "./common";
+export { COMMITS } from "./commits";
 export { DASHBOARD } from "./dashboard";
 export { GRAPH } from "./graph";
 export { HARNESS } from "./harness";

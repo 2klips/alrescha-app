@@ -23,7 +23,7 @@ MVP는 GitHub App 설치가 유일한 입구다. 공개 전 진입 장벽을 없
   수용 기준: URL 파서 단위 테스트(https/ssh/짧은 형태/쿼리·해시 포함/오타), 각 실패 상태의 라우트 테스트, Playwright로 붙여넣기→설치 유도→연결 완료 여정.
   Commit: `feat(onboarding): connect a repository by url`
 
-- [ ] **2. 커밋별 분석 카드**
+- [x] **2. 커밋별 분석 카드**
   푸시 webhook 파이프라인은 이미 있다 — 이를 **Vercel 배포 카드처럼** 노출: 커밋별 상태(대기/분석중/완료/실패), 소요 시간, 발견 델타(+n/−n), 영수증 링크, 실패 사유. 목록과 상세.
   수용 기준: 상태 전이 테스트(대기→분석중→완료/실패), 델타 계산 테스트, 실패 사유가 그대로 표시되는지, Playwright 카드 목록 여정.
   Commit: `feat(dashboard): show per-commit analysis cards`

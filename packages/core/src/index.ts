@@ -267,6 +267,21 @@ export type {
   RecordedWebhookKind,
 } from "./github/recorded-fixtures";
 
+export { buildCommitAnalysisCards } from "./runs/analysis-cards";
+export type {
+  AnalysisJobInput,
+  AnalysisJobKind,
+  AnalysisJobStatus,
+  AnalysisReceiptInput,
+  AnalysisRunInput,
+  AnalysisTriggerKind,
+  BuildCommitAnalysisCardsInput,
+  CommitAnalysisCard,
+  CommitAnalysisJobStep,
+  CommitAnalysisStatus,
+  CommitFindingsDelta,
+} from "./runs/analysis-cards";
+
 export { computePilotStats } from "./stats/pilot-stats";
 export type {
   PilotPackMeasurement,
