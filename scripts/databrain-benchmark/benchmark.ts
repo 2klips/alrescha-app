@@ -25,6 +25,7 @@ import type {
   BenchmarkArm,
   BenchmarkHypothesis,
   BenchmarkManifestV2,
+  BenchmarkManifestV3,
   BenchmarkModel,
   BenchmarkModelSpec,
   BenchmarkReportV2,
@@ -125,17 +126,37 @@ export function aggregateBenchmarkArm(
  * the same task with the same prompt, so the accuracy delta and the token
  * ratio are paired statistics.
  */
+export interface HypothesisArms {
+  baseline: BenchmarkArm;
+  treatment: BenchmarkArm;
+}
+
+const DEFAULT_HYPOTHESIS_ARMS: HypothesisArms = {
+  baseline: "checkout",
+  treatment: "data-brain",
+};
+
+/** Schema 1/2 pairs checkout↔data-brain; the routing experiment grep-only↔routed. */
+export function hypothesisArmsFor(
+  arms: readonly BenchmarkArm[],
+): HypothesisArms {
+  return arms.includes("routed")
+    ? { baseline: "grep-only", treatment: "routed" }
+    : DEFAULT_HYPOTHESIS_ARMS;
+}
+
 export function pairedBenchmarkUnits(
   trials: readonly BenchmarkTrialResult[],
   model: string | null,
+  pair: HypothesisArms = DEFAULT_HYPOTHESIS_ARMS,
 ): PairedUnit[] {
   const baseline = new Map<string, BenchmarkTrialResult>();
   const dataBrain = new Map<string, BenchmarkTrialResult>();
   for (const trial of trials) {
     if (model !== null && trial.model !== model) continue;
     const key = `${trial.taskId}\u0000${trial.model}\u0000${trial.trial}`;
-    if (trial.arm === "checkout") baseline.set(key, trial);
-    if (trial.arm === "data-brain") dataBrain.set(key, trial);
+    if (trial.arm === pair.baseline) baseline.set(key, trial);
+    if (trial.arm === pair.treatment) dataBrain.set(key, trial);
   }
   return [...baseline.keys()]
     .sort()
@@ -166,14 +187,16 @@ export function evaluateBenchmarkHypothesis(
   trials: readonly BenchmarkTrialResult[],
   aggregates: readonly BenchmarkAggregate[],
   model: string | null,
+  pair: HypothesisArms = DEFAULT_HYPOTHESIS_ARMS,
 ): BenchmarkHypothesis {
   const baseline = aggregates.find(
-    (aggregate) => aggregate.arm === "checkout" && aggregate.model === model,
+    (aggregate) => aggregate.arm === pair.baseline && aggregate.model === model,
   )!;
   const dataBrain = aggregates.find(
-    (aggregate) => aggregate.arm === "data-brain" && aggregate.model === model,
+    (aggregate) =>
+      aggregate.arm === pair.treatment && aggregate.model === model,
   )!;
-  const units = pairedBenchmarkUnits(trials, model);
+  const units = pairedBenchmarkUnits(trials, model, pair);
   const accuracyDeltaPercentagePoints =
     units.length === 0
       ? null
@@ -203,8 +226,8 @@ export function evaluateBenchmarkHypothesis(
     accuracyNonInferior:
       accuracyInterval !== null &&
       accuracyInterval.lower >= NON_INFERIORITY_MARGIN_PERCENTAGE_POINTS,
-    baselineArm: "checkout",
-    dataBrainArm: "data-brain",
+    baselineArm: pair.baseline,
+    dataBrainArm: pair.treatment,
     model,
     pairedUnitCount: units.length,
     targetTokenReductionPercent: TARGET_TOKEN_REDUCTION_PERCENT,
@@ -231,10 +254,11 @@ export function summarizeBenchmark(
       arms.map((arm) => aggregateBenchmarkArm(trials, arm, model)),
     ),
   ];
+  const pair = hypothesisArmsFor(arms);
   const hypotheses = [
-    evaluateBenchmarkHypothesis(trials, aggregates, null),
+    evaluateBenchmarkHypothesis(trials, aggregates, null, pair),
     ...executedModelIds.map((model) =>
-      evaluateBenchmarkHypothesis(trials, aggregates, model),
+      evaluateBenchmarkHypothesis(trials, aggregates, model, pair),
     ),
   ];
   return { aggregates, hypotheses };
@@ -312,7 +336,7 @@ export async function runBenchmark(input: {
   concurrency?: number;
   corpusCommit?: string | null;
   generatedAt?: string;
-  manifest: BenchmarkManifestV2;
+  manifest: BenchmarkManifestV2 | BenchmarkManifestV3;
   mode: "dry-run" | "real";
   models: readonly BenchmarkModelExecution[];
   overrides?: BenchmarkOverrides;

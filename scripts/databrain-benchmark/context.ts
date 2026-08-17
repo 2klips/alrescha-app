@@ -1,11 +1,17 @@
 import { readFile, readdir } from "node:fs/promises";
 import { extname, join, relative, sep } from "node:path";
 
+import { routeQuery } from "../../packages/core/src/index";
 import {
   getWorkspaceArtifact,
   searchWorkspaceIndex,
   selectWorkspaceContextPack,
 } from "../../packages/mcp/src/data-brain";
+import {
+  collectNeighbors,
+  getNodeContent,
+  searchWorkspaceNodes,
+} from "../../packages/mcp/src/graph-tools";
 import type { McpWorkspaceData } from "../../packages/mcp/src/store";
 import type { BenchmarkArm } from "./types";
 
@@ -239,6 +245,80 @@ export async function buildArmContext(input: {
     input.corpus,
     `${input.retrievalQuery} ${input.taskDescription}`,
   );
+
+  // Routing-experiment arms (schema 3, Phase 2B todo 5).
+  const grepOnlyContext = (): ArmContext => {
+    const selected = bounded(ranked.slice(0, 8), 50_000);
+    return {
+      arm: input.arm,
+      text: ["# grep-only retrieval", "", ...selected.map(section)].join("\n"),
+      toolNames: ["grep.search", ...selected.map(() => "grep.read")],
+    };
+  };
+  const graphOnlyContext = (): ArmContext => {
+    const graphWorkspace = workspaceFromCorpus(input.corpus);
+    const seeds = searchWorkspaceNodes(
+      graphWorkspace,
+      input.retrievalQuery,
+    ).slice(0, 4);
+    const neighborhoods = seeds.map((seed) =>
+      collectNeighbors(graphWorkspace, seed.nodeId, 1),
+    );
+    const contents = seeds
+      .map((seed) => getNodeContent(graphWorkspace, seed.nodeId))
+      .filter((node): node is NonNullable<typeof node> => node !== null)
+      .map((node) => `## ${node.path ?? node.id}\n\n${node.content.slice(0, 6_000)}`);
+    return {
+      arm: input.arm,
+      text: [
+        "# graph-only traversal",
+        "",
+        "## search_nodes",
+        JSON.stringify(seeds),
+        "## get_neighbors",
+        JSON.stringify(
+          neighborhoods.map((neighborhood) => neighborhood?.edges ?? []),
+        ),
+        "## get_node_content",
+        ...contents,
+      ].join("\n"),
+      toolNames: [
+        "search_nodes",
+        ...seeds.map(() => "get_neighbors"),
+        ...contents.map(() => "get_node_content"),
+      ],
+    };
+  };
+  if (input.arm === "grep-only") {
+    return grepOnlyContext();
+  }
+  if (input.arm === "graph-only") {
+    return graphOnlyContext();
+  }
+  if (input.arm === "routed") {
+    const decision = routeQuery(input.taskDescription);
+    let delegate =
+      decision.route === "graph" ? graphOnlyContext() : grepOnlyContext();
+    let fallbackNote = "";
+    if (decision.route === "graph" && delegate.toolNames.length <= 1) {
+      // The misroute escape hatch the router promises: an empty graph result
+      // falls back to text retrieval.
+      delegate = grepOnlyContext();
+      fallbackNote = `\n(폴백: ${decision.fallback.reason})`;
+    }
+    return {
+      arm: input.arm,
+      text: [
+        "# routed retrieval",
+        "",
+        `route_query → ${decision.route} — ${decision.reason}${fallbackNote}`,
+        "",
+        delegate.text,
+      ].join("\n"),
+      toolNames: ["route_query", ...delegate.toolNames],
+    };
+  }
+
   if (input.arm === "checkout") {
     const selected = bounded(ranked.slice(0, 8), 50_000);
     return {

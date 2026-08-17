@@ -38,12 +38,12 @@ MVP는 GitHub App 설치가 유일한 입구다. 공개 전 진입 장벽을 없
 
 연구가 지목한 효율 기법과 그래프 툴. **각 기법은 벤치 A/B로 효과를 측정한 뒤 기본값이 된다.**
 
-- [ ] **4. MCP 그래프 툴 5종**
+- [x] **4. MCP 그래프 툴 5종**
   `search_nodes` / `get_neighbors`(depth≤2) / `trace_path` / `get_node_content` / `impact_of`. 응답은 **ID-first**(본문은 명시 요청 시 2단계), graphify의 `path`/`explain` 출력 형식을 레퍼런스로. 기존 `search_index`·`query_brain`과 역할이 겹치지 않게 정리하고, 겹치면 통합한다.
   수용 기준: 툴별 계약 테스트, 멀티홉 정답 경로 픽스처, ID-first 응답에 본문이 섞이지 않음, 테넌트 격리, 호출 시 access_event 발행(원문 비저장 유지).
   Commit: `feat(mcp): add graph traversal tools`
 
-- [ ] **5. 질의 라우팅**
+- [x] **5. 질의 라우팅**
   독립 연구 결론: **단순 조회는 grep/검색, 멀티홉·관계형만 그래프**. 서버가 질의 유형을 판별해 적절한 경로를 추천/선택하고, 라우팅 근거를 응답에 남긴다.
   수용 기준: 질의를 단순/멀티홉으로 태깅한 픽스처에서 라우팅 정확도, 잘못 라우팅됐을 때의 폴백, 벤치에 grep-only / graph-only / 라우팅 3조건 과제 추가.
   Commit: `feat(brain): route queries by question shape`

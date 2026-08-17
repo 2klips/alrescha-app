@@ -4,11 +4,14 @@ import { readFile } from "node:fs/promises";
 import {
   BENCHMARK_ARMS,
   BENCHMARK_PROVIDERS,
+  ROUTING_ARMS,
+  type BenchmarkArm,
   type BenchmarkCorpus,
   type BenchmarkGrader,
   type BenchmarkManifest,
   type BenchmarkManifestV1,
   type BenchmarkManifestV2,
+  type BenchmarkManifestV3,
   type BenchmarkModelSpec,
   type BenchmarkProvider,
   type BenchmarkTask,
@@ -127,7 +130,11 @@ export function taskCorpus(task: BenchmarkTask): BenchmarkCorpus {
     : "realistic";
 }
 
-function parseTasks(parsed: Record<string, unknown>): BenchmarkTask[] {
+function parseTasks(
+  parsed: Record<string, unknown>,
+  expectedArms: readonly BenchmarkArm[] = BENCHMARK_ARMS,
+  requireDistinctRepositories = true,
+): BenchmarkTask[] {
   if (!Array.isArray(parsed.tasks))
     throw new TypeError("Benchmark manifest tasks must be an array.");
   const tasks = parsed.tasks.map(parseTask);
@@ -138,12 +145,15 @@ function parseTasks(parsed: Record<string, unknown>): BenchmarkTask[] {
   if (new Set(tasks.map(({ id }) => id)).size !== tasks.length) {
     throw new TypeError("Benchmark task ids must be unique.");
   }
-  if (JSON.stringify(parsed.arms) !== JSON.stringify(BENCHMARK_ARMS)) {
+  if (JSON.stringify(parsed.arms) !== JSON.stringify(expectedArms)) {
     throw new TypeError(
-      "Benchmark arms must be checkout, full-dump, and data-brain.",
+      `Benchmark arms must be ${expectedArms.join(", ")}.`,
     );
   }
-  if (new Set(tasks.map(({ repository }) => repository)).size < 2) {
+  if (
+    requireDistinctRepositories &&
+    new Set(tasks.map(({ repository }) => repository)).size < 2
+  ) {
     throw new TypeError(
       "Benchmark requires fixture and realistic-scale repositories.",
     );
@@ -220,6 +230,22 @@ export async function loadBenchmarkManifest(
       arms: [...BENCHMARK_ARMS],
       models: parseModels(parsed.models),
       schemaVersion: 2,
+      tasks,
+      trialsPerArm: 5,
+    };
+    return manifest;
+  }
+
+  if (parsed.schemaVersion === 3) {
+    // The routing experiment may run fixture-only: graph-only traversal needs
+    // a corpus whose edge set the harness controls.
+    const tasks = parseTasks(parsed, ROUTING_ARMS, false);
+    if (parsed.trialsPerArm !== 5)
+      throw new TypeError("Benchmark schema 3 requires five trials per arm.");
+    const manifest: BenchmarkManifestV3 = {
+      arms: [...ROUTING_ARMS],
+      models: parseModels(parsed.models),
+      schemaVersion: 3,
       tasks,
       trialsPerArm: 5,
     };

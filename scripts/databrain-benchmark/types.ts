@@ -1,5 +1,13 @@
 export const BENCHMARK_ARMS = ["checkout", "full-dump", "data-brain"] as const;
-export type BenchmarkArm = (typeof BENCHMARK_ARMS)[number];
+/**
+ * Schema-3 routing experiment (Phase 2B todo 5): grep-only retrieval vs
+ * graph-only traversal vs the deterministic router picking per question.
+ * `BENCHMARK_ARMS` stays byte-identical — the frozen v1/v2 manifests hash
+ * over it.
+ */
+export const ROUTING_ARMS = ["grep-only", "graph-only", "routed"] as const;
+export type RoutingArm = (typeof ROUTING_ARMS)[number];
+export type BenchmarkArm = (typeof BENCHMARK_ARMS)[number] | RoutingArm;
 
 export const BENCHMARK_PROVIDERS = ["anthropic", "openai"] as const;
 export type BenchmarkProvider = (typeof BENCHMARK_PROVIDERS)[number];
@@ -53,7 +61,22 @@ export interface BenchmarkManifestV2 {
   trialsPerArm: 5;
 }
 
-export type BenchmarkManifest = BenchmarkManifestV1 | BenchmarkManifestV2;
+/**
+ * Schema 3 — the routing experiment. Same interval-based gates as schema 2;
+ * the hypothesis pairs `grep-only` (baseline) against `routed` (treatment).
+ */
+export interface BenchmarkManifestV3 {
+  arms: RoutingArm[];
+  models: BenchmarkModelSpec[];
+  schemaVersion: 3;
+  tasks: BenchmarkTask[];
+  trialsPerArm: 5;
+}
+
+export type BenchmarkManifest =
+  | BenchmarkManifestV1
+  | BenchmarkManifestV2
+  | BenchmarkManifestV3;
 
 export interface BenchmarkModelOutput {
   answer: string;
@@ -178,8 +201,10 @@ export interface BenchmarkHypothesis {
   accuracyDeltaPercentagePoints: number | null;
   accuracyImprovementGoalMet: boolean;
   accuracyNonInferior: boolean;
-  baselineArm: "checkout";
-  dataBrainArm: "data-brain";
+  /** "checkout" for schema 1/2 runs; "grep-only" for the routing experiment. */
+  baselineArm: BenchmarkArm;
+  /** "data-brain" for schema 1/2 runs; "routed" for the routing experiment. */
+  dataBrainArm: BenchmarkArm;
   /** `null` pools every executed model; otherwise a single model id. */
   model: string | null;
   pairedUnitCount: number;

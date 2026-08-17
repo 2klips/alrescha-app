@@ -21,6 +21,7 @@ import {
 } from "./databrain-benchmark/report";
 import type {
   BenchmarkManifestV2,
+  BenchmarkManifestV3,
   BenchmarkModel,
   BenchmarkModelSpec,
   BenchmarkReportV1,
@@ -63,7 +64,7 @@ function realModel(spec: BenchmarkModelSpec, apiKey: string): BenchmarkModel {
  */
 function planModels(input: {
   dryRun: boolean;
-  manifest: BenchmarkManifestV2;
+  manifest: BenchmarkManifestV2 | BenchmarkManifestV3;
   mock: BenchmarkModel;
 }): BenchmarkModelExecution[] {
   return input.manifest.models.map((spec) => {
@@ -95,9 +96,9 @@ async function main(): Promise<void> {
     option("manifest") ?? "benchmarks/databrain/tasks.v3.json",
   );
   const manifest = await loadBenchmarkManifest(manifestPath);
-  if (manifest.schemaVersion !== 2) {
+  if (manifest.schemaVersion !== 2 && manifest.schemaVersion !== 3) {
     throw new TypeError(
-      `Only schema-2 manifests are executable; ${manifestPath} is schema ${manifest.schemaVersion}. The schema-1 release is frozen.`,
+      `Only schema-2 and schema-3 manifests are executable; ${manifestPath} is schema ${manifest.schemaVersion}. The schema-1 release is frozen.`,
     );
   }
 
