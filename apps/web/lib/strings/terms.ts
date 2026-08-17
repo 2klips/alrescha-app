@@ -51,6 +51,7 @@ export const CONVENTIONAL_ENGLISH_TERMS = [
   "member",
   "viewer",
   "receipt",
+  "AI",
   "VIBE Index",
   "VIBE",
   "A/B",

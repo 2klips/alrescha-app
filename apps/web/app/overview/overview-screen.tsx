@@ -13,6 +13,7 @@ import type {
   OverviewTodo,
 } from "../../lib/overview/view-model";
 import { GRADE } from "../../lib/strings/common";
+import { SideNav } from "../ui/side-nav";
 import { OVERVIEW } from "../../lib/strings/overview";
 
 /**
@@ -75,7 +76,7 @@ function GraphZone({ model }: { model: OverviewViewModel }) {
   return (
     <section className="overview-zone" aria-labelledby="overview-graph-title">
       <ZoneHeader
-        href="/"
+        href="/map"
         icon={Network}
         id="overview-graph-title"
         lead={OVERVIEW.graph.lead}
@@ -152,7 +153,7 @@ function AgentZone({ model }: { model: OverviewViewModel }) {
   return (
     <section className="overview-zone" aria-labelledby="overview-agent-title">
       <ZoneHeader
-        href="/"
+        href="/map"
         icon={Activity}
         id="overview-agent-title"
         lead={OVERVIEW.agent.lead}
@@ -219,57 +220,58 @@ function BrainZone({ model }: { model: OverviewViewModel }) {
 
 export function OverviewScreen({ model }: { model: OverviewViewModel }) {
   return (
-    <main className="overview-main">
-      <header className="overview-head">
-        <div>
-          <p className="panel-kicker">{OVERVIEW.kicker}</p>
-          <h1>{OVERVIEW.title}</h1>
-          <p className="overview-lead">{OVERVIEW.lead}</p>
-        </div>
-        <span className="overview-repo">
-          <GitCommitHorizontal size={13} aria-hidden />
-          {model.repo}
-        </span>
-      </header>
-
-      <section className="overview-kpis" aria-label={OVERVIEW.kpi.ariaLabel}>
-        <article>
-          <strong>{model.kpi.unresolved}</strong>
-          <span>{OVERVIEW.kpi.unresolved}</span>
-        </article>
-        <article>
-          <strong>{model.kpi.implementation}%</strong>
-          <span>{OVERVIEW.kpi.implementation}</span>
-        </article>
-        <article>
-          <strong>{model.kpi.tests}%</strong>
-          <span>{OVERVIEW.kpi.tests}</span>
-        </article>
-        <article>
-          {model.kpi.lastAnalysis ? (
-            <>
-              <strong>
-                <code>{model.kpi.lastAnalysis.commitSha}</code>
-              </strong>
-              <span>{OVERVIEW.kpi.lastAnalysis}</span>
-            </>
-          ) : (
-            <>
-              <strong className="overview-empty">
-                {OVERVIEW.kpi.lastAnalysisNone}
-              </strong>
-              <span>{OVERVIEW.kpi.lastAnalysis}</span>
-            </>
-          )}
-        </article>
-      </section>
-
-      <div className="overview-zones">
-        <GraphZone model={model} />
-        <TodoZone todos={model.todos} />
-        <AgentZone model={model} />
-        <BrainZone model={model} />
-      </div>
-    </main>
+    <div className="overview-shell">
+      <SideNav />
+      <main className="overview-main">
+        <header className="overview-head">
+          <div>
+            <p className="panel-kicker">{OVERVIEW.kicker}</p>
+            <h1>{OVERVIEW.title}</h1>
+            <p className="overview-lead">{OVERVIEW.lead}</p>
+          </div>
+          <span className="overview-repo">
+            <GitCommitHorizontal size={13} aria-hidden />
+            {model.repo}
+          </span>
+        </header>
+        <section className="overview-kpis" aria-label={OVERVIEW.kpi.ariaLabel}>
+          <article>
+            <strong>{model.kpi.unresolved}</strong>
+            <span>{OVERVIEW.kpi.unresolved}</span>
+          </article>
+          <article>
+            <strong>{model.kpi.implementation}%</strong>
+            <span>{OVERVIEW.kpi.implementation}</span>
+          </article>
+          <article>
+            <strong>{model.kpi.tests}%</strong>
+            <span>{OVERVIEW.kpi.tests}</span>
+          </article>
+          <article>
+            {model.kpi.lastAnalysis ? (
+              <>
+                <strong>
+                  <code>{model.kpi.lastAnalysis.commitSha}</code>
+                </strong>
+                <span>{OVERVIEW.kpi.lastAnalysis}</span>
+              </>
+            ) : (
+              <>
+                <strong className="overview-empty">
+                  {OVERVIEW.kpi.lastAnalysisNone}
+                </strong>
+                <span>{OVERVIEW.kpi.lastAnalysis}</span>
+              </>
+            )}
+          </article>
+        </section>
+        <div className="overview-zones">
+          <GraphZone model={model} />
+          <TodoZone todos={model.todos} />
+          <AgentZone model={model} />
+          <BrainZone model={model} />
+        </div>{" "}
+      </main>
+    </div>
   );
 }

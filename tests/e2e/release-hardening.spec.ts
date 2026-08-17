@@ -25,7 +25,7 @@ test("fresh user completes the seeded demo repository journey", async ({
 test("revoked GitHub installation preserves evidence and gives recovery guidance", async ({
   page,
 }) => {
-  await page.goto("/?state=revoked");
+  await page.goto("/map?state=revoked");
   await expect(
     page.getByRole("heading", { name: DASHBOARD.states.revoked.title }),
   ).toBeVisible();

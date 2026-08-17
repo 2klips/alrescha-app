@@ -6392,3 +6392,96 @@ li[data-todo-status="blocked"] .overview-todo-status {
     align-items: flex-start;
   }
 }
+
+/* ============================================================
+   Phase 2D — grouped sidebar + overview shell + light texture.
+   ============================================================ */
+
+.overview-shell {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.side-nav {
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.4rem 0.9rem;
+}
+
+.side-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.side-nav-label {
+  color: var(--faint);
+  font-size: 0.64rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  margin: 0 0.6rem 0.3rem;
+  text-transform: uppercase;
+}
+
+.side-nav a {
+  align-items: center;
+  border-radius: var(--radius-control, 0);
+  color: var(--muted);
+  display: flex;
+  font-size: 0.8rem;
+  gap: 0.5rem;
+  padding: 0.38rem 0.6rem;
+  text-decoration: none;
+}
+
+.side-nav a:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.side-nav a[aria-current="page"] {
+  background: var(--tint-accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .overview-shell {
+    grid-template-columns: 1fr;
+  }
+  .side-nav {
+    border-bottom: 1px solid var(--line);
+    border-right: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+}
+
+/* Light texture tokens (--radius-card 등) live in tokens.css — the single palette source. */
+
+.overview-zone,
+.overview-kpis article,
+.overview-minimap,
+.commit-card,
+.commit-detail,
+.empty-list {
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+}
+
+[data-theme="light"] .overview-zone,
+[data-theme="light"] .overview-kpis article,
+[data-theme="light"] .commit-card,
+[data-theme="light"] .commit-detail {
+  border-color: transparent;
+}
+
+.side-nav-foot {
+  border-top: 1px solid var(--line);
+  margin-top: auto;
+  padding-top: 0.8rem;
+}

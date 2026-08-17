@@ -16,7 +16,7 @@ test("the hit layer costs exactly one tab stop, with arrow-key node traversal", 
   page,
 }) => {
   await mkdir(EVIDENCE, { recursive: true });
-  await page.goto("/");
+  await page.goto("/map");
   await page.waitForSelector(".brain-map-hit");
 
   const nodeCount = await page.locator(".brain-map-hit").count();

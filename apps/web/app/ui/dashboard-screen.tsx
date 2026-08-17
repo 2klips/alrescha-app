@@ -83,8 +83,8 @@ const GRADE_OPTIONS: readonly {
 ];
 
 const NAV_ITEMS = [
-  { href: "/overview", icon: LayoutDashboard, label: NAV.overview },
-  { href: "/", icon: Network, label: NAV.graph },
+  { href: "/", icon: LayoutDashboard, label: NAV.overview },
+  { href: "/map", icon: Network, label: NAV.graph },
   { href: "/findings", icon: AlertTriangle, label: NAV.findings },
   { href: "/lint", icon: Braces, label: NAV.lint },
   { href: "/progress", icon: TrendingUp, label: NAV.progress },
@@ -430,7 +430,7 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
         >
           {NAV_ITEMS.map(({ href, icon: Icon, label }) => (
             <Link
-              aria-current={href === "/" ? "page" : undefined}
+              aria-current={href === "/map" ? "page" : undefined}
               href={href}
               key={href}
             >

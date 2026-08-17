@@ -1,6 +1,6 @@
-import { buildOverviewViewModel } from "../../lib/overview/view-model";
-import { OverviewScreen } from "./overview-screen";
+import { redirect } from "next/navigation";
 
-export default function OverviewPage() {
-  return <OverviewScreen model={buildOverviewViewModel()} />;
+/** The overview moved to the root (Phase 2D todo 6); keep old links working. */
+export default function OverviewRedirect() {
+  redirect("/");
 }

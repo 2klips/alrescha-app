@@ -34,8 +34,8 @@ test.use({ colorScheme: "dark" });
  * authenticated browser walk. See OQ-008.
  */
 const SCREENS = [
-  ["dashboard", "/"],
-  ["overview", "/overview"],
+  ["dashboard", "/map"],
+  ["overview", "/"],
   ["commits", "/commits"],
   ["findings", "/findings"],
   ["lint", "/lint"],

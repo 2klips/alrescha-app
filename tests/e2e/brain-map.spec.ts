@@ -56,7 +56,7 @@ async function zoomUntil(page: Page, target: LodLevel, deltaY: number) {
 test("mounts the WebGL brain map with a reachable node for every fixture node", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/map");
 
   const stage = page.locator(STAGE);
   await expect(stage).toBeVisible();
@@ -72,7 +72,7 @@ test("mounts the WebGL brain map with a reachable node for every fixture node", 
 test("zooming walks the three LOD bands and thins the labels out", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/map");
   await expect(page.locator("canvas.brain-map-canvas")).toBeVisible();
   // Wait for the engine's first reported frame; zooming before it lands would
   // measure the pre-simulation default rather than a real band.
@@ -105,7 +105,7 @@ test("zooming walks the three LOD bands and thins the labels out", async ({
 });
 
 test("force panel values survive a reload", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/map");
   // The panel is server-rendered, so it is visible and fillable *before* React
   // attaches its listeners; an input made in that window is silently discarded
   // when hydration resets the control to its rendered value. Waiting for the
@@ -165,7 +165,7 @@ for (const viewport of [
     page,
   }) => {
     await page.setViewportSize(viewport);
-    await page.goto("/");
+    await page.goto("/map");
     await expect(page.getByTestId("graph-force-panel")).toBeVisible();
 
     const overlap = await page.evaluate(() => {
@@ -209,7 +209,7 @@ for (const viewport of [
 test("a scripted MCP burst lights nodes and then fades them out", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/map");
   await expect(page.locator("canvas.brain-map-canvas")).toBeVisible();
   expect(await glowActive(page)).toBe(0);
 
@@ -222,7 +222,7 @@ test("a scripted MCP burst lights nodes and then fades them out", async ({
 });
 
 test("a hub chip focuses its node", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/map");
 
   const chip = page.locator("[data-hub-node]").first();
   const nodeId = await chip.getAttribute("data-hub-node");
@@ -245,7 +245,7 @@ test("remounting the stage ten times leaks no WebGL context", async ({
   page.on("pageerror", (error) => failures.push(error.message));
 
   for (let round = 0; round < 10; round += 1) {
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await page.goto("/map", { waitUntil: "domcontentloaded" });
     await expect(page.locator("canvas.brain-map-canvas")).toBeVisible();
     await page.goto("/findings", { waitUntil: "domcontentloaded" });
     await expect(page.locator("canvas.brain-map-canvas")).toHaveCount(0);

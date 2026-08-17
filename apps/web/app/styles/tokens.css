@@ -105,6 +105,10 @@
   --accent: var(--info);
   --danger: var(--brand);
   --panel: color-mix(in srgb, var(--surface) 94%, transparent);
+  /* Phase 2D: 다크=각진 Ink & Seal, 라이트=둥근 Toss 질감. */
+  --radius-card: 0px;
+  --radius-control: 0px;
+  --card-shadow: none;
   --panel-soft: color-mix(in srgb, var(--surface) 88%, transparent);
   --shadow-color: #000000;
   --panel-shadow: color-mix(in srgb, var(--shadow-color) 32%, transparent);
@@ -167,6 +171,10 @@
   --on-accent: #ffffff;
   --on-verified: #ffffff;
 
+  --radius-card: 14px;
+  --radius-control: 10px;
+  --card-shadow: 0 1px 4px
+    color-mix(in srgb, var(--shadow-color) 7%, transparent);
   --shadow-color: #20242e;
   --panel-shadow: color-mix(in srgb, var(--shadow-color) 14%, transparent);
 }

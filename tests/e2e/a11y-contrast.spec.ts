@@ -31,7 +31,7 @@ import { THEME_STORAGE_KEY } from "../../apps/web/lib/theme/theme-preference";
 const EVIDENCE = path.resolve(".omo/evidence/phase2a/task-9");
 
 const SURFACES = [
-  ["dashboard", "/"],
+  ["dashboard", "/map"],
   ["findings", "/findings"],
 ] as const;
 

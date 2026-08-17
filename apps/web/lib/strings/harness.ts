@@ -4,7 +4,7 @@
  */
 
 export const HARNESS = {
-  ariaAssets: "하네스 자산",
+  ariaAssets: "에이전트 지시문",
   title: "이미 작동하는 것을 저장합니다.",
 
   demo: {

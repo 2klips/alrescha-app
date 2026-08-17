@@ -17,7 +17,7 @@ test.beforeAll(async () => {
 });
 
 test("all four zones render with derived data", async ({ page }) => {
-  await page.goto("/overview");
+  await page.goto("/");
 
   await expect(
     page.getByRole("heading", { name: OVERVIEW.title }),
@@ -60,16 +60,16 @@ test("all four zones render with derived data", async ({ page }) => {
 });
 
 test("each zone links to the screen that owns the data", async ({ page }) => {
-  await page.goto("/overview");
+  await page.goto("/");
 
   await page.getByRole("link", { name: OVERVIEW.todos.open }).click();
   await expect(page).toHaveURL(/\/progress/);
 
-  await page.goto("/overview");
+  await page.goto("/");
   await page.getByRole("link", { name: OVERVIEW.brain.open }).click();
   await expect(page).toHaveURL(/\/graph/);
 
-  await page.goto("/overview");
+  await page.goto("/");
   await page.getByRole("link", { name: OVERVIEW.graph.open }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/map$/);
 });

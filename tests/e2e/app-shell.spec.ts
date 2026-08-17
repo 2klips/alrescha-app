@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { BRAND, DASHBOARD, NOT_FOUND } from "../../apps/web/lib/strings";
 
 test("opens the Arr app shell", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/map");
 
   await expect(page.getByText("2klips/arr-app").first()).toBeVisible();
   await expect(page.getByRole("link", { name: BRAND.homeLabel })).toBeVisible();

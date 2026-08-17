@@ -28,7 +28,7 @@ async function hydrated(page: Page, selector: string): Promise<void> {
 test("scripted MCP reads pulse the graph and feed focus follows the newest call", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/map");
   await hydrated(page, "[data-testid='brain-map-stage']");
   await page.getByRole("button", { name: DASHBOARD.activity.replay }).click();
 
@@ -66,7 +66,7 @@ test("scripted MCP reads pulse the graph and feed focus follows the newest call"
 test("enters a depth-two graph by node double-click and inspects grounded edges", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/map");
   // The brain map's DOM hit layer is the node affordance over the canvas.
   await hydrated(page, "[data-testid='brain-map-hits']");
   await page

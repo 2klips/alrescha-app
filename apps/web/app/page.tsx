@@ -1,18 +1,10 @@
-import {
-  buildDashboardViewModel,
-  parseDashboardState,
-} from "../lib/dashboard/graph-model";
-import { DashboardScreen } from "./ui/dashboard-screen";
+import { buildOverviewViewModel } from "../lib/overview/view-model";
+import { OverviewScreen } from "./overview/overview-screen";
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ state?: string | string[] }>;
-}) {
-  const { state } = await searchParams;
-  return (
-    <DashboardScreen
-      model={buildDashboardViewModel(parseDashboardState(state))}
-    />
-  );
+/**
+ * Phase 2D todo 6 — the four-zone overview is the default entry. The
+ * full-bleed graph dashboard lives one click away at /map.
+ */
+export default function HomePage() {
+  return <OverviewScreen model={buildOverviewViewModel()} />;
 }

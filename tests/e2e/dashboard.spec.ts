@@ -48,7 +48,7 @@ test("recovers from a mocked GitHub permission error", async ({ page }) => {
 test("links every HUD metric to visible provenance and filters graph", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/map");
   await page
     .getByRole("button", { name: DASHBOARD.metrics.unresolved })
     .first()

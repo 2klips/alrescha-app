@@ -45,7 +45,7 @@ function alphaOf(color: string): number {
 }
 
 test("every HUD metric opens its own provenance", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/map");
 
   for (const [key, label] of METRICS) {
     await page.getByRole("button", { name: label }).first().click();
@@ -64,15 +64,15 @@ test("every HUD metric opens its own provenance", async ({ page }) => {
 test("the rail links reach the harness and library surfaces", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/map");
 
-  await expect(page.getByRole("link", { name: "하네스 자산" })).toHaveAttribute(
-    "href",
-    "/app/harness",
-  );
   await expect(
-    page.getByRole("link", { name: "증거 라이브러리" }),
-  ).toHaveAttribute("href", "/app/library");
+    page.getByRole("link", { name: "에이전트 지시문" }),
+  ).toHaveAttribute("href", "/app/harness");
+  await expect(page.getByRole("link", { name: "저장된 증거" })).toHaveAttribute(
+    "href",
+    "/app/library",
+  );
 });
 
 test("the HUD is token-themed in dark and light, and captures evidence", async ({
@@ -80,7 +80,7 @@ test("the HUD is token-themed in dark and light, and captures evidence", async (
 }) => {
   await mkdir(EVIDENCE, { recursive: true });
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/");
+  await page.goto("/map");
   await expect(page.locator("canvas.brain-map-canvas")).toBeVisible();
   await page.waitForTimeout(2_000);
 
@@ -130,7 +130,7 @@ test("the HUD is token-themed in dark and light, and captures evidence", async (
   await page.screenshot({ path: path.join(EVIDENCE, "dashboard-light.png") });
 
   // Blocked states are HUD surfaces too and must be themed, not bare.
-  await page.goto("/?state=scanning");
+  await page.goto("/map?state=scanning");
   await expect(page.getByText(DASHBOARD.states.scanning.title)).toBeVisible();
   await page.screenshot({
     path: path.join(EVIDENCE, "dashboard-light-scanning.png"),
@@ -142,7 +142,7 @@ test("narrow viewports stack the HUD instead of floating it", async ({
 }) => {
   await mkdir(EVIDENCE, { recursive: true });
   await page.setViewportSize({ width: 420, height: 900 });
-  await page.goto("/");
+  await page.goto("/map");
   await expect(page.locator("canvas.brain-map-canvas")).toBeVisible();
   await page.waitForTimeout(1_200);
 

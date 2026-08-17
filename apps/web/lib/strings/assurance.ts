@@ -1,5 +1,5 @@
 /**
- * Copy for the assurance surfaces: Findings, 지시문 린트, Receipts
+ * Copy for the assurance surfaces: Findings, AI 지시문 검사, Receipts
  * (WORK_SPEC §5.2-②/③/⑤). Phase 2A todo 3.
  */
 
@@ -56,7 +56,7 @@ export const ASSURANCE = {
 
   lint: {
     kicker: "상시 로드 컨텍스트",
-    title: "지시문 린트",
+    title: "AI 지시문 검사",
     lead: "턴당 비용·중복·모순을 봅니다. 후보는 검토 전까지 ",
     leadTail: " 상태로 남습니다.",
     summary: {

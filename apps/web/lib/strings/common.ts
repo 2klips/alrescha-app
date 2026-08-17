@@ -12,19 +12,27 @@ export const BRAND = {
 
 export const NAV = {
   ariaPrimary: "주요 내비게이션",
+  /** Phase 2D todo 2 — 사이드바 4그룹. */
+  groups: {
+    glance: "한눈에",
+    analysis: "분석",
+    brain: "Data Brain",
+    records: "기록·자산",
+  },
   ariaSurfaces: "보증 화면",
   toggle: "내비게이션 열기",
   overview: "한눈에 보기",
+  brainExplore: "노드 탐색",
   graph: "Graph",
   findings: "Findings",
-  lint: "지시문 린트",
+  lint: "AI 지시문 검사",
   progress: "진행",
   commits: "commit 분석",
-  inspection: "점검",
+  inspection: "프로젝트 점검",
   team: "팀",
   receipts: "Receipts",
-  harness: "하네스 자산",
-  library: "증거 라이브러리",
+  harness: "에이전트 지시문",
+  library: "저장된 증거",
   connectRepo: "레포 연결",
 } as const;
 
