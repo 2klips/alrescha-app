@@ -339,6 +339,39 @@ export type {
   ServerPromptSyncPayload,
 } from "./team/prompt-log";
 
+export {
+  CoachingValidationError,
+  analyzePromptSignals,
+  coachPrompt,
+  coachingCreditCost,
+  coachingSuggestions,
+  promptCoachingOutputSchema,
+  promptRubricSchema,
+  rubricCeilings,
+  validateCoachingOutput,
+} from "./team/prompt-coach";
+export type {
+  CoachingProvider,
+  CoachingResult,
+  PromptCoachingOutput,
+  PromptRubric,
+  PromptSignals,
+} from "./team/prompt-coach";
+
+export {
+  VIBE_METRICS,
+  buildVibeIndex,
+  vibeGateResultsSchema,
+  vibeInputSchema,
+} from "./team/vibe-index";
+export type {
+  ContributionRow,
+  VibeGateResults,
+  VibeIndex,
+  VibeInput,
+  VibeMetric,
+} from "./team/vibe-index";
+
 export { computePilotStats } from "./stats/pilot-stats";
 export type {
   PilotPackMeasurement,
