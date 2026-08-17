@@ -6,7 +6,7 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-import { routeQuery } from "@arr/core";
+import { deriveArtifactFacets, routeQuery } from "@arr/core";
 
 import {
   getWorkspaceArtifact,
@@ -886,6 +886,11 @@ function createServer(
       inputSchema: z.object({
         query: z.string().trim().min(1),
         type_filter: NODE_TYPE_SCHEMA.optional(),
+        // Phase 2D todo 5 — optional facet filter, derived from the stored
+        // path (deterministic, ADR-013-equivalent). Backward compatible.
+        domain_filter: z
+          .enum(["frontend", "backend", "shared", "unclassified"])
+          .optional(),
       }),
       outputSchema: z.object({
         query: z.string(),
@@ -903,9 +908,16 @@ function createServer(
         workspaceId: z.string(),
       }),
     },
-    async ({ query, type_filter }) => {
+    async ({ query, type_filter, domain_filter }) => {
       const workspace = await readWorkspace();
-      const results = searchWorkspaceNodes(workspace, query, type_filter);
+      const unfiltered = searchWorkspaceNodes(workspace, query, type_filter);
+      const results = domain_filter
+        ? unfiltered.filter(
+            (result) =>
+              deriveArtifactFacets(result.path, "code_metadata").domain ===
+              domain_filter,
+          )
+        : unfiltered;
       emitAccessEvent(
         store,
         principal,

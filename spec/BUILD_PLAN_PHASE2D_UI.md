@@ -36,7 +36,7 @@
 
 ## Wave 1 — `/overview` 통합 대시보드 (신규 화면, 기존 화면 무변경)
 
-- [ ] **1. 4존 통합 대시보드**
+- [x] **1. 4존 통합 대시보드**
       신규 라우트 `/overview`: 상단 KPI 스트립 4장(미해소 문제·구현 커버리지·테스트 커버리지·마지막 분석 상태) + 2×2 존 그리드 —
       ① **그래프 뷰**: 미니 그래프 미리보기(정적 SVG 렌더, 노드 유형 범례) + "전체 그래프 열기" ② **할 일 목록**: 진행 보드 상위 항목(상태 뱃지·출처 표기) ③ **에이전트 기록**: MCP 액세스 피드 최근 항목(툴·시각·상세) ④ **Data Brain**: 영역별 노드 수(프론트엔드/백엔드/문서/테스트 — 노드 path에서 유도) + 등급 분포.
       모든 데이터는 기존 데모 뷰모델·픽스처에서 파생(새 데이터 발명 금지). 각 존 헤더에서 해당 상세 화면으로 이동.
@@ -45,31 +45,31 @@
 
 ## Wave 2 — 내비 재편 + 어휘 단순화
 
-- [ ] **2. 사이드바 4그룹 재편**
+- [x] **2. 사이드바 4그룹 재편**
       평면 11항목 → 그룹: **한눈에**(대시보드) / **분석**(커밋 분석·발견된 문제·점검) / **Data Brain**(그래프·노드 탐색) / **기록·자산**(할 일 진행·Receipts·에이전트 지시문·저장된 증거·팀). 현재 `dashboard-screen.tsx`와 `assurance-workspace.tsx`에 중복된 내비를 공유 컴포넌트로 통합.
       수용 기준: 내비 구조 단위 테스트, 기존 e2e 셀렉터 호환(라벨은 strings 경유라 자동 전파), 모바일 접힘 동작.
       Commit: `feat(shell): group the sidebar navigation`
 
-- [ ] **3. 어휘 개편 (strings 모듈 일괄)**
+- [x] **3. 어휘 개편 (strings 모듈 일괄)**
       개편안: "지시문 린트"→"AI 지시문 검사", "하네스 자산"→"에이전트 지시문", "증거 라이브러리"→"저장된 증거", "점검"→"프로젝트 점검", 나머지는 유지(commit·Findings·Receipts는 개발자 관례 어휘 — terms.ts 정책 준수). 화면 리드 문장을 "이 화면이 무엇을 보여주는가" 한 문장으로 통일.
       수용 기준: Korean-first 스위프 green, 관례 영어 목록 불변, e2e 전체 green(라벨 전파 확인).
       Commit: `refactor(strings): simplify the product vocabulary`
 
 ## Wave 3 — Data Brain 영역 분류 엔진
 
-- [ ] **4. 영역 분류기 (`packages/core`)**
+- [x] **4. 영역 분류기 _(구현 판단: 저장 병합 대신 저장 필드(path·classification)에서 읽기 시점 유도 — 사본 드리프트가 원천 불가능하고 ADR-013 동등성이 자명해짐)_ (`packages/core`)**
       아티팩트 path·classification에서 **facet**을 결정론적으로 유도: `domain`(frontend/backend/shared — 워크스페이스 규약: `apps/web`=frontend, `apps/worker`·`packages`=backend, 그 외=shared), `page`(Next.js 라우트 파일이면 라우트 경로), `unit`(file/code-symbol/doc/test). 규약은 설정 가능하되 기본값은 모노레포 관례. facet은 스캔 시 계산해 아티팩트 metadata에 병합(ADR-014의 symbolEngine과 같은 패턴 — 재스캔 생존).
       수용 기준: 분류 결정론 픽스처 테스트(ts/py/go·문서·라우트 파일), CLI/GitHub 두 경로 동일 facet(ADR-013 동등성), 미분류는 발명하지 않고 `unclassified`.
       Commit: `feat(ingest): derive domain and page facets for every artifact`
 
-- [ ] **5. 그래프 영역 뷰**
+- [ ] **5. 그래프 영역 뷰** _(부분 완료: MCP search_nodes domain_filter + overview Data Brain 존은 배선됨. 남음: /map 캔버스의 facet 그룹 모드·필터 칩)_
       `/`(전체 그래프)에 facet 그룹 모드 — 영역별 클러스터 배경·필터 칩(프론트/백/페이지/파일/코드/문서), Data Brain 존과 `/graph` 탐색에 같은 facet 필터. MCP `search_nodes`에 facet 인자 추가(선택적, 스키마 하위 호환).
       수용 기준: facet 필터 e2e, 그룹 모드 토글 상태 유지, MCP 계약 테스트(기존 호출 무변경 통과).
       Commit: `feat(brain): group and filter the graph by facet`
 
 ## Wave 4 — 기본 라우트 전환·마무리
 
-- [ ] **6. `/` = 통합 대시보드, 그래프는 `/map`**
+- [x] **6. `/` = 통합 대시보드, 그래프는 `/map`**
       기본 진입을 overview로 전환, 전면 그래프는 `/map`으로 이동(URL 리다이렉트 유지). 걸려 있는 e2e(대시보드·brain-map·HUD·테마·a11y)의 대상 경로 이전 — **단언 약화 금지, 경로만 이동**. 스켈레톤 로딩 상태 보강. CHANGELOG.
       수용 기준: 전체 e2e green(이전 후 개수 동일 이상), 리다이렉트 테스트, 라이트하우스/번들 회귀 없음(`scripts/measure-route-bundle.ts`).
       Commit: `feat(shell): make the overview the default route`

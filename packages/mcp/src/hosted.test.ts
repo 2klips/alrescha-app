@@ -946,6 +946,19 @@ describe("hosted MCP contract", () => {
       ],
     });
 
+    // Phase 2D todo 5 — the optional facet filter narrows by derived domain
+    // and stays backward compatible (the unfiltered call above is unchanged).
+    const facetSearch = await client.callTool({
+      arguments: { domain_filter: "frontend", query: "CI evidence policy" },
+      name: "search_nodes",
+    });
+    const facetResults = (
+      facetSearch.structuredContent as { results: { path: string }[] }
+    ).results;
+    expect(facetResults.every(({ path }) => path.startsWith("apps/web/"))).toBe(
+      true,
+    );
+
     const neighbors = await client.callTool({
       arguments: { depth: 2, node_id: doc },
       name: "get_neighbors",
