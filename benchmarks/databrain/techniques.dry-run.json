@@ -1,0 +1,55 @@
+{
+  "assumption": "Token estimate is the dry-run assumption ceil(context characters / 4); recall is deterministic required-fact coverage, not a model run.",
+  "corpus": "fixtures/drifted-demo",
+  "measurements": [
+    {
+      "baselineRecallPercent": 91.67,
+      "baselineTokens": 5219,
+      "cacheStablePrefixTokens": 0,
+      "defaultOn": true,
+      "enabledRecallPercent": 91.67,
+      "enabledTokens": 4477,
+      "recallDeltaPercentagePoints": 0,
+      "taskCount": 4,
+      "technique": "id-first-loading",
+      "tokenDeltaPercent": -14.22
+    },
+    {
+      "baselineRecallPercent": 91.67,
+      "baselineTokens": 5219,
+      "cacheStablePrefixTokens": 129,
+      "defaultOn": true,
+      "enabledRecallPercent": 91.67,
+      "enabledTokens": 5325,
+      "recallDeltaPercentagePoints": 0,
+      "taskCount": 4,
+      "technique": "static-prefix",
+      "tokenDeltaPercent": 2.03
+    },
+    {
+      "baselineRecallPercent": 91.67,
+      "baselineTokens": 5219,
+      "cacheStablePrefixTokens": 0,
+      "defaultOn": true,
+      "enabledRecallPercent": 91.67,
+      "enabledTokens": 4975,
+      "recallDeltaPercentagePoints": 0,
+      "taskCount": 4,
+      "technique": "lazy-tool-definitions",
+      "tokenDeltaPercent": -4.68
+    },
+    {
+      "baselineRecallPercent": 66.67,
+      "baselineTokens": 5219,
+      "cacheStablePrefixTokens": 0,
+      "defaultOn": true,
+      "enabledRecallPercent": 83.33,
+      "enabledTokens": 5431,
+      "recallDeltaPercentagePoints": 16.67,
+      "taskCount": 4,
+      "technique": "compaction-safe-session",
+      "tokenDeltaPercent": 4.06
+    }
+  ],
+  "taskSource": "benchmarks/databrain/tasks.v3.json (fixture answer-manifest tasks)"
+}

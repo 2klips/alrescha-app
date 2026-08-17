@@ -13,7 +13,7 @@ import {
   searchWorkspaceNodes,
 } from "../../packages/mcp/src/graph-tools";
 import type { McpWorkspaceData } from "../../packages/mcp/src/store";
-import type { BenchmarkArm } from "./types";
+import type { BenchmarkArm, TechniqueFlags } from "./types";
 
 export interface RepositoryCorpusEntry {
   content: string;
@@ -27,9 +27,38 @@ export interface RepositoryCorpus {
 
 export interface ArmContext {
   arm: BenchmarkArm;
+  /** Byte-stable prefix length when the static-prefix technique is on. */
+  staticPrefixChars?: number;
   text: string;
   toolNames: string[];
 }
+
+/** Fixed instruction preamble — byte-identical across every task. */
+export const STATIC_PREFIX = [
+  "# Arr Data Brain 사용 규약",
+  "",
+  "- 색인·그래프에서 찾은 노드 id로 필요한 내용만 요청한다.",
+  "- 응답 근거는 노드 경로를 인용한다.",
+  "- 저장되지 않은 사실을 지어내지 않는다.",
+  "",
+].join("\n");
+
+/** The full hosted tool catalog, one line each (lazy loading trims this). */
+export const TOOL_CATALOG: Readonly<Record<string, string>> = {
+  get_artifact: "아티팩트 내용/발췌 + 이웃",
+  get_findings: "발견 목록",
+  get_neighbors: "노드 이웃(ID-first)",
+  get_node_content: "노드 본문(명시 2단계)",
+  impact_of: "영향 리포트",
+  log_progress: "작업 기록",
+  query_brain: "구조화 질의",
+  record_note: "노트",
+  request_context_pack: "컨텍스트 팩",
+  route_query: "질의 라우팅",
+  search_index: "색인 검색(발췌 포함)",
+  search_nodes: "ID-first 검색",
+  trace_path: "증거 경로 추적",
+};
 
 const TEXT_EXTENSIONS = new Set([
   ".css",
@@ -226,6 +255,8 @@ export async function buildArmContext(input: {
   corpus: RepositoryCorpus;
   retrievalQuery: string;
   taskDescription: string;
+  /** Measurement mode (todo 6). Omitted → the historical context, byte-identical. */
+  techniques?: TechniqueFlags;
 }): Promise<ArmContext> {
   if (input.arm === "full-dump") {
     const documents = bounded(
@@ -422,21 +453,94 @@ export async function buildArmContext(input: {
     taskDescription: `${input.retrievalQuery} ${input.taskDescription}`,
     tokenBudget: 800,
   });
+  if (input.techniques === undefined) {
+    return {
+      arm: input.arm,
+      text: [
+        "# Data Brain scripted MCP results",
+        "",
+        `## search_index\n\n${searchResults.map(({ excerpt, path, rank }) => `${path} [${rank}]\n${excerpt.slice(0, 160)}`).join("\n\n")}`,
+        "",
+        `## get_artifact\n\n${artifactResults.map(section).join("\n\n")}`,
+        "",
+        `## request_context_pack\n\n${pack.text}`,
+      ].join("\n"),
+      toolNames: [
+        ...Array.from({ length: searchCallCount }, () => "search_index"),
+        ...artifactResults.map(() => "get_artifact"),
+        "request_context_pack",
+      ],
+    };
+  }
+
+  // ---- Measurement mode (todo 6): technique flags reshape the context. ----
+  const techniques = input.techniques;
+  const idFirst = techniques["id-first-loading"];
+
+  const idFirstArtifacts = selectedArtifactResults.slice(0, 2).flatMap(
+    (result) => {
+      const selected = getWorkspaceArtifact(workspace, {
+        id: result.nodeId,
+      }).artifact;
+      return selected
+        ? [{ content: selected.content.slice(0, 4_000), path: selected.path }]
+        : [];
+    },
+  );
+  const searchSection = idFirst
+    ? `## search_nodes\n\n${searchResults.map(({ id, path, rank }) => `${id} ${path} [${rank}]`).join("\n")}`
+    : `## search_index\n\n${searchResults.map(({ excerpt, path, rank }) => `${path} [${rank}]\n${excerpt.slice(0, 160)}`).join("\n\n")}`;
+  const contentSection = idFirst
+    ? `## get_node_content\n\n${idFirstArtifacts.map(section).join("\n\n")}`
+    : `## get_artifact\n\n${artifactResults.map(section).join("\n\n")}`;
+  const packSection = `## request_context_pack\n\n${pack.text}`;
+
+  const contentToolNames = idFirst
+    ? [
+        ...Array.from({ length: searchCallCount }, () => "search_nodes"),
+        ...idFirstArtifacts.map(() => "get_node_content"),
+        "request_context_pack",
+      ]
+    : [
+        ...Array.from({ length: searchCallCount }, () => "search_index"),
+        ...artifactResults.map(() => "get_artifact"),
+        "request_context_pack",
+      ];
+  const catalogNames = techniques["lazy-tool-definitions"]
+    ? [...new Set(contentToolNames)].sort()
+    : Object.keys(TOOL_CATALOG);
+  const catalogSection = `## tool_definitions\n\n${catalogNames
+    .map((name) => `- ${name}: ${TOOL_CATALOG[name] ?? ""}`)
+    .join("\n")}`;
+
+  const parts: string[] = [];
+  if (techniques["static-prefix"]) {
+    parts.push(STATIC_PREFIX);
+  }
+  parts.push("# Data Brain scripted MCP results", "", catalogSection, "");
+  if (techniques["compaction-safe-session"]) {
+    // Compaction keeps the tail: metadata first, content last, then a tiny
+    // anchor index from which everything can be re-derived by node id.
+    const anchors = searchResults
+      .map(({ nodeId, path }) => `- ${nodeId} ${path}`)
+      .join("\n");
+    parts.push(
+      searchSection,
+      "",
+      packSection,
+      "",
+      contentSection,
+      "",
+      `## 세션 앵커(재파생)\n\n${anchors}`,
+    );
+  } else {
+    parts.push(searchSection, "", contentSection, "", packSection);
+  }
+
   return {
     arm: input.arm,
-    text: [
-      "# Data Brain scripted MCP results",
-      "",
-      `## search_index\n\n${searchResults.map(({ excerpt, path, rank }) => `${path} [${rank}]\n${excerpt.slice(0, 160)}`).join("\n\n")}`,
-      "",
-      `## get_artifact\n\n${artifactResults.map(section).join("\n\n")}`,
-      "",
-      `## request_context_pack\n\n${pack.text}`,
-    ].join("\n"),
-    toolNames: [
-      ...Array.from({ length: searchCallCount }, () => "search_index"),
-      ...artifactResults.map(() => "get_artifact"),
-      "request_context_pack",
-    ],
+    staticPrefixChars: techniques["static-prefix"] ? STATIC_PREFIX.length : 0,
+    text: parts.join("\n"),
+    toolNames: contentToolNames,
   };
 }

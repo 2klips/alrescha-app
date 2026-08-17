@@ -9,6 +9,27 @@ export const ROUTING_ARMS = ["grep-only", "graph-only", "routed"] as const;
 export type RoutingArm = (typeof ROUTING_ARMS)[number];
 export type BenchmarkArm = (typeof BENCHMARK_ARMS)[number] | RoutingArm;
 
+/**
+ * Token-efficiency techniques (Phase 2B todo 6). Each is an on/off flag on
+ * the data-brain context builder, measured A/B before it may become a
+ * default. All-off reproduces the pre-technique context byte-for-byte when
+ * `techniques` is omitted entirely.
+ */
+export const TOKEN_TECHNIQUES = [
+  "id-first-loading",
+  "static-prefix",
+  "lazy-tool-definitions",
+  "compaction-safe-session",
+] as const;
+export type TokenTechnique = (typeof TOKEN_TECHNIQUES)[number];
+export type TechniqueFlags = Readonly<Record<TokenTechnique, boolean>>;
+export const NO_TECHNIQUES: TechniqueFlags = Object.freeze({
+  "compaction-safe-session": false,
+  "id-first-loading": false,
+  "lazy-tool-definitions": false,
+  "static-prefix": false,
+});
+
 export const BENCHMARK_PROVIDERS = ["anthropic", "openai"] as const;
 export type BenchmarkProvider = (typeof BENCHMARK_PROVIDERS)[number];
 
