@@ -139,3 +139,11 @@
 - 임시 결정: 커밋 카드는 `jobs`의 상태·타임스탬프에서 상태/소요 시간을 유도한다(`packages/core/src/runs/analysis-cards.ts`). 이는 데이터 정합상 안전하지만, `runs` 컬럼들은 여전히 죽은 상태다.
 - 필요한 결정: ⑴ `finish_job`/`claim_next_job`이 소속 run의 상태를 함께 전이시키는 마이그레이션을 추가할지(pilot-report가 살아난다), ⑵ 아니면 `runs.status`를 파생 뷰로 대체하고 컬럼을 폐기할지. ⑴이면 "run의 모든 잡 종료 시 성공/실패 판정" 규칙을 SQL로 명문화해야 한다.
 - 상태: resolved(⑴ 채택, 2026-08-17 사용자 판정 — `202608170001_run_lifecycle.sql`. 첫 claim이 run을 `running`+`started_at`(1회), 마지막 잡 종결 시 `failed > cancelled > succeeded` 우선순위로 판정+`completed_at`. 재시도 requeue는 비종결. run 행 `for update` 잠금으로 동시 종결 직렬화, 모든 경로가 잡→run 순서로 잠가 데드락 없음. 해지 경로의 `cancelled` 의미 보존, `pending`/`running` 밖의 run은 부활 금지. 커밋 카드의 잡 기반 유도는 이중 장부(회귀 신호)로 유지. `tests/run-lifecycle.test.ts` 8케이스, `.omo/evidence/phase2b/oq-014-run-lifecycle.md`)
+
+## OQ-015 — tree-sitter 채택은 의존성 결정이 필요하다 (기획 판단 필요)
+
+- 발견: Phase 2B todo 7 ⑵ / `packages/core/src/ingest/repository-scanner.ts` `extractSymbols`
+- 내용: 계획은 "tree-sitter 다언어 AST를 심볼 추출의 1순위로 승격, 정규식은 폴백"을 요구한다. 그런데 tree-sitter 도입은 두 경로뿐이다 — ⑴ 네이티브 바인딩(`tree-sitter` + 언어별 그래머): node-gyp 빌드가 필요해 Windows 개발 환경·CLI 배포(`arr push`가 로컬에서 스캔)에 부담 ⑵ wasm(`web-tree-sitter` + 그래머 wasm): 그래머당 수백 KB의 바이너리를 레포/패키지에 실어야 한다. 어느 쪽이든 공급망·크기·빌드 복잡도가 걸린 의존성 결정이라 에이전트가 임의로 정하지 않았다.
+- 임시 결정: 추출기를 **엔진 체인**으로 구조화했다 — `extractSymbols(path, source)`가 언어별 엔진을 고르고, ts/js는 기존 TypeScript 컴파일러 **AST**(진짜 AST 파싱), Python·Go는 결정론적 구조 파서(폴백 계층)로 처리한다. 언어별 픽스처 테스트(ts + python + go)는 수용 기준을 충족하며, tree-sitter가 채택되면 엔진 하나를 갈아끼우는 구조다(`SymbolExtractionEngine` 판별자 노출).
+- 필요한 결정: ⑴ wasm 경로 채택(크기 비용 감수) ⑵ 네이티브 경로 채택(빌드 비용 감수) ⑶ 현행 체인 유지(코드 언어 추가 시 구조 파서 확장). CLI(`packages/cli`)가 같은 스캐너를 로컬 실행한다는 점이 배포 판단에 걸린다.
+- 상태: open

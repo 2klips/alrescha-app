@@ -42,6 +42,14 @@ const todoItemSchema = z.strictObject({
   title: z.string().min(1).max(240),
 });
 
+const rationaleNoteSchema = z.strictObject({
+  adrRef: z.string().regex(/^ADR-\d{1,4}$/).nullable(),
+  kind: z.enum(["adr-reference", "note", "why"]),
+  line: z.number().int().positive(),
+  sourceKey: z.string().min(1).max(400),
+  text: z.string().min(1).max(240),
+});
+
 const scannedArtifactSchema = z.strictObject({
   classification: z.enum([
     "adr",
@@ -57,6 +65,7 @@ const scannedArtifactSchema = z.strictObject({
   exportedSymbols: z.array(exportedSymbolSchema).max(10_000),
   kind: z.enum(["adr", "code_metadata", "instruction", "spec", "todo"]),
   path: z.string().min(1).max(1000),
+  rationales: z.array(rationaleNoteSchema).max(10_000),
   sizeBytes: z.number().int().nonnegative(),
   sourceBlobSha: sha1Schema,
   sourceCommitSha: sha1Schema,

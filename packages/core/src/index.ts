@@ -45,6 +45,8 @@ export type {
 export {
   classifyArtifactPath,
   extractExportedSymbols,
+  extractRationales,
+  extractSymbols,
   persistedKind,
   scanRepository,
 } from "./ingest/repository-scanner";
@@ -53,6 +55,8 @@ export type {
   ExportedSymbolMetadata,
   PersistedArtifactKind,
   PreviousScannedArtifact,
+  RationaleKind,
+  RationaleNote,
   RepositoryScanPlan,
   RepositorySource,
   RepositoryTree,
@@ -60,6 +64,7 @@ export type {
   ScanSkip,
   ScanSkipReason,
   ScannedArtifact,
+  SymbolExtractionEngine,
 } from "./ingest/repository-scanner";
 
 export {

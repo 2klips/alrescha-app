@@ -48,12 +48,12 @@ MVP는 GitHub App 설치가 유일한 입구다. 공개 전 진입 장벽을 없
   수용 기준: 질의를 단순/멀티홉으로 태깅한 픽스처에서 라우팅 정확도, 잘못 라우팅됐을 때의 폴백, 벤치에 grep-only / graph-only / 라우팅 3조건 과제 추가.
   Commit: `feat(brain): route queries by question shape`
 
-- [ ] **6. 토큰 효율 기법**
+- [x] **6. 토큰 효율 기법**
   ⑴ ID-first 계층 로딩 ⑵ 프롬프트 캐싱(정적 프리픽스) ⑶ 툴 정의 지연 로드 ⑷ compaction-safe 장기 세션. 각각 **벤치 A/B로 켜기 전후를 측정**하고 결과를 리포트에 남긴다.
   수용 기준: 기법별 on/off 플래그와 측정, 리포트에 기법별 델타 표, 정확도 하락 시 기본값 off 유지.
   Commit: `feat(brain): apply measured token-efficiency techniques`
 
-- [ ] **7. 스캐너 확장 (흡수 항목)**
+- [x] **7. 스캐너 확장 (흡수 항목)**
   ⑴ rationale 주석(`# WHY:` / `# NOTE:`)과 ADR 인용을 **1급 노드**로 추출해 코드↔의도를 연결 (G4) ⑵ tree-sitter 다언어 AST를 심볼 추출의 1순위로 승격, 정규식은 폴백 (G5) ⑶ 핸드오프·세션 파일(`.claude/session-state.md`, `current-task.md` 등)을 `todo_progress`로 인식 (H1).
   수용 기준: 언어별 심볼 추출 픽스처(ts/js + 최소 2개 언어), rationale 노드의 provenance, 핸드오프 파일이 진행 대시보드에 반영되는 경로 테스트.
   Commit: `feat(ingest): extract rationale, multi-language symbols, handoff files`

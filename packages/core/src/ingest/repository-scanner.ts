@@ -45,19 +45,38 @@ export interface ExportedSymbolMetadata {
   readonly startLine: number;
 }
 
+export type RationaleKind = "adr-reference" | "note" | "why";
+
+/**
+ * A rationale comment lifted out of code (Phase 2B todo 7 ⑴): `WHY:`/`NOTE:`
+ * markers and ADR citations become first-class graph nodes connecting code to
+ * intent. Only the comment text travels — never surrounding code.
+ */
+export interface RationaleNote {
+  readonly adrRef: string | null;
+  readonly kind: RationaleKind;
+  readonly line: number;
+  readonly sourceKey: string;
+  readonly text: string;
+}
+
 export interface ScannedArtifact {
   readonly classification: ArtifactClassification;
   readonly digest: string;
   readonly exportedSymbols: readonly ExportedSymbolMetadata[];
   readonly kind: PersistedArtifactKind;
   readonly path: string;
+  readonly rationales: readonly RationaleNote[];
   readonly sizeBytes: number;
   readonly sourceBlobSha: string;
   readonly sourceCommitSha: string;
   readonly todoItems: readonly ParsedTodoItem[];
 }
 
-export type PreviousScannedArtifact = Omit<ScannedArtifact, "todoItems">;
+export type PreviousScannedArtifact = Omit<
+  ScannedArtifact,
+  "rationales" | "todoItems"
+>;
 
 export interface ScanSkip {
   readonly detail: string;
@@ -75,7 +94,12 @@ export interface RepositoryScanPlan {
   readonly unchangedPaths: readonly string[];
 }
 
-const CODE_EXTENSIONS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
+const TYPESCRIPT_EXTENSIONS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
+const CODE_EXTENSIONS = new Set([...TYPESCRIPT_EXTENSIONS, ".go", ".py"]);
+
+/** Handoff/session files agents leave behind (Phase 2B todo 7 ⑶, H1). */
+const HANDOFF_FILE_PATTERN =
+  /^(session[-_](state|notes?)|current[-_]task|handoff([._-].*)?)\.(md|mdx)$/;
 
 function extension(path: string): string {
   const fileName = path.slice(path.lastIndexOf("/") + 1);
@@ -109,7 +133,8 @@ export function classifyArtifactPath(inputPath: string): ArtifactClassification 
   }
   if (
     (fileExtension === ".md" || fileExtension === ".mdx") &&
-    /^(todo|todos|progress|status|roadmap)([._-].*)?\.(md|mdx)$/.test(fileName)
+    (/^(todo|todos|progress|status|roadmap)([._-].*)?\.(md|mdx)$/.test(fileName) ||
+      HANDOFF_FILE_PATTERN.test(fileName))
   ) {
     return "todo_progress";
   }
@@ -222,6 +247,149 @@ export function extractExportedSymbols(path: string, source: string): readonly E
   return symbols.sort((left, right) => left.startLine - right.startLine || left.startColumn - right.startColumn);
 }
 
+export type SymbolExtractionEngine =
+  | "go-structural"
+  | "python-structural"
+  | "typescript-ast";
+
+function structuralSymbol(
+  name: string,
+  kind: string,
+  lineIndex: number,
+  column: number,
+): ExportedSymbolMetadata {
+  return {
+    endColumn: column + name.length,
+    endLine: lineIndex + 1,
+    kind,
+    name,
+    startColumn: column + 1,
+    startLine: lineIndex + 1,
+  };
+}
+
+/** Top-level `def`/`class` declarations; private (`_`) names stay out. */
+function extractPythonSymbols(source: string): ExportedSymbolMetadata[] {
+  const symbols: ExportedSymbolMetadata[] = [];
+  source.split(/\r?\n/).forEach((line, index) => {
+    const definition = /^(async\s+)?def\s+([A-Za-z_][\w]*)\s*\(/.exec(line);
+    if (definition?.[2] && !definition[2].startsWith("_")) {
+      symbols.push(
+        structuralSymbol(
+          definition[2],
+          "function",
+          index,
+          line.indexOf(definition[2]),
+        ),
+      );
+      return;
+    }
+    const classDefinition = /^class\s+([A-Za-z_][\w]*)/.exec(line);
+    if (classDefinition?.[1] && !classDefinition[1].startsWith("_")) {
+      symbols.push(
+        structuralSymbol(
+          classDefinition[1],
+          "class",
+          index,
+          line.indexOf(classDefinition[1]),
+        ),
+      );
+    }
+  });
+  return symbols;
+}
+
+/** Go's export rule is the capital initial — only those are recorded. */
+function extractGoSymbols(source: string): ExportedSymbolMetadata[] {
+  const symbols: ExportedSymbolMetadata[] = [];
+  const push = (name: string | undefined, kind: string, index: number, line: string) => {
+    if (name && /^[A-Z]/.test(name)) {
+      symbols.push(structuralSymbol(name, kind, index, line.indexOf(name)));
+    }
+  };
+  source.split(/\r?\n/).forEach((line, index) => {
+    const func = /^func\s+(?:\([^)]*\)\s*)?([A-Za-z_][\w]*)\s*\(/.exec(line);
+    if (func) {
+      push(func[1], "function", index, line);
+      return;
+    }
+    const typeDeclaration = /^type\s+([A-Za-z_][\w]*)\s+(struct|interface)\b/.exec(line);
+    if (typeDeclaration) {
+      push(typeDeclaration[1], typeDeclaration[2] ?? "type", index, line);
+      return;
+    }
+    const valueDeclaration = /^(?:var|const)\s+([A-Za-z_][\w]*)\b/.exec(line);
+    if (valueDeclaration) {
+      push(valueDeclaration[1], "variable", index, line);
+    }
+  });
+  return symbols;
+}
+
+/**
+ * Multi-language symbol extraction (Phase 2B todo 7 ⑵): an AST engine where
+ * one is available (the TypeScript compiler for ts/js), deterministic
+ * structural parsing as the fallback tier for Python and Go. The tree-sitter
+ * promotion is recorded as OQ-015 — it needs a dependency decision.
+ */
+export function extractSymbols(
+  path: string,
+  source: string,
+): { engine: SymbolExtractionEngine; symbols: readonly ExportedSymbolMetadata[] } {
+  const fileExtension = extension(path.toLowerCase());
+  if (fileExtension === ".py") {
+    return { engine: "python-structural", symbols: extractPythonSymbols(source) };
+  }
+  if (fileExtension === ".go") {
+    return { engine: "go-structural", symbols: extractGoSymbols(source) };
+  }
+  return {
+    engine: "typescript-ast",
+    symbols: extractExportedSymbols(path, source),
+  };
+}
+
+const RATIONALE_MARKER_PATTERN =
+  /^\s*(?:\/\/|#|\*|\/\*|--)\s*(WHY|NOTE):\s*(.+?)\s*(?:\*\/)?\s*$/;
+const COMMENT_LINE_PATTERN = /^\s*(?:\/\/|#|\*|\/\*|--)\s*(.+?)\s*(?:\*\/)?\s*$/;
+const ADR_REFERENCE_PATTERN = /\bADR-\d{1,4}\b/;
+const MAX_RATIONALE_TEXT = 240;
+
+/** WHY:/NOTE: markers and ADR citations in comments — the comment text only. */
+export function extractRationales(
+  path: string,
+  source: string,
+): RationaleNote[] {
+  const rationales: RationaleNote[] = [];
+  source.split(/\r?\n/).forEach((line, index) => {
+    const marker = RATIONALE_MARKER_PATTERN.exec(line);
+    if (marker?.[1] && marker[2]) {
+      rationales.push({
+        adrRef: ADR_REFERENCE_PATTERN.exec(marker[2])?.[0] ?? null,
+        kind: marker[1] === "WHY" ? "why" : "note",
+        line: index + 1,
+        sourceKey: `rationale:${path}:${index + 1}`,
+        text: marker[2].slice(0, MAX_RATIONALE_TEXT),
+      });
+      return;
+    }
+    const comment = COMMENT_LINE_PATTERN.exec(line);
+    const adrReference = comment?.[1]
+      ? ADR_REFERENCE_PATTERN.exec(comment[1])
+      : null;
+    if (comment?.[1] && adrReference) {
+      rationales.push({
+        adrRef: adrReference[0],
+        kind: "adr-reference",
+        line: index + 1,
+        sourceKey: `rationale:${path}:${index + 1}`,
+        text: comment[1].slice(0, MAX_RATIONALE_TEXT),
+      });
+    }
+  });
+  return rationales;
+}
+
 function decodedText(bytes: Uint8Array): string | null {
   if (bytes.subarray(0, 8192).includes(0)) {
     return null;
@@ -326,9 +494,16 @@ export async function scanRepository(input: {
     artifacts.push({
       classification,
       digest,
-      exportedSymbols: classification === "code_metadata" ? extractExportedSymbols(entry.path, source) : [],
+      exportedSymbols:
+        classification === "code_metadata"
+          ? extractSymbols(entry.path, source).symbols
+          : [],
       kind: persistedKind(classification),
       path: entry.path,
+      rationales:
+        classification === "code_metadata"
+          ? extractRationales(entry.path, source)
+          : [],
       sizeBytes: bytes.byteLength,
       sourceBlobSha: entry.sha,
       sourceCommitSha: input.commitSha,
