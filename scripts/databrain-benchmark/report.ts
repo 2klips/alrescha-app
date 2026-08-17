@@ -176,6 +176,7 @@ function renderBenchmarkMarkdownV2(report: BenchmarkReportV2): string {
     `- Schema version: \`${report.schemaVersion}\``,
     `- Generated: \`${report.run.generatedAt}\``,
     `- Manifest SHA-256: \`${report.run.manifestDigest}\``,
+    `- Corpus commit: \`${report.run.corpusCommit ?? "unavailable"}\``,
     `- Token accounting: ${report.run.tokenizerAssumption}`,
     `- Confidence method: ${report.run.confidenceMethod}`,
     `- Protocol: ${report.protocol.taskCount} pre-registered tasks (${report.protocol.realisticTaskCount} realistic-repository, ${report.protocol.fixtureTaskCount} fixture) × ${report.protocol.trialsPerArm} trials × ${report.protocol.arms.length} arms × ${report.run.models.length} models = ${report.protocol.registeredTrialCount} registered trials; ${report.protocol.expectedTrialCount} executed.`,

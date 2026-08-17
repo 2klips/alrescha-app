@@ -125,6 +125,7 @@ async function seedV3Release(
       },
       run: {
         confidenceMethod: BOOTSTRAP_METHOD_DESCRIPTION,
+        corpusCommit: "0123456789abcdef0123456789abcdef01234567",
         generatedAt: "2026-08-17T00:00:00.000Z",
         manifestDigest: benchmarkManifestDigest(manifest),
         mode: "real",
@@ -448,7 +449,7 @@ describe("F5 efficacy benchmark audit — schema 2 release", () => {
         expect(audit).toMatchObject({
           actualTrialCount: 600,
           expectedTrialCount: 600,
-          model: "gpt-5-nano-2025-08-07+claude-sonnet-5",
+          model: "gpt-5.6-luna+claude-sonnet-5",
           status: "pass",
         });
         expect(audit.releases.map(({ id }) => id)).toEqual(["v2", "v3"]);
@@ -467,7 +468,7 @@ describe("F5 efficacy benchmark audit — schema 2 release", () => {
         expect(audit).toMatchObject({
           actualTrialCount: 300,
           expectedTrialCount: 300,
-          model: "gpt-5-nano-2025-08-07",
+          model: "gpt-5.6-luna",
           status: "pass",
         });
         const markdown = await readFile(
@@ -541,6 +542,22 @@ describe("F5 efficacy benchmark audit — schema 2 release", () => {
 
         expect(audit.findings).toContainEqual(
           expect.objectContaining({ kind: "measurement-integrity" }),
+        );
+        expect(audit.status).toBe("fail");
+      },
+    );
+  }, 60_000);
+
+  it("rejects a schema-2 release without a recorded corpus commit", async () => {
+    await withV3Fixture(
+      (report) => {
+        report.run.corpusCommit = null;
+      },
+      async (root) => {
+        const audit = await verifyBenchmarkRelease(root);
+
+        expect(audit.findings).toContainEqual(
+          expect.objectContaining({ kind: "run-contract" }),
         );
         expect(audit.status).toBe("fail");
       },

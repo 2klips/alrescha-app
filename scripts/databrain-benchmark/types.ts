@@ -237,6 +237,12 @@ export interface BenchmarkReportV2 {
   };
   run: {
     confidenceMethod: string;
+    /**
+     * `git rev-parse HEAD` of the working tree the realistic-repository
+     * context was read from (ADR-012 §6). Null only when git is unavailable;
+     * the F5 audit rejects a release without it.
+     */
+    corpusCommit: string | null;
     generatedAt: string;
     manifestDigest: string;
     mode: "dry-run" | "real";

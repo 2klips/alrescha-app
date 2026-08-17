@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "models": [
-    { "id": "gpt-5-nano-2025-08-07", "provider": "openai" },
+    { "id": "gpt-5.6-luna", "provider": "openai" },
     { "id": "claude-sonnet-5", "provider": "anthropic" }
   ],
   "trialsPerArm": 5,

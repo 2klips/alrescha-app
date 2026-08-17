@@ -16,8 +16,8 @@
 **동결 원칙:** `tasks.json`(schema 1)과 `results.real.{json,md}`는 한 바이트도 건드리지 않았다. 매니페스트 다이제스트는 파싱된 객체의 `JSON.stringify` 해시이므로, 로더의 v1 경로는 객체 형태·키 순서까지 그대로 보존했다. v1 마크다운 렌더러도 동결(`renderBenchmarkMarkdownV1`)했고 스키마로 분기만 추가했다.
 
 - `tasks.json` 파일 SHA-256: `e1dc4352d19a123c739c5437b2882629c05a506f7db377cf5899258759ae7553`
-- **`tasks.v3.json` 파일 SHA-256: `a4b0444190fa484c7ce76690b69e38d316e42ab76bd0acb71714ef9496e6f12b`**
-- **v3 매니페스트 다이제스트(리포트에 기록되는 값, 파싱 객체 해시): `ffffb0a973cef8d6c2946086d136289561961419c7210c52562e1741253bf6ba`**
+- **`tasks.v3.json` 파일 SHA-256: `9318cb67f723875221aef7db439f69e7ccf281de56af11dd364c7ad30ac32dd3`** (개정 1 — §12 참조. 개정 전: `a4b0444190fa484c7ce76690b69e38d316e42ab76bd0acb71714ef9496e6f12b`)
+- **v3 매니페스트 다이제스트(리포트에 기록되는 값, 파싱 객체 해시): `7a317232cfb4f7c13db3e4c8c4f9bfd3f8eb26dd6f02dccc519b04ad77a9c2a7`** (개정 전: `ffffb0a973cef8d6c2946086d136289561961419c7210c52562e1741253bf6ba`)
 
 ## 2. 과제 인벤토리 (20개, 사전등록)
 
@@ -45,7 +45,7 @@
 
 ## 3. 다모델 설계
 
-- 매니페스트가 `models: [{id, provider}]`를 사전등록한다. 현재: `gpt-5-nano-2025-08-07`(openai), `claude-sonnet-5`(anthropic). schema 2는 **서로 다른 provider 2개 이상**을 강제한다.
+- 매니페스트가 `models: [{id, provider}]`를 사전등록한다. 현재: `gpt-5.6-luna`(openai — 개정 1로 교체, §12), `claude-sonnet-5`(anthropic). schema 2는 **서로 다른 provider 2개 이상**을 강제한다.
 - Anthropic 어댑터: `POST https://api.anthropic.com/v1/messages`, 헤더 `x-api-key` + `anthropic-version: 2023-06-01`, `max_tokens: 4096`. 구조화 출력은 OpenAI JSON 스키마와 **바이트 단위로 같은 스키마**를 가진 단일 툴(`databrain_benchmark_output`)을 `tool_choice: {type:"tool"}`로 강제해 얻는다 → 두 공급자가 같은 계약에 답한다.
 - **토큰 회계는 각 공급자의 보고값만 쓴다** (`usage.input_tokens`/`usage.output_tokens`). 어느 경로에도 로컬 토크나이저 추정이 없다; id나 usage가 없으면 시행을 실패 처리한다.
 - 429/5xx(+Anthropic 529)는 `retry-after`·본문 지연 힌트·지수 백오프로 최대 6회 재시도. 오류 메시지의 `sk-`/`sk-ant-` 패턴은 마스킹한다.
@@ -147,3 +147,46 @@ Data Brain real: 3/3 trials, 0 failed.               (6.7초)
 ## 11. 남긴 개선 여지 (실행 전에 넣으면 좋은 것)
 
 - **코퍼스 커밋 기록.** 실레포 과제의 컨텍스트는 실행 시점의 워킹트리에서 만들어진다(네트워크 접근은 없다 — 오프라인 재현 가능). 다만 리포트에는 실행 시각만 있고 **어느 커밋의 레포를 읽었는지**가 없다. 실행 전에 `run.corpusCommit`(= `git rev-parse HEAD`)을 리포트에 추가하고 F5 감사에서 필수화하면, "이 수치는 어느 커밋의 코퍼스에서 나왔나"가 영수증처럼 남는다(ADR-001의 provenance 원칙과 같은 결). 채점 자체는 매니페스트 기반이라 코퍼스가 변해도 재현 가능하지만, 회수 난이도는 코퍼스 상태에 따라 달라진다. 이번 세션에서는 스모크를 두 번 과금하지 않기 위해 넣지 않았다.
+
+## 12. 사전등록 개정 1 — 실행 전 모델 교체 + corpusCommit 구현 (2026-08-17)
+
+**실제 실행 전이므로 사전등록 개정이 유효하다.** `results.v3.real.*`는 아직 존재하지 않는다.
+
+### 개정 내용
+
+1. **OpenAI 측 모델 교체: `gpt-5-nano-2025-08-07` → `gpt-5.6-luna`.**
+   - 근거: ⑴ 기존 등록은 최하위 티어(nano) vs 중상위 티어(claude-sonnet-5)라, 모델별 결과가 갈릴 때 공급자 차이와 모델 급 차이를 구분할 수 없었다. ⑵ GPT-5.6 Luna(2026-07-09 출시, 07-30 가격 인하)는 공개 벤치마크에서 GPT-5.5를 상회한다고 보고되어 nano 대비 티어 격차를 크게 줄인다. ⑶ 계정에서 모델 ID `gpt-5.6-luna`를 `/v1/models` 실조회로 확인했다 (dated snapshot 없음, bare ID만 제공).
+   - 하네스 영향: 라우팅은 `provider` 기준이라 코드 변경 없음. 실매니페스트를 읽는 테스트 기대값 5곳 갱신 (`tests/databrain-benchmark.test.ts` 3곳, `tests/efficacy-benchmark.test.ts` v3 픽스처 2곳 — v2 동결 검증부는 불변).
+   - §6 비용 추정에는 영향 없음(토큰 수는 모델 무관 동일 가정). 보정계수가 gpt-5-nano 실측이라는 한계는 그대로이며, Luna에서도 자릿수 추정으로만 취급한다.
+
+2. **`run.corpusCommit` 구현 (§11 첫 항목 해소, ADR-012 §6 채택 이행).**
+   - `runBenchmark`가 `git rev-parse HEAD`를 리포트 `run.corpusCommit`에 기록 (`scripts/databrain-benchmark/benchmark.ts`). git 부재 시 null.
+   - schema-2 마크다운 렌더러에 `Corpus commit` 행 추가 (`report.ts`).
+   - F5 감사: schema-2 릴리스에 40-hex `corpusCommit` 필수 (`verify-benchmark-report.ts`, run-contract). 씨앗 결함 테스트 추가(누락 → fail).
+
+### 다이제스트 (개정 후)
+
+- `tasks.v3.json` 파일 SHA-256: `9318cb67f723875221aef7db439f69e7ccf281de56af11dd364c7ad30ac32dd3`
+- v3 매니페스트 다이제스트(파싱 객체 해시): `7a317232cfb4f7c13db3e4c8c4f9bfd3f8eb26dd6f02dccc519b04ad77a9c2a7`
+
+### 게이트
+
+- typecheck ✅ · vitest 벤치마크 스위트 46/46 ✅ (전체 스위트·lint는 스모크 후 최종 확인)
+
+### 개정 1 스모크 (실모델, 실제 과금 발생분)
+
+- **어댑터 수정 1건:** GPT-5.6은 `reasoning.effort: "minimal"`을 지원하지 않는다(400 실측: 지원값 none/low/medium/high/xhigh/max). v2가 쓰던 "minimal"의 최근접 후속값 **"low"** 로 교체 (`model.ts`). 매니페스트에 사전등록된 값이 아니므로 하네스 설정 변경이며, Anthropic 측(기본 adaptive thinking, 비영 추론)과의 대칭성도 "none"보다 "low"가 가깝다.
+- `--tasks=fixture-implement-remaining-session-ms --repeats=1` 스모크, 양 공급자 실경로 통과:
+
+| 모델 | 군별 점수 (checkout/full-dump/data-brain) | 입력 합 | 출력 합 |
+|---|---|---:|---:|
+| gpt-5.6-luna | 1 / 0 / 1 | 3,619 | 1,140 |
+| claude-sonnet-5 | 1 / 0 / 1 | 7,878 | 3,409 |
+
+- full-dump 0점은 v2 나노 스모크와 동일 패턴(문서 덤프 군은 `src/session.ts` 관례를 못 본다) — 실측 그대로.
+- `run.corpusCommit` 실기록 확인: `2071a5ce1a9b88bb9025725319888b620914800c`.
+- 산출물: `results.v3.smoke.{json,md}`(luna) · `results.v3.smoke-anthropic.{json,md}`(sonnet). 둘 다 override 기록으로 릴리스 승격 불가.
+
+### 최종 게이트 (개정 1)
+
+- `pnpm lint` ✅ (무결점) · `pnpm typecheck` ✅ · `pnpm vitest run` **440/440** ✅ (439 → 440, corpusCommit 씨앗 결함 테스트 추가)

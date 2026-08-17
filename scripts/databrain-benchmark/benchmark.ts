@@ -1,4 +1,6 @@
+import { execFile } from "node:child_process";
 import { resolve } from "node:path";
+import { promisify } from "node:util";
 
 import {
   buildArmContext,
@@ -285,8 +287,30 @@ function describeOverrides(input: {
   return described;
 }
 
+/**
+ * The realistic-repository context is read from the working tree, so the
+ * report records which commit that tree was at (ADR-012 §6). Null when git
+ * is unavailable — the F5 audit rejects a release without it.
+ */
+async function resolveCorpusCommit(
+  repositoryRoot: string,
+): Promise<string | null> {
+  try {
+    const { stdout } = await promisify(execFile)(
+      "git",
+      ["rev-parse", "HEAD"],
+      { cwd: repositoryRoot },
+    );
+    const commit = stdout.trim();
+    return /^[0-9a-f]{40}$/.test(commit) ? commit : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function runBenchmark(input: {
   concurrency?: number;
+  corpusCommit?: string | null;
   generatedAt?: string;
   manifest: BenchmarkManifestV2;
   mode: "dry-run" | "real";
@@ -418,6 +442,10 @@ export async function runBenchmark(input: {
     },
     run: {
       confidenceMethod: BOOTSTRAP_METHOD_DESCRIPTION,
+      corpusCommit:
+        input.corpusCommit === undefined
+          ? await resolveCorpusCommit(input.repositoryRoot)
+          : input.corpusCommit,
       generatedAt: input.generatedAt ?? new Date().toISOString(),
       manifestDigest: benchmarkManifestDigest(input.manifest),
       mode: input.mode,

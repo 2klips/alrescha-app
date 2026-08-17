@@ -236,7 +236,9 @@ export function createOpenAiBenchmarkModel(
               ],
               max_output_tokens: 4_096,
               model: input.model,
-              reasoning: { effort: "minimal" },
+              // GPT-5.6 dropped "minimal"; "low" is its nearest successor
+              // (few-but-nonzero reasoning tokens, like GPT-5 "minimal").
+              reasoning: { effort: "low" },
               store: false,
               text: {
                 format: {

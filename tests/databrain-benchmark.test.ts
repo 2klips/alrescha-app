@@ -543,9 +543,10 @@ export function remainingSessionMs(session: Session, now: number): number {
 
     expect(report.protocol.expectedTrialCount).toBe(15);
     expect(report.trials).toHaveLength(15);
+    expect(report.run.corpusCommit).toMatch(/^[0-9a-f]{40}$/);
     expect(report.run.models).toEqual([
       {
-        id: "gpt-5-nano-2025-08-07",
+        id: "gpt-5.6-luna",
         provider: "openai",
         reason: null,
         status: "executed",
@@ -587,7 +588,7 @@ export function remainingSessionMs(session: Session, now: number): number {
       mode: "dry-run",
       models: mockExecution(manifest),
       overrides: {
-        modelIds: ["gpt-5-nano-2025-08-07"],
+        modelIds: ["gpt-5.6-luna"],
         repeats: 1,
         taskIds: ["fixture-answer-legacy-billing"],
       },
@@ -598,7 +599,7 @@ export function remainingSessionMs(session: Session, now: number): number {
     expect(report.run.overrides).toEqual([
       "tasks=fixture-answer-legacy-billing",
       "repeats=1",
-      "models=gpt-5-nano-2025-08-07",
+      "models=gpt-5.6-luna",
     ]);
     expect(report.run.models[1]).toMatchObject({
       status: "skipped",
