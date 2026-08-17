@@ -1,6 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { AUTH_TENANCY_MIGRATION, asAuthenticatedUser, createTestDatabase } from "./helpers/database";
+import {
+  AUTH_TENANCY_MIGRATION,
+  asAuthenticatedUser,
+  createTestDatabase,
+} from "./helpers/database";
 
 const USER_A = "11111111-1111-4111-8111-111111111111";
 const USER_B = "22222222-2222-4222-8222-222222222222";
@@ -17,11 +21,18 @@ describe("Supabase auth and solo-workspace RLS", () => {
       [USER_A, USER_B],
     );
 
-    const workspaces = await database.query<{ id: string; owner_user_id: string }>(
+    const workspaces = await database.query<{
+      id: string;
+      owner_user_id: string;
+    }>(
       "select id, owner_user_id from public.workspaces order by owner_user_id",
     );
-    workspaceA = workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_A)?.id ?? "";
-    workspaceB = workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_B)?.id ?? "";
+    workspaceA =
+      workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_A)
+        ?.id ?? "";
+    workspaceB =
+      workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_B)
+        ?.id ?? "";
 
     await database.query(
       `insert into public.repositories (id, workspace_id, full_name)
@@ -60,8 +71,12 @@ describe("Supabase auth and solo-workspace RLS", () => {
   });
 
   it("auto-provisions exactly one owner workspace and membership per auth user", async () => {
-    const workspaces = await database.query<{ count: number }>("select count(*)::integer as count from public.workspaces");
-    const memberships = await database.query<{ count: number }>("select count(*)::integer as count from public.workspace_members where role = 'owner'");
+    const workspaces = await database.query<{ count: number }>(
+      "select count(*)::integer as count from public.workspaces",
+    );
+    const memberships = await database.query<{ count: number }>(
+      "select count(*)::integer as count from public.workspace_members where role = 'owner'",
+    );
 
     expect(workspaces.rows[0]?.count).toBe(2);
     expect(memberships.rows[0]?.count).toBe(2);
@@ -71,26 +86,48 @@ describe("Supabase auth and solo-workspace RLS", () => {
 
   it.each([
     ["workspaces", "select id from public.workspaces", "id"],
-    ["repositories", "select workspace_id from public.repositories", "workspace_id"],
+    [
+      "repositories",
+      "select workspace_id from public.repositories",
+      "workspace_id",
+    ],
     ["findings", "select workspace_id from public.findings", "workspace_id"],
     ["receipts", "select workspace_id from public.receipts", "workspace_id"],
-    ["mcp_tokens", "select workspace_id from public.mcp_tokens", "workspace_id"],
-    ["credit_ledger", "select workspace_id from public.credit_ledger", "workspace_id"],
-  ] as const)("prevents user A reading user B %s rows", async (_table, query, workspaceColumn) => {
-    const rows = await asAuthenticatedUser(database, USER_A, async (transaction) =>
-      transaction.query<Record<string, string>>(query),
-    );
+    [
+      "mcp_tokens",
+      "select workspace_id from public.mcp_tokens",
+      "workspace_id",
+    ],
+    [
+      "credit_ledger",
+      "select workspace_id from public.credit_ledger",
+      "workspace_id",
+    ],
+  ] as const)(
+    "prevents user A reading user B %s rows",
+    async (_table, query, workspaceColumn) => {
+      const rows = await asAuthenticatedUser(
+        database,
+        USER_A,
+        async (transaction) => transaction.query<Record<string, string>>(query),
+      );
 
-    expect(rows.rows).toHaveLength(1);
-    expect(rows.rows[0]?.[workspaceColumn] ?? rows.rows[0]?.id).toBe(workspaceA);
-  });
+      expect(rows.rows).toHaveLength(1);
+      expect(rows.rows[0]?.[workspaceColumn] ?? rows.rows[0]?.id).toBe(
+        workspaceA,
+      );
+    },
+  );
 
   it("prevents cross-tenant repository mutation at the database layer", async () => {
-    const update = await asAuthenticatedUser(database, USER_A, async (transaction) =>
-      transaction.query(
-        "update public.repositories set full_name = 'stolen/repo' where workspace_id = $1 returning id",
-        [workspaceB],
-      ),
+    const update = await asAuthenticatedUser(
+      database,
+      USER_A,
+      async (transaction) =>
+        transaction.query(
+          "update public.repositories set full_name = 'stolen/repo' where workspace_id = $1 returning id",
+          [workspaceB],
+        ),
     );
 
     expect(update.rows).toEqual([]);
@@ -106,18 +143,35 @@ describe("Supabase auth and solo-workspace RLS", () => {
   });
 
   it.each([
-    ["findings", "update public.findings set title = 'tampered' where workspace_id = $1"],
+    [
+      "findings",
+      "update public.findings set title = 'tampered' where workspace_id = $1",
+    ],
     ["receipts", "delete from public.receipts where workspace_id = $1"],
-    ["credit_ledger", "update public.credit_ledger set amount = 999 where workspace_id = $1"],
-  ] as const)("prevents user A mutating user B %s rows", async (_table, query) => {
-    await expect(
-      asAuthenticatedUser(database, USER_A, async (transaction) => transaction.query(query, [workspaceB])),
-    ).rejects.toThrow(/permission denied|row-level security policy/);
-  });
+    [
+      "credit_ledger",
+      "update public.credit_ledger set amount = 999 where workspace_id = $1",
+    ],
+  ] as const)(
+    "prevents user A mutating user B %s rows",
+    async (_table, query) => {
+      await expect(
+        asAuthenticatedUser(database, USER_A, async (transaction) =>
+          transaction.query(query, [workspaceB]),
+        ),
+      ).rejects.toThrow(/permission denied|row-level security policy/);
+    },
+  );
 
   it("prevents user A deleting user B MCP tokens", async () => {
-    const deletion = await asAuthenticatedUser(database, USER_A, async (transaction) =>
-      transaction.query("delete from public.mcp_tokens where workspace_id = $1 returning id", [workspaceB]),
+    const deletion = await asAuthenticatedUser(
+      database,
+      USER_A,
+      async (transaction) =>
+        transaction.query(
+          "delete from public.mcp_tokens where workspace_id = $1 returning id",
+          [workspaceB],
+        ),
     );
 
     expect(deletion.rows).toEqual([]);

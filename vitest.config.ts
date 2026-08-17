@@ -6,7 +6,11 @@ export default defineConfig({
       reporter: ["text", "json", "html"],
     },
     exclude: ["**/node_modules/**", "tests/e2e/**"],
-    include: ["apps/**/*.test.{ts,tsx}", "packages/**/*.test.ts", "tests/**/*.test.ts"],
+    include: [
+      "apps/**/*.test.{ts,tsx}",
+      "packages/**/*.test.ts",
+      "tests/**/*.test.ts",
+    ],
     maxWorkers: 4,
   },
 });

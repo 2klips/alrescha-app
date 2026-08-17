@@ -7,4 +7,3 @@ describe("core package", () => {
     expect(CORE_PACKAGE_NAME).toBe("@arr/core");
   });
 });
-

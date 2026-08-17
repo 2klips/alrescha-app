@@ -47,7 +47,8 @@ async function main(): Promise<void> {
         assumption: TECHNIQUE_TOKEN_ASSUMPTION,
         corpus: "fixtures/drifted-demo",
         measurements,
-        taskSource: "benchmarks/databrain/tasks.v3.json (fixture answer-manifest tasks)",
+        taskSource:
+          "benchmarks/databrain/tasks.v3.json (fixture answer-manifest tasks)",
       },
       null,
       2,

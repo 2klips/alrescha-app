@@ -146,9 +146,12 @@ function collectStrings(module: object, path = ""): Array<[string, string]> {
     if (typeof value === "string") found.push([keyPath, value]);
     else if (Array.isArray(value)) {
       value.forEach((entry, index) => {
-        if (typeof entry === "string") found.push([`${keyPath}[${index}]`, entry]);
+        if (typeof entry === "string")
+          found.push([`${keyPath}[${index}]`, entry]);
         else if (entry && typeof entry === "object")
-          found.push(...collectStrings(entry as object, `${keyPath}[${index}]`));
+          found.push(
+            ...collectStrings(entry as object, `${keyPath}[${index}]`),
+          );
       });
     } else if (value && typeof value === "object") {
       found.push(...collectStrings(value as object, keyPath));
@@ -197,7 +200,13 @@ interface StrayLiteral {
   value: string;
 }
 
-const TEXT_ATTRIBUTES = ["aria-label", "placeholder", "title", "alt", "aria-description"];
+const TEXT_ATTRIBUTES = [
+  "aria-label",
+  "placeholder",
+  "title",
+  "alt",
+  "aria-description",
+];
 
 /**
  * Stray user-facing literals: JSX text nodes and human-readable attributes that
@@ -211,7 +220,9 @@ function findStrayLiterals(file: string): StrayLiteral[] {
   // line, with no operators — that shape excludes TS generics (`useState<T>(…)`)
   // and ternaries, which are not copy. The `(?<!=)` guard drops arrow-function
   // return types too (`=> void | Promise<void>` is not a text node).
-  for (const match of source.matchAll(/(?<!=)>[ \t]*([^<>{}\n;=()?:]*[A-Za-z가-힣][^<>{}\n;=()?:]*)[ \t]*<[/A-Za-z]/g)) {
+  for (const match of source.matchAll(
+    /(?<!=)>[ \t]*([^<>{}\n;=()?:]*[A-Za-z가-힣][^<>{}\n;=()?:]*)[ \t]*<[/A-Za-z]/g,
+  )) {
     const text = (match[1] ?? "").trim();
     if (text) stray.push({ file, value: text });
   }
@@ -284,9 +295,12 @@ describe("korean-first copy policy", () => {
 });
 
 describe("string centralization", () => {
-  test.each(CONVERTED_SCREENS)("%s holds no stray user-facing literal", (file) => {
-    expect(findStrayLiterals(file).map((entry) => entry.value)).toEqual([]);
-  });
+  test.each(CONVERTED_SCREENS)(
+    "%s holds no stray user-facing literal",
+    (file) => {
+      expect(findStrayLiterals(file).map((entry) => entry.value)).toEqual([]);
+    },
+  );
 
   test("the detector actually fires on an inline literal", () => {
     const stray = findStrayLiterals(STRAY_LITERAL_FIXTURE);

@@ -61,7 +61,9 @@ test("every HUD metric opens its own provenance", async ({ page }) => {
   }
 });
 
-test("the rail links reach the harness and library surfaces", async ({ page }) => {
+test("the rail links reach the harness and library surfaces", async ({
+  page,
+}) => {
   await page.goto("/");
 
   await expect(page.getByRole("link", { name: "하네스 자산" })).toHaveAttribute(
@@ -83,9 +85,9 @@ test("the HUD is token-themed in dark and light, and captures evidence", async (
   await page.waitForTimeout(2_000);
 
   const railBackground = () =>
-    page.locator(".arr-repo-rail").evaluate((element) =>
-      getComputedStyle(element).backgroundColor,
-    );
+    page
+      .locator(".arr-repo-rail")
+      .evaluate((element) => getComputedStyle(element).backgroundColor);
 
   const darkSurface = await token(page, "--surface");
   const darkRail = await railBackground();
@@ -97,11 +99,15 @@ test("the HUD is token-themed in dark and light, and captures evidence", async (
   await expect
     .poll(async () =>
       Number(
-        await page.getByTestId("brain-map-stage").getAttribute("data-glow-active"),
+        await page
+          .getByTestId("brain-map-stage")
+          .getAttribute("data-glow-active"),
       ),
     )
     .toBeGreaterThan(0);
-  await page.screenshot({ path: path.join(EVIDENCE, "dashboard-dark-glow.png") });
+  await page.screenshot({
+    path: path.join(EVIDENCE, "dashboard-dark-glow.png"),
+  });
 
   await page.locator("[data-theme-toggle]").first().click();
   await expect
@@ -114,7 +120,9 @@ test("the HUD is token-themed in dark and light, and captures evidence", async (
   const lightSurface = await token(page, "--surface");
   expect(lightSurface).not.toBe(darkSurface);
   expect(await railBackground()).not.toBe(darkRail);
-  await page.screenshot({ path: path.join(EVIDENCE, "dashboard-light-glow.png") });
+  await page.screenshot({
+    path: path.join(EVIDENCE, "dashboard-light-glow.png"),
+  });
 
   await page.reload();
   await expect(page.locator("canvas.brain-map-canvas")).toBeVisible();
@@ -124,10 +132,14 @@ test("the HUD is token-themed in dark and light, and captures evidence", async (
   // Blocked states are HUD surfaces too and must be themed, not bare.
   await page.goto("/?state=scanning");
   await expect(page.getByText(DASHBOARD.states.scanning.title)).toBeVisible();
-  await page.screenshot({ path: path.join(EVIDENCE, "dashboard-light-scanning.png") });
+  await page.screenshot({
+    path: path.join(EVIDENCE, "dashboard-light-scanning.png"),
+  });
 });
 
-test("narrow viewports stack the HUD instead of floating it", async ({ page }) => {
+test("narrow viewports stack the HUD instead of floating it", async ({
+  page,
+}) => {
   await mkdir(EVIDENCE, { recursive: true });
   await page.setViewportSize({ width: 420, height: 900 });
   await page.goto("/");

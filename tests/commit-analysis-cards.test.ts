@@ -34,10 +34,7 @@ function build(jobs: readonly AnalysisJobInput[]) {
 
 describe("commit card status transitions", () => {
   it("starts pending while every job is queued", () => {
-    const card = build([
-      job({ kind: "scan" }),
-      job({ kind: "analyze" }),
-    ]);
+    const card = build([job({ kind: "scan" }), job({ kind: "analyze" })]);
     expect(card.status).toBe("pending");
     expect(card.durationMs).toBeNull();
     expect(card.failureReason).toBeNull();
@@ -136,10 +133,7 @@ describe("commit card status transitions", () => {
   });
 
   it("orders job steps scan-first for the detail view", () => {
-    const card = build([
-      job({ kind: "analyze" }),
-      job({ kind: "scan" }),
-    ]);
+    const card = build([job({ kind: "analyze" }), job({ kind: "scan" })]);
     expect(card.jobs.map(({ kind }) => kind)).toEqual(["scan", "analyze"]);
   });
 });

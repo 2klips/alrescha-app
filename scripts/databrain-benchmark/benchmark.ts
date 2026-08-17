@@ -72,8 +72,7 @@ function armTrials(
   model: string | null,
 ): BenchmarkTrialResult[] {
   return trials.filter(
-    (trial) =>
-      trial.arm === arm && (model === null || trial.model === model),
+    (trial) => trial.arm === arm && (model === null || trial.model === model),
   );
 }
 
@@ -158,22 +157,20 @@ export function pairedBenchmarkUnits(
     if (trial.arm === pair.baseline) baseline.set(key, trial);
     if (trial.arm === pair.treatment) dataBrain.set(key, trial);
   }
-  return [...baseline.keys()]
-    .sort()
-    .flatMap((key) => {
-      const left = baseline.get(key)!;
-      const right = dataBrain.get(key);
-      return right
-        ? [
-            {
-              baselineScore: left.grade?.score ?? 0,
-              baselineTokens: left.inputTokens + left.outputTokens,
-              dataBrainScore: right.grade?.score ?? 0,
-              dataBrainTokens: right.inputTokens + right.outputTokens,
-            },
-          ]
-        : [];
-    });
+  return [...baseline.keys()].sort().flatMap((key) => {
+    const left = baseline.get(key)!;
+    const right = dataBrain.get(key);
+    return right
+      ? [
+          {
+            baselineScore: left.grade?.score ?? 0,
+            baselineTokens: left.inputTokens + left.outputTokens,
+            dataBrainScore: right.grade?.score ?? 0,
+            dataBrainTokens: right.inputTokens + right.outputTokens,
+          },
+        ]
+      : [];
+  });
 }
 
 function tokenReduction(units: readonly PairedUnit[]): number | null {
@@ -208,7 +205,8 @@ export function evaluateBenchmarkHypothesis(
   const accuracyInterval = bootstrapConfidenceInterval(
     units,
     (sample) =>
-      mean(sample.map((unit) => unit.dataBrainScore - unit.baselineScore)) * 100,
+      mean(sample.map((unit) => unit.dataBrainScore - unit.baselineScore)) *
+      100,
     `accuracy-delta\u0000${model ?? "all-models"}`,
   );
   const tokenInterval = bootstrapConfidenceInterval(
@@ -279,8 +277,9 @@ async function mapWithConcurrency<T, R>(
     }
   }
   await Promise.all(
-    Array.from({ length: Math.min(Math.max(1, concurrency), values.length) }, () =>
-      worker(),
+    Array.from(
+      { length: Math.min(Math.max(1, concurrency), values.length) },
+      () => worker(),
     ),
   );
   return output;
@@ -320,11 +319,9 @@ async function resolveCorpusCommit(
   repositoryRoot: string,
 ): Promise<string | null> {
   try {
-    const { stdout } = await promisify(execFile)(
-      "git",
-      ["rev-parse", "HEAD"],
-      { cwd: repositoryRoot },
-    );
+    const { stdout } = await promisify(execFile)("git", ["rev-parse", "HEAD"], {
+      cwd: repositoryRoot,
+    });
     const commit = stdout.trim();
     return /^[0-9a-f]{40}$/.test(commit) ? commit : null;
   } catch {
@@ -435,7 +432,12 @@ export async function runBenchmark(input: {
       ? execution.reason
       : "Excluded by a command-line model override.";
     return execution && execution.runner
-      ? { id: spec.id, provider: spec.provider, reason: null, status: "executed" }
+      ? {
+          id: spec.id,
+          provider: spec.provider,
+          reason: null,
+          status: "executed",
+        }
       : {
           id: spec.id,
           provider: spec.provider,

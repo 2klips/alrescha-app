@@ -2,7 +2,10 @@ import { SETTINGS } from "../../../../lib/strings";
 
 export function PrivacyBoundary() {
   return (
-    <section className="privacy-boundary-grid" aria-label={SETTINGS.privacy.ariaLabel}>
+    <section
+      className="privacy-boundary-grid"
+      aria-label={SETTINGS.privacy.ariaLabel}
+    >
       <article className="mcp-settings-card">
         <span className="eyebrow">{SETTINGS.privacy.stored.eyebrow}</span>
         <h2>{SETTINGS.privacy.stored.title}</h2>
@@ -36,8 +39,8 @@ export function PrivacyBoundary() {
         <span className="eyebrow">{SETTINGS.privacy.claims.eyebrow}</span>
         <h2>{SETTINGS.privacy.claims.title}</h2>
         <p>
-          {SETTINGS.privacy.claims.bodyPrefix}
-          {" "}<a href="/app/stats">{SETTINGS.privacy.claims.statsLinkLabel}</a>
+          {SETTINGS.privacy.claims.bodyPrefix}{" "}
+          <a href="/app/stats">{SETTINGS.privacy.claims.statsLinkLabel}</a>
           {SETTINGS.privacy.claims.bodySuffix}
         </p>
       </article>

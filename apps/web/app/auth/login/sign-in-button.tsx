@@ -15,7 +15,9 @@ export function SignInButton() {
     const supabase = createClient();
     const { error: signInError } = await supabase.auth.signInWithOAuth({
       provider: "github",
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=/app` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback?next=/app`,
+      },
     });
 
     if (signInError) {
@@ -26,11 +28,15 @@ export function SignInButton() {
 
   return (
     <div>
-      <button className="button" disabled={pending} onClick={signIn} type="button">
+      <button
+        className="button"
+        disabled={pending}
+        onClick={signIn}
+        type="button"
+      >
         {pending ? AUTH.signIn.pending : AUTH.signIn.idle}
       </button>
       {error ? <p role="alert">{error}</p> : null}
     </div>
   );
 }
-

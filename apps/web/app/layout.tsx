@@ -15,11 +15,14 @@ import "./globals.css";
 import { THEME_INIT_SCRIPT } from "../lib/theme/theme-preference";
 
 export const metadata: Metadata = {
-  description: "Trace every software claim to implementation and verified test evidence.",
+  description:
+    "Trace every software claim to implementation and verified test evidence.",
   title: "Arr · Proof, before merge",
 };
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+export default function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
       <head>

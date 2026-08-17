@@ -19,7 +19,12 @@ export interface GuardrailViolation {
 
 const SOURCE_EXTENSIONS = new Set([".cjs", ".js", ".mjs", ".ts", ".tsx"]);
 const PRODUCTION_ROOTS = ["apps", "packages", "supabase/migrations"] as const;
-const EXCLUDED_SEGMENTS = new Set([".next", "coverage", "dist", "node_modules"]);
+const EXCLUDED_SEGMENTS = new Set([
+  ".next",
+  "coverage",
+  "dist",
+  "node_modules",
+]);
 
 interface PatternRule {
   readonly message: (match: RegExpExecArray) => string;
@@ -33,7 +38,9 @@ function normalized(file: string): string {
 }
 
 function isTestFile(file: string): boolean {
-  return /(?:^|\/)(?:__tests__|test|tests)(?:\/|$)|\.(?:spec|test)\.[cm]?[jt]sx?$/.test(file);
+  return /(?:^|\/)(?:__tests__|test|tests)(?:\/|$)|\.(?:spec|test)\.[cm]?[jt]sx?$/.test(
+    file,
+  );
 }
 
 function isTransientPath(file: string): boolean {
@@ -67,7 +74,8 @@ const RULES: readonly PatternRule[] = [
   },
   {
     rule: "deprecated-mcp-capability",
-    pattern: /\b(?:capabilities|serverCapabilities)\s*[:=]\s*\{[^}]{0,600}\b(sampling|roots|logging)\s*:/gi,
+    pattern:
+      /\b(?:capabilities|serverCapabilities)\s*[:=]\s*\{[^}]{0,600}\b(sampling|roots|logging)\s*:/gi,
     when: () => true,
     message: (match) =>
       `MCP ${match[1] ?? "deprecated"} capability is forbidden; MCP 2026-07-28 is stateless.`,
@@ -76,51 +84,65 @@ const RULES: readonly PatternRule[] = [
     rule: "deprecated-mcp-capability",
     pattern: /\b(?:sessionId|protocolSession)\s*:/g,
     when: () => true,
-    message: () => "Protocol session state is forbidden; MCP 2026-07-28 must remain stateless.",
+    message: () =>
+      "Protocol session state is forbidden; MCP 2026-07-28 must remain stateless.",
   },
   {
     rule: "raw-code-persistence",
-    pattern: /\b(?:raw_source|source_code|code_body|raw_code)\b\s+(?:jsonb|text|varchar)\b/gi,
+    pattern:
+      /\b(?:raw_source|source_code|code_body|raw_code)\b\s+(?:jsonb|text|varchar)\b/gi,
     when: (file) => !isTransientPath(file),
-    message: () => "Raw source-code persistence is forbidden outside an allowlisted transient path.",
+    message: () =>
+      "Raw source-code persistence is forbidden outside an allowlisted transient path.",
   },
   {
     rule: "raw-code-persistence",
     pattern:
       /\b(?:insert|persist|save|update|upsert)\w*\s*\([^;]{0,240}\b(?:rawCode|rawSource|sourceCode|codeBody)\b/gi,
     when: (file) => !isTransientPath(file),
-    message: () => "Raw source-code persistence is forbidden outside an allowlisted transient path.",
+    message: () =>
+      "Raw source-code persistence is forbidden outside an allowlisted transient path.",
   },
   {
     rule: "doc-body-inlining",
-    pattern: /(?:\$\{\s*)?(?:artifact|doc|document)\.(?:body|content|raw|sourceText)\b|\b(?:docBody|fullDocument|artifactContent)\b/g,
+    pattern:
+      /(?:\$\{\s*)?(?:artifact|doc|document)\.(?:body|content|raw|sourceText)\b|\b(?:docBody|fullDocument|artifactContent)\b/g,
     when: isIndexTemplatePath,
-    message: () => "Document bodies must not be inlined into minimal-index templates.",
+    message: () =>
+      "Document bodies must not be inlined into minimal-index templates.",
   },
   {
     rule: "repo-write-outside-pr-proposal",
     pattern:
       /\.(?:createCommit|createOrUpdateFileContents|createRef|deleteRef|updateRef)\s*\(|\.pulls\.create\s*\(|\bgit\s+push\b/g,
     when: (file) => !isPrProposalPath(file),
-    message: () => "Repository writes are allowed only inside the advisory PR-proposal module.",
+    message: () =>
+      "Repository writes are allowed only inside the advisory PR-proposal module.",
   },
   {
     rule: "network-in-core",
     pattern:
       /\bfetch\s*\(|\bnew\s+(?:EventSource|WebSocket|XMLHttpRequest)\b|from\s+["'](?:axios|node:https?|undici)["']/g,
     when: (file) => file.startsWith("packages/core/src/"),
-    message: () => "Core must receive network access through an injected port; direct network calls are forbidden.",
+    message: () =>
+      "Core must receive network access through an injected port; direct network calls are forbidden.",
   },
 ];
 
-function locationAt(text: string, offset: number): { line: number; column: number } {
+function locationAt(
+  text: string,
+  offset: number,
+): { line: number; column: number } {
   const prefix = text.slice(0, offset);
   const line = prefix.split("\n").length;
   const lastNewline = prefix.lastIndexOf("\n");
   return { line, column: offset - lastNewline };
 }
 
-export function scanGuardrailFile(file: string, text: string): readonly GuardrailViolation[] {
+export function scanGuardrailFile(
+  file: string,
+  text: string,
+): readonly GuardrailViolation[] {
   const relativeFile = normalized(file);
 
   if (isTestFile(relativeFile)) {
@@ -186,10 +208,16 @@ async function collectFiles(directory: string): Promise<string[]> {
   return files.sort();
 }
 
-export async function scanGuardrails(rootDir: string): Promise<readonly GuardrailViolation[]> {
+export async function scanGuardrails(
+  rootDir: string,
+): Promise<readonly GuardrailViolation[]> {
   const root = resolve(rootDir);
   const files = (
-    await Promise.all(PRODUCTION_ROOTS.map((productionRoot) => collectFiles(resolve(root, productionRoot))))
+    await Promise.all(
+      PRODUCTION_ROOTS.map((productionRoot) =>
+        collectFiles(resolve(root, productionRoot)),
+      ),
+    )
   ).flat();
   const violations: GuardrailViolation[] = [];
 
@@ -200,6 +228,8 @@ export async function scanGuardrails(rootDir: string): Promise<readonly Guardrai
 
   return violations.sort(
     (left, right) =>
-      left.file.localeCompare(right.file) || left.line - right.line || left.column - right.column,
+      left.file.localeCompare(right.file) ||
+      left.line - right.line ||
+      left.column - right.column,
   );
 }

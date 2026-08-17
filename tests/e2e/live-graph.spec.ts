@@ -25,7 +25,9 @@ async function hydrated(page: Page, selector: string): Promise<void> {
   }, selector);
 }
 
-test("scripted MCP reads pulse the graph and feed focus follows the newest call", async ({ page }) => {
+test("scripted MCP reads pulse the graph and feed focus follows the newest call", async ({
+  page,
+}) => {
   await page.goto("/");
   await hydrated(page, "[data-testid='brain-map-stage']");
   await page.getByRole("button", { name: DASHBOARD.activity.replay }).click();
@@ -47,15 +49,23 @@ test("scripted MCP reads pulse the graph and feed focus follows the newest call"
     .toBeGreaterThan(0);
 
   await feed.getByRole("button").first().click();
-  await expect(page.getByRole("complementary", { name: DASHBOARD.ariaInspector })).toContainText("Idempotent webhooks");
+  await expect(
+    page.getByRole("complementary", { name: DASHBOARD.ariaInspector }),
+  ).toContainText("Idempotent webhooks");
 
-  const evidenceDirectory = path.resolve(".omo/evidence/docshub-product-strategy");
+  const evidenceDirectory = path.resolve(
+    ".omo/evidence/docshub-product-strategy",
+  );
   await mkdir(evidenceDirectory, { recursive: true });
   const evidencePath = path.join(evidenceDirectory, "task-14.png");
-  await access(evidencePath).catch(async () => page.screenshot({ path: evidencePath, fullPage: true }));
+  await access(evidencePath).catch(async () =>
+    page.screenshot({ path: evidencePath, fullPage: true }),
+  );
 });
 
-test("enters a depth-two graph by node double-click and inspects grounded edges", async ({ page }) => {
+test("enters a depth-two graph by node double-click and inspects grounded edges", async ({
+  page,
+}) => {
   await page.goto("/");
   // The brain map's DOM hit layer is the node affordance over the canvas.
   await hydrated(page, "[data-testid='brain-map-hits']");
@@ -65,21 +75,35 @@ test("enters a depth-two graph by node double-click and inspects grounded edges"
     .dblclick();
 
   await expect(page).toHaveURL(/\/graph\?node=req-auth/);
-  await expect(page.getByRole("region", { name: GRAPH.regionLabel })).toBeVisible();
-  await expect(page.getByRole("heading", { name: GRAPH.heading })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /declares|implements|tests|references/ })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: GRAPH.regionLabel }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: GRAPH.heading }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /declares|implements|tests|references/ }),
+  ).toBeVisible();
   await expect(page.getByText(GRAPH.provenance.confidence)).toBeVisible();
   await expect(page.locator(".provenance-card .grade-badge")).toBeVisible();
 
   await expect(page.locator("[data-canvas-nodes='4']")).toBeVisible();
   await hydrated(page, "[data-canvas-nodes]");
-  await page.getByRole("checkbox", { name: GRAPH.inspector.orphanToggleLabel }).check();
+  await page
+    .getByRole("checkbox", { name: GRAPH.inspector.orphanToggleLabel })
+    .check();
   await expect(page.locator("[data-canvas-nodes='5']")).toBeVisible();
-  await expect(page.getByRole("link", { name: GRAPH.footer.relatedFindings })).toBeVisible();
-  await expect(page.getByRole("link", { name: new RegExp(GRAPH.footer.sourceRecord) })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: GRAPH.footer.relatedFindings }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: new RegExp(GRAPH.footer.sourceRecord) }),
+  ).toBeVisible();
 });
 
-test("renders nonblank local graph pixels at desktop and mobile sizes", async ({ page }) => {
+test("renders nonblank local graph pixels at desktop and mobile sizes", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/graph?node=req-auth");
   const desktopGraph = page.locator(".local-graph-canvas");

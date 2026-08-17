@@ -167,7 +167,8 @@ export async function createMinimalIndexProposal(
     if (installation.data.revoked_at) {
       return {
         ...INITIAL_INDEX_PROPOSAL_STATE,
-        error: "GitHub App is disconnected. Reconnect before preparing a proposal.",
+        error:
+          "GitHub App is disconnected. Reconnect before preparing a proposal.",
       };
     }
 

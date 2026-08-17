@@ -38,10 +38,7 @@ import {
   type GraphNode,
   type GraphNodeType,
 } from "../../lib/dashboard/graph-model";
-import {
-  glowAfterglowNodes,
-  glowFromRealtime,
-} from "../../lib/graph/glow";
+import { glowAfterglowNodes, glowFromRealtime } from "../../lib/graph/glow";
 import {
   DEMO_REVOKED_TOKEN_ID,
   DEMO_WORKSPACE_ID,
@@ -576,7 +573,10 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
               value={Number((model.metrics.tokenCost / 1000).toFixed(1))}
             />
           </div>
-          <div className="arr-graph-controls" aria-label={DASHBOARD.ariaControls}>
+          <div
+            className="arr-graph-controls"
+            aria-label={DASHBOARD.ariaControls}
+          >
             <label className="arr-search">
               <Search size={15} />
               <span className="sr-only">{DASHBOARD.search.label}</span>

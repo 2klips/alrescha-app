@@ -37,7 +37,11 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const workspace = await supabase.from("workspaces").select("id").limit(1).single();
+  const workspace = await supabase
+    .from("workspaces")
+    .select("id")
+    .limit(1)
+    .single();
   if (workspace.error || !workspace.data) {
     return Response.json({ error: "forbidden" }, { status: 403 });
   }
@@ -102,13 +106,17 @@ export async function POST(request: Request) {
           .limit(1);
         return Boolean(result.data?.length);
       },
-      lookupPublicRepository: (fullName) => lookupPublicGitHubRepository(fullName),
+      lookupPublicRepository: (fullName) =>
+        lookupPublicGitHubRepository(fullName),
     },
   );
 
   switch (outcome.kind) {
     case "connected":
-      return NextResponse.redirect(new URL("/app?github=pending", requestUrl.origin), 303);
+      return NextResponse.redirect(
+        new URL("/app?github=pending", requestUrl.origin),
+        303,
+      );
     case "invalid_url":
       return backToConnect(requestUrl.origin, {
         url_reason: outcome.reason,

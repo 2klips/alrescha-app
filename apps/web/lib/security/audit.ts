@@ -30,7 +30,8 @@ export async function recordSecurityAuditEvent(input: {
       target_workspace_id: input.workspaceId,
     },
   );
-  if (error) throw new Error(`Failed to record security audit event: ${error.code}`);
+  if (error)
+    throw new Error(`Failed to record security audit event: ${error.code}`);
 }
 
 export async function consumeWorkspaceSecurityLimit(input: {
@@ -48,6 +49,7 @@ export async function consumeWorkspaceSecurityLimit(input: {
       window_seconds: input.windowSeconds,
     },
   );
-  if (error) throw new Error(`Failed to enforce security rate limit: ${error.code}`);
+  if (error)
+    throw new Error(`Failed to enforce security rate limit: ${error.code}`);
   return data === true;
 }

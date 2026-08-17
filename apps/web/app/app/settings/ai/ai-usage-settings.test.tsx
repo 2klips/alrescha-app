@@ -38,7 +38,9 @@ describe("AI judgment usage settings", () => {
 
     expect(html).toContain(SETTINGS.ai.creditUsage.balance(38));
     expect(html).toContain(SETTINGS.ai.creditUsage.used(12));
-    expect(html).toContain(SETTINGS.ai.byok.configured(SETTINGS.ai.byok.providerNames.openai));
+    expect(html).toContain(
+      SETTINGS.ai.byok.configured(SETTINGS.ai.byok.providerNames.openai),
+    );
     expect(html).toContain(SETTINGS.ai.byok.intro);
     expect(html).not.toContain("workspace-provider-secret");
     expect(html).toContain('name="apiKey"');

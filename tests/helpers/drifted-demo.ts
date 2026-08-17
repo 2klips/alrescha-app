@@ -63,7 +63,11 @@ function integer(value: unknown, label: string): number {
   return value;
 }
 
-function oneOf<const T extends readonly string[]>(value: unknown, options: T, label: string): T[number] {
+function oneOf<const T extends readonly string[]>(
+  value: unknown,
+  options: T,
+  label: string,
+): T[number] {
   if (typeof value !== "string" || !options.includes(value)) {
     throw new TypeError(`${label} must be one of: ${options.join(", ")}.`);
   }
@@ -79,7 +83,10 @@ async function validateSpan(
   const span = object(input, label);
   const path = text(span.path, `${label}.path`);
 
-  if (isAbsolute(path) || relative(fixtureRoot, resolve(fixtureRoot, path)).startsWith("..")) {
+  if (
+    isAbsolute(path) ||
+    relative(fixtureRoot, resolve(fixtureRoot, path)).startsWith("..")
+  ) {
     throw new TypeError(`${label}.path must remain inside the fixture.`);
   }
 
@@ -91,15 +98,23 @@ async function validateSpan(
   const source = await readFile(resolve(fixtureRoot, path), "utf8");
   const lines = source.split(/\r?\n/);
 
-  if (startLine > lines.length || endLine > lines.length || endLine < startLine) {
-    throw new RangeError(`${label} span ${path}:${startLine}-${endLine} is outside file (${lines.length} lines).`);
+  if (
+    startLine > lines.length ||
+    endLine > lines.length ||
+    endLine < startLine
+  ) {
+    throw new RangeError(
+      `${label} span ${path}:${startLine}-${endLine} is outside file (${lines.length} lines).`,
+    );
   }
 
   const firstLine = lines[startLine - 1] ?? "";
   const lastLine = lines[endLine - 1] ?? "";
 
   if (startColumn > firstLine.length + 1 || endColumn > lastLine.length + 1) {
-    throw new RangeError(`${label} columns are outside ${path}:${startLine}-${endLine}.`);
+    throw new RangeError(
+      `${label} columns are outside ${path}:${startLine}-${endLine}.`,
+    );
   }
 
   const selected = lines.slice(startLine - 1, endLine);
@@ -111,7 +126,9 @@ async function validateSpan(
   const actualExcerpt = selected.join("\n");
 
   if (actualExcerpt !== excerpt) {
-    throw new TypeError(`${label}.excerpt does not match ${path}:${startLine}-${endLine}.`);
+    throw new TypeError(
+      `${label}.excerpt does not match ${path}:${startLine}-${endLine}.`,
+    );
   }
 
   return { endColumn, endLine, excerpt, path, startColumn, startLine };
@@ -134,7 +151,9 @@ export async function validateExpectedFindingsManifest(
   const commitSha = text(manifest.commitSha, "manifest.commitSha");
 
   if (!/^[0-9a-f]{40}$/.test(commitSha)) {
-    throw new TypeError("manifest.commitSha must be a 40-character lowercase hex SHA.");
+    throw new TypeError(
+      "manifest.commitSha must be a 40-character lowercase hex SHA.",
+    );
   }
 
   if (!Array.isArray(manifest.findings)) {
@@ -148,7 +167,9 @@ export async function validateExpectedFindingsManifest(
     const finding = object(inputFinding, label);
 
     if (!Array.isArray(finding.provenance) || finding.provenance.length === 0) {
-      throw new TypeError(`${label}.provenance must contain at least one span.`);
+      throw new TypeError(
+        `${label}.provenance must contain at least one span.`,
+      );
     }
 
     const type = oneOf(finding.type, FINDING_TYPES, `${label}.type`);
@@ -159,14 +180,24 @@ export async function validateExpectedFindingsManifest(
     );
 
     if (type === "contradicting-instructions" && provenance.length !== 2) {
-      throw new TypeError(`${label} must carry both conflicting instruction spans.`);
+      throw new TypeError(
+        `${label} must carry both conflicting instruction spans.`,
+      );
     }
 
     findings.push({
-      grade: oneOf(finding.grade, ["inferred", "verified"] as const, `${label}.grade`),
+      grade: oneOf(
+        finding.grade,
+        ["inferred", "verified"] as const,
+        `${label}.grade`,
+      ),
       id: text(finding.id, `${label}.id`),
       provenance,
-      severity: oneOf(finding.severity, ["high", "medium", "low"] as const, `${label}.severity`),
+      severity: oneOf(
+        finding.severity,
+        ["high", "medium", "low"] as const,
+        `${label}.severity`,
+      ),
       summary: text(finding.summary, `${label}.summary`),
       type,
     });
@@ -182,7 +213,9 @@ export async function validateExpectedFindingsManifest(
   const missingTypes = FINDING_TYPES.filter((type) => !types.has(type));
 
   if (missingTypes.length > 0) {
-    throw new TypeError(`manifest is missing finding types: ${missingTypes.join(", ")}.`);
+    throw new TypeError(
+      `manifest is missing finding types: ${missingTypes.join(", ")}.`,
+    );
   }
 
   return {
@@ -192,4 +225,3 @@ export async function validateExpectedFindingsManifest(
     schemaVersion: 1,
   };
 }
-

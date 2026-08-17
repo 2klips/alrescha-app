@@ -1,6 +1,8 @@
 import { z } from "zod";
 
-export const ulidSchema = z.string().regex(/^[0-9A-HJKMNP-TV-Z]{26}$/, "Expected a ULID");
+export const ulidSchema = z
+  .string()
+  .regex(/^[0-9A-HJKMNP-TV-Z]{26}$/, "Expected a ULID");
 export const workspaceIdSchema = ulidSchema.brand<"WorkspaceId">();
 export const repositoryIdSchema = ulidSchema.brand<"RepositoryId">();
 export const graphNodeIdSchema = ulidSchema.brand<"GraphNodeId">();
@@ -10,16 +12,18 @@ const sha1Schema = z.string().regex(/^[0-9a-f]{40}$/);
 const sha256Schema = z.string().regex(/^[0-9a-f]{64}$/);
 const metadataSchema = z.record(z.string(), z.unknown());
 
-export const sourceSpanSchema = z.strictObject({
-  endColumn: z.number().int().positive().optional(),
-  endLine: z.number().int().positive(),
-  path: z.string().min(1),
-  startColumn: z.number().int().positive().optional(),
-  startLine: z.number().int().positive(),
-}).refine(({ endLine, startLine }) => endLine >= startLine, {
-  message: "Span end must not precede start",
-  path: ["endLine"],
-});
+export const sourceSpanSchema = z
+  .strictObject({
+    endColumn: z.number().int().positive().optional(),
+    endLine: z.number().int().positive(),
+    path: z.string().min(1),
+    startColumn: z.number().int().positive().optional(),
+    startLine: z.number().int().positive(),
+  })
+  .refine(({ endLine, startLine }) => endLine >= startLine, {
+    message: "Span end must not precede start",
+    path: ["endLine"],
+  });
 
 export const provenanceSchema = z.union([
   z.strictObject({
@@ -53,7 +57,15 @@ export const artifactSchema = z.strictObject({
   ...tenantRepositorySchema,
   digest: sha256Schema,
   id: graphNodeIdSchema,
-  kind: z.enum(["instruction", "spec", "adr", "todo", "code_metadata", "test_report", "ci_run"]),
+  kind: z.enum([
+    "instruction",
+    "spec",
+    "adr",
+    "todo",
+    "code_metadata",
+    "test_report",
+    "ci_run",
+  ]),
   metadata: metadataSchema,
   path: z.string().min(1),
   sourceCommitSha: sha1Schema,
@@ -83,7 +95,15 @@ export const edgeSchema = z.strictObject({
   confidence: confidenceSchema,
   id: ulidSchema,
   provenance: provenanceSchema,
-  relation: z.enum(["requires", "implements", "tests", "supports", "contradicts", "supersedes", "references"]),
+  relation: z.enum([
+    "requires",
+    "implements",
+    "tests",
+    "supports",
+    "contradicts",
+    "supersedes",
+    "references",
+  ]),
   sourceNodeId: graphNodeIdSchema,
   targetNodeId: graphNodeIdSchema,
 });
@@ -126,20 +146,22 @@ export const runSchema = z.strictObject({
   triggerKind: z.enum(["manual", "push", "check_run", "workflow_run"]),
 });
 
-export const jobSchema = z.strictObject({
-  ...tenantRepositorySchema,
-  attemptCount: z.number().int().nonnegative(),
-  id: ulidSchema,
-  idempotencyKey: z.string().min(1),
-  kind: z.enum(["scan", "analyze", "judge", "pack"]),
-  maxAttempts: z.number().int().min(1).max(10),
-  payload: metadataSchema,
-  runId: ulidSchema,
-  status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
-}).refine(({ attemptCount, maxAttempts }) => attemptCount <= maxAttempts, {
-  message: "attemptCount must not exceed maxAttempts",
-  path: ["attemptCount"],
-});
+export const jobSchema = z
+  .strictObject({
+    ...tenantRepositorySchema,
+    attemptCount: z.number().int().nonnegative(),
+    id: ulidSchema,
+    idempotencyKey: z.string().min(1),
+    kind: z.enum(["scan", "analyze", "judge", "pack"]),
+    maxAttempts: z.number().int().min(1).max(10),
+    payload: metadataSchema,
+    runId: ulidSchema,
+    status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+  })
+  .refine(({ attemptCount, maxAttempts }) => attemptCount <= maxAttempts, {
+    message: "attemptCount must not exceed maxAttempts",
+    path: ["attemptCount"],
+  });
 
 export const creditLedgerEntrySchema = z.strictObject({
   amount: z.number().int(),

@@ -19,7 +19,10 @@ interface ProgressDashboardViewProps {
 const STATUS_COPY = {
   blocked: { icon: AlertOctagon, label: PROGRESS.todoBoard.statuses.blocked },
   done: { icon: CheckCircle2, label: PROGRESS.todoBoard.statuses.done },
-  "in-progress": { icon: Activity, label: PROGRESS.todoBoard.statuses["in-progress"] },
+  "in-progress": {
+    icon: Activity,
+    label: PROGRESS.todoBoard.statuses["in-progress"],
+  },
   open: { icon: Circle, label: PROGRESS.todoBoard.statuses.open },
 } as const;
 
@@ -49,7 +52,9 @@ function Metric({
       <div>
         <span>{title}</span>
         <strong>
-          {metric.percent === null ? PROGRESS.metrics.notMeasured : `${metric.percent}%`}
+          {metric.percent === null
+            ? PROGRESS.metrics.notMeasured
+            : `${metric.percent}%`}
         </strong>
       </div>
       <progress
@@ -58,7 +63,9 @@ function Metric({
         value={metric.completed}
       />
       <footer>
-        <span>{PROGRESS.metrics.completed(metric.completed, metric.total)}</span>
+        <span>
+          {PROGRESS.metrics.completed(metric.completed, metric.total)}
+        </span>
         <small>
           <Link2 size={11} />
           {metric.sourceLabel}

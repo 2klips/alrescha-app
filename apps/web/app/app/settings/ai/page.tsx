@@ -45,7 +45,8 @@ export default async function AiSettingsPage() {
     .eq("workspace_id", workspace.data.id)
     .order("created_at", { ascending: false })
     .limit(100);
-  if (ledgerResult.error) throw new Error(SETTINGS.errors.creditUsageUnavailable);
+  if (ledgerResult.error)
+    throw new Error(SETTINGS.errors.creditUsageUnavailable);
 
   const keyResult = await createAdminClient()
     .from("workspace_ai_keys")

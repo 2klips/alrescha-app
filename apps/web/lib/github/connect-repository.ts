@@ -41,7 +41,12 @@ export async function connectSelectedRepository(input: {
       .eq("github_repository_id", input.githubRepositoryId)
       .maybeSingle(),
   ]);
-  if (installation.error || repository.error || !installation.data || !repository.data) {
+  if (
+    installation.error ||
+    repository.error ||
+    !installation.data ||
+    !repository.data
+  ) {
     return { error: "forbidden", ok: false };
   }
   const installationData = installation.data;

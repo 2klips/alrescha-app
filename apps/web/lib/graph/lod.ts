@@ -99,7 +99,8 @@ function onScreen(candidate: LabelCandidate, viewport: Viewport): boolean {
  */
 function betterThan(left: LabelCandidate, right: LabelCandidate): boolean {
   if (left.degree !== right.degree) return left.degree > right.degree;
-  if (left.pixelSize !== right.pixelSize) return left.pixelSize > right.pixelSize;
+  if (left.pixelSize !== right.pixelSize)
+    return left.pixelSize > right.pixelSize;
   return left.id < right.id;
 }
 

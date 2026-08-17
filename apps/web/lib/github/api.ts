@@ -11,7 +11,11 @@ function encoded(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
 }
 
-export function createGitHubAppJwt(appId: string, privateKey: string, now = Date.now()): string {
+export function createGitHubAppJwt(
+  appId: string,
+  privateKey: string,
+  now = Date.now(),
+): string {
   const issuedAt = Math.floor(now / 1000) - 60;
   const unsigned = `${encoded({ alg: "RS256", typ: "JWT" })}.${encoded({
     exp: issuedAt + 10 * 60,
@@ -44,7 +48,11 @@ export async function exchangeGitHubAppUserCode(input: {
   code: string;
 }): Promise<string> {
   const response = await fetch("https://github.com/login/oauth/access_token", {
-    body: JSON.stringify({ client_id: input.clientId, client_secret: input.clientSecret, code: input.code }),
+    body: JSON.stringify({
+      client_id: input.clientId,
+      client_secret: input.clientSecret,
+      code: input.code,
+    }),
     headers: { accept: "application/json", "content-type": "application/json" },
     method: "POST",
   });
@@ -86,7 +94,10 @@ export async function getVerifiedUserInstallation(input: {
   userAccessToken: string;
 }): Promise<VerifiedGitHubInstallation> {
   const [installationBody, repositoriesBody] = await Promise.all([
-    githubJson(`https://api.github.com/app/installations/${input.installationId}`, input.appJwt),
+    githubJson(
+      `https://api.github.com/app/installations/${input.installationId}`,
+      input.appJwt,
+    ),
     githubJson(
       `https://api.github.com/user/installations/${input.installationId}/repositories?per_page=100`,
       input.userAccessToken,
@@ -104,7 +115,8 @@ export async function getVerifiedUserInstallation(input: {
   const installation = installationBody as Record<string, unknown>;
   const repositoryResponse = repositoriesBody as Record<string, unknown>;
   const account = installation.account as Record<string, unknown> | undefined;
-  const permissionValues = installation.permissions as Record<string, unknown> | undefined;
+  const permissionValues = installation.permissions as
+    Record<string, unknown> | undefined;
   if (
     installation.id !== input.installationId ||
     !account ||
@@ -150,10 +162,16 @@ export async function lookupPublicGitHubRepository(
   );
   if (response.status === 404) return null;
   if (!response.ok) {
-    throw new Error(`GitHub repository lookup failed with status ${response.status}.`);
+    throw new Error(
+      `GitHub repository lookup failed with status ${response.status}.`,
+    );
   }
   const body = (await response.json()) as { id?: unknown };
-  if (typeof body.id !== "number" || !Number.isSafeInteger(body.id) || body.id <= 0) {
+  if (
+    typeof body.id !== "number" ||
+    !Number.isSafeInteger(body.id) ||
+    body.id <= 0
+  ) {
     throw new Error("GitHub repository lookup response is malformed.");
   }
   return { githubRepositoryId: body.id };

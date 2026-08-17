@@ -30,8 +30,6 @@
 - 근거: `apps/web/node_modules/pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css`, `.omo/evidence/phase2a/task-1.md`
 - 상태: resolved(Phase 2A Task 9 — 실측으로 선택 확정). 프로덕션 빌드에서 `/`가 실제로 내려받는 폰트는 **woff2 서브셋 12개 285.1KB**, `/findings`는 **7개 156.8KB**다(`scripts/measure-route-bundle.ts`). 단일 `PretendardVariable.woff2` 전체는 2.0MB이므로 동적 서브셋이 첫 방문에서 ~7배 유리하고, 화면마다 실제로 쓰는 유니코드 범위만 받는다. 계획 문구("`next/font/local`로 자체 호스팅")를 "자체 호스팅 + 유니코드 서브셋"으로 개정할 것을 제안한다.
 
-
-
 ## OQ-003 — 라이트 테마 `--muted`·파생 토큰 값이 ADR-009-3에 없음
 
 - 발견: Phase 2A Task 1 / `apps/web/app/styles/tokens.css`
@@ -86,7 +84,7 @@
 ## OQ-009 — ADR-009-3 라이트 팔레트가 작은 텍스트에서 WCAG AA를 통과하지 못함
 
 - 발견: Phase 2A Task 9 / `tests/e2e/a11y-contrast.spec.ts`, `apps/web/app/styles/tokens.css`
-- 내용: axe-core 대비 검사에서 `/findings` 라이트 테마가 **22건 violation**을 냈다. 원인의 대부분은 파생 토큰이 아니라 **ADR-009-3이 못 박은 값 자체**다 — 종이 흰색(`#FFFFFF`/`#FAF7F1`/`#F3EFE7`) 위에서 `--verified #1E8A5E`는 3.77~4.33:1, `--inferred #B07A14`는 3.25~3.72:1, `--brand #D6402E`는 3.95~4.53:1, `--info #3B6FDB`는 4.08~4.68:1이다. 이 색들을 9~11px 모노 뱃지(`.grade-badge`, `.severity-label`, `.commit-chip`)가 텍스트 색으로 쓰기 때문에 AA(4.5:1) 미달이다. 다크 테마의 같은 색들은 전부 4.95:1 이상으로 통과한다.
+- 내용: axe-core 대비 검사에서 `/findings` 라이트 테마가 **22건 violation**을 냈다. 원인의 대부분은 파생 토큰이 아니라 **ADR-009-3이 못 박은 값 자체**다 — 종이 흰색(`#FFFFFF`/`#FAF7F1`/`#F3EFE7`) 위에서 `--verified #1E8A5E`는 3.77~~4.33:1, `--inferred #B07A14`는 3.25~~3.72:1, `--brand #D6402E`는 3.95~~4.53:1, `--info #3B6FDB`는 4.08~~4.68:1이다. 이 색들을 9~11px 모노 뱃지(`.grade-badge`, `.severity-label`, `.commit-chip`)가 텍스트 색으로 쓰기 때문에 AA(4.5:1) 미달이다. 다크 테마의 같은 색들은 전부 4.95:1 이상으로 통과한다.
 - 임시 결정: **ADR 값은 건드리지 않았다**(ADR = WORK_SPEC > 계획). 대신 `tokens.css`에 텍스트 전용 파생 토큰을 추가했다 — `--brand-text #C43A2B`(4.59:1), `--verified-text #177A52`(4.65:1), `--inferred-text #8F6310`(4.62:1), `--info-text #3766CA`(4.68:1). 다크에서는 기본 토큰의 별칭일 뿐이다. 그래프 노드 색·점·링·틴트·테두리는 여전히 ADR 값을 쓰므로 팔레트의 정체성은 그대로고, 텍스트만 어두운 형제 색을 쓴다. 파생 별칭(`--ok-text`, `--warn-text`, `--broken-text`, `--accent-text`)도 같이 뒀다.
 - 근거: `.omo/evidence/phase2a/task-9.md`, `.omo/evidence/phase2a/task-9/axe-contrast-*.json`, `tests/design-tokens.test.ts`(`token contrast` 스위트)
 - 상태: open — ADR-009-3이 "라이트 팔레트는 큰 면적·그래프용, 작은 텍스트는 파생 색"을 명시하도록 개정할지, 아니면 라이트 값 자체를 AA 통과값으로 바꿀지 기획 판단이 필요하다. 마케팅 사이트도 같은 팔레트를 쓰므로 (`docs/design-tokens.md`) 결정이 양쪽에 걸린다.

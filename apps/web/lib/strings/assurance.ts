@@ -33,11 +33,17 @@ export const ASSURANCE = {
       low: "low",
     },
     /** `<kind> · confidence <n>%` */
-    rowMeta: (kind: string, confidence: number) => `${kind} · confidence ${confidence}%`,
+    rowMeta: (kind: string, confidence: number) =>
+      `${kind} · confidence ${confidence}%`,
     emptyList: "두 필터를 모두 만족하는 발견이 없습니다.",
     /** `심각도 <level>` */
     severityLabelText: (severity: string) => `심각도 ${severity}`,
-    meta: { rule: "규칙", confidence: "confidence", status: "상태", statusOpen: "open" },
+    meta: {
+      rule: "규칙",
+      confidence: "confidence",
+      status: "상태",
+      statusOpen: "open",
+    },
     sourceSpan: {
       ariaLabel: "원문 스팬",
       title: "원문 스팬",

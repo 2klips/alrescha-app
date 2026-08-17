@@ -33,10 +33,16 @@ export const ONBOARDING = {
       action: "권한 확인",
     },
     scopes: {
-      contents: { title: "콘텐츠 · 읽기", body: "명세, 지시문, 코드 메타데이터" },
+      contents: {
+        title: "콘텐츠 · 읽기",
+        body: "명세, 지시문, 코드 메타데이터",
+      },
       checks: { title: "검사 · 읽기", body: "commit에 연결된 테스트 판정" },
       actions: { title: "실행 · 읽기", body: "JUnit·Vitest 리포트 아티팩트" },
-      metadata: { title: "메타데이터 · 읽기", body: "레포지토리 신원과 브랜치" },
+      metadata: {
+        title: "메타데이터 · 읽기",
+        body: "레포지토리 신원과 브랜치",
+      },
     },
     cta: "GitHub App 설치",
     note: "접근 이벤트는 30일간 보관됩니다. `pull_requests:write`는 권고성 PR 제안 시에만 나중에 선택적으로 요청됩니다.",
@@ -46,7 +52,8 @@ export const ONBOARDING = {
     kicker: "03 · 레포지토리",
     titleDemo: "알려진 드리프트 사례를 살펴보세요.",
     titleDefault: "첫 증명 Graph를 선택하세요.",
-    bodyDemo: "이 번들 공개 픽스처는 GitHub token, 비공개 레포지토리 권한, credit이 필요 없습니다.",
+    bodyDemo:
+      "이 번들 공개 픽스처는 GitHub token, 비공개 레포지토리 권한, credit이 필요 없습니다.",
     bodyDefault: "설치 token은 일시적으로만 유지되며 저장되지 않습니다.",
     demoRepo: "arr/drifted-demo",
     defaultRepo: "2klips/arr-app",
@@ -57,7 +64,8 @@ export const ONBOARDING = {
       label: "GitHub 레포 주소",
       placeholder: "https://github.com/owner/repo",
       submit: "주소로 연결",
-      invalid: "레포 주소를 인식하지 못했습니다. https://github.com/owner/repo 형태인지 확인하세요.",
+      invalid:
+        "레포 주소를 인식하지 못했습니다. https://github.com/owner/repo 형태인지 확인하세요.",
       installNeeded: (repository: string) =>
         `${repository}에는 아직 GitHub App이 설치되어 있지 않습니다. 설치 화면에서 이 레포가 미리 선택됩니다.`,
       installCta: "이 레포로 App 설치",

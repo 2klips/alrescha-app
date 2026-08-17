@@ -124,7 +124,9 @@ export function BrainMap({
       );
       const scale = created.camera().scale;
       const camera = created.camera();
-      for (const target of layer.querySelectorAll<HTMLElement>("[data-node-id]")) {
+      for (const target of layer.querySelectorAll<HTMLElement>(
+        "[data-node-id]",
+      )) {
         const node = painted.get(target.dataset.nodeId ?? "");
         if (!node) {
           target.hidden = true;
@@ -135,7 +137,9 @@ export function BrainMap({
         // motion is sub-pixel, and an unrounded write would keep nudging the
         // element forever — a target that never stops moving is a target a
         // pointer (and Playwright's stability check) can never settle on.
-        const size = Math.round(Math.max(MIN_HIT_SIZE, node.radius * 2 * scale));
+        const size = Math.round(
+          Math.max(MIN_HIT_SIZE, node.radius * 2 * scale),
+        );
         target.style.left = `${Math.round(viewport.width / 2 + camera.x + node.x * scale)}px`;
         target.style.top = `${Math.round(viewport.height / 2 + camera.y + node.y * scale)}px`;
         target.style.width = `${size}px`;
@@ -145,9 +149,8 @@ export function BrainMap({
 
     void createGraphEngine({
       createBackend: async () => {
-        const { createPixiBackend } = await import(
-          "../../lib/graph/pixi-backend"
-        );
+        const { createPixiBackend } =
+          await import("../../lib/graph/pixi-backend");
         return createPixiBackend({
           canvas,
           fontFamily: readDesignToken("font-sans"),
@@ -190,7 +193,10 @@ export function BrainMap({
         if (stamp - syncedAt >= HIT_LAYER_SYNC_MS) {
           syncedAt = stamp;
           syncHitLayer(created);
-          if (frame.lod !== reportedLod || frame.labels.length !== reportedLabels) {
+          if (
+            frame.lod !== reportedLod ||
+            frame.labels.length !== reportedLabels
+          ) {
             reportedLod = frame.lod;
             reportedLabels = frame.labels.length;
             onLodChangeRef.current?.(frame.lod, frame.labels.length);

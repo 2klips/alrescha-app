@@ -59,7 +59,11 @@ function numberField(value: JsonRecord, field: string, label: string): number {
   return result;
 }
 
-function booleanField(value: JsonRecord, field: string, label: string): boolean {
+function booleanField(
+  value: JsonRecord,
+  field: string,
+  label: string,
+): boolean {
   const result = value[field];
 
   if (typeof result !== "boolean") {
@@ -78,7 +82,9 @@ export function normalizeRecordedTree(input: unknown): NormalizedGitHubTree {
     throw new TypeError("tree response.tree must be an array.");
   }
 
-  const paths = tree.map((entry, index) => stringField(record(entry, `tree[${index}]`), "path", `tree[${index}]`));
+  const paths = tree.map((entry, index) =>
+    stringField(record(entry, `tree[${index}]`), "path", `tree[${index}]`),
+  );
 
   return {
     paths: [...paths].sort(),
@@ -87,7 +93,9 @@ export function normalizeRecordedTree(input: unknown): NormalizedGitHubTree {
   };
 }
 
-export function normalizeRecordedContent(input: unknown): NormalizedGitHubContent {
+export function normalizeRecordedContent(
+  input: unknown,
+): NormalizedGitHubContent {
   const contentResponse = record(input, "content response");
   const encoding = stringField(contentResponse, "encoding", "content response");
 
@@ -96,25 +104,41 @@ export function normalizeRecordedContent(input: unknown): NormalizedGitHubConten
   }
 
   return {
-    content: stringField(contentResponse, "content", "content response").replaceAll("\n", ""),
+    content: stringField(
+      contentResponse,
+      "content",
+      "content response",
+    ).replaceAll("\n", ""),
     encoding,
     path: stringField(contentResponse, "path", "content response"),
     sha: stringField(contentResponse, "sha", "content response"),
   };
 }
 
-export function normalizeRecordedWebhook(input: unknown): NormalizedGitHubWebhook {
+export function normalizeRecordedWebhook(
+  input: unknown,
+): NormalizedGitHubWebhook {
   const recording = record(input, "webhook recording");
   const headers = record(recording.headers, "webhook recording.headers");
   const body = record(recording.body, "webhook recording.body");
-  const kind = stringField(headers, "x-github-event", "webhook recording.headers");
+  const kind = stringField(
+    headers,
+    "x-github-event",
+    "webhook recording.headers",
+  );
 
   if (kind !== "push" && kind !== "check_run" && kind !== "workflow_run") {
     throw new TypeError(`Unsupported recorded webhook event: ${kind}.`);
   }
 
-  const repository = record(body.repository, "webhook recording.body.repository");
-  const installation = record(body.installation, "webhook recording.body.installation");
+  const repository = record(
+    body.repository,
+    "webhook recording.body.repository",
+  );
+  const installation = record(
+    body.installation,
+    "webhook recording.body.installation",
+  );
   let commitSha: string;
 
   if (kind === "push") {
@@ -126,14 +150,28 @@ export function normalizeRecordedWebhook(input: unknown): NormalizedGitHubWebhoo
 
   return {
     commitSha,
-    deliveryId: stringField(headers, "x-github-delivery", "webhook recording.headers"),
-    installationId: numberField(installation, "id", "webhook recording.body.installation"),
+    deliveryId: stringField(
+      headers,
+      "x-github-delivery",
+      "webhook recording.headers",
+    ),
+    installationId: numberField(
+      installation,
+      "id",
+      "webhook recording.body.installation",
+    ),
     kind,
-    repository: stringField(repository, "full_name", "webhook recording.body.repository"),
+    repository: stringField(
+      repository,
+      "full_name",
+      "webhook recording.body.repository",
+    ),
   };
 }
 
-export function normalizeRecordedArtifacts(input: unknown): readonly NormalizedGitHubArtifact[] {
+export function normalizeRecordedArtifacts(
+  input: unknown,
+): readonly NormalizedGitHubArtifact[] {
   const response = record(input, "artifacts response");
 
   if (!Array.isArray(response.artifacts)) {
@@ -142,14 +180,25 @@ export function normalizeRecordedArtifacts(input: unknown): readonly NormalizedG
 
   return response.artifacts.map((artifact, index) => {
     const item = record(artifact, `artifacts[${index}]`);
-    const workflowRun = record(item.workflow_run, `artifacts[${index}].workflow_run`);
+    const workflowRun = record(
+      item.workflow_run,
+      `artifacts[${index}].workflow_run`,
+    );
 
     return {
-      archiveDownloadUrl: stringField(item, "archive_download_url", `artifacts[${index}]`),
+      archiveDownloadUrl: stringField(
+        item,
+        "archive_download_url",
+        `artifacts[${index}]`,
+      ),
       expired: booleanField(item, "expired", `artifacts[${index}]`),
       id: numberField(item, "id", `artifacts[${index}]`),
       name: stringField(item, "name", `artifacts[${index}]`),
-      workflowRunId: numberField(workflowRun, "id", `artifacts[${index}].workflow_run`),
+      workflowRunId: numberField(
+        workflowRun,
+        "id",
+        `artifacts[${index}].workflow_run`,
+      ),
     };
   });
 }

@@ -14,7 +14,8 @@ import type {
   McpWorkspaceData,
 } from "./store";
 
-export type SearchRank = "exact" | "title-heading" | "path-symbol" | "graph-neighbor";
+export type SearchRank =
+  "exact" | "title-heading" | "path-symbol" | "graph-neighbor";
 
 export interface SearchIndexResult {
   excerpt: string;
@@ -103,11 +104,17 @@ export interface SelectedContextPack {
 }
 
 function normalizeSearchText(value: string): string {
-  return value.normalize("NFKC").trim().toLocaleLowerCase("en-US").replace(/\s+/g, " ");
+  return value
+    .normalize("NFKC")
+    .trim()
+    .toLocaleLowerCase("en-US")
+    .replace(/\s+/g, " ");
 }
 
 function queryTokens(query: string): string[] {
-  return normalizeSearchText(query).split(/[^\p{L}\p{N}_-]+/u).filter(Boolean);
+  return normalizeSearchText(query)
+    .split(/[^\p{L}\p{N}_-]+/u)
+    .filter(Boolean);
 }
 
 function includesEveryToken(value: string, tokens: readonly string[]): boolean {
@@ -115,17 +122,39 @@ function includesEveryToken(value: string, tokens: readonly string[]): boolean {
   return tokens.every((token) => normalized.includes(token));
 }
 
-function directRank(entry: McpIndexEntryData, query: string, tokens: readonly string[]): SearchRank | null {
-  const exactFields = [entry.title, entry.path, entry.searchKey, ...entry.headings, ...entry.tags, ...entry.symbols];
-  if (exactFields.some((field) => normalizeSearchText(field) === query)) return "exact";
-  if (includesEveryToken([entry.title, ...entry.headings, ...entry.tags].join(" "), tokens)) {
+function directRank(
+  entry: McpIndexEntryData,
+  query: string,
+  tokens: readonly string[],
+): SearchRank | null {
+  const exactFields = [
+    entry.title,
+    entry.path,
+    entry.searchKey,
+    ...entry.headings,
+    ...entry.tags,
+    ...entry.symbols,
+  ];
+  if (exactFields.some((field) => normalizeSearchText(field) === query))
+    return "exact";
+  if (
+    includesEveryToken(
+      [entry.title, ...entry.headings, ...entry.tags].join(" "),
+      tokens,
+    )
+  ) {
     return "title-heading";
   }
-  if (includesEveryToken([entry.path, ...entry.symbols].join(" "), tokens)) return "path-symbol";
+  if (includesEveryToken([entry.path, ...entry.symbols].join(" "), tokens))
+    return "path-symbol";
   return null;
 }
 
-function excerptFor(workspace: McpWorkspaceData, nodeId: string, fallback: string): string {
+function excerptFor(
+  workspace: McpWorkspaceData,
+  nodeId: string,
+  fallback: string,
+): string {
   for (const repository of workspace.repositories) {
     const artifact = repository.artifacts.find(({ id }) => id === nodeId);
     if (artifact) return artifact.content.slice(0, 280);
@@ -152,8 +181,12 @@ export function searchWorkspaceIndex(
 ): SearchIndexResult[] {
   const query = normalizeSearchText(input.query);
   const tokens = queryTokens(input.query);
-  const entries: WorkspaceIndexEntry[] = workspace.repositories.flatMap((repository) =>
-    repository.indexEntries.map((entry) => ({ entry, repositoryId: repository.id })),
+  const entries: WorkspaceIndexEntry[] = workspace.repositories.flatMap(
+    (repository) =>
+      repository.indexEntries.map((entry) => ({
+        entry,
+        repositoryId: repository.id,
+      })),
   );
   const ranks = new Map<string, SearchRank>();
   const directNodeIds = new Set<string>();
@@ -178,7 +211,8 @@ export function searchWorkspaceIndex(
   return entries
     .flatMap(({ entry, repositoryId }) => {
       const rank = ranks.get(entry.id);
-      if (!rank || (input.typeFilter && entry.type !== input.typeFilter)) return [];
+      if (!rank || (input.typeFilter && entry.type !== input.typeFilter))
+        return [];
       return [
         {
           excerpt: excerptFor(workspace, entry.nodeId, entry.searchKey),
@@ -196,14 +230,18 @@ export function searchWorkspaceIndex(
     })
     .sort(
       (left, right) =>
-        right.score - left.score || left.path.localeCompare(right.path) || left.id.localeCompare(right.id),
+        right.score - left.score ||
+        left.path.localeCompare(right.path) ||
+        left.id.localeCompare(right.id),
     )
     .slice(0, 20);
 }
 
 function repositoryNodes(workspace: McpWorkspaceData): BrainNode[] {
   return workspace.repositories.flatMap((repository) => {
-    const artifactPaths = new Map(repository.artifacts.map((artifact) => [artifact.id, artifact.path]));
+    const artifactPaths = new Map(
+      repository.artifacts.map((artifact) => [artifact.id, artifact.path]),
+    );
     const nodes: BrainNode[] = [
       ...repository.artifacts.map((artifact) => ({
         id: artifact.id,
@@ -235,7 +273,10 @@ function repositoryNodes(workspace: McpWorkspaceData): BrainNode[] {
       ...repository.findings.map((finding) => ({
         id: finding.id,
         label: finding.title,
-        path: "span" in finding.provenance ? finding.provenance.span.path : undefined,
+        path:
+          "span" in finding.provenance
+            ? finding.provenance.span.path
+            : undefined,
         relations: [] as McpEdgeRelation[],
         repositoryId: repository.id,
         status: finding.status,
@@ -263,7 +304,8 @@ function repositoryNodes(workspace: McpWorkspaceData): BrainNode[] {
     for (const edge of repository.edges) {
       for (const nodeId of [edge.sourceNodeId, edge.targetNodeId]) {
         const node = byId.get(nodeId);
-        if (node && !node.relations.includes(edge.relation)) node.relations.push(edge.relation);
+        if (node && !node.relations.includes(edge.relation))
+          node.relations.push(edge.relation);
       }
     }
     for (const node of nodes) node.relations.sort();
@@ -275,19 +317,29 @@ export function queryWorkspaceBrain(
   workspace: McpWorkspaceData,
   filter: BrainQueryFilter,
 ): BrainNode[] {
-  const normalizedPath = filter.path ? normalizeSearchText(filter.path) : undefined;
+  const normalizedPath = filter.path
+    ? normalizeSearchText(filter.path)
+    : undefined;
   return repositoryNodes(workspace)
     .filter((node) => !filter.types || filter.types.includes(node.type))
     .filter((node) => !filter.statuses || filter.statuses.includes(node.status))
     .filter(
-      (node) => !filter.relations || filter.relations.every((relation) => node.relations.includes(relation)),
+      (node) =>
+        !filter.relations ||
+        filter.relations.every((relation) => node.relations.includes(relation)),
     )
     .filter(
       (node) =>
         !filter.withoutRelations ||
-        filter.withoutRelations.every((relation) => !node.relations.includes(relation)),
+        filter.withoutRelations.every(
+          (relation) => !node.relations.includes(relation),
+        ),
     )
-    .filter((node) => !normalizedPath || normalizeSearchText(node.path ?? "").includes(normalizedPath))
+    .filter(
+      (node) =>
+        !normalizedPath ||
+        normalizeSearchText(node.path ?? "").includes(normalizedPath),
+    )
     .sort(
       (left, right) =>
         left.type.localeCompare(right.type) ||
@@ -302,14 +354,22 @@ export function getWorkspaceArtifact(
 ): ArtifactWithNeighbors {
   const matches = workspace.repositories.flatMap((repository) =>
     repository.artifacts
-      .filter((artifact) => (selector.id ? artifact.id === selector.id : artifact.path === selector.path))
+      .filter((artifact) =>
+        selector.id
+          ? artifact.id === selector.id
+          : artifact.path === selector.path,
+      )
       .map((artifact) => ({ artifact, repository })),
   );
-  matches.sort((left, right) => left.repository.id.localeCompare(right.repository.id));
+  matches.sort((left, right) =>
+    left.repository.id.localeCompare(right.repository.id),
+  );
   const match = matches[0];
   if (!match) return { artifact: null, neighbors: [] };
 
-  const nodes = new Map(repositoryNodes(workspace).map((node) => [node.id, node]));
+  const nodes = new Map(
+    repositoryNodes(workspace).map((node) => [node.id, node]),
+  );
   const neighbors: ArtifactNeighbor[] = [];
   for (const edge of match.repository.edges) {
     if (edge.targetNodeId === match.artifact.id) {
@@ -343,11 +403,11 @@ export function getWorkspaceArtifact(
   return {
     artifact: { ...match.artifact, repositoryId: match.repository.id },
     neighbors: neighbors.sort(
-        (left, right) =>
-          left.relation.localeCompare(right.relation) ||
-          left.direction.localeCompare(right.direction) ||
-          left.id.localeCompare(right.id),
-      ),
+      (left, right) =>
+        left.relation.localeCompare(right.relation) ||
+        left.direction.localeCompare(right.direction) ||
+        left.id.localeCompare(right.id),
+    ),
   };
 }
 
@@ -357,10 +417,15 @@ export function getWorkspaceFindings(
 ): WorkspaceFinding[] {
   return workspace.repositories
     .flatMap((repository) =>
-      repository.findings.map((finding) => ({ ...finding, repositoryId: repository.id })),
+      repository.findings.map((finding) => ({
+        ...finding,
+        repositoryId: repository.id,
+      })),
     )
     .filter((finding) => !filter.kind || finding.kind === filter.kind)
-    .filter((finding) => !filter.severity || finding.severity === filter.severity)
+    .filter(
+      (finding) => !filter.severity || finding.severity === filter.severity,
+    )
     .filter((finding) => !filter.status || finding.status === filter.status)
     .sort(
       (left, right) =>

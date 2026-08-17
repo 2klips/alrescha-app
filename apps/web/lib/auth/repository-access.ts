@@ -1,7 +1,9 @@
 import { createAdminClient } from "../supabase/admin";
 import type { RepositorySummary } from "./repository-route";
 
-export async function findRepository(repositoryId: string): Promise<RepositorySummary | null> {
+export async function findRepository(
+  repositoryId: string,
+): Promise<RepositorySummary | null> {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("repositories")
@@ -13,10 +15,17 @@ export async function findRepository(repositoryId: string): Promise<RepositorySu
     return null;
   }
 
-  return { fullName: data.full_name, id: data.id, workspaceId: data.workspace_id };
+  return {
+    fullName: data.full_name,
+    id: data.id,
+    workspaceId: data.workspace_id,
+  };
 }
 
-export async function isWorkspaceMember(workspaceId: string, userId: string): Promise<boolean> {
+export async function isWorkspaceMember(
+  workspaceId: string,
+  userId: string,
+): Promise<boolean> {
   const admin = createAdminClient();
   const { count, error } = await admin
     .from("workspace_members")
@@ -26,4 +35,3 @@ export async function isWorkspaceMember(workspaceId: string, userId: string): Pr
 
   return !error && count === 1;
 }
-

@@ -1,7 +1,4 @@
-import type {
-  GitHubOnboardingStore,
-  GitHubRepositoryChoice,
-} from "@arr/core";
+import type { GitHubOnboardingStore, GitHubRepositoryChoice } from "@arr/core";
 
 import { createAdminClient } from "../supabase/admin";
 import { recordSecurityAuditEvent } from "../security/audit";
@@ -10,17 +7,25 @@ export function createGitHubOnboardingStore(): GitHubOnboardingStore {
   const admin = createAdminClient();
 
   return {
-    async savePendingInstallation({ installation, permissionMode, workspaceId }) {
+    async savePendingInstallation({
+      installation,
+      permissionMode,
+      workspaceId,
+    }) {
       const existing = await admin
         .from("github_installations")
         .select("id, workspace_id")
         .eq("github_installation_id", installation.githubInstallationId)
         .maybeSingle();
       if (existing.error) {
-        throw new Error(`Failed to inspect GitHub installation: ${existing.error.code}`);
+        throw new Error(
+          `Failed to inspect GitHub installation: ${existing.error.code}`,
+        );
       }
       if (existing.data && existing.data.workspace_id !== workspaceId) {
-        throw new Error("GitHub installation is already linked to another workspace.");
+        throw new Error(
+          "GitHub installation is already linked to another workspace.",
+        );
       }
 
       const saved = existing.data
@@ -49,7 +54,9 @@ export function createGitHubOnboardingStore(): GitHubOnboardingStore {
             .select("id")
             .single();
       if (saved.error || !saved.data) {
-        throw new Error(`Failed to save GitHub installation: ${saved.error?.code ?? "unknown"}`);
+        throw new Error(
+          `Failed to save GitHub installation: ${saved.error?.code ?? "unknown"}`,
+        );
       }
 
       const rows = installation.repositories.map((repository) => ({
@@ -60,11 +67,15 @@ export function createGitHubOnboardingStore(): GitHubOnboardingStore {
         observed_at: new Date().toISOString(),
         workspace_id: workspaceId,
       }));
-      const repositories = await admin.from("github_available_repositories").upsert(rows, {
-        onConflict: "workspace_id,installation_id,github_repository_id",
-      });
+      const repositories = await admin
+        .from("github_available_repositories")
+        .upsert(rows, {
+          onConflict: "workspace_id,installation_id,github_repository_id",
+        });
       if (repositories.error) {
-        throw new Error(`Failed to save available repositories: ${repositories.error.code}`);
+        throw new Error(
+          `Failed to save available repositories: ${repositories.error.code}`,
+        );
       }
 
       await recordSecurityAuditEvent({
@@ -108,7 +119,9 @@ export async function saveSelectedRepository(input: {
     .select("id")
     .single();
   if (saved.error || !saved.data) {
-    throw new Error(`Failed to select GitHub repository: ${saved.error?.code ?? "unknown"}`);
+    throw new Error(
+      `Failed to select GitHub repository: ${saved.error?.code ?? "unknown"}`,
+    );
   }
   if (input.actorUserId) {
     await recordSecurityAuditEvent({

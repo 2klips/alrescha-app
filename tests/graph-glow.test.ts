@@ -56,7 +56,11 @@ function pulse(lastTouchedAt: number, eventCount = 1): NodePulse {
   return { eventCount, lastTouchedAt, nodeId: "n" };
 }
 
-function burst(count: number, startedAt: number, spacingMs: number): GraphAccessEvent[] {
+function burst(
+  count: number,
+  startedAt: number,
+  spacingMs: number,
+): GraphAccessEvent[] {
   return Array.from({ length: count }, (_, index) => ({
     id: `burst-${index}`,
     occurredAt: startedAt + index * spacingMs,
@@ -87,8 +91,14 @@ describe("neuron glow intensity", () => {
     const peak = glowPeak(1);
 
     expect(glowIntensityAt(node, touchedAt)).toBe(0);
-    expect(glowIntensityAt(node, touchedAt + GLOW_RISE_MS / 2)).toBeCloseTo(peak / 2, 5);
-    expect(glowIntensityAt(node, touchedAt + GLOW_RISE_MS)).toBeCloseTo(peak, 5);
+    expect(glowIntensityAt(node, touchedAt + GLOW_RISE_MS / 2)).toBeCloseTo(
+      peak / 2,
+      5,
+    );
+    expect(glowIntensityAt(node, touchedAt + GLOW_RISE_MS)).toBeCloseTo(
+      peak,
+      5,
+    );
     expect(
       glowIntensityAt(node, touchedAt + GLOW_RISE_MS + GLOW_DECAY_TAU_MS),
     ).toBeCloseTo(peak * Math.exp(-1), 5);
@@ -101,7 +111,10 @@ describe("neuron glow intensity", () => {
     );
 
     expect(
-      samples.every((value, index) => index === 0 || value <= (samples[index - 1] as number)),
+      samples.every(
+        (value, index) =>
+          index === 0 || value <= (samples[index - 1] as number),
+      ),
     ).toBe(true);
   });
 
@@ -111,7 +124,9 @@ describe("neuron glow intensity", () => {
 
     expect(glowPhaseAt(node, touchedAt + 9_000)).toBe("afterglow");
     expect(late).toBeCloseTo(GLOW_AFTERGLOW_FLOOR * glowPeak(1), 5);
-    expect(glowAfterglowNodes({ n: node }, touchedAt + 9_000)).toEqual(new Set(["n"]));
+    expect(glowAfterglowNodes({ n: node }, touchedAt + 9_000)).toEqual(
+      new Set(["n"]),
+    );
     expect(glowAfterglowNodes({ n: node }, touchedAt + 200).size).toBe(0);
   });
 
@@ -120,13 +135,19 @@ describe("neuron glow intensity", () => {
     expect(glowPeak(10_000)).toBeLessThanOrEqual(1);
     expect(
       glowIntensityAt(pulse(touchedAt, 8), touchedAt + GLOW_RISE_MS),
-    ).toBeGreaterThan(glowIntensityAt(pulse(touchedAt, 1), touchedAt + GLOW_RISE_MS));
+    ).toBeGreaterThan(
+      glowIntensityAt(pulse(touchedAt, 1), touchedAt + GLOW_RISE_MS),
+    );
   });
 
   test("only non-idle nodes are handed to the renderer", () => {
     const intensities = glowIntensities(
       {
-        cold: { eventCount: 4, lastTouchedAt: touchedAt - 30_000, nodeId: "cold" },
+        cold: {
+          eventCount: 4,
+          lastTouchedAt: touchedAt - 30_000,
+          nodeId: "cold",
+        },
         hot: { ...pulse(touchedAt), nodeId: "hot" },
       },
       touchedAt + 300,
@@ -147,7 +168,10 @@ describe("event coalescing", () => {
     for (let now = 0; now <= 1_000; now += 10) {
       const batch = coalescer.drain(now);
       if (batch) batches.push(batch);
-      while (cursor < events.length && (events[cursor] as GraphAccessEvent).occurredAt <= now) {
+      while (
+        cursor < events.length &&
+        (events[cursor] as GraphAccessEvent).occurredAt <= now
+      ) {
         coalescer.push(events[cursor] as GraphAccessEvent, now);
         cursor += 1;
       }
@@ -232,14 +256,19 @@ describe("drift overlays", () => {
 
     expect(frame.driftColor).toBe(PALETTE.danger);
     expect(
-      frame.nodes.filter((node) => node.ring).map((node) => node.id).sort(),
+      frame.nodes
+        .filter((node) => node.ring)
+        .map((node) => node.id)
+        .sort(),
     ).toEqual([...overlay.ringedNodeIds].sort());
     expect(
       frame.edges
         .filter((edge) => edge.dashed)
         .every((edge) => edge.color === PALETTE.danger),
     ).toBe(true);
-    expect(frame.nodes.find((node) => node.id === "req-auth")?.glow).toBeGreaterThan(0);
+    expect(
+      frame.nodes.find((node) => node.id === "req-auth")?.glow,
+    ).toBeGreaterThan(0);
   });
 
   test("edges propagate the intensity of whichever endpoint is hotter", () => {
@@ -251,7 +280,9 @@ describe("drift overlays", () => {
     });
     const expected = new Set(
       data.edges
-        .filter((edge) => edge.source === "req-auth" || edge.target === "req-auth")
+        .filter(
+          (edge) => edge.source === "req-auth" || edge.target === "req-auth",
+        )
         .map((edge) => edge.id),
     );
     const touched = frame.edges.filter((edge) => edge.flow > 0);
@@ -269,8 +300,12 @@ describe("drift overlays", () => {
       positions,
     });
 
-    expect(frame.nodes.find((node) => node.id === "req-auth")?.afterglow).toBe(true);
-    expect(frame.nodes.find((node) => node.id === "code-auth")?.afterglow).toBe(false);
+    expect(frame.nodes.find((node) => node.id === "req-auth")?.afterglow).toBe(
+      true,
+    );
+    expect(frame.nodes.find((node) => node.id === "code-auth")?.afterglow).toBe(
+      false,
+    );
   });
 });
 
@@ -321,7 +356,10 @@ describe("glow reaches the engine without touching the layout", () => {
         engine.paint();
         applied += 1;
       }
-      while (cursor < events.length && (events[cursor] as GraphAccessEvent).occurredAt <= now) {
+      while (
+        cursor < events.length &&
+        (events[cursor] as GraphAccessEvent).occurredAt <= now
+      ) {
         coalescer.push(events[cursor] as GraphAccessEvent, now);
         cursor += 1;
       }

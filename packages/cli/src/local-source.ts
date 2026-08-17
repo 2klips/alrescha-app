@@ -129,7 +129,9 @@ export async function createLocalRepositorySource(
         if (cached) {
           return cached;
         }
-        return new Uint8Array(await readFile(join(rootDir, ...path.split("/"))));
+        return new Uint8Array(
+          await readFile(join(rootDir, ...path.split("/"))),
+        );
       },
       async listTree(): Promise<RepositoryTree> {
         return tree;

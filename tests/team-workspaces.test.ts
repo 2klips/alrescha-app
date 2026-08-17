@@ -132,10 +132,11 @@ describe("team workspaces (todo 9)", () => {
       /admin, member, or viewer only/,
     );
     // admin invites a viewer — allowed.
-    await call(ADMIN, "select public.invite_workspace_member($1, $2, 'viewer')", [
-      workspace,
-      STRANGER,
-    ]);
+    await call(
+      ADMIN,
+      "select public.invite_workspace_member($1, $2, 'viewer')",
+      [workspace, STRANGER],
+    );
     // double-invite is rejected.
     await expectRejected(
       OWNER,
@@ -146,10 +147,11 @@ describe("team workspaces (todo 9)", () => {
   });
 
   it("keeps invited users powerless until they accept, and strangers cannot accept for them", async () => {
-    await call(OWNER, "select public.invite_workspace_member($1, $2, 'member')", [
-      workspace,
-      STRANGER,
-    ]);
+    await call(
+      OWNER,
+      "select public.invite_workspace_member($1, $2, 'member')",
+      [workspace, STRANGER],
+    );
     // Invited ≠ active: still no graph access.
     expect(
       await call(

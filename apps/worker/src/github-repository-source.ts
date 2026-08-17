@@ -16,7 +16,11 @@ function record(value: unknown, label: string): JsonRecord {
 
 function treeResponse(value: unknown): RepositoryTree {
   const response = record(value, "GitHub tree response");
-  if (typeof response.sha !== "string" || typeof response.truncated !== "boolean" || !Array.isArray(response.tree)) {
+  if (
+    typeof response.sha !== "string" ||
+    typeof response.truncated !== "boolean" ||
+    !Array.isArray(response.tree)
+  ) {
     throw new Error("GitHub tree response is malformed.");
   }
 
@@ -26,7 +30,9 @@ function treeResponse(value: unknown): RepositoryTree {
       typeof entry.path !== "string" ||
       typeof entry.mode !== "string" ||
       typeof entry.sha !== "string" ||
-      (entry.type !== "blob" && entry.type !== "tree" && entry.type !== "commit") ||
+      (entry.type !== "blob" &&
+        entry.type !== "tree" &&
+        entry.type !== "commit") ||
       (entry.size !== undefined && typeof entry.size !== "number")
     ) {
       throw new Error(`GitHub tree entry ${index} is malformed.`);
@@ -51,14 +57,20 @@ export class GitHubRepositorySource implements RepositorySource {
     private readonly fetchImplementation: typeof fetch = fetch,
   ) {}
 
-  private async request(path: string, accept = "application/vnd.github+json"): Promise<Response> {
-    const response = await this.fetchImplementation(`https://api.github.com${path}`, {
-      headers: {
-        accept,
-        authorization: `Bearer ${this.installationToken}`,
-        "x-github-api-version": GITHUB_API_VERSION,
+  private async request(
+    path: string,
+    accept = "application/vnd.github+json",
+  ): Promise<Response> {
+    const response = await this.fetchImplementation(
+      `https://api.github.com${path}`,
+      {
+        headers: {
+          accept,
+          authorization: `Bearer ${this.installationToken}`,
+          "x-github-api-version": GITHUB_API_VERSION,
+        },
       },
-    });
+    );
     if (!response.ok) {
       throw new Error(`GitHub repository request failed: ${response.status}`);
     }
@@ -73,24 +85,32 @@ export class GitHubRepositorySource implements RepositorySource {
   }
 
   async listTree(commitSha: string): Promise<RepositoryTree> {
-    const recursive = treeResponse(await (await this.request(this.treePath(commitSha, true))).json());
+    const recursive = treeResponse(
+      await (await this.request(this.treePath(commitSha, true))).json(),
+    );
     if (!recursive.truncated) {
       return recursive;
     }
 
     const entries: RepositoryTreeEntry[] = [];
-    const queue: Array<{ prefix: string; sha: string }> = [{ prefix: "", sha: commitSha }];
+    const queue: Array<{ prefix: string; sha: string }> = [
+      { prefix: "", sha: commitSha },
+    ];
     let rootTreeSha = recursive.treeSha;
 
     while (queue.length > 0) {
       const current = queue.shift();
       if (!current) break;
-      const subtree = treeResponse(await (await this.request(this.treePath(current.sha, false))).json());
+      const subtree = treeResponse(
+        await (await this.request(this.treePath(current.sha, false))).json(),
+      );
       if (current.prefix === "") {
         rootTreeSha = subtree.treeSha;
       }
       for (const entry of subtree.entries) {
-        const path = current.prefix ? `${current.prefix}/${entry.path}` : entry.path;
+        const path = current.prefix
+          ? `${current.prefix}/${entry.path}`
+          : entry.path;
         if (entry.type === "tree") {
           queue.push({ prefix: path, sha: entry.sha });
         } else {
@@ -98,7 +118,9 @@ export class GitHubRepositorySource implements RepositorySource {
         }
       }
       if (entries.length + queue.length > 100_000) {
-        throw new Error("Repository tree exceeds the 100,000-entry scan safety limit.");
+        throw new Error(
+          "Repository tree exceeds the 100,000-entry scan safety limit.",
+        );
       }
     }
 

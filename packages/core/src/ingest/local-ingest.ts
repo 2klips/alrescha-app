@@ -43,7 +43,10 @@ const todoItemSchema = z.strictObject({
 });
 
 const rationaleNoteSchema = z.strictObject({
-  adrRef: z.string().regex(/^ADR-\d{1,4}$/).nullable(),
+  adrRef: z
+    .string()
+    .regex(/^ADR-\d{1,4}$/)
+    .nullable(),
   kind: z.enum(["adr-reference", "note", "why"]),
   line: z.number().int().positive(),
   sourceKey: z.string().min(1).max(400),
@@ -125,10 +128,7 @@ export interface LocalIngestStore {
     workspaceId: string,
     repositoryId: string,
   ): Promise<LocalIngestPreviousState>;
-  findRepository(
-    workspaceId: string,
-    fullName: string,
-  ): Promise<string | null>;
+  findRepository(workspaceId: string, fullName: string): Promise<string | null>;
   /**
    * Record the ingest as a run so the commit appears on the analysis cards.
    * `startedAt` is measured by the server at request entry — never supplied

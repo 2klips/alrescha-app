@@ -32,29 +32,32 @@ const GRAPH_TOOLS = [
 ] as const;
 
 /** Multi-hop / relational signals, Korean and English. Order is fixed. */
-const GRAPH_SIGNALS: readonly { readonly name: string; readonly pattern: RegExp }[] =
-  [
-    { name: "path-trace", pattern: /경로|추적|trace|\bpath\b/iu },
-    {
-      name: "connection",
-      pattern: /연결|이어[지진]|연쇄|\bconnected\b|\blinked\b/iu,
-    },
-    {
-      name: "impact",
-      pattern: /영향|바뀌면|바꾸면|고치면|\bimpact\b|\baffect(?:s|ed)?\b/iu,
-    },
-    { name: "dependency", pattern: /의존|\bdepends?\b|\bdependenc/iu },
-    { name: "neighborhood", pattern: /이웃|인접|주변 노드|\bneighbors?\b/iu },
-    { name: "relation", pattern: /관계|\brelations?(?:ship)?\b/iu },
-    {
-      name: "span-endpoints",
-      pattern: /(?:에서|부터).{1,40}까지|\bfrom\b.{1,60}\bto\b/iu,
-    },
-    {
-      name: "relational-absence",
-      pattern: /(?:없는|않은|안 된)\s*(?:요구사항|문서|테스트|증거)|\bwithout\s+(?:tests?|evidence)\b/iu,
-    },
-  ];
+const GRAPH_SIGNALS: readonly {
+  readonly name: string;
+  readonly pattern: RegExp;
+}[] = [
+  { name: "path-trace", pattern: /경로|추적|trace|\bpath\b/iu },
+  {
+    name: "connection",
+    pattern: /연결|이어[지진]|연쇄|\bconnected\b|\blinked\b/iu,
+  },
+  {
+    name: "impact",
+    pattern: /영향|바뀌면|바꾸면|고치면|\bimpact\b|\baffect(?:s|ed)?\b/iu,
+  },
+  { name: "dependency", pattern: /의존|\bdepends?\b|\bdependenc/iu },
+  { name: "neighborhood", pattern: /이웃|인접|주변 노드|\bneighbors?\b/iu },
+  { name: "relation", pattern: /관계|\brelations?(?:ship)?\b/iu },
+  {
+    name: "span-endpoints",
+    pattern: /(?:에서|부터).{1,40}까지|\bfrom\b.{1,60}\bto\b/iu,
+  },
+  {
+    name: "relational-absence",
+    pattern:
+      /(?:없는|않은|안 된)\s*(?:요구사항|문서|테스트|증거)|\bwithout\s+(?:tests?|evidence)\b/iu,
+  },
+];
 
 export function routeQuery(question: string): QueryRoutingDecision {
   const matchedSignals = GRAPH_SIGNALS.filter(({ pattern }) =>

@@ -170,9 +170,7 @@ describe("routing benchmark arms (schema 3)", () => {
 
   it("falls back to grep when the graph route finds nothing (misroute escape)", async () => {
     const corpus = {
-      entries: [
-        { content: "회계 절차 문서.", path: "docs/finance.md" },
-      ],
+      entries: [{ content: "회계 절차 문서.", path: "docs/finance.md" }],
       root: "fixtures/drifted-demo",
     };
     const routed = await buildArmContext({

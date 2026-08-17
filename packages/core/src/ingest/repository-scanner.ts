@@ -14,7 +14,8 @@ export type ArtifactClassification =
   | "spec"
   | "todo_progress";
 
-export type PersistedArtifactKind = "adr" | "code_metadata" | "instruction" | "spec" | "todo";
+export type PersistedArtifactKind =
+  "adr" | "code_metadata" | "instruction" | "spec" | "todo";
 export type ScanSkipReason = "binary" | "oversized" | "submodule" | "symlink";
 
 export interface RepositoryTreeEntry {
@@ -101,7 +102,16 @@ export interface RepositoryScanPlan {
   readonly unchangedPaths: readonly string[];
 }
 
-const TYPESCRIPT_EXTENSIONS = new Set([".cjs", ".cts", ".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
+const TYPESCRIPT_EXTENSIONS = new Set([
+  ".cjs",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".mts",
+  ".ts",
+  ".tsx",
+]);
 const CODE_EXTENSIONS = new Set([...TYPESCRIPT_EXTENSIONS, ".go", ".py"]);
 
 /** Handoff/session files agents leave behind (Phase 2B todo 7 ⑶, H1). */
@@ -114,7 +124,9 @@ function extension(path: string): string {
   return dot === -1 ? "" : fileName.slice(dot).toLowerCase();
 }
 
-export function classifyArtifactPath(inputPath: string): ArtifactClassification | null {
+export function classifyArtifactPath(
+  inputPath: string,
+): ArtifactClassification | null {
   const path = inputPath.replaceAll("\\", "/");
   const lower = path.toLowerCase();
   const fileName = lower.slice(lower.lastIndexOf("/") + 1);
@@ -123,7 +135,11 @@ export function classifyArtifactPath(inputPath: string): ArtifactClassification 
   if (fileName === "agents.md") {
     return "agents";
   }
-  if (fileName === "claude.md" || lower.includes("/.claude/rules/") || lower.startsWith(".claude/rules/")) {
+  if (
+    fileName === "claude.md" ||
+    lower.includes("/.claude/rules/") ||
+    lower.startsWith(".claude/rules/")
+  ) {
     return "claude";
   }
   if (fileName === "skill.md") {
@@ -134,13 +150,17 @@ export function classifyArtifactPath(inputPath: string): ArtifactClassification 
   }
   if (
     (fileExtension === ".md" || fileExtension === ".mdx") &&
-    (fileName.startsWith("adr-") || lower.includes("/adr/") || lower.includes("/adrs/"))
+    (fileName.startsWith("adr-") ||
+      lower.includes("/adr/") ||
+      lower.includes("/adrs/"))
   ) {
     return "adr";
   }
   if (
     (fileExtension === ".md" || fileExtension === ".mdx") &&
-    (/^(todo|todos|progress|status|roadmap)([._-].*)?\.(md|mdx)$/.test(fileName) ||
+    (/^(todo|todos|progress|status|roadmap)([._-].*)?\.(md|mdx)$/.test(
+      fileName,
+    ) ||
       HANDOFF_FILE_PATTERN.test(fileName))
   ) {
     return "todo_progress";
@@ -161,7 +181,9 @@ export function classifyArtifactPath(inputPath: string): ArtifactClassification 
   return null;
 }
 
-export function persistedKind(classification: ArtifactClassification): PersistedArtifactKind {
+export function persistedKind(
+  classification: ArtifactClassification,
+): PersistedArtifactKind {
   switch (classification) {
     case "adr":
       return "adr";
@@ -190,8 +212,14 @@ function symbolKind(node: ts.Node): string {
   return "export";
 }
 
-function symbolMetadata(sourceFile: ts.SourceFile, node: ts.Node, name: string): ExportedSymbolMetadata {
-  const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+function symbolMetadata(
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  name: string,
+): ExportedSymbolMetadata {
+  const start = sourceFile.getLineAndCharacterOfPosition(
+    node.getStart(sourceFile),
+  );
   const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
   return {
     endColumn: end.character + 1,
@@ -204,25 +232,49 @@ function symbolMetadata(sourceFile: ts.SourceFile, node: ts.Node, name: string):
 }
 
 function hasExportModifier(node: ts.Node): boolean {
-  return ts.canHaveModifiers(node) && Boolean(ts.getModifiers(node)?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword));
+  return (
+    ts.canHaveModifiers(node) &&
+    Boolean(
+      ts
+        .getModifiers(node)
+        ?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword),
+    )
+  );
 }
 
-export function extractExportedSymbols(path: string, source: string): readonly ExportedSymbolMetadata[] {
-  const scriptKind = path.toLowerCase().endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
-  const sourceFile = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, scriptKind);
+export function extractExportedSymbols(
+  path: string,
+  source: string,
+): readonly ExportedSymbolMetadata[] {
+  const scriptKind = path.toLowerCase().endsWith("x")
+    ? ts.ScriptKind.TSX
+    : ts.ScriptKind.TS;
+  const sourceFile = ts.createSourceFile(
+    path,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKind,
+  );
   const symbols: ExportedSymbolMetadata[] = [];
 
   for (const statement of sourceFile.statements) {
     if (ts.isVariableStatement(statement) && hasExportModifier(statement)) {
       for (const declaration of statement.declarationList.declarations) {
         if (ts.isIdentifier(declaration.name)) {
-          symbols.push(symbolMetadata(sourceFile, declaration, declaration.name.text));
+          symbols.push(
+            symbolMetadata(sourceFile, declaration, declaration.name.text),
+          );
         }
       }
       continue;
     }
 
-    if (ts.isExportDeclaration(statement) && statement.exportClause && ts.isNamedExports(statement.exportClause)) {
+    if (
+      ts.isExportDeclaration(statement) &&
+      statement.exportClause &&
+      ts.isNamedExports(statement.exportClause)
+    ) {
       for (const element of statement.exportClause.elements) {
         symbols.push(symbolMetadata(sourceFile, element, element.name.text));
       }
@@ -251,13 +303,14 @@ export function extractExportedSymbols(path: string, source: string): readonly E
     }
   }
 
-  return symbols.sort((left, right) => left.startLine - right.startLine || left.startColumn - right.startColumn);
+  return symbols.sort(
+    (left, right) =>
+      left.startLine - right.startLine || left.startColumn - right.startColumn,
+  );
 }
 
 export type SymbolExtractionEngine =
-  | "go-structural"
-  | "python-structural"
-  | "typescript-ast";
+  "go-structural" | "python-structural" | "typescript-ast";
 
 function structuralSymbol(
   name: string,
@@ -309,7 +362,12 @@ function extractPythonSymbols(source: string): ExportedSymbolMetadata[] {
 /** Go's export rule is the capital initial — only those are recorded. */
 function extractGoSymbols(source: string): ExportedSymbolMetadata[] {
   const symbols: ExportedSymbolMetadata[] = [];
-  const push = (name: string | undefined, kind: string, index: number, line: string) => {
+  const push = (
+    name: string | undefined,
+    kind: string,
+    index: number,
+    line: string,
+  ) => {
     if (name && /^[A-Z]/.test(name)) {
       symbols.push(structuralSymbol(name, kind, index, line.indexOf(name)));
     }
@@ -320,7 +378,8 @@ function extractGoSymbols(source: string): ExportedSymbolMetadata[] {
       push(func[1], "function", index, line);
       return;
     }
-    const typeDeclaration = /^type\s+([A-Za-z_][\w]*)\s+(struct|interface)\b/.exec(line);
+    const typeDeclaration =
+      /^type\s+([A-Za-z_][\w]*)\s+(struct|interface)\b/.exec(line);
     if (typeDeclaration) {
       push(typeDeclaration[1], typeDeclaration[2] ?? "type", index, line);
       return;
@@ -342,10 +401,16 @@ function extractGoSymbols(source: string): ExportedSymbolMetadata[] {
 export function extractSymbols(
   path: string,
   source: string,
-): { engine: SymbolExtractionEngine; symbols: readonly ExportedSymbolMetadata[] } {
+): {
+  engine: SymbolExtractionEngine;
+  symbols: readonly ExportedSymbolMetadata[];
+} {
   const fileExtension = extension(path.toLowerCase());
   if (fileExtension === ".py") {
-    return { engine: "python-structural", symbols: extractPythonSymbols(source) };
+    return {
+      engine: "python-structural",
+      symbols: extractPythonSymbols(source),
+    };
   }
   if (fileExtension === ".go") {
     return { engine: "go-structural", symbols: extractGoSymbols(source) };
@@ -358,7 +423,8 @@ export function extractSymbols(
 
 const RATIONALE_MARKER_PATTERN =
   /^\s*(?:\/\/|#|\*|\/\*|--)\s*(WHY|NOTE):\s*(.+?)\s*(?:\*\/)?\s*$/;
-const COMMENT_LINE_PATTERN = /^\s*(?:\/\/|#|\*|\/\*|--)\s*(.+?)\s*(?:\*\/)?\s*$/;
+const COMMENT_LINE_PATTERN =
+  /^\s*(?:\/\/|#|\*|\/\*|--)\s*(.+?)\s*(?:\*\/)?\s*$/;
 const ADR_REFERENCE_PATTERN = /\bADR-\d{1,4}\b/;
 const MAX_RATIONALE_TEXT = 240;
 
@@ -416,7 +482,9 @@ export async function scanRepository(input: {
   readonly source: RepositorySource;
 }): Promise<RepositoryScanPlan> {
   if (!/^[0-9a-f]{40}$/.test(input.commitSha)) {
-    throw new Error("Repository scan commit SHA must be 40 lowercase hexadecimal characters.");
+    throw new Error(
+      "Repository scan commit SHA must be 40 lowercase hexadecimal characters.",
+    );
   }
 
   if (input.previousCommitSha === input.commitSha) {
@@ -427,7 +495,9 @@ export async function scanRepository(input: {
       skipped: [],
       touchedRows: 0,
       treeSha: null,
-      unchangedPaths: (input.previousArtifacts ?? []).map(({ path }) => path).sort(),
+      unchangedPaths: (input.previousArtifacts ?? [])
+        .map(({ path }) => path)
+        .sort(),
     };
   }
 
@@ -437,19 +507,34 @@ export async function scanRepository(input: {
   }
 
   const maxFileBytes = input.maxFileBytes ?? 1024 * 1024;
-  const previousByPath = new Map((input.previousArtifacts ?? []).map((artifact) => [artifact.path, artifact]));
+  const previousByPath = new Map(
+    (input.previousArtifacts ?? []).map((artifact) => [
+      artifact.path,
+      artifact,
+    ]),
+  );
   const observedPaths = new Set<string>();
   const artifacts: ScannedArtifact[] = [];
   const skipped: ScanSkip[] = [];
   const unchangedPaths: string[] = [];
 
-  for (const entry of [...tree.entries].sort((left, right) => left.path.localeCompare(right.path))) {
+  for (const entry of [...tree.entries].sort((left, right) =>
+    left.path.localeCompare(right.path),
+  )) {
     if (entry.type === "commit" || entry.mode === "160000") {
-      skipped.push({ detail: "Git submodules are not followed.", path: entry.path, reason: "submodule" });
+      skipped.push({
+        detail: "Git submodules are not followed.",
+        path: entry.path,
+        reason: "submodule",
+      });
       continue;
     }
     if (entry.mode === "120000") {
-      skipped.push({ detail: "Symbolic links are not followed.", path: entry.path, reason: "symlink" });
+      skipped.push({
+        detail: "Symbolic links are not followed.",
+        path: entry.path,
+        reason: "symlink",
+      });
       continue;
     }
     if (entry.type !== "blob") {
@@ -488,7 +573,11 @@ export async function scanRepository(input: {
     }
     const source = decodedText(bytes);
     if (source === null) {
-      skipped.push({ detail: "File is not valid UTF-8 text.", path: entry.path, reason: "binary" });
+      skipped.push({
+        detail: "File is not valid UTF-8 text.",
+        path: entry.path,
+        reason: "binary",
+      });
       continue;
     }
 
@@ -524,7 +613,9 @@ export async function scanRepository(input: {
     });
   }
 
-  const removedPaths = [...previousByPath.keys()].filter((path) => !observedPaths.has(path)).sort();
+  const removedPaths = [...previousByPath.keys()]
+    .filter((path) => !observedPaths.has(path))
+    .sort();
   return {
     artifacts,
     commitSha: input.commitSha,

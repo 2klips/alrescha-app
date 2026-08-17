@@ -4,10 +4,7 @@ import type { PublicMcpTokenRecord } from "@arr/mcp";
 import { useActionState } from "react";
 
 import { SETTINGS } from "../../../../lib/strings";
-import {
-  issueMcpToken,
-  revokeMcpToken,
-} from "./actions";
+import { issueMcpToken, revokeMcpToken } from "./actions";
 import { INITIAL_ISSUE_MCP_TOKEN_STATE } from "./state";
 
 function timestamp(value: string | null): string {
@@ -31,7 +28,9 @@ export function McpTokenManager({
       <section className="mcp-settings-card" aria-labelledby="mcp-issue-title">
         <h2 id="mcp-issue-title">{SETTINGS.mcp.tokens.issueTitle}</h2>
         <form action={issueAction} className="mcp-token-form">
-          <label htmlFor="mcp-token-name">{SETTINGS.mcp.tokens.nameLabel}</label>
+          <label htmlFor="mcp-token-name">
+            {SETTINGS.mcp.tokens.nameLabel}
+          </label>
           <input
             autoComplete="off"
             id="mcp-token-name"
@@ -86,10 +85,14 @@ export function McpTokenManager({
                 <strong>{token.name}</strong>
                 <code>{token.tokenPrefix}…</code>
                 <span>{token.scopes.join(", ")}</span>
-                <span>{SETTINGS.mcp.tokens.lastUsed(timestamp(token.lastUsedAt))}</span>
+                <span>
+                  {SETTINGS.mcp.tokens.lastUsed(timestamp(token.lastUsedAt))}
+                </span>
               </div>
               {token.revokedAt ? (
-                <span className="mcp-revoked">{SETTINGS.mcp.tokens.revoked}</span>
+                <span className="mcp-revoked">
+                  {SETTINGS.mcp.tokens.revoked}
+                </span>
               ) : (
                 <form action={revokeMcpToken}>
                   <input name="tokenId" type="hidden" value={token.id} />

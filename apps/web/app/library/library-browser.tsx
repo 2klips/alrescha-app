@@ -178,7 +178,12 @@ export function LibraryBrowser({
                     <div className="library-tags">
                       {item.tags.map((tag) => (
                         <a
-                          href={filterHref(basePath, query, tag, persistentParams)}
+                          href={filterHref(
+                            basePath,
+                            query,
+                            tag,
+                            persistentParams,
+                          )}
                           key={tag}
                         >
                           #{tag}

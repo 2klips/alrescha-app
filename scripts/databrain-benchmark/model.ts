@@ -46,7 +46,9 @@ function retryDelayMilliseconds(input: {
   const retryAfter = Number(input.retryAfterHeader);
   const messageDelay = input.message.match(/try again in ([\d.]+)(ms|s)/i);
   const milliseconds =
-    input.retryAfterHeader !== null && Number.isFinite(retryAfter) && retryAfter >= 0
+    input.retryAfterHeader !== null &&
+    Number.isFinite(retryAfter) &&
+    retryAfter >= 0
       ? retryAfter * 1_000
       : messageDelay
         ? Number(messageDelay[1]) *
@@ -308,7 +310,10 @@ interface MessagesApiBody {
 
 function messagesToolOutput(body: MessagesApiBody): unknown {
   for (const block of body.content ?? []) {
-    if (block.type === "tool_use" && block.name === BENCHMARK_OUTPUT_TOOL_NAME) {
+    if (
+      block.type === "tool_use" &&
+      block.name === BENCHMARK_OUTPUT_TOOL_NAME
+    ) {
       return block.input;
     }
   }

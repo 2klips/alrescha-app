@@ -1,4 +1,7 @@
-import { assertMinimalGitHubPermissions, type GitHubPermissions } from "./app-permissions";
+import {
+  assertMinimalGitHubPermissions,
+  type GitHubPermissions,
+} from "./app-permissions";
 
 export interface GitHubRepositoryChoice {
   readonly defaultBranch: string;
@@ -41,7 +44,10 @@ export async function prepareGitHubOnboarding(input: {
     workspaceId: input.workspaceId,
   });
 
-  return { installationId: saved.installationId, repositoryCount: installation.repositories.length };
+  return {
+    installationId: saved.installationId,
+    repositoryCount: installation.repositories.length,
+  };
 }
 
 export async function selectGitHubRepository(input: {

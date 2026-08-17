@@ -146,9 +146,7 @@ function parseTasks(
     throw new TypeError("Benchmark task ids must be unique.");
   }
   if (JSON.stringify(parsed.arms) !== JSON.stringify(expectedArms)) {
-    throw new TypeError(
-      `Benchmark arms must be ${expectedArms.join(", ")}.`,
-    );
+    throw new TypeError(`Benchmark arms must be ${expectedArms.join(", ")}.`);
   }
   if (
     requireDistinctRepositories &&

@@ -68,7 +68,10 @@ interface RouteReport {
     fontRaw: number;
   };
   route: string;
-  totals: Record<Phase, { brotli: number; count: number; gzip: number; raw: number }>;
+  totals: Record<
+    Phase,
+    { brotli: number; count: number; gzip: number; raw: number }
+  >;
 }
 
 async function freePort(): Promise<number> {
@@ -109,7 +112,8 @@ function assetPath(url: string): string | null {
 
 function isJavaScript(request: Request): boolean {
   return (
-    request.resourceType() === "script" || new URL(request.url()).pathname.endsWith(".js")
+    request.resourceType() === "script" ||
+    new URL(request.url()).pathname.endsWith(".js")
   );
 }
 
@@ -139,7 +143,8 @@ async function measureRoute(
       if (url.includes("/_next/")) others.add(url);
       return;
     }
-    if (!seen.has(url)) seen.set(url, documentScripts.has(url) ? "document" : phase);
+    if (!seen.has(url))
+      seen.set(url, documentScripts.has(url) ? "document" : phase);
   });
 
   await page.goto(new URL(route, origin).toString(), { waitUntil: "load" });
@@ -220,7 +225,8 @@ async function main(): Promise<void> {
   const budgetKb = budgetIndex >= 0 ? Number(argv[budgetIndex + 1]) : 450;
   const routes = argv.filter(
     (value, index) =>
-      !value.startsWith("--") && !(budgetIndex >= 0 && index === budgetIndex + 1),
+      !value.startsWith("--") &&
+      !(budgetIndex >= 0 && index === budgetIndex + 1),
   );
   const targets = routes.length > 0 ? routes : DEFAULT_ROUTES;
 

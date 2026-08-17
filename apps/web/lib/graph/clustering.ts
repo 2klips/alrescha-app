@@ -59,7 +59,8 @@ export function communityAssignment(
   const byFolder = () =>
     new Map(data.nodes.map((node) => [node.id, folderCommunity(node)]));
 
-  if (options.strategy === "folder" || data.edges.length === 0) return byFolder();
+  if (options.strategy === "folder" || data.edges.length === 0)
+    return byFolder();
 
   try {
     const graph = buildGraphologyGraph(data);
@@ -169,7 +170,10 @@ export function collapseGraph(input: CollapseInput): CollapsedGraph {
     const centroid = group.reduce(
       (sum, node) => {
         const position = positionOf(node);
-        return { x: sum.x + position.x / group.length, y: sum.y + position.y / group.length };
+        return {
+          x: sum.x + position.x / group.length,
+          y: sum.y + position.y / group.length,
+        };
       },
       { x: 0, y: 0 },
     );

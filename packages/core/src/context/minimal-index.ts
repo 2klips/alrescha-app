@@ -61,7 +61,10 @@ export function applyManagedIndex(
   existing: string | undefined,
   section: string,
 ): string {
-  if (!section.startsWith(ARR_INDEX_BEGIN) || !section.endsWith(ARR_INDEX_END)) {
+  if (
+    !section.startsWith(ARR_INDEX_BEGIN) ||
+    !section.endsWith(ARR_INDEX_END)
+  ) {
     throw new TypeError("section must be a complete Arr managed index.");
   }
 

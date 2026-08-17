@@ -67,10 +67,11 @@ describe("prompt capture privacy (ADR-011)", () => {
       )
     ).rows[0]!.id;
     for (const invitee of [ALICE, BOB]) {
-      await call(OWNER, "select public.invite_workspace_member($1, $2, 'member')", [
-        workspace,
-        invitee,
-      ]);
+      await call(
+        OWNER,
+        "select public.invite_workspace_member($1, $2, 'member')",
+        [workspace, invitee],
+      );
       await call(invitee, "select public.accept_workspace_invite($1)", [
         workspace,
       ]);
@@ -86,11 +87,15 @@ describe("prompt capture privacy (ADR-011)", () => {
     await call(ALICE, "select public.set_prompt_consent($1, true, false)", [
       workspace,
     ]);
-    await expect(record(ALICE)).rejects.toThrow(/not enabled for this workspace/);
+    await expect(record(ALICE)).rejects.toThrow(
+      /not enabled for this workspace/,
+    );
 
     // Enabled, but Bob never consented: refused — including a service-role
     // direct insert, which the BEFORE trigger blocks below RLS.
-    await call(OWNER, "select public.set_prompt_capture($1, true)", [workspace]);
+    await call(OWNER, "select public.set_prompt_capture($1, true)", [
+      workspace,
+    ]);
     await expect(record(BOB)).rejects.toThrow(/has not consented/);
     await expect(
       database.query(
@@ -117,7 +122,9 @@ describe("prompt capture privacy (ADR-011)", () => {
   });
 
   it("ADR-011:no-raw-prompt-in-access-events — the two stores never mix", async () => {
-    await call(OWNER, "select public.set_prompt_capture($1, true)", [workspace]);
+    await call(OWNER, "select public.set_prompt_capture($1, true)", [
+      workspace,
+    ]);
     await call(ALICE, "select public.set_prompt_consent($1, true, true)", [
       workspace,
     ]);
@@ -136,13 +143,22 @@ describe("prompt capture privacy (ADR-011)", () => {
        where table_schema = 'public' and table_name = 'access_events'`,
     );
     const names = columns.rows.map(({ column_name }) => column_name);
-    for (const forbidden of ["prompt", "prompt_text", "query", "task", "text", "raw_text"]) {
+    for (const forbidden of [
+      "prompt",
+      "prompt_text",
+      "query",
+      "task",
+      "text",
+      "raw_text",
+    ]) {
       expect(names).not.toContain(forbidden);
     }
   });
 
   it("ADR-011:no-consent-status-exposure — consent rows are visible to their subject only", async () => {
-    await call(OWNER, "select public.set_prompt_capture($1, true)", [workspace]);
+    await call(OWNER, "select public.set_prompt_capture($1, true)", [
+      workspace,
+    ]);
     await call(ALICE, "select public.set_prompt_consent($1, true, false)", [
       workspace,
     ]);
@@ -177,7 +193,9 @@ describe("prompt capture privacy (ADR-011)", () => {
   });
 
   it("stores no raw text unless the member's separate raw-sync switch is on", async () => {
-    await call(OWNER, "select public.set_prompt_capture($1, true)", [workspace]);
+    await call(OWNER, "select public.set_prompt_capture($1, true)", [
+      workspace,
+    ]);
     await call(ALICE, "select public.set_prompt_consent($1, true, false)", [
       workspace,
     ]);
@@ -187,31 +205,38 @@ describe("prompt capture privacy (ADR-011)", () => {
     await record(ALICE, null);
     const dump = JSON.stringify(
       (
-        await database.query("select * from public.prompt_records where workspace_id = $1", [
-          workspace,
-        ])
+        await database.query(
+          "select * from public.prompt_records where workspace_id = $1",
+          [workspace],
+        )
       ).rows,
     );
     expect(dump).not.toContain("PRIVATE_PROMPT_TEXT_c41f");
   });
 
   it("keeps unshared prompts readable by their author alone; sharing is explicit", async () => {
-    await call(OWNER, "select public.set_prompt_capture($1, true)", [workspace]);
+    await call(OWNER, "select public.set_prompt_capture($1, true)", [
+      workspace,
+    ]);
     await call(ALICE, "select public.set_prompt_consent($1, true, true)", [
       workspace,
     ]);
     await record(ALICE, SENSITIVE_PROMPT, false);
 
     expect(
-      await call(ALICE, "select raw_text from public.prompt_records where workspace_id = $1", [
-        workspace,
-      ]),
+      await call(
+        ALICE,
+        "select raw_text from public.prompt_records where workspace_id = $1",
+        [workspace],
+      ),
     ).toHaveLength(1);
     for (const userId of [OWNER, BOB]) {
       expect(
-        await call(userId, "select id from public.prompt_records where workspace_id = $1", [
-          workspace,
-        ]),
+        await call(
+          userId,
+          "select id from public.prompt_records where workspace_id = $1",
+          [workspace],
+        ),
       ).toEqual([]);
     }
 
@@ -222,14 +247,18 @@ describe("prompt capture privacy (ADR-011)", () => {
       [workspace],
     );
     expect(
-      await call(BOB, "select id from public.prompt_records where workspace_id = $1", [
-        workspace,
-      ]),
+      await call(
+        BOB,
+        "select id from public.prompt_records where workspace_id = $1",
+        [workspace],
+      ),
     ).toHaveLength(1);
   });
 
   it("deletion is immediate and reaches derived aggregates", async () => {
-    await call(OWNER, "select public.set_prompt_capture($1, true)", [workspace]);
+    await call(OWNER, "select public.set_prompt_capture($1, true)", [
+      workspace,
+    ]);
     await call(ALICE, "select public.set_prompt_consent($1, true, false)", [
       workspace,
     ]);
@@ -244,9 +273,11 @@ describe("prompt capture privacy (ADR-011)", () => {
     );
     expect(before).toEqual([{ average: "2.0000000000000000", records: 2 }]);
 
-    await call(ALICE, "delete from public.prompt_records where workspace_id = $1", [
-      workspace,
-    ]);
+    await call(
+      ALICE,
+      "delete from public.prompt_records where workspace_id = $1",
+      [workspace],
+    );
     const after = await call(
       ALICE,
       `select count(*)::integer as records from public.prompt_records where workspace_id = $1 and user_id = $2`,
@@ -265,7 +296,9 @@ describe("prompt capture privacy (ADR-011)", () => {
       ),
     ).rejects.toThrow(/not enabled for this workspace/);
 
-    await call(OWNER, "select public.set_prompt_capture($1, true)", [workspace]);
+    await call(OWNER, "select public.set_prompt_capture($1, true)", [
+      workspace,
+    ]);
     await expect(
       database.query(
         "select public.record_prompt_as($1::text, $2::uuid, 'log_progress', '{}'::text[], 10, '{}'::jsonb, null::text, false)",
@@ -326,8 +359,12 @@ describe("prompt capture privacy (ADR-011)", () => {
     expect(LOCAL_PROMPT_LOG_GITIGNORE_ENTRY).toBe(".arr/");
 
     // Metadata-first sync boundary: without the switch, the text stays local.
-    const withoutRaw = toServerPromptSync(recordEntry, { rawSyncEnabled: false });
-    expect(JSON.stringify(withoutRaw)).not.toContain("PRIVATE_PROMPT_TEXT_c41f");
+    const withoutRaw = toServerPromptSync(recordEntry, {
+      rawSyncEnabled: false,
+    });
+    expect(JSON.stringify(withoutRaw)).not.toContain(
+      "PRIVATE_PROMPT_TEXT_c41f",
+    );
     expect(withoutRaw.tokenCount).toBe(120);
     const withRaw = toServerPromptSync(recordEntry, { rawSyncEnabled: true });
     expect(withRaw.rawText).toBe(SENSITIVE_PROMPT);

@@ -78,7 +78,8 @@ export const DASHBOARD = {
 
   ci: {
     present: "CI 증거 · bad0551에서 테스트 78건 verified",
-    missing: "이 commit에는 CI 리포트가 없습니다 — 테스트 링크는 inferred로 남습니다.",
+    missing:
+      "이 commit에는 CI 리포트가 없습니다 — 테스트 링크는 inferred로 남습니다.",
   },
 
   canvasTitle: "요구사항·문서·코드·verified 테스트를 잇는 증거 Graph",
@@ -182,8 +183,18 @@ export const DASHBOARD = {
     replay: "MCP 세션 재생",
     trace: "실시간 추적",
     samples: [
-      { detail: "파일 42개 색인", meta: "git: bad0551", time: "10:24:31", tool: "search_index" },
-      { detail: "테스트 결과 조회 (#8721)", meta: "cache: hit", time: "10:24:28", tool: "get_artifact" },
+      {
+        detail: "파일 42개 색인",
+        meta: "git: bad0551",
+        time: "10:24:31",
+        tool: "search_index",
+      },
+      {
+        detail: "테스트 결과 조회 (#8721)",
+        meta: "cache: hit",
+        time: "10:24:28",
+        tool: "get_artifact",
+      },
       {
         detail: "제한된 컨텍스트 팩 구성",
         meta: "worker: 3",

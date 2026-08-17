@@ -30,9 +30,17 @@ describe("graph-centered dashboard", () => {
 
   test("searches and filters graph nodes", () => {
     const graph = buildDashboardViewModel("scanned").graph;
-    const result = filterGraph(graph, { grade: "verified", query: "auth", type: "all" });
+    const result = filterGraph(graph, {
+      grade: "verified",
+      query: "auth",
+      type: "all",
+    });
 
-    expect(result.nodes.map((node) => node.id)).toEqual(["req-auth", "code-auth", "test-auth"]);
+    expect(result.nodes.map((node) => node.id)).toEqual([
+      "req-auth",
+      "code-auth",
+      "test-auth",
+    ]);
     expect(result.nodes.every((node) => node.grade === "verified")).toBe(true);
   });
 
@@ -40,7 +48,11 @@ describe("graph-centered dashboard", () => {
     const graph = buildDashboardViewModel("scanned").graph;
     const focused = focusLocalGraph(graph, "req-auth", 1);
 
-    expect(focused.nodes.map((node) => node.id).sort()).toEqual(["code-auth", "doc-guide", "req-auth"]);
+    expect(focused.nodes.map((node) => node.id).sort()).toEqual([
+      "code-auth",
+      "doc-guide",
+      "req-auth",
+    ]);
     expect(focused.edges).toHaveLength(2);
   });
 
@@ -48,8 +60,14 @@ describe("graph-centered dashboard", () => {
     const graph = clusterGraph(createFixtureGraph(500));
 
     expect(graph.nodes.length).toBeLessThanOrEqual(12);
-    expect(graph.nodes.reduce((total, node) => total + (node.clusterCount ?? 1), 0)).toBe(500);
-    expect(graph.nodes.some((node) => node.grade === "broken" && node.findingCount > 0)).toBe(true);
+    expect(
+      graph.nodes.reduce((total, node) => total + (node.clusterCount ?? 1), 0),
+    ).toBe(500);
+    expect(
+      graph.nodes.some(
+        (node) => node.grade === "broken" && node.findingCount > 0,
+      ),
+    ).toBe(true);
   });
 
   test("prepares a 500-node canvas frame within one 60fps budget", () => {
@@ -78,8 +96,22 @@ describe("hub nodes (Phase 2A todo 7)", () => {
   test("breaks ties on node id so the chip order is reproducible", () => {
     const graph: GraphData = {
       edges: [
-        { broken: false, grade: "verified", id: "e1", provenance: PROVENANCE, source: "b", target: "a" },
-        { broken: false, grade: "verified", id: "e2", provenance: PROVENANCE, source: "c", target: "a" },
+        {
+          broken: false,
+          grade: "verified",
+          id: "e1",
+          provenance: PROVENANCE,
+          source: "b",
+          target: "a",
+        },
+        {
+          broken: false,
+          grade: "verified",
+          id: "e2",
+          provenance: PROVENANCE,
+          source: "c",
+          target: "a",
+        },
       ],
       nodes: ["c", "b", "a"].map((id) => ({
         findingCount: 0,
@@ -93,7 +125,11 @@ describe("hub nodes (Phase 2A todo 7)", () => {
       })),
     };
 
-    expect(topHubNodes(graph, 3).map((hub) => hub.node.id)).toEqual(["a", "b", "c"]);
+    expect(topHubNodes(graph, 3).map((hub) => hub.node.id)).toEqual([
+      "a",
+      "b",
+      "c",
+    ]);
   });
 
   test("omits isolated nodes — a chip must lead somewhere", () => {

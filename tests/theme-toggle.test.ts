@@ -72,17 +72,27 @@ describe("theme preference resolution", () => {
   });
 
   test("first visit honours prefers-color-scheme", () => {
-    expect(resolveInitialTheme({ stored: null, prefersLight: true })).toBe("light");
-    expect(resolveInitialTheme({ stored: null, prefersLight: false })).toBe("dark");
+    expect(resolveInitialTheme({ stored: null, prefersLight: true })).toBe(
+      "light",
+    );
+    expect(resolveInitialTheme({ stored: null, prefersLight: false })).toBe(
+      "dark",
+    );
   });
 
   test("a stored choice outranks the OS preference", () => {
-    expect(resolveInitialTheme({ stored: "dark", prefersLight: true })).toBe("dark");
-    expect(resolveInitialTheme({ stored: "light", prefersLight: false })).toBe("light");
+    expect(resolveInitialTheme({ stored: "dark", prefersLight: true })).toBe(
+      "dark",
+    );
+    expect(resolveInitialTheme({ stored: "light", prefersLight: false })).toBe(
+      "light",
+    );
   });
 
   test("junk in storage falls back instead of painting an undefined theme", () => {
-    expect(resolveInitialTheme({ stored: "solarized", prefersLight: true })).toBe("light");
+    expect(
+      resolveInitialTheme({ stored: "solarized", prefersLight: true }),
+    ).toBe("light");
     expect(isTheme("solarized")).toBe(false);
     for (const theme of THEMES) expect(isTheme(theme)).toBe(true);
   });
@@ -134,7 +144,9 @@ describe("theme persistence", () => {
     });
 
     try {
-      expect(() => applyTheme("light", html as unknown as Element)).not.toThrow();
+      expect(() =>
+        applyTheme("light", html as unknown as Element),
+      ).not.toThrow();
       expect(html.getAttribute(THEME_ATTRIBUTE)).toBe("light");
     } finally {
       if (original === undefined) {
@@ -159,14 +171,18 @@ describe("theme persistence", () => {
 describe("no flash of the wrong theme", () => {
   test("the boot script paints the stored theme before hydration", () => {
     expect(runInitScript({ stored: "light" }).theme).toBe("light");
-    expect(runInitScript({ stored: "dark", prefersLight: true }).theme).toBe("dark");
+    expect(runInitScript({ stored: "dark", prefersLight: true }).theme).toBe(
+      "dark",
+    );
   });
 
   test("the boot script consults prefers-color-scheme on a first visit", () => {
     const result = runInitScript({ stored: null, prefersLight: true });
     expect(result.theme).toBe("light");
     expect(result.matchMediaQueries).toEqual(["(prefers-color-scheme: light)"]);
-    expect(runInitScript({ stored: null, prefersLight: false }).theme).toBe("dark");
+    expect(runInitScript({ stored: null, prefersLight: false }).theme).toBe(
+      "dark",
+    );
   });
 
   test("the boot script survives blocked storage", () => {
@@ -178,7 +194,9 @@ describe("no flash of the wrong theme", () => {
     expect(layout).toContain("THEME_INIT_SCRIPT");
     expect(layout).toContain('id="arr-theme-init"');
     expect(layout.indexOf("<head>")).toBeLessThan(layout.indexOf("<body>"));
-    expect(layout.indexOf("arr-theme-init")).toBeLessThan(layout.indexOf("<body>"));
+    expect(layout.indexOf("arr-theme-init")).toBeLessThan(
+      layout.indexOf("<body>"),
+    );
   });
 });
 

@@ -65,7 +65,10 @@ export interface InspectionDocumentEntry {
   readonly freshness: DocumentFreshness;
   readonly path: string;
   /** grade is the literal evidence label the UI must render. */
-  readonly summary: { readonly grade: "inferred"; readonly text: string } | null;
+  readonly summary: {
+    readonly grade: "inferred";
+    readonly text: string;
+  } | null;
 }
 
 export interface InspectionDashboard {

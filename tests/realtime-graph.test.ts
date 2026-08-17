@@ -20,7 +20,11 @@ const policy = {
 describe("realtime evidence graph state", () => {
   test("transitions pulse to decay to afterglow to idle", () => {
     const now = 10_000;
-    const state = reduceAccessEventBatch(createRealtimeGraphState(DEMO_WORKSPACE_ID), createDemoAccessEvents(now), policy);
+    const state = reduceAccessEventBatch(
+      createRealtimeGraphState(DEMO_WORKSPACE_ID),
+      createDemoAccessEvents(now),
+      policy,
+    );
     const pulse = state.pulses["req-auth"];
 
     expect(pulsePhaseAt(pulse, now + 200)).toBe("pulse");
@@ -30,26 +34,45 @@ describe("realtime evidence graph state", () => {
   });
 
   test("orders feed newest-first and excludes cross-tenant and revoked-token events", () => {
-    const state = reduceAccessEventBatch(createRealtimeGraphState(DEMO_WORKSPACE_ID), createDemoAccessEvents(1_000), policy);
+    const state = reduceAccessEventBatch(
+      createRealtimeGraphState(DEMO_WORKSPACE_ID),
+      createDemoAccessEvents(1_000),
+      policy,
+    );
 
     expect(state.feed.map((event) => event.id)).toEqual([
-      "access-note", "access-pack", "access-findings", "access-artifact", "access-search",
+      "access-note",
+      "access-pack",
+      "access-findings",
+      "access-artifact",
+      "access-search",
     ]);
-    expect(state.feed.some((event) => event.targetPath.includes("private"))).toBe(false);
-    expect(state.feed.some((event) => event.targetPath.includes("revoked"))).toBe(false);
+    expect(
+      state.feed.some((event) => event.targetPath.includes("private")),
+    ).toBe(false);
+    expect(
+      state.feed.some((event) => event.targetPath.includes("revoked")),
+    ).toBe(false);
   });
 
   test("batches a 50 events/s burst without triggering graph relayout", () => {
-    const events: GraphAccessEvent[] = Array.from({ length: 50 }, (_, index) => ({
-      id: `burst-${index}`,
-      occurredAt: 1_000 + index * 20,
-      targetNodeIds: [`node-${index % 5}`],
-      targetPath: `artifact-${index}.ts`,
-      tokenId: "token-codex",
-      tool: "search_index",
-      workspaceId: DEMO_WORKSPACE_ID,
-    }));
-    const state = reduceAccessEventBatch(createRealtimeGraphState(DEMO_WORKSPACE_ID), events, policy);
+    const events: GraphAccessEvent[] = Array.from(
+      { length: 50 },
+      (_, index) => ({
+        id: `burst-${index}`,
+        occurredAt: 1_000 + index * 20,
+        targetNodeIds: [`node-${index % 5}`],
+        targetPath: `artifact-${index}.ts`,
+        tokenId: "token-codex",
+        tool: "search_index",
+        workspaceId: DEMO_WORKSPACE_ID,
+      }),
+    );
+    const state = reduceAccessEventBatch(
+      createRealtimeGraphState(DEMO_WORKSPACE_ID),
+      events,
+      policy,
+    );
 
     expect(state.renderBatches).toBe(1);
     expect(state.layoutRevision).toBe(0);
@@ -63,10 +86,18 @@ describe("realtime evidence graph state", () => {
     const batches: readonly GraphAccessEvent[][] = [];
     const mutableBatches = batches as GraphAccessEvent[][];
     const unsubscribe = subscribeWorkspaceRealtime(
-      { subscribe: (channel, next) => { expect(channel).toBe(`workspace:${DEMO_WORKSPACE_ID}:access-events`); listener = next; return vi.fn(); } },
+      {
+        subscribe: (channel, next) => {
+          expect(channel).toBe(`workspace:${DEMO_WORKSPACE_ID}:access-events`);
+          listener = next;
+          return vi.fn();
+        },
+      },
       policy,
       (batch) => mutableBatches.push([...batch]),
-      (nextFlush) => { flush = nextFlush; },
+      (nextFlush) => {
+        flush = nextFlush;
+      },
     );
     const events = createDemoAccessEvents(1_000);
     for (const event of events) listener?.(event);
@@ -78,7 +109,9 @@ describe("realtime evidence graph state", () => {
   });
 
   test("logs fire-and-forget without surfacing publisher failure", async () => {
-    const publish = vi.fn(async () => { throw new Error("realtime unavailable"); });
+    const publish = vi.fn(async () => {
+      throw new Error("realtime unavailable");
+    });
     const event = createDemoAccessEvents(1_000)[0]!;
 
     expect(logAccessEventFireAndForget(event, publish)).toBeUndefined();

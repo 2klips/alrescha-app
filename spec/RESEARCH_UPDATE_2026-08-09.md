@@ -9,7 +9,7 @@
 ## 1. 핵심 결론 (7/28 대비 무엇이 달라졌나)
 
 1. **[최중요·리스크] ETH 취리히 연구가 DocsHub의 심장을 겨눈다.**
-   *"Evaluating AGENTS.md"* (2026-02, [arXiv 2602.11988](https://arxiv.org/abs/2602.11988)): 컨텍스트 파일(AGENTS.md 등)은 **작업 성공률을 개선하지 못하면서 추론 비용을 평균 20%+ 올린다**. LLM이 자동 생성한 파일은 성공률을 오히려 2–3% 낮춤. 반면 SkillsBench([arXiv 2602.12670](https://arxiv.org/abs/2602.12670))는 **큐레이션된, 필요 시 로드(load-on-demand)되는 지식은 +16.6pp 개선**을 보임(단 SW 엔지니어링 도메인은 +4.5pp로 최약).
+   _"Evaluating AGENTS.md"_ (2026-02, [arXiv 2602.11988](https://arxiv.org/abs/2602.11988)): 컨텍스트 파일(AGENTS.md 등)은 **작업 성공률을 개선하지 못하면서 추론 비용을 평균 20%+ 올린다**. LLM이 자동 생성한 파일은 성공률을 오히려 2–3% 낮춤. 반면 SkillsBench([arXiv 2602.12670](https://arxiv.org/abs/2602.12670))는 **큐레이션된, 필요 시 로드(load-on-demand)되는 지식은 +16.6pp 개선**을 보임(단 SW 엔지니어링 도메인은 +4.5pp로 최약).
    → **"항상 로드되는 정적 문서"는 근거-부정, "작고·비추론가능(non-inferable)·주문형 로드"는 근거-긍정.** DocsHub의 컨텍스트 허브는 후자로 설계해야 함. Anthropic 공식 독트린("smallest set of high-signal tokens", progressive disclosure)과도 일치.
 
 2. **[기회] 축 4 (스펙-투-프루프 / 보증)는 여전히 가장 하얀 공간.**
@@ -25,7 +25,7 @@
    - Google Antigravity 2.0: **지식 베이스가 코어 프리미티브** (에이전트가 읽고 쓰는) — 컨텍스트 허브의 가장 가까운 퍼스트파티 경쟁자.
    - Codex: Cursor 스킬 임포트 + Claude/Cursor 대화 동기화 — 크로스툴 설정 동기화도 퍼스트파티 전장이 됨.
    - 선례: Anthropic은 서드파티 하네스의 구독 인증을 서버 측에서 차단한 적 있음(1월, 4월).
-   → 방어선은 **크로스 벤더 · 팀 공유 · 그래프 구조 · 검증 가능한 출처(provenance)** — 단일 벤더가 구조적으로 못 하는 것들.
+     → 방어선은 **크로스 벤더 · 팀 공유 · 그래프 구조 · 검증 가능한 출처(provenance)** — 단일 벤더가 구조적으로 못 하는 것들.
 
 5. **[표준] 지금 6주 사이에 기반이 굳었다 — 안전하게 올라탈 것.**
    - **MCP 2026-07-28 스펙 확정** (역대 최대 개정: stateless 코어, Sampling/Roots/Logging 폐기 12개월 시계, tasks 확장, 캐시 가능한 리스트). DocsHub MCP 서버는 처음부터 이 모델로.
@@ -38,15 +38,16 @@
 
 ## 2. 5개 축별 경쟁 판정 (21개 제품 조사 종합)
 
-| 축 | 판정 | 주요 경쟁 | 비고 |
-|---|---|---|---|
-| ① 컨텍스트 허브 (MCP 서빙) | **혼잡** | Claude Code 네이티브, Antigravity KB, DeepWiki(무료·400K레포 은행 사례), ByteRover(큐레이션 컨텍스트 트리, $15/mo), SpecStory, Ref.tools(Plans 피벗), Pieces | 차별화 = 팀 저작 스펙/ADR의 **큐레이션·수명주기 관리**(staleness·소유권·리뷰) — 이건 아무도 안 함 |
-| ② 그래프 뷰 (docs↔code↔req) | **무경쟁** | 인접: DeepWiki 다이어그램, Hamster "Context Graph"(문서↔태스크, 코드 제외), OKF 시맨틱 모델 워크스트림(8월 신규) | 단독으론 기능이지 해자 아님. 리드 축의 UI로 활용 |
-| ③ 스킬 레지스트리+분석 | **양분** | 배포·보안: 플랫폼이 점유(Tessl $125M, Snyk, Anthropic 자체) / **분석(충돌·토큰·인벤토리): 공백** (agnix, AgentLinter 등 인디뿐) | 분석 레이어만 공략 |
-| ④ 보증 (스펙-투-프루프) | **공백** | 인접: Kiro(생성 시점 검증), BMAD Loop, Entelligence(PR 리뷰+메트릭), Prelint(기획-코드 드리프트 PR 리뷰, PH 1위) | 최대 기회. Tessl $125M이 WTP 증거 |
-| ⑤ 진행 대시보드 | **격전** | Entelligence Agent Insights, Devin Command Center(Kanban), Charlie Daemons, Amp 멀티플레이어 orbs, Taskmaster/Hamster, Traycer | 단독 승부 비추천. 부수 기능으로 |
+| 축                          | 판정       | 주요 경쟁                                                                                                                                                    | 비고                                                                                              |
+| --------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| ① 컨텍스트 허브 (MCP 서빙)  | **혼잡**   | Claude Code 네이티브, Antigravity KB, DeepWiki(무료·400K레포 은행 사례), ByteRover(큐레이션 컨텍스트 트리, $15/mo), SpecStory, Ref.tools(Plans 피벗), Pieces | 차별화 = 팀 저작 스펙/ADR의 **큐레이션·수명주기 관리**(staleness·소유권·리뷰) — 이건 아무도 안 함 |
+| ② 그래프 뷰 (docs↔code↔req) | **무경쟁** | 인접: DeepWiki 다이어그램, Hamster "Context Graph"(문서↔태스크, 코드 제외), OKF 시맨틱 모델 워크스트림(8월 신규)                                             | 단독으론 기능이지 해자 아님. 리드 축의 UI로 활용                                                  |
+| ③ 스킬 레지스트리+분석      | **양분**   | 배포·보안: 플랫폼이 점유(Tessl $125M, Snyk, Anthropic 자체) / **분석(충돌·토큰·인벤토리): 공백** (agnix, AgentLinter 등 인디뿐)                              | 분석 레이어만 공략                                                                                |
+| ④ 보증 (스펙-투-프루프)     | **공백**   | 인접: Kiro(생성 시점 검증), BMAD Loop, Entelligence(PR 리뷰+메트릭), Prelint(기획-코드 드리프트 PR 리뷰, PH 1위)                                             | 최대 기회. Tessl $125M이 WTP 증거                                                                 |
+| ⑤ 진행 대시보드             | **격전**   | Entelligence Agent Insights, Devin Command Center(Kanban), Charlie Daemons, Amp 멀티플레이어 orbs, Taskmaster/Hamster, Traycer                               | 단독 승부 비추천. 부수 기능으로                                                                   |
 
 ### 신규 등장 경쟁자 (7/28 이후 확인)
+
 - **Alignbase** — 회사 단위 AGENTS.md 관리 SaaS (축① 직접 경쟁)
 - **Reporails** — 에이전트 지시문 진단 (축③ 분석)
 - **Prelint** — 기획-코드 드리프트 PR 리뷰, Product Hunt 1위 (축④)
@@ -58,17 +59,18 @@
 
 ## 3. 전제 검증 (P1–P5)
 
-| 전제 | 판정 | 핵심 근거 |
-|---|---|---|
-| P1 고통은 실재 (컨텍스트 손실·지시 무시·토큰 비용·드리프트) | **강한 지지** | SO 2025: 66% "거의 맞지만 틀린 AI"가 최대 불만; CLAUDE.md 무시 카나리아 테스트("Mr Tinkleberry")가 커뮤니티 관행; claude-mem 46K+★; Mintlify 문서 트래픽의 45.3%가 AI 에이전트 |
-| P2 구조화된 문서가 성과 개선 | **혼재 — 최대 리스크** | 반증: ETH 연구(위 1절). 지지: SkillsBench, Anthropic 컨텍스트 관리 evals(토큰 -84%/성능 +39%), Spec Kit 성장. → 설계로 회피 가능하나 **정면 돌파 불가** |
-| P3 시장 규모·성장 | **강한 지지** | Anthropic $47B 런레이트(5월 공식), Claude Code 단독 >$2.5B, Cursor ~$4B 추정, Copilot 유료 470만 |
-| P4 지불의사 | **지지 (팀/엔터프라이즈 편중)** | Tessl $125M, Mem0 $24M, Context7 엔터프라이즈화. **단, 이 카테고리 트랙션 1위 도구는 전부 무료** (claude-mem, Spec Kit, Context7 기본, DeepWiki) — 개인 유료화는 미증명 |
-| P5 플랫폼 흡수·묘지 | **지지 — 최대 전략 위협** | Swimm(문서-코드 동기화 → 메인프레임 피벗), Mutable.ai(→Google 인수 후 종료), CodeSee(→GitKraken 매각). 퍼스트파티 흡수 목록은 1절 4항 |
+| 전제                                                        | 판정                            | 핵심 근거                                                                                                                                                                      |
+| ----------------------------------------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| P1 고통은 실재 (컨텍스트 손실·지시 무시·토큰 비용·드리프트) | **강한 지지**                   | SO 2025: 66% "거의 맞지만 틀린 AI"가 최대 불만; CLAUDE.md 무시 카나리아 테스트("Mr Tinkleberry")가 커뮤니티 관행; claude-mem 46K+★; Mintlify 문서 트래픽의 45.3%가 AI 에이전트 |
+| P2 구조화된 문서가 성과 개선                                | **혼재 — 최대 리스크**          | 반증: ETH 연구(위 1절). 지지: SkillsBench, Anthropic 컨텍스트 관리 evals(토큰 -84%/성능 +39%), Spec Kit 성장. → 설계로 회피 가능하나 **정면 돌파 불가**                        |
+| P3 시장 규모·성장                                           | **강한 지지**                   | Anthropic $47B 런레이트(5월 공식), Claude Code 단독 >$2.5B, Cursor ~$4B 추정, Copilot 유료 470만                                                                               |
+| P4 지불의사                                                 | **지지 (팀/엔터프라이즈 편중)** | Tessl $125M, Mem0 $24M, Context7 엔터프라이즈화. **단, 이 카테고리 트랙션 1위 도구는 전부 무료** (claude-mem, Spec Kit, Context7 기본, DeepWiki) — 개인 유료화는 미증명        |
+| P5 플랫폼 흡수·묘지                                         | **지지 — 최대 전략 위협**       | Swimm(문서-코드 동기화 → 메인프레임 피벗), Mutable.ai(→Google 인수 후 종료), CodeSee(→GitKraken 매각). 퍼스트파티 흡수 목록은 1절 4항                                          |
 
 ### 5대 리스크와 저비용 실험 (검증 에이전트 제안 요약)
+
 1. **R1 코어 메커니즘 (ETH)**: 비공개 레포 3곳에서 미니 AGENTbench 재현 — 큐레이션 컨텍스트 유/무로 15–20개 실작업 성공률+토큰 측정 (~1주)
-2. **R2 퍼스트파티 흡수**: 자동 메모리 출시 *이후* claude-mem 설치한 헤비유저 15명 인터뷰 — 네이티브가 못 하는 것이 크로스툴·팀 공유·거버넌스로 수렴하는지 확인
+2. **R2 퍼스트파티 흡수**: 자동 메모리 출시 _이후_ claude-mem 설치한 헤비유저 15명 인터뷰 — 네이티브가 못 하는 것이 크로스툴·팀 공유·거버넌스로 수렴하는지 확인
 3. **R3 무료 중력**: 팀 대상 fake-door 가격 테스트 ("에이전트 3종 횡단 드리프트 검증 $X/seat") — 광고비 <$500, 2주
 4. **R4 제품 형태 (외투 속 4개 제품)**: **보증 1개 결과만 컨시어지 판매** — CI 게이트 "머지된 코드가 스펙/문서와 어긋나면 플래그", 3팀 수동 파일럿 4주, 2팀 잔존+1팀 지불의사면 통과
 5. **R5 ROI 입증 불가**: 파일럿 첫날부터 측정 내장 — 작업당 토큰, 재생성 횟수, 지시 준수 카나리아의 전후 대시보드
@@ -88,19 +90,20 @@
 
 ## 5. 표준 채택 지침 (빌드 시 준수)
 
-| 기반 | 상태 | 지침 |
-|---|---|---|
-| SKILL.md + `.agents/skills/` | 안전 | 스킬 매니저 기질. `skills-ref`로 검증 |
-| Agent Plugins 1.0 (8/6) | 신규·유력 | 배포 컨테이너로 채택 (Codex/ChatGPT/VS Code/Copilot/Cursor 도달) |
-| MCP 2026-07-28 | 안전 (이행기) | stateless 코어로 신규 구축. Sampling/Roots/Logging 사용 금지. `ttlMs` 캐시 리스트 활용. **SEP-2640(Skills over MCP)** 추적 — 병합 시 컨텍스트 서버+스킬 배포가 단일 채널로 |
-| AGENTS.md | 매우 안전 (동결) | 정본 산출물. Claude Code용 `@AGENTS.md` 래퍼 자동 생성 필수 |
-| 증거 영수증 | 공백 = 기회 | in-toto(runtime-trace/scai) + Sigstore + OTel GenAI + **Agent Trace 브리지**. MCP SEP-3004/2809/3140 참여 고려 |
-| llms.txt | 부정 평결 | 전략 아님. 코딩 에이전트용 저가 익스포트로만 |
-| OKF | 변동 | 임포트/익스포트만, 내부 모델 비결합 |
+| 기반                         | 상태             | 지침                                                                                                                                                                       |
+| ---------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SKILL.md + `.agents/skills/` | 안전             | 스킬 매니저 기질. `skills-ref`로 검증                                                                                                                                      |
+| Agent Plugins 1.0 (8/6)      | 신규·유력        | 배포 컨테이너로 채택 (Codex/ChatGPT/VS Code/Copilot/Cursor 도달)                                                                                                           |
+| MCP 2026-07-28               | 안전 (이행기)    | stateless 코어로 신규 구축. Sampling/Roots/Logging 사용 금지. `ttlMs` 캐시 리스트 활용. **SEP-2640(Skills over MCP)** 추적 — 병합 시 컨텍스트 서버+스킬 배포가 단일 채널로 |
+| AGENTS.md                    | 매우 안전 (동결) | 정본 산출물. Claude Code용 `@AGENTS.md` 래퍼 자동 생성 필수                                                                                                                |
+| 증거 영수증                  | 공백 = 기회      | in-toto(runtime-trace/scai) + Sigstore + OTel GenAI + **Agent Trace 브리지**. MCP SEP-3004/2809/3140 참여 고려                                                             |
+| llms.txt                     | 부정 평결        | 전략 아님. 코딩 에이전트용 저가 익스포트로만                                                                                                                               |
+| OKF                          | 변동             | 임포트/익스포트만, 내부 모델 비결합                                                                                                                                        |
 
 ---
 
 ## 6. 미검증·주의 항목 (외부 인용 금지)
+
 - Cursor-SpaceX 딜, "Claude Code $8B/점유율 54%", *Kahn v. Anthropic* 소송, "$285B Cowork 셀오프" — 전부 2차/애그리게이터 출처
 - Stenography/Denigma 종료 여부, SpecStory 라운드 규모, Replit 현재 ARR
 - Cursor Memories 제거의 1차 출처 확인, CodeGraph 스타 수(출처 간 32k–47k 상충)
@@ -108,4 +111,5 @@
 - DORA 2026·SO 2026 결과는 가을 발표 — 그때 재확인
 
 ## 7. 부분 완료
+
 - AI 코드리뷰 도구 세부(Baz 가격, Cubic/Recurse ML 펀딩, Greptile 최신) — 에이전트 세션 한도로 중단. 단 CodeRabbit($24)·Greptile($30)·Qodo($30)·Graphite($20–40) 가격은 가격 조사에서 확보됨.

@@ -6,7 +6,9 @@ import { redirect } from "next/navigation";
 import { getCurrentUserId } from "../../../lib/auth/current-user";
 import { createClient } from "../../../lib/supabase/server";
 
-export async function setPilotInstrumentation(formData: FormData): Promise<void> {
+export async function setPilotInstrumentation(
+  formData: FormData,
+): Promise<void> {
   const userId = await getCurrentUserId();
   if (!userId) redirect("/auth/login");
 

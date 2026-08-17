@@ -134,7 +134,8 @@ async function main(): Promise<void> {
     taskIds: listOption("tasks"),
   };
   const basename =
-    option("output-basename") ?? (dryRun ? "results.v3.dry-run" : "results.v3.real");
+    option("output-basename") ??
+    (dryRun ? "results.v3.dry-run" : "results.v3.real");
 
   const report = await runBenchmark({
     concurrency: concurrencyValue,

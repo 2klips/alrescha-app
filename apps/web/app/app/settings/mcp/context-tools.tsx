@@ -7,10 +7,7 @@ import {
   createMinimalIndexProposal,
   requestContextPackPreview,
 } from "./actions";
-import type {
-  ContextPackActionState,
-  IndexProposalActionState,
-} from "./state";
+import type { ContextPackActionState, IndexProposalActionState } from "./state";
 
 export function ContextTools({
   initialContextState,
@@ -37,7 +34,9 @@ export function ContextTools({
         <div className="eyebrow">{SETTINGS.mcp.contextPack.eyebrow}</div>
         <h2 id="context-pack-title">{SETTINGS.mcp.contextPack.title}</h2>
         <form action={contextAction} className="mcp-token-form">
-          <label htmlFor="context-task">{SETTINGS.mcp.contextPack.taskLabel}</label>
+          <label htmlFor="context-task">
+            {SETTINGS.mcp.contextPack.taskLabel}
+          </label>
           <textarea
             id="context-task"
             maxLength={1_000}
@@ -50,10 +49,18 @@ export function ContextTools({
             <label>
               {SETTINGS.mcp.contextPack.targetAgentLabel}
               <select defaultValue="codex" name="targetAgent">
-                <option value="codex">{SETTINGS.mcp.contextPack.agents.codex}</option>
-                <option value="claude-code">{SETTINGS.mcp.contextPack.agents.claudeCode}</option>
-                <option value="cursor">{SETTINGS.mcp.contextPack.agents.cursor}</option>
-                <option value="generic">{SETTINGS.mcp.contextPack.agents.generic}</option>
+                <option value="codex">
+                  {SETTINGS.mcp.contextPack.agents.codex}
+                </option>
+                <option value="claude-code">
+                  {SETTINGS.mcp.contextPack.agents.claudeCode}
+                </option>
+                <option value="cursor">
+                  {SETTINGS.mcp.contextPack.agents.cursor}
+                </option>
+                <option value="generic">
+                  {SETTINGS.mcp.contextPack.agents.generic}
+                </option>
               </select>
             </label>
             <label>
@@ -68,7 +75,9 @@ export function ContextTools({
             </label>
           </div>
           <button className="button" disabled={contextPending} type="submit">
-            {contextPending ? SETTINGS.mcp.contextPack.composing : SETTINGS.mcp.contextPack.compose}
+            {contextPending
+              ? SETTINGS.mcp.contextPack.composing
+              : SETTINGS.mcp.contextPack.compose}
           </button>
         </form>
         {contextState.error ? (
@@ -80,7 +89,9 @@ export function ContextTools({
           <div className="context-pack-result" role="status">
             <div className="context-result-meta">
               <strong>
-                {SETTINGS.mcp.contextPack.estimatedTokens(contextState.pack.estimatedTokens)}
+                {SETTINGS.mcp.contextPack.estimatedTokens(
+                  contextState.pack.estimatedTokens,
+                )}
               </strong>
               <span>{contextState.pack.targetAgent}</span>
             </div>
@@ -97,7 +108,9 @@ export function ContextTools({
             {contextState.pack.omitted.length > 0 ? (
               <details>
                 <summary>
-                  {SETTINGS.mcp.contextPack.omissions(contextState.pack.omitted.length)}
+                  {SETTINGS.mcp.contextPack.omissions(
+                    contextState.pack.omitted.length,
+                  )}
                 </summary>
                 <ol>
                   {contextState.pack.omitted.map((entry) => (
@@ -131,7 +144,9 @@ export function ContextTools({
         </p>
         <form action={proposalAction}>
           <button className="button" disabled={proposalPending} type="submit">
-            {proposalPending ? SETTINGS.mcp.minimalIndex.preparing : SETTINGS.mcp.minimalIndex.create}
+            {proposalPending
+              ? SETTINGS.mcp.minimalIndex.preparing
+              : SETTINGS.mcp.minimalIndex.create}
           </button>
         </form>
         {proposalState.error ? (
@@ -153,10 +168,13 @@ export function ContextTools({
         {proposalState.status === "permission_required" ? (
           <div className="permission-fallback" role="status">
             <strong>
-              {SETTINGS.mcp.minimalIndex.permissionRequired(proposalState.missingPermission ?? "")}
+              {SETTINGS.mcp.minimalIndex.permissionRequired(
+                proposalState.missingPermission ?? "",
+              )}
             </strong>
             <p>{SETTINGS.mcp.minimalIndex.permissionPausedBody}</p>
-            {proposalState.missingPermission === SETTINGS.mcp.minimalIndex.prWritePermission ? (
+            {proposalState.missingPermission ===
+            SETTINGS.mcp.minimalIndex.prWritePermission ? (
               <a className="secondary-button" href="/app/connect/github">
                 {SETTINGS.mcp.minimalIndex.grantPrPermission}
               </a>
@@ -175,7 +193,10 @@ export function ContextTools({
                 <div className="diff-columns">
                   <div>
                     <span>{SETTINGS.mcp.minimalIndex.current}</span>
-                    <pre>{file.before ?? SETTINGS.mcp.minimalIndex.newFilePlaceholder}</pre>
+                    <pre>
+                      {file.before ??
+                        SETTINGS.mcp.minimalIndex.newFilePlaceholder}
+                    </pre>
                   </div>
                   <div>
                     <span>{SETTINGS.mcp.minimalIndex.proposed}</span>

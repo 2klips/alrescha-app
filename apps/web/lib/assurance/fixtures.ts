@@ -34,12 +34,31 @@ export interface FindingFixture {
 
 export const FINDINGS: readonly FindingFixture[] = [
   {
-    action: "Publish a Vitest or JUnit report for the analyzed commit and map the test case to REQ-CI-04.",
+    action:
+      "Publish a Vitest or JUnit report for the analyzed commit and map the test case to REQ-CI-04.",
     confidence: 0.96,
     evidence: [
-      { grade: "verified", id: "ev-doc-ci", label: "REQ-CI-04", relation: "declared by", source: "spec/WORK_SPEC.md:203-208" },
-      { grade: "inferred", id: "ev-code-ci", label: "ingestCiTestReports", relation: "implemented by", source: "packages/core/src/evidence/ci-reports.ts:371-492" },
-      { grade: "broken", id: "ev-test-ci", label: "No same-commit CI report", relation: "tested by", source: "bad0551 · GitHub Checks" },
+      {
+        grade: "verified",
+        id: "ev-doc-ci",
+        label: "REQ-CI-04",
+        relation: "declared by",
+        source: "spec/WORK_SPEC.md:203-208",
+      },
+      {
+        grade: "inferred",
+        id: "ev-code-ci",
+        label: "ingestCiTestReports",
+        relation: "implemented by",
+        source: "packages/core/src/evidence/ci-reports.ts:371-492",
+      },
+      {
+        grade: "broken",
+        id: "ev-test-ci",
+        label: "No same-commit CI report",
+        relation: "tested by",
+        source: "bad0551 · GitHub Checks",
+      },
     ],
     grade: "inferred",
     id: "finding-missing-ci",
@@ -50,12 +69,31 @@ export const FINDINGS: readonly FindingFixture[] = [
     title: "CI evidence is missing for one active requirement",
   },
   {
-    action: "Keep the root AGENTS.md rule and remove the conflicting nested instruction.",
+    action:
+      "Keep the root AGENTS.md rule and remove the conflicting nested instruction.",
     confidence: 0.88,
     evidence: [
-      { grade: "verified", id: "ev-root-rule", label: "Root instruction", relation: "contradicts", source: "AGENTS.md:18-20" },
-      { grade: "verified", id: "ev-nested-rule", label: "Nested instruction", relation: "contradicts", source: "apps/web/AGENTS.md:7-9" },
-      { grade: "inferred", id: "ev-lint-judge", label: "Semantic overlap candidate", relation: "classified by", source: "deterministic instruction lint" },
+      {
+        grade: "verified",
+        id: "ev-root-rule",
+        label: "Root instruction",
+        relation: "contradicts",
+        source: "AGENTS.md:18-20",
+      },
+      {
+        grade: "verified",
+        id: "ev-nested-rule",
+        label: "Nested instruction",
+        relation: "contradicts",
+        source: "apps/web/AGENTS.md:7-9",
+      },
+      {
+        grade: "inferred",
+        id: "ev-lint-judge",
+        label: "Semantic overlap candidate",
+        relation: "classified by",
+        source: "deterministic instruction lint",
+      },
     ],
     grade: "inferred",
     id: "finding-contradiction",
@@ -66,26 +104,56 @@ export const FINDINGS: readonly FindingFixture[] = [
     title: "Nested agent rule conflicts with repository policy",
   },
   {
-    action: "Update the scanner count in IMPLEMENTATION_GUIDE.md or remove the fixed count.",
+    action:
+      "Update the scanner count in IMPLEMENTATION_GUIDE.md or remove the fixed count.",
     confidence: 1,
     evidence: [
-      { grade: "verified", id: "ev-old-digest", label: "Document digest", relation: "describes", source: "spec/IMPLEMENTATION_GUIDE.md:94" },
-      { grade: "verified", id: "ev-new-tree", label: "Current tree digest", relation: "supersedes", source: "bad0551 repository tree" },
+      {
+        grade: "verified",
+        id: "ev-old-digest",
+        label: "Document digest",
+        relation: "describes",
+        source: "spec/IMPLEMENTATION_GUIDE.md:94",
+      },
+      {
+        grade: "verified",
+        id: "ev-new-tree",
+        label: "Current tree digest",
+        relation: "supersedes",
+        source: "bad0551 repository tree",
+      },
     ],
     grade: "verified",
     id: "finding-stale-guide",
     kind: "stale-doc",
     receiptId: "receipt-previous",
     severity: "medium",
-    source: { endLine: 96, path: "spec/IMPLEMENTATION_GUIDE.md", startLine: 92 },
+    source: {
+      endLine: 96,
+      path: "spec/IMPLEMENTATION_GUIDE.md",
+      startLine: 92,
+    },
     title: "Implementation guide references an older artifact count",
   },
   {
-    action: "Link ADR-002 to an active requirement or mark the decision superseded.",
+    action:
+      "Link ADR-002 to an active requirement or mark the decision superseded.",
     confidence: 0.73,
     evidence: [
-      { grade: "verified", id: "ev-adr", label: "ADR-002", relation: "indexed as", source: "spec/decisions/ADR-002.md" },
-      { grade: "inferred", id: "ev-orphan", label: "No inbound requirement edge", relation: "not referenced by", source: "latest graph index" },
+      {
+        grade: "verified",
+        id: "ev-adr",
+        label: "ADR-002",
+        relation: "indexed as",
+        source: "spec/decisions/ADR-002.md",
+      },
+      {
+        grade: "inferred",
+        id: "ev-orphan",
+        label: "No inbound requirement edge",
+        relation: "not referenced by",
+        source: "latest graph index",
+      },
     ],
     grade: "inferred",
     id: "finding-orphan-adr",
@@ -103,8 +171,12 @@ export function filterFindings(
 ): FindingFixture[] {
   return findings.filter(
     (finding) =>
-      (!filters.kind || filters.kind === "all" || finding.kind === filters.kind) &&
-      (!filters.severity || filters.severity === "all" || finding.severity === filters.severity),
+      (!filters.kind ||
+        filters.kind === "all" ||
+        finding.kind === filters.kind) &&
+      (!filters.severity ||
+        filters.severity === "all" ||
+        finding.severity === filters.severity),
   );
 }
 
@@ -189,19 +261,42 @@ export const INSTRUCTION_COSTS = [
   { agents: "Codex · Claude", findings: 1, path: "AGENTS.md", tokens: 712 },
   { agents: "Codex", findings: 1, path: "apps/web/AGENTS.md", tokens: 438 },
   { agents: "Claude", findings: 0, path: "CLAUDE.md", tokens: 11 },
-  { agents: "Cursor", findings: 0, path: ".cursor/rules/evidence.mdc", tokens: 679 },
+  {
+    agents: "Cursor",
+    findings: 0,
+    path: ".cursor/rules/evidence.mdc",
+    tokens: 679,
+  },
 ] as const;
 
 export const OVERLAPS = [
-  { left: "AGENTS.md:18-28", overlap: "Acceptance test and commit rules", right: "apps/web/AGENTS.md:4-11", tokens: 96 },
-  { left: "AGENTS.md:43-49", overlap: "Metadata-only storage boundary", right: ".cursor/rules/evidence.mdc:12-19", tokens: 73 },
+  {
+    left: "AGENTS.md:18-28",
+    overlap: "Acceptance test and commit rules",
+    right: "apps/web/AGENTS.md:4-11",
+    tokens: 96,
+  },
+  {
+    left: "AGENTS.md:43-49",
+    overlap: "Metadata-only storage boundary",
+    right: ".cursor/rules/evidence.mdc:12-19",
+    tokens: 73,
+  },
 ] as const;
 
 export const CONTRADICTIONS = [
   {
     confidence: 0.88,
-    left: { path: "AGENTS.md", quote: "Run acceptance tests before marking a task complete.", span: "18-20" },
-    right: { path: "apps/web/AGENTS.md", quote: "UI changes may be committed before browser checks.", span: "7-9" },
+    left: {
+      path: "AGENTS.md",
+      quote: "Run acceptance tests before marking a task complete.",
+      span: "18-20",
+    },
+    right: {
+      path: "apps/web/AGENTS.md",
+      quote: "UI changes may be committed before browser checks.",
+      span: "7-9",
+    },
   },
 ] as const;
 
@@ -230,7 +325,8 @@ export interface ReceiptFixture {
 export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-10T13:42:00.000Z",
-    expectedDigest: "e039d2e653fce7e4891eed208875fedd07daec8c203419e1ce2617f85ab3d784",
+    expectedDigest:
+      "e039d2e653fce7e4891eed208875fedd07daec8c203419e1ce2617f85ab3d784",
     id: "receipt-current",
     label: "bad0551 · deterministic analysis",
     stale: false,
@@ -238,18 +334,23 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   },
   {
     createdAt: "2026-08-09T17:08:00.000Z",
-    expectedDigest: "e039d2e653fce7e4891eed208875fedd07daec8c203419e1ce2617f85ab3d784",
+    expectedDigest:
+      "e039d2e653fce7e4891eed208875fedd07daec8c203419e1ce2617f85ab3d784",
     id: "receipt-tampered",
     label: "bad0551 · tampered fixture",
     stale: false,
     statement: {
       ...CURRENT_STATEMENT,
-      predicate: { ...CURRENT_STATEMENT.predicate, evidence: { inferred: 9, verified: 3 } },
+      predicate: {
+        ...CURRENT_STATEMENT.predicate,
+        evidence: { inferred: 9, verified: 3 },
+      },
     },
   },
   {
     createdAt: "2026-08-08T09:12:00.000Z",
-    expectedDigest: "40bc6190015cf895dff4094d119426516aa72fa6e426c40d825d0a438587db57",
+    expectedDigest:
+      "40bc6190015cf895dff4094d119426516aa72fa6e426c40d825d0a438587db57",
     id: "receipt-previous",
     label: "e9101b5 · previous analysis",
     stale: true,

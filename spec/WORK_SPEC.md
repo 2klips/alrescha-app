@@ -60,18 +60,19 @@ Spec(기획·명세) → Proof(증명). 바이브 코딩 시대의 핵심 불안
 
 SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Data Brain**이다. 가능한 모든 용법을 조합해 "이 프로젝트만을 위한 가장 효율적인 DB"를 만든다:
 
-| 레이어 | 내용 | 성격 |
-|---|---|---|
-| ① 증거 그래프 DB | 아티팩트·요구사항·증거·엣지의 구조화 저장 (§7) | 결정론, provenance 필수 |
-| ② LLM Wiki | 문서 간 상호링크·백링크 그래프 + 문서별 `inferred` AI 요약·관련문서 캐시. **주문형 서빙 전용** — 정적 파일에 절대 인라인하지 않음 | 링크는 결정론, 요약은 `inferred` |
-| ③ Data Index | 제목·경로·헤딩·태그·심볼·그래프 이웃 기반 결정론 검색 색인 (§8-6) | 결정론, 크레딧 0 |
-| ④ 주문형 서빙 | MCP `search_index`/`get_artifact`/컨텍스트 팩 — 작업에 필요한 만큼만 (§11–12) | ETH 정합 |
+| 레이어           | 내용                                                                                                                              | 성격                             |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| ① 증거 그래프 DB | 아티팩트·요구사항·증거·엣지의 구조화 저장 (§7)                                                                                    | 결정론, provenance 필수          |
+| ② LLM Wiki       | 문서 간 상호링크·백링크 그래프 + 문서별 `inferred` AI 요약·관련문서 캐시. **주문형 서빙 전용** — 정적 파일에 절대 인라인하지 않음 | 링크는 결정론, 요약은 `inferred` |
+| ③ Data Index     | 제목·경로·헤딩·태그·심볼·그래프 이웃 기반 결정론 검색 색인 (§8-6)                                                                 | 결정론, 크레딧 0                 |
+| ④ 주문형 서빙    | MCP `search_index`/`get_artifact`/컨텍스트 팩 — 작업에 필요한 만큼만 (§11–12)                                                     | ETH 정합                         |
 
 **Data Brain의 존재 이유는 단 하나다: 같은 작업을 더 정확하게, 더 적은 토큰으로.** 이 주장은 구호가 아니라 §17.1의 효율 벤치마크로 실측·증명한다. 벤치마크가 증명하지 못하면 Data Brain 구성을 바꾼다 — 주장을 바꾸는 게 아니라.
 
 ### 1.5 왜 이 순서인가 (시장 근거 요약)
 
 2026-08-09 시장 조사([RESEARCH_UPDATE_2026-08-09.md](RESEARCH_UPDATE_2026-08-09.md)) 결론:
+
 - 조사한 21개 경쟁 제품 중 **requirement→구현→테스트를 커밋 단위로 추적하는 제품은 없음** (보증 = 최대 공백). Tessl $125M 펀딩이 이 방향 지불의사 증거.
 - 반면 컨텍스트 허브는 Claude Code 네이티브 메모리·Google Antigravity·DeepWiki와 정면 경쟁 (혼잡).
 - ETH 취리히 연구(arXiv 2602.11988): 정적 컨텍스트 파일은 성공률 개선 없이 비용 +20% → **항상-로드 문서 생성은 금지**, 주문형 로드만 허용.
@@ -83,11 +84,11 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
 
 전문은 [DECISIONS-ADR.md](DECISIONS-ADR.md). 구현자는 아래 요약만으로도 방향을 잃지 않아야 한다.
 
-| ADR | 결정 | 구현에 미치는 영향 |
-|---|---|---|
-| ADR-001 (2026-07-28) | 증거 그래프 중심 통합 정의. AI 추론은 `inferred`, 실행 증거만 `verified`. 모든 영수증은 commit·digest와 연결. Git-native. | 데이터 모델의 provenance 필수 제약, 판정 규칙의 증거 등급 |
-| ADR-002 (2026-08-09) | ① 주문형 로드 코어 (정적 파일은 최소 인덱스만) ② 보증 리드 MVP ③ $20 앵커 가격 ④ 표준: MCP 2026-07-28 stateless·SKILL.md·Agent Plugins 1.0·in-toto형 영수증 | MCP 서버 스펙 선택, 인덱스 파일 설계, 기능 우선순위 |
-| ADR-003 (2026-08-09) | 전달 형태 = **GitHub-우선 웹 SaaS**: GitHub App(읽기 전용) + 서버 분석 + 웹 대시보드 + 호스티드 MCP. 로컬 CLI는 2단계. 테스트 증거는 사용자 CI 리포트 수집. 레포 쓰기는 advisory-only(PR 제안). 솔로 워크스페이스만. | 전체 아키텍처 형태, 권한 설계, 쓰기 경로 단일화 |
+| ADR                  | 결정                                                                                                                                                                                                                 | 구현에 미치는 영향                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| ADR-001 (2026-07-28) | 증거 그래프 중심 통합 정의. AI 추론은 `inferred`, 실행 증거만 `verified`. 모든 영수증은 commit·digest와 연결. Git-native.                                                                                            | 데이터 모델의 provenance 필수 제약, 판정 규칙의 증거 등급 |
+| ADR-002 (2026-08-09) | ① 주문형 로드 코어 (정적 파일은 최소 인덱스만) ② 보증 리드 MVP ③ $20 앵커 가격 ④ 표준: MCP 2026-07-28 stateless·SKILL.md·Agent Plugins 1.0·in-toto형 영수증                                                          | MCP 서버 스펙 선택, 인덱스 파일 설계, 기능 우선순위       |
+| ADR-003 (2026-08-09) | 전달 형태 = **GitHub-우선 웹 SaaS**: GitHub App(읽기 전용) + 서버 분석 + 웹 대시보드 + 호스티드 MCP. 로컬 CLI는 2단계. 테스트 증거는 사용자 CI 리포트 수집. 레포 쓰기는 advisory-only(PR 제안). 솔로 워크스페이스만. | 전체 아키텍처 형태, 권한 설계, 쓰기 경로 단일화           |
 
 ---
 
@@ -195,9 +196,10 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
 #### ③ 하네스 대시보드 (`/harness`) — 인벤토리 + 린트 통합 (ADR-006)
 
 **상단: 인벤토리** — 이 프로젝트에서 발견된 하네스 자산을 "무엇이 있고 어디에 활성인가"로 표시.
+
 - 그룹: Skills(SKILL.md) / Rules·지시문(AGENTS.md·CLAUDE.md·.claude/rules·.cursor/rules) / Plugins·MCP 설정(발견된 설정 파일 기준).
 - 각 행: 이름·경로·어느 에이전트가 로드하는지(Claude Code/Codex/Cursor 로딩 규칙 기반)·상시 로드 여부·토큰 비용·연결된 발견(모순 등)·"라이브러리에 저장" 버튼(→⑨).
-**하단: 린트** —
+  **하단: 린트** —
 - 표1 상시 로드 비용: 파일별 토큰 수 + 로드 주체 + 합계. 헤더에 토크나이저 가정 명시.
 - 표2 모순 후보: 두 지시문 발췌(양쪽 span 필수) + 모순 사유 + AI 확정 버튼.
 - 표3 중복/겹침: 동일 내용이 여러 파일에 있는 경우.
@@ -205,6 +207,7 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
 #### ④ 증거 그래프 상세 (`/graph`) — 목업: `screens/graph.html`
 
 메인 대시보드(①)가 그래프 전면 뷰를 담당하므로, 이 화면은 **분석용 상세 뷰**다: 특정 요구사항/발견을 중심으로 한 로컬 그래프(깊이 2) + provenance 검사.
+
 - 노드 유형: 요구사항(사각)·문서(둥근사각)·코드 영역(육각)·테스트(원). 엣지: 근거 있는 관계만, 호버/선택 시 provenance(스팬·confidence·등급) 표시.
 - 미연결(고아) 문서 토글. 노드 클릭 → 해당 발견/문서로 이동. ①에서 노드 더블클릭 시 이 화면으로 진입.
 
@@ -222,6 +225,7 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
 #### ⑧ 진행 대시보드 (`/progress`) — ADR-006, 경량 원칙
 
 **데이터 소스 두 가지뿐:** ⑴ 레포의 TODO/진행 문서 파싱(태스크 리스트 체크 상태) ⑵ 에이전트의 `log_progress` 구조화 기록. 추가 추론·AI 요약으로 진척을 "지어내지" 않는다.
+
 - **진척율:** 요구사항 커버리지(§5.2-①과 동일 수치) + todo 완료율(체크박스 기준)을 나란히. 출처 명시.
 - **Todo 보드:** TODO.md 등에서 파싱한 항목 + `log_progress`로 생성된 항목. 상태: open / in-progress / done / blocked. 각 항목은 원문 span 또는 기록 이벤트로 링크.
 - **최근 작업 타임라인:** log_progress 이벤트 역순 — "방금 한 작업"이 최상단. 커밋·발견 해소와 시간축 병기.
@@ -269,26 +273,26 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
 
 핵심 테이블 (전부 workspace 스코프 + RLS, ULID PK). 상세 제약은 BUILD_PLAN todo 5.
 
-| 테이블 | 역할 | 핵심 필드/제약 |
-|---|---|---|
-| `workspaces` | 개인 워크스페이스 (팀 확장 대비) | owner_user_id; `members` 테이블 존재하되 MVP UI 없음 |
-| `github_installations` | App 설치 상태 | installation_id, 권한 스냅샷, revoked_at |
-| `repositories` | 연결 레포 | full_name, default_branch, 연결 상태 |
-| `artifacts` | 스캔된 문서·코드 메타데이터 | type(enum: spec/adr/agents_md/claude_md/cursor_rules/skill/todo_progress/code_meta), path, digest, commit_sha, spans; **본문 컬럼 없음**(문서는 발췌 span만, 코드는 심볼 목록만) |
-| `requirements` | 추출된 요구사항 | text 발췌, source_artifact_id + span **NOT NULL**, extraction_method(deterministic/ai), status |
-| `evidence` | 증거 레코드 | kind(impl_path/impl_symbol/test_report), grade(**verified/inferred**), source(커밋 SHA·리포트 ID·프로브 사유) NOT NULL |
-| `edges` | 그래프 엣지 | from/to, relation, confidence, provenance(span or reason) **NOT NULL** |
-| `findings` | 드리프트 발견 | type(6종 enum), severity, confidence, status(open/resolved), evidence 링크들, suggested_action, opened_at_commit, resolved_at_commit |
-| `receipts` | 영수증 | in-toto Statement JSON, commit_sha, digest 목록, verify 상태 |
-| `jobs` | 잡 큐 | type, status, idempotency_key UNIQUE, claim/heartbeat/retry 필드, tenant 스코프 |
-| `credit_ledger` | 크레딧 원장 | event(grant/reserve/settle/refund/topup/adjust), amount, job_id, idempotency_key |
-| `mcp_tokens` | MCP 접근 토큰 | hash 저장, scope, last_used_at, revoked_at |
-| `index_entries` | 데이터 색인 | artifact/requirement 참조, 검색 키(제목·경로·헤딩·태그·심볼), 그래프 이웃 캐시; MVP는 결정론 색인(임베딩 컬럼은 2단계 예약) |
-| `access_events` | 에이전트 조회 이벤트 (발광 소스) | mcp_token_id, tool/resource명, 대상 node_ids[], ts; 실시간 채널로 브로드캐스트, 보존 30일(Free)/무제한(Pro) |
-| `judgments` | AI 판단 기록 | 대상 finding, provider, 입력 요약, 출력 payload(스키마 검증 통과분), 크레딧 정산 링크 |
-| `progress_events` | 에이전트 진행 기록 | MCP log_progress 구조화 저장소 (task·status·summary·refs) — 진행 대시보드 소스 |
-| `todos` | Todo 항목 | 출처(TODO 문서 파싱 span 또는 log_progress), 상태(open/in-progress/done/blocked), 연결 요구사항 |
-| `library_items` | 개인 라이브러리 (워크스페이스 전역) | 유형(skill/rules/지시문), 출처(레포·경로·커밋), 내용 스냅샷, 태그 — MVP는 저장·조회만 |
+| 테이블                 | 역할                                | 핵심 필드/제약                                                                                                                                                                   |
+| ---------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workspaces`           | 개인 워크스페이스 (팀 확장 대비)    | owner_user_id; `members` 테이블 존재하되 MVP UI 없음                                                                                                                             |
+| `github_installations` | App 설치 상태                       | installation_id, 권한 스냅샷, revoked_at                                                                                                                                         |
+| `repositories`         | 연결 레포                           | full_name, default_branch, 연결 상태                                                                                                                                             |
+| `artifacts`            | 스캔된 문서·코드 메타데이터         | type(enum: spec/adr/agents_md/claude_md/cursor_rules/skill/todo_progress/code_meta), path, digest, commit_sha, spans; **본문 컬럼 없음**(문서는 발췌 span만, 코드는 심볼 목록만) |
+| `requirements`         | 추출된 요구사항                     | text 발췌, source_artifact_id + span **NOT NULL**, extraction_method(deterministic/ai), status                                                                                   |
+| `evidence`             | 증거 레코드                         | kind(impl_path/impl_symbol/test_report), grade(**verified/inferred**), source(커밋 SHA·리포트 ID·프로브 사유) NOT NULL                                                           |
+| `edges`                | 그래프 엣지                         | from/to, relation, confidence, provenance(span or reason) **NOT NULL**                                                                                                           |
+| `findings`             | 드리프트 발견                       | type(6종 enum), severity, confidence, status(open/resolved), evidence 링크들, suggested_action, opened_at_commit, resolved_at_commit                                             |
+| `receipts`             | 영수증                              | in-toto Statement JSON, commit_sha, digest 목록, verify 상태                                                                                                                     |
+| `jobs`                 | 잡 큐                               | type, status, idempotency_key UNIQUE, claim/heartbeat/retry 필드, tenant 스코프                                                                                                  |
+| `credit_ledger`        | 크레딧 원장                         | event(grant/reserve/settle/refund/topup/adjust), amount, job_id, idempotency_key                                                                                                 |
+| `mcp_tokens`           | MCP 접근 토큰                       | hash 저장, scope, last_used_at, revoked_at                                                                                                                                       |
+| `index_entries`        | 데이터 색인                         | artifact/requirement 참조, 검색 키(제목·경로·헤딩·태그·심볼), 그래프 이웃 캐시; MVP는 결정론 색인(임베딩 컬럼은 2단계 예약)                                                      |
+| `access_events`        | 에이전트 조회 이벤트 (발광 소스)    | mcp_token_id, tool/resource명, 대상 node_ids[], ts; 실시간 채널로 브로드캐스트, 보존 30일(Free)/무제한(Pro)                                                                      |
+| `judgments`            | AI 판단 기록                        | 대상 finding, provider, 입력 요약, 출력 payload(스키마 검증 통과분), 크레딧 정산 링크                                                                                            |
+| `progress_events`      | 에이전트 진행 기록                  | MCP log_progress 구조화 저장소 (task·status·summary·refs) — 진행 대시보드 소스                                                                                                   |
+| `todos`                | Todo 항목                           | 출처(TODO 문서 파싱 span 또는 log_progress), 상태(open/in-progress/done/blocked), 연결 요구사항                                                                                  |
+| `library_items`        | 개인 라이브러리 (워크스페이스 전역) | 유형(skill/rules/지시문), 출처(레포·경로·커밋), 내용 스냅샷, 태그 — MVP는 저장·조회만                                                                                            |
 
 ---
 
@@ -310,14 +314,14 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
 
 ## 9. 드리프트 발견 6종 판정 규칙
 
-| 유형 | 판정 조건 | 기본 심각도 | 비고 |
-|---|---|---|---|
-| `missing-implementation` | 요구사항에 구현 증거(경로/심볼) 없음 | high (inferred-only면 medium 상한) | 프로브가 못 찾은 것 ≠ 없는 것 — 사유 명시 |
-| `missing-test` | 구현 증거는 있으나 해당 커밋의 테스트 증거 없음 | medium | CI 미연결 레포는 일괄 배너로 안내, 개별 스팸 금지 |
-| `stale-doc` | 문서가 참조하는 경로/심볼이 현재 커밋에 없음 | medium | 문서 span + 소멸된 참조 대상 명시 |
-| `contradicting-instructions` | 두 지시문이 같은 주제에 상충 지시(결정론 휴리스틱: 부정쌍·동일 토픽 MUST 충돌) | medium (AI 확정 시 high 가능) | **양쪽 span 필수**. AI 확정은 판단 잡 |
-| `orphan-doc` | 어떤 요구사항·코드와도 연결되지 않는 스펙류 문서 | low | 지시문·TODO는 제외 |
-| `unproven-claim` | 문서가 "~지원함/~동작함"류 주장을 하는데 증거 없음 | medium | 주장 문장 span 필수 |
+| 유형                         | 판정 조건                                                                      | 기본 심각도                        | 비고                                              |
+| ---------------------------- | ------------------------------------------------------------------------------ | ---------------------------------- | ------------------------------------------------- |
+| `missing-implementation`     | 요구사항에 구현 증거(경로/심볼) 없음                                           | high (inferred-only면 medium 상한) | 프로브가 못 찾은 것 ≠ 없는 것 — 사유 명시         |
+| `missing-test`               | 구현 증거는 있으나 해당 커밋의 테스트 증거 없음                                | medium                             | CI 미연결 레포는 일괄 배너로 안내, 개별 스팸 금지 |
+| `stale-doc`                  | 문서가 참조하는 경로/심볼이 현재 커밋에 없음                                   | medium                             | 문서 span + 소멸된 참조 대상 명시                 |
+| `contradicting-instructions` | 두 지시문이 같은 주제에 상충 지시(결정론 휴리스틱: 부정쌍·동일 토픽 MUST 충돌) | medium (AI 확정 시 high 가능)      | **양쪽 span 필수**. AI 확정은 판단 잡             |
+| `orphan-doc`                 | 어떤 요구사항·코드와도 연결되지 않는 스펙류 문서                               | low                                | 지시문·TODO는 제외                                |
+| `unproven-claim`             | 문서가 "~지원함/~동작함"류 주장을 하는데 증거 없음                             | medium                             | 주장 문장 span 필수                               |
 
 공통: 발견은 같은 span에 중복 생성 금지. 다음 분석에서 조건이 사라지면 `resolved` 전환(삭제 아님 — 이력 보존). 허용 오차 파일(tolerance)은 빈 상태로 시작하며 항목 추가 시 사유 필수.
 
@@ -342,7 +346,7 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
   - `search_index(query, type_filter?)` → 색인 검색 결과(아티팩트·요구사항, 랭킹·경로·발췌). 에이전트가 "데이터를 쉽게 찾는" 1차 진입점.
   - `query_brain(filter)` → 구조화 질의 (ADR-006): 유형·상태·관계 필터로 Data Brain 조회 — 예: "테스트 증거 없는 요구사항 전부", "spec/auth.md와 연결된 코드 영역". 결정론, 색인·그래프 기반.
   - `get_artifact(path | id)` → 단일 아티팩트 내용/발췌 + 그래프 이웃 요약.
-  - `request_context_pack(task_description, token_budget?)` → §12 팩. 
+  - `request_context_pack(task_description, token_budget?)` → §12 팩.
   - `get_findings(filter?)` → 발견 목록(증거 등급 라벨 포함 — MCP 응답에서도 inferred 라벨 생략 금지).
   - `log_progress({task, status, summary, refs?})` → 구조화 작업 기록 (ADR-006 양식): `task`(짧은 제목 또는 기존 todo id), `status`(started|progress|done|blocked), `summary`(≤200자), `refs`(경로/커밋, 선택). **호출당 목표 ≤150 토큰** — 진행 대시보드(§5.2-⑧)의 데이터 소스. 양식은 스킬/최소 인덱스에 "작업 단위 완료 시 1회" 지침으로 포함.
   - `record_note(text, target?)` → 사용자 확인용 노트.
@@ -374,10 +378,13 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
 
 ```markdown
 <!-- SPECPROOF:BEGIN (managed — do not edit inside) -->
+
 ## Project context via SpecProof
+
 - Before coding, call MCP tool `request_context_pack` with your task description.
-- MCP endpoint: https://mcp.specproof.app  (token: see project settings)
+- MCP endpoint: https://mcp.specproof.app (token: see project settings)
 - Findings & receipts: https://2klips.github.io/... (dashboard)
+
 <!-- SPECPROOF:END -->
 ```
 
@@ -401,7 +408,11 @@ in-toto Statement 형태(서명은 Phase 2, `signatures: []`).
   "predicate": {
     "tool": { "name": "specproof", "version": "0.1.0" },
     "analyzedAt": "2026-08-09T12:00:00Z",
-    "findings": { "opened": [/* finding 요약 */], "resolved": [], "open_total": 7 },
+    "findings": {
+      "opened": [/* finding 요약 */],
+      "resolved": [],
+      "open_total": 7
+    },
     "coverage": { "requirements": 24, "implVerified": 11, "testVerified": 6 },
     "evidenceGrades": { "verified": 17, "inferred": 14 }
   },
@@ -427,11 +438,11 @@ in-toto Statement 형태(서명은 Phase 2, `signatures: []`).
 
 MVP는 과금 코드 없이 원장만 구현하되, 제품 카피·플랜 게이트는 아래를 전제로 설계한다 (ADR-002, 시장 조사 4절 근거):
 
-| 플랜 | 가격 | 내용 |
-|---|---|---|
-| Free | $0 | 레포 1개, 크레딧 50/월, 히스토리(영수증·발견 이력) 30일 |
-| Pro | $20/월 | 무제한 레포, 달러 페그 크레딧(공개 단가표·라이브 미터·기본 상한), 무제한 히스토리, 토큰 절감 분석 |
-| Team (2단계) | $35/user 또는 ~$300 플랫 | 풀 크레딧, 공유 그래프·드리프트 대시보드, 스킬 라이브러리, SSO는 애드온 |
+| 플랜         | 가격                     | 내용                                                                                              |
+| ------------ | ------------------------ | ------------------------------------------------------------------------------------------------- |
+| Free         | $0                       | 레포 1개, 크레딧 50/월, 히스토리(영수증·발견 이력) 30일                                           |
+| Pro          | $20/월                   | 무제한 레포, 달러 페그 크레딧(공개 단가표·라이브 미터·기본 상한), 무제한 히스토리, 토큰 절감 분석 |
+| Team (2단계) | $35/user 또는 ~$300 플랫 | 풀 크레딧, 공유 그래프·드리프트 대시보드, 스킬 라이브러리, SSO는 애드온                           |
 
 원칙: 실패 실행 무과금, 요금제 의미 중도 변경 시 기존 구독자 grandfathering, 추상 이중 단위 금지.
 
@@ -456,6 +467,7 @@ MVP는 과금 코드 없이 원장만 구현하되, 제품 카피·플랜 게이
 **목적:** "SpecProof를 쓰면 같은 작업의 정확도가 올라가고 토큰이 줄어든다"를 실측으로 증명한다. 시장 조사 R1 리스크(ETH 연구: 정적 컨텍스트는 무효과+비용 증가)에 대한 직접 응답이자, "측정 없는 숫자 주장 금지" 가드레일(§3-8)의 실행 수단.
 
 **프로토콜 (A/B, 사전 등록):**
+
 - **과제 세트:** 최소 12개 과제 × 3회 반복. 픽스처 레포(drifted-demo) + 실제 규모 레포 1개 이상. 과제 유형 3종 — ⑴ 기능 구현("R-07 비밀번호 재설정 구현") ⑵ 질의 응답("이 프로젝트의 인증 방식과 그 근거는?") ⑶ 문서 정합 판단("이 커밋이 스펙과 어긋난 부분은?"). 각 과제는 **객관 채점 기준**을 사전 정의: 구현→기존 테스트 통과 여부, 질의→정답 매니페스트 채점, 판단→기대 발견 매니페스트 대조.
 - **A군 (베이스라인):** 동일 모델·동일 프롬프트의 에이전트가 레포 체크아웃만으로 수행 (필요시 자체 탐색). 보조 비교군 A′: 문서 전체를 컨텍스트에 덤프(naive full-dump).
 - **B군 (SpecProof):** 동일 에이전트가 Data Brain(MCP `search_index`/`get_artifact`/컨텍스트 팩)을 사용해 수행.
@@ -468,7 +480,7 @@ MVP는 과금 코드 없이 원장만 구현하되, 제품 카피·플랜 게이
 
 - **Data Brain:** SpecProof가 레포마다 구축하는 프로젝트 전용 지식 DB — 증거 그래프 DB + LLM Wiki(상호링크·`inferred` 요약) + Data Index + 주문형 서빙의 결합 (§1.6). 존재 이유는 "같은 작업을 더 정확하게, 더 적은 토큰으로"이며 §17.1 벤치마크로 증명한다.
 - **드리프트(drift):** 기획 문서와 실제 코드/테스트 상태의 불일치.
-- **증거 등급:** `verified`(분석 커밋의 실행 증거로 확인) / `inferred`(추론·간접 근거). 
+- **증거 등급:** `verified`(분석 커밋의 실행 증거로 확인) / `inferred`(추론·간접 근거).
 - **영수증(receipt):** 커밋 시점 분석 결과의 변조 감지 가능 기록 (in-toto Statement).
 - **컨텍스트 팩:** 특정 작업을 위해 선별된 문서 묶음 + 읽기 순서 + 제외 사유.
 - **최소 인덱스:** AGENTS.md 안의 ≤30줄 SpecProof 관리 섹션. 유일하게 허용되는 정적 컨텍스트.

@@ -39,7 +39,8 @@ function output(
 describe("prompt coaching (todo 11)", () => {
   it("enforces the output schema contract: six axes 0-2, inferred label, max 3 suggestions", () => {
     expect(
-      promptCoachingOutputSchema.safeParse(output({ verifiability: 2 })).success,
+      promptCoachingOutputSchema.safeParse(output({ verifiability: 2 }))
+        .success,
     ).toBe(true);
     // Wrong grade, out-of-range axis, extra field, too many suggestions — all rejected.
     for (const invalid of [

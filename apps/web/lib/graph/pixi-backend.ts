@@ -23,7 +23,11 @@ import {
 } from "pixi.js";
 
 import { recordContextLoss, type GraphBackend } from "./engine";
-import { resolveColor, type GraphPalette, type RenderFrame } from "./render-frame";
+import {
+  resolveColor,
+  type GraphPalette,
+  type RenderFrame,
+} from "./render-frame";
 
 export interface PixiBackendOptions {
   canvas: HTMLCanvasElement;

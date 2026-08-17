@@ -85,7 +85,10 @@ describe("local ingest route handlers", () => {
   it("rejects an unknown token", async () => {
     const { store } = fakeStore();
     const response = await handleLocalIngestUpload(
-      postRequest({ plan: EMPTY_PLAN, repositoryFullName: "local/demo" }, "wrong"),
+      postRequest(
+        { plan: EMPTY_PLAN, repositoryFullName: "local/demo" },
+        "wrong",
+      ),
       store,
     );
     expect(response.status).toBe(401);
@@ -136,7 +139,11 @@ describe("local ingest route handlers", () => {
   it.each([
     [
       "a top-level body field",
-      { fileBodies: { "src/a.ts": "raw" }, plan: EMPTY_PLAN, repositoryFullName: "local/demo" },
+      {
+        fileBodies: { "src/a.ts": "raw" },
+        plan: EMPTY_PLAN,
+        repositoryFullName: "local/demo",
+      },
     ],
     [
       "a plan-level body field",

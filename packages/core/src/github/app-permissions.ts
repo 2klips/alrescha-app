@@ -26,8 +26,12 @@ export function assertMinimalGitHubPermissions(
   const expected: GitHubPermissions = allowPullRequestProposals
     ? { ...GITHUB_READ_ONLY_PERMISSIONS, ...GITHUB_PR_PROPOSAL_PERMISSION }
     : GITHUB_READ_ONLY_PERMISSIONS;
-  const actualEntries = Object.entries(permissions).sort(([left], [right]) => left.localeCompare(right));
-  const expectedEntries = Object.entries(expected).sort(([left], [right]) => left.localeCompare(right));
+  const actualEntries = Object.entries(permissions).sort(([left], [right]) =>
+    left.localeCompare(right),
+  );
+  const expectedEntries = Object.entries(expected).sort(([left], [right]) =>
+    left.localeCompare(right),
+  );
 
   if (JSON.stringify(actualEntries) !== JSON.stringify(expectedEntries)) {
     throw new Error(

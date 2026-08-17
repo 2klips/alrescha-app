@@ -17,8 +17,14 @@ describe("receiptFindings", () => {
   it.each([
     ["null", null],
     ["no findings key", {}],
-    ["opened is not a list", { findings: { open_total: 1, opened: 3, resolved: [] } }],
-    ["open_total is not a number", { findings: { open_total: "7", opened: [], resolved: [] } }],
+    [
+      "opened is not a list",
+      { findings: { open_total: 1, opened: 3, resolved: [] } },
+    ],
+    [
+      "open_total is not a number",
+      { findings: { open_total: "7", opened: [], resolved: [] } },
+    ],
   ])("yields null for a malformed summary (%s)", (_label, summary) => {
     expect(receiptFindings(summary)).toBeNull();
   });
@@ -96,10 +102,7 @@ describe("buildWorkspaceCommitCards", () => {
       failureReason: "vitest report artifact was unreadable",
       status: "failed",
     });
-    expect(cards[1]!.jobs.map(({ kind }) => kind)).toEqual([
-      "scan",
-      "analyze",
-    ]);
+    expect(cards[1]!.jobs.map(({ kind }) => kind)).toEqual(["scan", "analyze"]);
   });
 
   it("keeps the repository id visible when the repository row is missing", () => {

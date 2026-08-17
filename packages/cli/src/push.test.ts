@@ -39,15 +39,19 @@ interface RecordedRequest {
   readonly url: string;
 }
 
-function fakeServer(options?: {
-  previous?: unknown;
-  uploadStatus?: number;
-}): { fetchImplementation: typeof fetch; requests: RecordedRequest[] } {
+function fakeServer(options?: { previous?: unknown; uploadStatus?: number }): {
+  fetchImplementation: typeof fetch;
+  requests: RecordedRequest[];
+} {
   const requests: RecordedRequest[] = [];
   const fetchImplementation = (async (input: unknown, init?: RequestInit) => {
     const url = String(input);
     const method = init?.method ?? "GET";
-    requests.push({ body: (init?.body as string | undefined) ?? null, method, url });
+    requests.push({
+      body: (init?.body as string | undefined) ?? null,
+      method,
+      url,
+    });
     if (method === "GET") {
       return Response.json(
         options?.previous ?? { previous: { artifacts: [], commitSha: null } },
@@ -119,7 +123,9 @@ describe("pushLocalProject", () => {
       status: "unchanged",
     });
     // Nothing was uploaded the second time.
-    expect(second.requests.filter(({ method }) => method === "POST")).toEqual([]);
+    expect(second.requests.filter(({ method }) => method === "POST")).toEqual(
+      [],
+    );
   });
 
   it("reports offline when the server is unreachable, uploading nothing", async () => {

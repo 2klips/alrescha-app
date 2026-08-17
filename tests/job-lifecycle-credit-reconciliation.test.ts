@@ -32,11 +32,16 @@ describe("Postgres worker queue and credit lifecycle", () => {
       "insert into auth.users (id, email) values ($1, 'worker-a@example.test'), ($2, 'worker-b@example.test')",
       [USER_A, USER_B],
     );
-    const workspaces = await database.query<{ id: string; owner_user_id: string }>(
-      "select id, owner_user_id from public.workspaces",
-    );
-    workspaceA = workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_A)?.id ?? "";
-    workspaceB = workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_B)?.id ?? "";
+    const workspaces = await database.query<{
+      id: string;
+      owner_user_id: string;
+    }>("select id, owner_user_id from public.workspaces");
+    workspaceA =
+      workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_A)
+        ?.id ?? "";
+    workspaceB =
+      workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_B)
+        ?.id ?? "";
     await database.query(
       `insert into public.repositories (id, workspace_id, full_name)
        values ($1, $2, 'owner-a/repo'), ($3, $4, 'owner-b/repo')`,
@@ -47,7 +52,15 @@ describe("Postgres worker queue and credit lifecycle", () => {
         (id, workspace_id, repository_id, trigger_kind, trigger_key, commit_sha)
        values ($1, $2, $3, 'manual', 'seed-a', $7),
               ($4, $5, $6, 'manual', 'seed-b', $7)`,
-      [runA, workspaceA, repositoryA, runB, workspaceB, repositoryB, "1".repeat(40)],
+      [
+        runA,
+        workspaceA,
+        repositoryA,
+        runB,
+        workspaceB,
+        repositoryB,
+        "1".repeat(40),
+      ],
     );
     await database.query(
       `insert into public.credit_ledger (workspace_id, event, amount, idempotency_key)
@@ -85,7 +98,11 @@ describe("Postgres worker queue and credit lifecycle", () => {
   }
 
   async function claim(workspaceId = workspaceA, workerId = "worker-1") {
-    return database.query<{ attempt_count: number; id: string; workspace_id: string }>(
+    return database.query<{
+      attempt_count: number;
+      id: string;
+      workspace_id: string;
+    }>(
       "select id, workspace_id, attempt_count from public.claim_next_job($1, $2, 30)",
       [workspaceId, workerId],
     );
@@ -172,13 +189,20 @@ describe("Postgres worker queue and credit lifecycle", () => {
   });
 
   it("bounds retries at max_attempts", async () => {
-    const jobId = await enqueue({ key: "bounded", kind: "judge", maxAttempts: 2 });
+    const jobId = await enqueue({
+      key: "bounded",
+      kind: "judge",
+      maxAttempts: 2,
+    });
     await claim();
     const firstFailure = await database.query<{ outcome: string }>(
       "select public.finish_job($1, 'worker-1', false, 'transient') as outcome",
       [jobId],
     );
-    await database.query("update public.jobs set available_at = now() where id = $1", [jobId]);
+    await database.query(
+      "update public.jobs set available_at = now() where id = $1",
+      [jobId],
+    );
     await claim();
     const secondFailure = await database.query<{ outcome: string }>(
       "select public.finish_job($1, 'worker-1', false, 'permanent') as outcome",
@@ -197,7 +221,11 @@ describe("Postgres worker queue and credit lifecycle", () => {
   });
 
   it("cancels safely, rejects late completion, and refunds once", async () => {
-    const jobId = await enqueue({ cost: 10, key: "cancel-credit", kind: "judge" });
+    const jobId = await enqueue({
+      cost: 10,
+      key: "cancel-credit",
+      kind: "judge",
+    });
     await claim();
     await database.query("select public.reserve_job_credits($1)", [jobId]);
     const cancelled = await database.query<{ cancelled: boolean }>(
@@ -225,7 +253,11 @@ describe("Postgres worker queue and credit lifecycle", () => {
   });
 
   it("reserves and settles credits exactly once on success", async () => {
-    const jobId = await enqueue({ cost: 10, key: "settle-credit", kind: "judge" });
+    const jobId = await enqueue({
+      cost: 10,
+      key: "settle-credit",
+      kind: "judge",
+    });
     await claim();
     const firstReservation = await database.query<{ id: string }>(
       "select public.reserve_job_credits($1) as id",
@@ -235,7 +267,10 @@ describe("Postgres worker queue and credit lifecycle", () => {
       "select public.reserve_job_credits($1) as id",
       [jobId],
     );
-    await database.query("select public.finish_job($1, 'worker-1', true, null)", [jobId]);
+    await database.query(
+      "select public.finish_job($1, 'worker-1', true, null)",
+      [jobId],
+    );
     await database.query("select public.settle_job_credits($1, true)", [jobId]);
     const entries = await database.query<{ amount: number; event: string }>(
       "select event, amount from public.credit_ledger where job_id = $1 order by event",
@@ -251,7 +286,12 @@ describe("Postgres worker queue and credit lifecycle", () => {
   });
 
   it("refunds a terminal failed judgment and forbids charging deterministic jobs", async () => {
-    const jobId = await enqueue({ cost: 15, key: "failed-credit", kind: "judge", maxAttempts: 1 });
+    const jobId = await enqueue({
+      cost: 15,
+      key: "failed-credit",
+      kind: "judge",
+      maxAttempts: 1,
+    });
     await claim();
     await database.query("select public.reserve_job_credits($1)", [jobId]);
     const failure = await database.query<{ outcome: string }>(
@@ -288,23 +328,44 @@ describe("Postgres worker queue and credit lifecycle", () => {
        where workspace_id = $1`,
       [workspaceA],
     );
-    const firstJob = await enqueue({ cost: 10, key: "cap-first", kind: "judge" });
+    const firstJob = await enqueue({
+      cost: 10,
+      key: "cap-first",
+      kind: "judge",
+    });
     await claim();
     await database.query("select public.reserve_job_credits($1)", [firstJob]);
-    await database.query("select public.finish_job($1, 'worker-1', true, null)", [firstJob]);
+    await database.query(
+      "select public.finish_job($1, 'worker-1', true, null)",
+      [firstJob],
+    );
 
-    const monthlyCappedJob = await enqueue({ cost: 10, key: "cap-monthly", kind: "judge" });
+    const monthlyCappedJob = await enqueue({
+      cost: 10,
+      key: "cap-monthly",
+      kind: "judge",
+    });
     await claim();
-    await expect(database.query("select public.reserve_job_credits($1)", [monthlyCappedJob])).rejects.toThrow(
-      /workspace monthly credit cap exceeded/,
-    );
+    await expect(
+      database.query("select public.reserve_job_credits($1)", [
+        monthlyCappedJob,
+      ]),
+    ).rejects.toThrow(/workspace monthly credit cap exceeded/);
 
-    const perJobCappedJob = await enqueue({ cost: 11, key: "cap-job", kind: "judge" });
-    await database.query("update public.jobs set priority = 0 where id = $1", [perJobCappedJob]);
+    const perJobCappedJob = await enqueue({
+      cost: 11,
+      key: "cap-job",
+      kind: "judge",
+    });
+    await database.query("update public.jobs set priority = 0 where id = $1", [
+      perJobCappedJob,
+    ]);
     await claim(workspaceA, "worker-2");
-    await expect(database.query("select public.reserve_job_credits($1)", [perJobCappedJob])).rejects.toThrow(
-      /per-job cap/,
-    );
+    await expect(
+      database.query("select public.reserve_job_credits($1)", [
+        perJobCappedJob,
+      ]),
+    ).rejects.toThrow(/per-job cap/);
     expect(await balance()).toBe(90);
   });
 });

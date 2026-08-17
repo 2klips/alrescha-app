@@ -14,14 +14,21 @@ describe("local evidence detail graph", () => {
     const local = buildLocalEvidenceGraph(complete, "req-auth", { depth: 2 });
 
     expect(local.nodes.map((node) => node.id).sort()).toEqual([
-      "code-auth", "doc-guide", "req-auth", "test-auth",
+      "code-auth",
+      "doc-guide",
+      "req-auth",
+      "test-auth",
     ]);
     expect(local.edges).toHaveLength(3);
   });
 
   test("adds orphan nodes only when toggled and never invents an edge", () => {
-    const hidden = buildLocalEvidenceGraph(complete, "req-auth", { includeOrphans: false });
-    const shown = buildLocalEvidenceGraph(complete, "req-auth", { includeOrphans: true });
+    const hidden = buildLocalEvidenceGraph(complete, "req-auth", {
+      includeOrphans: false,
+    });
+    const shown = buildLocalEvidenceGraph(complete, "req-auth", {
+      includeOrphans: true,
+    });
 
     expect(hidden.nodes.some((node) => node.id === "doc-orphan")).toBe(false);
     expect(shown.nodes.some((node) => node.id === "doc-orphan")).toBe(true);

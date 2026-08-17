@@ -29,11 +29,22 @@ export interface AccessPolicy {
   workspaceId: string;
 }
 
-export function createRealtimeGraphState(workspaceId: string): RealtimeGraphState {
-  return { feed: [], layoutRevision: 0, pulses: {}, renderBatches: 0, workspaceId };
+export function createRealtimeGraphState(
+  workspaceId: string,
+): RealtimeGraphState {
+  return {
+    feed: [],
+    layoutRevision: 0,
+    pulses: {},
+    renderBatches: 0,
+    workspaceId,
+  };
 }
 
-export function pulsePhaseAt(pulse: NodePulse | undefined, now: number): PulsePhase {
+export function pulsePhaseAt(
+  pulse: NodePulse | undefined,
+  now: number,
+): PulsePhase {
   if (!pulse) return "idle";
   const age = now - pulse.lastTouchedAt;
   if (age < 0 || age >= 12_000) return "idle";
@@ -82,18 +93,24 @@ export function reduceAccessEventBatch(
 }
 
 export interface WorkspaceRealtimeSource {
-  subscribe: (channel: string, listener: (event: GraphAccessEvent) => void) => () => void;
+  subscribe: (
+    channel: string,
+    listener: (event: GraphAccessEvent) => void,
+  ) => () => void;
 }
 
 function workspaceChannel(workspaceId: string): string {
   return `workspace:${workspaceId}:access-events`;
 }
 
-export function createBrowserWorkspaceRealtimeSource(target: EventTarget): WorkspaceRealtimeSource {
+export function createBrowserWorkspaceRealtimeSource(
+  target: EventTarget,
+): WorkspaceRealtimeSource {
   return {
     subscribe(channel, listener) {
       const handler = (event: Event) => {
-        if (event instanceof CustomEvent) listener(event.detail as GraphAccessEvent);
+        if (event instanceof CustomEvent)
+          listener(event.detail as GraphAccessEvent);
       };
       target.addEventListener(channel, handler);
       return () => target.removeEventListener(channel, handler);
@@ -101,8 +118,13 @@ export function createBrowserWorkspaceRealtimeSource(target: EventTarget): Works
   };
 }
 
-export function dispatchBrowserAccessEvent(target: EventTarget, event: GraphAccessEvent): void {
-  target.dispatchEvent(new CustomEvent(workspaceChannel(event.workspaceId), { detail: event }));
+export function dispatchBrowserAccessEvent(
+  target: EventTarget,
+  event: GraphAccessEvent,
+): void {
+  target.dispatchEvent(
+    new CustomEvent(workspaceChannel(event.workspaceId), { detail: event }),
+  );
 }
 
 export function subscribeWorkspaceRealtime(
@@ -113,18 +135,25 @@ export function subscribeWorkspaceRealtime(
 ): () => void {
   let queue: GraphAccessEvent[] = [];
   let scheduled = false;
-  const unsubscribe = source.subscribe(workspaceChannel(policy.workspaceId), (event) => {
-    if (event.workspaceId !== policy.workspaceId || policy.revokedTokenIds.has(event.tokenId)) return;
-    queue.push(event);
-    if (scheduled) return;
-    scheduled = true;
-    schedule(() => {
-      scheduled = false;
-      const batch = queue;
-      queue = [];
-      if (batch.length > 0) onBatch(batch);
-    });
-  });
+  const unsubscribe = source.subscribe(
+    workspaceChannel(policy.workspaceId),
+    (event) => {
+      if (
+        event.workspaceId !== policy.workspaceId ||
+        policy.revokedTokenIds.has(event.tokenId)
+      )
+        return;
+      queue.push(event);
+      if (scheduled) return;
+      scheduled = true;
+      schedule(() => {
+        scheduled = false;
+        const batch = queue;
+        queue = [];
+        if (batch.length > 0) onBatch(batch);
+      });
+    },
+  );
   return () => {
     queue = [];
     unsubscribe();
@@ -145,13 +174,69 @@ export const DEMO_REVOKED_TOKEN_ID = "token-revoked";
 
 export function createDemoAccessEvents(startedAt: number): GraphAccessEvent[] {
   return [
-    { id: "access-search", occurredAt: startedAt, targetNodeIds: ["req-auth", "doc-guide"], targetPath: "spec/WORK_SPEC.md", tokenId: "token-codex", tool: "search_index", workspaceId: DEMO_WORKSPACE_ID },
-    { id: "access-artifact", occurredAt: startedAt + 180, targetNodeIds: ["req-auth", "code-auth"], targetPath: "repository-access.ts", tokenId: "token-codex", tool: "get_artifact", workspaceId: DEMO_WORKSPACE_ID },
-    { id: "access-findings", occurredAt: startedAt + 360, targetNodeIds: ["req-ci", "code-evidence", "test-ci"], targetPath: "REQ-CI-04", tokenId: "token-claude", tool: "get_findings", workspaceId: DEMO_WORKSPACE_ID },
-    { id: "access-pack", occurredAt: startedAt + 540, targetNodeIds: ["req-context", "doc-agents"], targetPath: "context pack", tokenId: "token-cursor", tool: "request_context_pack", workspaceId: DEMO_WORKSPACE_ID },
-    { id: "access-note", occurredAt: startedAt + 720, targetNodeIds: ["req-webhook", "code-webhook"], targetPath: "webhook.ts", tokenId: "token-codex", tool: "get_artifact", workspaceId: DEMO_WORKSPACE_ID },
-    { id: "access-cross-tenant", occurredAt: startedAt + 900, targetNodeIds: ["code-pack"], targetPath: "private-other-repo.ts", tokenId: "token-other", tool: "get_artifact", workspaceId: "workspace-other" },
-    { id: "access-revoked", occurredAt: startedAt + 1_080, targetNodeIds: ["test-pack"], targetPath: "revoked-secret.md", tokenId: DEMO_REVOKED_TOKEN_ID, tool: "get_artifact", workspaceId: DEMO_WORKSPACE_ID },
+    {
+      id: "access-search",
+      occurredAt: startedAt,
+      targetNodeIds: ["req-auth", "doc-guide"],
+      targetPath: "spec/WORK_SPEC.md",
+      tokenId: "token-codex",
+      tool: "search_index",
+      workspaceId: DEMO_WORKSPACE_ID,
+    },
+    {
+      id: "access-artifact",
+      occurredAt: startedAt + 180,
+      targetNodeIds: ["req-auth", "code-auth"],
+      targetPath: "repository-access.ts",
+      tokenId: "token-codex",
+      tool: "get_artifact",
+      workspaceId: DEMO_WORKSPACE_ID,
+    },
+    {
+      id: "access-findings",
+      occurredAt: startedAt + 360,
+      targetNodeIds: ["req-ci", "code-evidence", "test-ci"],
+      targetPath: "REQ-CI-04",
+      tokenId: "token-claude",
+      tool: "get_findings",
+      workspaceId: DEMO_WORKSPACE_ID,
+    },
+    {
+      id: "access-pack",
+      occurredAt: startedAt + 540,
+      targetNodeIds: ["req-context", "doc-agents"],
+      targetPath: "context pack",
+      tokenId: "token-cursor",
+      tool: "request_context_pack",
+      workspaceId: DEMO_WORKSPACE_ID,
+    },
+    {
+      id: "access-note",
+      occurredAt: startedAt + 720,
+      targetNodeIds: ["req-webhook", "code-webhook"],
+      targetPath: "webhook.ts",
+      tokenId: "token-codex",
+      tool: "get_artifact",
+      workspaceId: DEMO_WORKSPACE_ID,
+    },
+    {
+      id: "access-cross-tenant",
+      occurredAt: startedAt + 900,
+      targetNodeIds: ["code-pack"],
+      targetPath: "private-other-repo.ts",
+      tokenId: "token-other",
+      tool: "get_artifact",
+      workspaceId: "workspace-other",
+    },
+    {
+      id: "access-revoked",
+      occurredAt: startedAt + 1_080,
+      targetNodeIds: ["test-pack"],
+      targetPath: "revoked-secret.md",
+      tokenId: DEMO_REVOKED_TOKEN_ID,
+      tool: "get_artifact",
+      workspaceId: DEMO_WORKSPACE_ID,
+    },
   ];
 }
 

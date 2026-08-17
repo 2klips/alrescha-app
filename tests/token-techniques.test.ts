@@ -66,7 +66,12 @@ describe("token-efficiency techniques (todo 6)", () => {
   });
 
   it("id-first loading swaps excerpts for ids and shrinks the context", async () => {
-    const base = { arm: "data-brain" as const, corpus: CORPUS, retrievalQuery: "session renewal", taskDescription: "session 갱신 규칙이 뭐야?" };
+    const base = {
+      arm: "data-brain" as const,
+      corpus: CORPUS,
+      retrievalQuery: "session renewal",
+      taskDescription: "session 갱신 규칙이 뭐야?",
+    };
     const off = await buildArmContext({ ...base, techniques: NO_TECHNIQUES });
     const on = await buildArmContext({
       ...base,
@@ -100,7 +105,12 @@ describe("token-efficiency techniques (todo 6)", () => {
   });
 
   it("lazy tool definitions list only the tools actually used", async () => {
-    const base = { arm: "data-brain" as const, corpus: CORPUS, retrievalQuery: "session renewal", taskDescription: "session 갱신 규칙이 뭐야?" };
+    const base = {
+      arm: "data-brain" as const,
+      corpus: CORPUS,
+      retrievalQuery: "session renewal",
+      taskDescription: "session 갱신 규칙이 뭐야?",
+    };
     const full = await buildArmContext({ ...base, techniques: NO_TECHNIQUES });
     const lazy = await buildArmContext({
       ...base,
@@ -112,7 +122,12 @@ describe("token-efficiency techniques (todo 6)", () => {
   });
 
   it("compaction-safe ordering keeps content recall after tail-keeping compaction", async () => {
-    const base = { arm: "data-brain" as const, corpus: CORPUS, retrievalQuery: "session renewal", taskDescription: "session 갱신 규칙이 뭐야?" };
+    const base = {
+      arm: "data-brain" as const,
+      corpus: CORPUS,
+      retrievalQuery: "session renewal",
+      taskDescription: "session 갱신 규칙이 뭐야?",
+    };
     const off = await buildArmContext({ ...base, techniques: NO_TECHNIQUES });
     const on = await buildArmContext({
       ...base,

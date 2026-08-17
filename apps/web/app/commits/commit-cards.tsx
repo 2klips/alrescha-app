@@ -1,7 +1,4 @@
-import type {
-  CommitAnalysisCard,
-  CommitAnalysisStatus,
-} from "@arr/core";
+import type { CommitAnalysisCard, CommitAnalysisStatus } from "@arr/core";
 import {
   CheckCircle2,
   ChevronRight,
@@ -119,7 +116,9 @@ function CommitDetail({ card }: { card: CommitAnalysisCard }) {
         <div>
           <dt>{COMMITS.detail.startedAtLabel}</dt>
           <dd>
-            <time dateTime={card.createdAt}>{formatInstant(card.createdAt)}</time>
+            <time dateTime={card.createdAt}>
+              {formatInstant(card.createdAt)}
+            </time>
             <small>{COMMITS.detail.triggerKinds[card.triggerKind]}</small>
           </dd>
         </div>

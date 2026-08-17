@@ -67,12 +67,20 @@ export function AiUsageSettings({
         <h2 id="byok-title">{SETTINGS.ai.byok.heading}</h2>
         <p>{SETTINGS.ai.byok.intro}</p>
         <form action={saveByokKey} className="byok-key-form">
-          <label htmlFor="ai-provider">{SETTINGS.ai.byok.providerFieldLabel}</label>
+          <label htmlFor="ai-provider">
+            {SETTINGS.ai.byok.providerFieldLabel}
+          </label>
           <select id="ai-provider" name="provider">
-            <option value="anthropic">{SETTINGS.ai.byok.providerNames.anthropic}</option>
-            <option value="openai">{SETTINGS.ai.byok.providerNames.openai}</option>
+            <option value="anthropic">
+              {SETTINGS.ai.byok.providerNames.anthropic}
+            </option>
+            <option value="openai">
+              {SETTINGS.ai.byok.providerNames.openai}
+            </option>
           </select>
-          <label htmlFor="ai-provider-key">{SETTINGS.ai.byok.apiKeyFieldLabel}</label>
+          <label htmlFor="ai-provider-key">
+            {SETTINGS.ai.byok.apiKeyFieldLabel}
+          </label>
           <input
             autoComplete="new-password"
             id="ai-provider-key"

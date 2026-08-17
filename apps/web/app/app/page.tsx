@@ -13,7 +13,10 @@ export default async function WorkspacePage() {
   }
 
   const supabase = await createClient();
-  const { data: workspaces } = await supabase.from("workspaces").select("id, name").limit(1);
+  const { data: workspaces } = await supabase
+    .from("workspaces")
+    .select("id, name")
+    .limit(1);
   const workspace = workspaces?.[0];
   const installation = workspace
     ? await supabase
@@ -32,7 +35,10 @@ export default async function WorkspacePage() {
   );
 
   return (
-    <div data-user-id={userId} data-workspace-name={workspace?.name ?? "Personal workspace"}>
+    <div
+      data-user-id={userId}
+      data-workspace-name={workspace?.name ?? "Personal workspace"}
+    >
       <DashboardScreen model={model} />
     </div>
   );

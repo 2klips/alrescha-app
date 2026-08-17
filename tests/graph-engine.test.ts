@@ -61,7 +61,9 @@ function fixture(nodeCount: number): GraphData {
 
 describe("simulation wire protocol", () => {
   test("clamps force parameters to the published slider range", () => {
-    expect(clampForceConfig({ linkDistance: 10_000, repelStrength: -50 })).toEqual({
+    expect(
+      clampForceConfig({ linkDistance: 10_000, repelStrength: -50 }),
+    ).toEqual({
       ...DEFAULT_FORCE_CONFIG,
       linkDistance: 400,
       repelStrength: 0,
@@ -99,7 +101,9 @@ describe("simulation wire protocol", () => {
   test("rejects malformed host messages rather than crashing the worker", () => {
     expect(parseHostMessage(null)).toBeNull();
     expect(parseHostMessage({ type: "nope" })).toBeNull();
-    expect(parseHostMessage({ links: [], nodeIds: [1], type: "start" })).toBeNull();
+    expect(
+      parseHostMessage({ links: [], nodeIds: [1], type: "start" }),
+    ).toBeNull();
     expect(
       parseHostMessage({ links: [[0, 9]], nodeIds: ["a"], type: "start" }),
     ).toBeNull();
@@ -107,7 +111,9 @@ describe("simulation wire protocol", () => {
   });
 
   test("rejects worker messages that are not a real position frame", () => {
-    expect(parseWorkerMessage({ positions: [1, 2], revision: 0, type: "positions" })).toBeNull();
+    expect(
+      parseWorkerMessage({ positions: [1, 2], revision: 0, type: "positions" }),
+    ).toBeNull();
     expect(
       parseWorkerMessage({
         alpha: 0.5,
@@ -121,9 +127,24 @@ describe("simulation wire protocol", () => {
   test("start message indexes links and drops dangling or self edges", () => {
     const data: GraphData = {
       edges: [
-        { ...fixture(15).edges[0]!, id: "e-dangling", source: "req-auth", target: "ghost" },
-        { ...fixture(15).edges[0]!, id: "e-self", source: "req-auth", target: "req-auth" },
-        { ...fixture(15).edges[0]!, id: "e-real", source: "req-auth", target: "code-auth" },
+        {
+          ...fixture(15).edges[0]!,
+          id: "e-dangling",
+          source: "req-auth",
+          target: "ghost",
+        },
+        {
+          ...fixture(15).edges[0]!,
+          id: "e-self",
+          source: "req-auth",
+          target: "req-auth",
+        },
+        {
+          ...fixture(15).edges[0]!,
+          id: "e-real",
+          source: "req-auth",
+          target: "code-auth",
+        },
       ],
       nodes: fixture(15).nodes,
     };
@@ -169,7 +190,8 @@ describe("worker runtime", () => {
     const { posted, runtime } = runtimeHarness();
     runtime.handle(createStartMessage(fixture(15)));
 
-    for (let step = 0; step < 400 && runtime.running(); step += 1) runtime.step();
+    for (let step = 0; step < 400 && runtime.running(); step += 1)
+      runtime.step();
 
     const settled = posted.filter(
       (message) => (message as { type: string }).type === "settled",
@@ -182,11 +204,15 @@ describe("worker runtime", () => {
   test("a config message reheats the simulation and changes the geometry", () => {
     const { posted, runtime } = runtimeHarness();
     runtime.handle(createStartMessage(fixture(15)));
-    for (let step = 0; step < 200 && runtime.running(); step += 1) runtime.step();
+    for (let step = 0; step < 200 && runtime.running(); step += 1)
+      runtime.step();
     const settledFrame = posted.at(-2) as { positions: Float32Array };
     const before = Float32Array.from(settledFrame.positions);
 
-    runtime.handle({ config: { linkDistance: 400, repelStrength: 1_500 }, type: "config" });
+    runtime.handle({
+      config: { linkDistance: 400, repelStrength: 1_500 },
+      type: "config",
+    });
     expect(runtime.running()).toBe(true);
     for (let step = 0; step < 50; step += 1) runtime.step();
     const after = (posted.at(-1) as { positions: Float32Array }).positions;
@@ -206,20 +232,27 @@ describe("worker runtime", () => {
   test("emitted alpha falls monotonically towards the stop threshold", () => {
     const { posted, runtime } = runtimeHarness();
     runtime.handle(createStartMessage(fixture(15)));
-    for (let step = 0; step < 400 && runtime.running(); step += 1) runtime.step();
+    for (let step = 0; step < 400 && runtime.running(); step += 1)
+      runtime.step();
     const alphas = posted
       .filter((message) => (message as { type: string }).type === "positions")
       .map((message) => (message as { alpha: number }).alpha);
 
     expect(alphas.at(-1)).toBeLessThan(SIMULATION_ALPHA_MIN);
-    expect(alphas.every((alpha, index) => index === 0 || alpha < (alphas[index - 1] as number))).toBe(true);
+    expect(
+      alphas.every(
+        (alpha, index) => index === 0 || alpha < (alphas[index - 1] as number),
+      ),
+    ).toBe(true);
   });
 });
 
 describe("deterministic force layout", () => {
   test("seeded start positions never coincide", () => {
     const positions = seededInitialPositions(500, 7);
-    const keys = new Set(positions.map((position) => `${position.x},${position.y}`));
+    const keys = new Set(
+      positions.map((position) => `${position.x},${position.y}`),
+    );
 
     expect(keys.size).toBe(500);
   });
@@ -233,14 +266,19 @@ describe("deterministic force layout", () => {
     expect([...second.entries()]).toEqual([...first.entries()]);
     expect(
       [...first.values()].every(
-        (position) => Number.isFinite(position.x) && Number.isFinite(position.y),
+        (position) =>
+          Number.isFinite(position.x) && Number.isFinite(position.y),
       ),
     ).toBe(true);
   });
 
   test("the layout spreads nodes instead of piling them on the origin", () => {
-    const positions = [...runForceLayout(fixture(120), undefined, 120, 3).values()];
-    const spread = Math.max(...positions.map((position) => Math.hypot(position.x, position.y)));
+    const positions = [
+      ...runForceLayout(fixture(120), undefined, 120, 3).values(),
+    ];
+    const spread = Math.max(
+      ...positions.map((position) => Math.hypot(position.x, position.y)),
+    );
 
     expect(spread).toBeGreaterThan(100);
   });
@@ -249,11 +287,15 @@ describe("deterministic force layout", () => {
     const data = fixture(60);
     const near = runForceLayout(data, { linkDistance: 30 }, 200, 5);
     const far = runForceLayout(data, { linkDistance: 320 }, 200, 5);
-    const meanEdgeLength = (positions: Map<string, { x: number; y: number }>) => {
+    const meanEdgeLength = (
+      positions: Map<string, { x: number; y: number }>,
+    ) => {
       const lengths = data.edges.flatMap((edge) => {
         const source = positions.get(edge.source);
         const target = positions.get(edge.target);
-        return source && target ? [Math.hypot(source.x - target.x, source.y - target.y)] : [];
+        return source && target
+          ? [Math.hypot(source.x - target.x, source.y - target.y)]
+          : [];
       });
       return lengths.reduce((sum, length) => sum + length, 0) / lengths.length;
     };
@@ -262,7 +304,11 @@ describe("deterministic force layout", () => {
   });
 
   test("setConfig on a live layout reheats it", () => {
-    const layout = createForceLayout({ links: [[0, 1]], nodeCount: 2, seed: 1 });
+    const layout = createForceLayout({
+      links: [[0, 1]],
+      nodeCount: 2,
+      seed: 1,
+    });
     layout.tick(400);
     expect(layout.alpha()).toBeLessThan(0.01);
 
@@ -332,13 +378,21 @@ describe("render frame", () => {
     expect(broken.length).toBeGreaterThan(0);
     expect(broken.every((edge) => edge.color === PALETTE.danger)).toBe(true);
     expect(
-      frame.edges.filter((edge) => !edge.dashed).every((edge) => edge.color !== PALETTE.danger),
+      frame.edges
+        .filter((edge) => !edge.dashed)
+        .every((edge) => edge.color !== PALETTE.danger),
     ).toBe(true);
   });
 
   test("nodes with open findings carry the drift ring", () => {
-    const frame = buildRenderFrame({ data, palette: PALETTE, positions: new Map() });
-    const ringed = frame.nodes.filter((node) => node.ring).map((node) => node.id);
+    const frame = buildRenderFrame({
+      data,
+      palette: PALETTE,
+      positions: new Map(),
+    });
+    const ringed = frame.nodes
+      .filter((node) => node.ring)
+      .map((node) => node.id);
 
     expect(ringed).toContain("req-ci");
     expect(frame.driftColor).toBe(PALETTE.danger);
@@ -483,7 +537,9 @@ describe("engine lifecycle", () => {
     const nodeIds = fixture(15).nodes.map((node) => node.id);
     emit({
       alpha: 0.9,
-      positions: encodePositions(nodeIds.map((_, index) => ({ x: index * 10, y: 0 }))),
+      positions: encodePositions(
+        nodeIds.map((_, index) => ({ x: index * 10, y: 0 })),
+      ),
       revision: 1,
       type: "positions",
     });
@@ -499,7 +555,9 @@ describe("engine lifecycle", () => {
     });
 
     engine.setPalette({ ...PALETTE, "node-code": 0x0a0a0a });
-    expect(engine.frame().nodes.find((node) => node.id === "code-auth")?.color).toBe(0x0a0a0a);
+    expect(
+      engine.frame().nodes.find((node) => node.id === "code-auth")?.color,
+    ).toBe(0x0a0a0a);
     engine.dispose();
   });
 
@@ -525,9 +583,9 @@ describe("engine lifecycle", () => {
     });
 
     expect(start).toHaveBeenCalledTimes(1);
-    expect((start.mock.calls[0]?.[0] as { nodeIds: string[] }).nodeIds).toHaveLength(
-      model.graph.nodes.length,
-    );
+    expect(
+      (start.mock.calls[0]?.[0] as { nodeIds: string[] }).nodeIds,
+    ).toHaveLength(model.graph.nodes.length);
     engine.dispose();
   });
 });

@@ -61,7 +61,8 @@ export function bootstrapConfidenceInterval<T>(
       sample[index] = units[Math.floor(random() * units.length)]!;
     }
     const estimate = estimator(sample);
-    if (estimate !== null && Number.isFinite(estimate)) estimates.push(estimate);
+    if (estimate !== null && Number.isFinite(estimate))
+      estimates.push(estimate);
   }
   if (estimates.length === 0) return null;
   estimates.sort((left, right) => left - right);

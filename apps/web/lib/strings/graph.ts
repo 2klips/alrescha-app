@@ -19,7 +19,8 @@ export const GRAPH = {
     kicker: "선택한 노드",
     fallbackTitle: "증거 엣지",
     orphanToggleLabel: "고아 아티팩트 표시",
-    orphanToggleNote: "고아 아티팩트는 provenance 엣지가 없어 엣지 상세에 나타나지 않습니다.",
+    orphanToggleNote:
+      "고아 아티팩트는 provenance 엣지가 없어 엣지 상세에 나타나지 않습니다.",
   },
 
   provenance: {
@@ -29,7 +30,8 @@ export const GRAPH = {
     confidence: "신뢰도",
     grade: "증거 등급",
     relation: "관계",
-    complete: "근거 계보가 완전합니다. 마우스 오버 상세는 근거 없는 엣지로 대체되지 않습니다.",
+    complete:
+      "근거 계보가 완전합니다. 마우스 오버 상세는 근거 없는 엣지로 대체되지 않습니다.",
     empty: "이 근접 영역에 표시할 provenance가 없습니다.",
   },
 

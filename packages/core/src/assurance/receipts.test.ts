@@ -23,23 +23,35 @@ const statement: InTotoStatement = {
 describe("in-toto-shaped assurance receipts", () => {
   test("validates the locked Statement v1 shape", () => {
     expect(inTotoStatementSchema.parse(statement)).toEqual(statement);
-    expect(() => inTotoStatementSchema.parse({ ...statement, _type: "custom" })).toThrow();
+    expect(() =>
+      inTotoStatementSchema.parse({ ...statement, _type: "custom" }),
+    ).toThrow();
   });
 
   test("verifies canonical SHA-256 digest and detects tampering", async () => {
     const digest = await digestInTotoStatement(statement);
 
-    await expect(verifyInTotoStatement(statement, digest)).resolves.toMatchObject({ state: "verified" });
+    await expect(
+      verifyInTotoStatement(statement, digest),
+    ).resolves.toMatchObject({ state: "verified" });
     await expect(
       verifyInTotoStatement(
-        { ...statement, predicate: { ...statement.predicate, evidence: { inferred: 99, verified: 3 } } },
+        {
+          ...statement,
+          predicate: {
+            ...statement.predicate,
+            evidence: { inferred: 99, verified: 3 },
+          },
+        },
         digest,
       ),
     ).resolves.toMatchObject({ state: "tampered" });
   });
 
   test("does not produce a verdict for an invalid statement", async () => {
-    await expect(verifyInTotoStatement({ predicate: {} }, "0".repeat(64))).resolves.toMatchObject({
+    await expect(
+      verifyInTotoStatement({ predicate: {} }, "0".repeat(64)),
+    ).resolves.toMatchObject({
       state: "invalid",
     });
   });

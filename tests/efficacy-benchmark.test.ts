@@ -173,7 +173,10 @@ async function withV3Fixture(
     const benchmarkDirectory = join(root, "benchmarks/databrain");
     await mkdir(benchmarkDirectory, { recursive: true });
     const [v1Manifest, v1Report, v1Markdown, v3Manifest] = await Promise.all([
-      readFile(join(REPOSITORY_ROOT, "benchmarks/databrain/tasks.json"), "utf8"),
+      readFile(
+        join(REPOSITORY_ROOT, "benchmarks/databrain/tasks.json"),
+        "utf8",
+      ),
       readFile(
         join(REPOSITORY_ROOT, "benchmarks/databrain/results.real.json"),
         "utf8",
@@ -189,7 +192,10 @@ async function withV3Fixture(
     });
     mutate(report);
     const markdown = options.tamperMarkdown
-      ? renderBenchmarkMarkdown(report).replace("## Model coverage", "## Models")
+      ? renderBenchmarkMarkdown(report).replace(
+          "## Model coverage",
+          "## Models",
+        )
       : renderBenchmarkMarkdown(report);
 
     await Promise.all([
@@ -199,7 +205,11 @@ async function withV3Fixture(
         v1Report,
         "utf8",
       ),
-      writeFile(join(benchmarkDirectory, "results.real.md"), v1Markdown, "utf8"),
+      writeFile(
+        join(benchmarkDirectory, "results.real.md"),
+        v1Markdown,
+        "utf8",
+      ),
       writeFile(join(benchmarkDirectory, "tasks.v3.json"), v3Manifest, "utf8"),
       writeFile(
         join(benchmarkDirectory, "results.v3.real.json"),

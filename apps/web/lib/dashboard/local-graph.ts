@@ -32,7 +32,9 @@ export function inspectEdgeProvenance(edge: GraphEdge): GraphEdgeProvenance {
   return edge.provenance;
 }
 
-export function graphEdgesWithDisplayableProvenance(graph: GraphData): GraphEdge[] {
+export function graphEdgesWithDisplayableProvenance(
+  graph: GraphData,
+): GraphEdge[] {
   return graph.edges.filter(
     (edge) =>
       edge.provenance.sourcePath.length > 0 &&

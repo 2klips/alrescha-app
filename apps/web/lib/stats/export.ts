@@ -30,8 +30,7 @@ export async function createPilotStatsExportResponse(
     {
       headers: {
         "Cache-Control": "private, no-store",
-        "Content-Disposition":
-          'attachment; filename="arr-pilot-stats.json"',
+        "Content-Disposition": 'attachment; filename="arr-pilot-stats.json"',
       },
     },
   );

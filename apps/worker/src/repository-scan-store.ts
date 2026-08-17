@@ -1,7 +1,4 @@
-import type {
-  PreviousScannedArtifact,
-  RepositoryScanPlan,
-} from "@arr/core";
+import type { PreviousScannedArtifact, RepositoryScanPlan } from "@arr/core";
 import type postgres from "postgres";
 
 interface PreviousArtifactRow {
@@ -32,7 +29,10 @@ function fromRow(row: PreviousArtifactRow): PreviousScannedArtifact {
 export class RepositoryScanStore {
   constructor(private readonly sql: postgres.Sql) {}
 
-  async loadPrevious(workspaceId: string, repositoryId: string): Promise<{
+  async loadPrevious(
+    workspaceId: string,
+    repositoryId: string,
+  ): Promise<{
     artifacts: readonly PreviousScannedArtifact[];
     commitSha: string | null;
   }> {
@@ -59,7 +59,11 @@ export class RepositoryScanStore {
    * GitHub path and the local ingest path share one atomic implementation
    * (ADR-013 — the two routes must yield the same graph).
    */
-  async apply(workspaceId: string, repositoryId: string, plan: RepositoryScanPlan): Promise<number> {
+  async apply(
+    workspaceId: string,
+    repositoryId: string,
+    plan: RepositoryScanPlan,
+  ): Promise<number> {
     const rows = await this.sql<{ touched: number }[]>`
       select public.apply_repository_scan(
         ${workspaceId}, ${repositoryId}, ${JSON.stringify(plan)}::jsonb

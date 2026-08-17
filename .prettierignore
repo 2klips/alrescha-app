@@ -6,3 +6,9 @@ playwright-report
 pnpm-lock.yaml
 test-results
 benchmarks/databrain/results.*
+# Digest-locked inputs: recorded fixtures and frozen pre-registrations.
+# Reformatting them changes digests and breaks replay tests (ADR-012).
+fixtures
+benchmarks
+# Historical evidence records stay byte-for-byte as written.
+.omo

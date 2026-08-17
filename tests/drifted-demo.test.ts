@@ -13,7 +13,10 @@ import {
   normalizeRecordedTree,
   normalizeRecordedWebhook,
 } from "../packages/core/src/github/recorded-fixtures";
-import { FINDING_TYPES, validateExpectedFindingsManifest } from "./helpers/drifted-demo";
+import {
+  FINDING_TYPES,
+  validateExpectedFindingsManifest,
+} from "./helpers/drifted-demo";
 
 const execFile = promisify(execFileCallback);
 const ROOT = resolve(import.meta.dirname, "..");
@@ -38,7 +41,9 @@ async function directoryBytes(directory: string): Promise<number> {
     }
 
     const path = join(directory, entry.name);
-    bytes += entry.isDirectory() ? await directoryBytes(path) : (await stat(path)).size;
+    bytes += entry.isDirectory()
+      ? await directoryBytes(path)
+      : (await stat(path)).size;
   }
 
   return bytes;
@@ -52,13 +57,21 @@ describe("drifted-demo expected findings manifest", () => {
     );
 
     expect(manifest.findings).toHaveLength(6);
-    expect(new Set(manifest.findings.map(({ type }) => type))).toEqual(new Set(FINDING_TYPES));
-    expect(manifest.findings.every(({ grade }) => grade === "inferred")).toBe(true);
+    expect(new Set(manifest.findings.map(({ type }) => type))).toEqual(
+      new Set(FINDING_TYPES),
+    );
+    expect(manifest.findings.every(({ grade }) => grade === "inferred")).toBe(
+      true,
+    );
   });
 
   it("rejects a manifest span that points outside its source file", async () => {
-    const manifest = (await json(join(FIXTURE_ROOT, "expected-findings.json"))) as {
-      findings: Array<{ provenance: Array<{ endLine: number; startLine: number }> }>;
+    const manifest = (await json(
+      join(FIXTURE_ROOT, "expected-findings.json"),
+    )) as {
+      findings: Array<{
+        provenance: Array<{ endLine: number; startLine: number }>;
+      }>;
     };
     const firstSpan = manifest.findings[0]?.provenance[0];
 
@@ -69,15 +82,17 @@ describe("drifted-demo expected findings manifest", () => {
     firstSpan.startLine = 999;
     firstSpan.endLine = 999;
 
-    await expect(validateExpectedFindingsManifest(manifest, FIXTURE_ROOT)).rejects.toThrow(
-      /span spec\.md:999-999 is outside file/,
-    );
+    await expect(
+      validateExpectedFindingsManifest(manifest, FIXTURE_ROOT),
+    ).rejects.toThrow(/span spec\.md:999-999 is outside file/);
   });
 });
 
 describe("recorded GitHub fixture replay", () => {
   it("normalizes the tree, contents, webhooks, and Actions artifacts offline", async () => {
-    const tree = normalizeRecordedTree(await json(join(RECORDINGS_ROOT, "tree.json")));
+    const tree = normalizeRecordedTree(
+      await json(join(RECORDINGS_ROOT, "tree.json")),
+    );
     const spec = normalizeRecordedContent(
       await json(join(RECORDINGS_ROOT, "contents", "spec.json")),
     );
@@ -86,7 +101,9 @@ describe("recorded GitHub fixture replay", () => {
     );
     const webhooks = await Promise.all(
       ["push.json", "check-run.json", "workflow-run.json"].map(async (file) =>
-        normalizeRecordedWebhook(await json(join(RECORDINGS_ROOT, "webhooks", file))),
+        normalizeRecordedWebhook(
+          await json(join(RECORDINGS_ROOT, "webhooks", file)),
+        ),
       ),
     );
     const artifacts = normalizeRecordedArtifacts(
@@ -102,20 +119,37 @@ describe("recorded GitHub fixture replay", () => {
     expect(Buffer.from(session.content, "base64").toString("utf8")).toBe(
       await readFile(join(FIXTURE_ROOT, session.path), "utf8"),
     );
-    expect(webhooks.map(({ kind }) => kind).sort()).toEqual(["check_run", "push", "workflow_run"]);
-    expect(webhooks.every(({ commitSha }) => commitSha === "1".repeat(40))).toBe(true);
-    expect(webhooks.every(({ repository }) => repository === "arr/drifted-demo")).toBe(true);
-    expect(artifacts.map(({ name }) => name)).toEqual(["junit-results", "vitest-results"]);
-    expect(artifacts.every(({ workflowRunId }) => workflowRunId === 8801)).toBe(true);
+    expect(webhooks.map(({ kind }) => kind).sort()).toEqual([
+      "check_run",
+      "push",
+      "workflow_run",
+    ]);
+    expect(
+      webhooks.every(({ commitSha }) => commitSha === "1".repeat(40)),
+    ).toBe(true);
+    expect(
+      webhooks.every(({ repository }) => repository === "arr/drifted-demo"),
+    ).toBe(true);
+    expect(artifacts.map(({ name }) => name)).toEqual([
+      "junit-results",
+      "vitest-results",
+    ]);
+    expect(artifacts.every(({ workflowRunId }) => workflowRunId === 8801)).toBe(
+      true,
+    );
   });
 
   it("keeps each recorded webhook signature reproducible", async () => {
-    const metadata = (await json(join(RECORDINGS_ROOT, "recording-metadata.json"))) as {
+    const metadata = (await json(
+      join(RECORDINGS_ROOT, "recording-metadata.json"),
+    )) as {
       webhookSecret: string;
     };
 
     for (const file of ["push.json", "check-run.json", "workflow-run.json"]) {
-      const recording = (await json(join(RECORDINGS_ROOT, "webhooks", file))) as {
+      const recording = (await json(
+        join(RECORDINGS_ROOT, "webhooks", file),
+      )) as {
         body: unknown;
         headers: Record<string, string>;
       };
@@ -128,48 +162,72 @@ describe("recorded GitHub fixture replay", () => {
   });
 
   it("contains passing JUnit and Vitest JSON evidence for REQ-AUTH-002", async () => {
-    const junit = await readFile(join(RECORDINGS_ROOT, "actions", "junit.xml"), "utf8");
-    const vitest = (await json(join(RECORDINGS_ROOT, "actions", "vitest.json"))) as {
+    const junit = await readFile(
+      join(RECORDINGS_ROOT, "actions", "junit.xml"),
+      "utf8",
+    );
+    const vitest = (await json(
+      join(RECORDINGS_ROOT, "actions", "vitest.json"),
+    )) as {
       numFailedTests: number;
       numPassedTests: number;
       success: boolean;
-      testResults: Array<{ assertionResults: Array<{ fullName: string; status: string }> }>;
+      testResults: Array<{
+        assertionResults: Array<{ fullName: string; status: string }>;
+      }>;
     };
 
     expect(junit).toContain('tests="1" failures="0"');
     expect(junit).toContain("REQ-AUTH-002");
-    expect(vitest).toMatchObject({ success: true, numPassedTests: 1, numFailedTests: 0 });
+    expect(vitest).toMatchObject({
+      success: true,
+      numPassedTests: 1,
+      numFailedTests: 0,
+    });
     expect(vitest.testResults[0]?.assertionResults[0]).toMatchObject({
       status: "passed",
     });
-    expect(vitest.testResults[0]?.assertionResults[0]?.fullName).toContain("REQ-AUTH-002");
+    expect(vitest.testResults[0]?.assertionResults[0]?.fullName).toContain(
+      "REQ-AUTH-002",
+    );
   });
 
   it("stays below the bounded fixture size budget", async () => {
-    await expect(directoryBytes(FIXTURE_ROOT)).resolves.toBeLessThan(512 * 1024);
+    await expect(directoryBytes(FIXTURE_ROOT)).resolves.toBeLessThan(
+      512 * 1024,
+    );
   });
 });
 
 describe("fixture executable tests", () => {
-  it(
-    "runs offline and emits fresh JUnit plus JSON report artifacts",
-    async () => {
-      await execFile(process.execPath, [VITEST_CLI, "run", "--config", "vitest.config.ts"], {
+  it("runs offline and emits fresh JUnit plus JSON report artifacts", async () => {
+    await execFile(
+      process.execPath,
+      [VITEST_CLI, "run", "--config", "vitest.config.ts"],
+      {
         cwd: FIXTURE_ROOT,
         env: { ...process.env, CI: "1" },
         timeout: 30_000,
-      });
+      },
+    );
 
-      const junit = await readFile(join(FIXTURE_ROOT, ".reports", "junit.xml"), "utf8");
-      const report = (await json(join(FIXTURE_ROOT, ".reports", "vitest.json"))) as {
-        numFailedTests: number;
-        numPassedTests: number;
-        success: boolean;
-      };
+    const junit = await readFile(
+      join(FIXTURE_ROOT, ".reports", "junit.xml"),
+      "utf8",
+    );
+    const report = (await json(
+      join(FIXTURE_ROOT, ".reports", "vitest.json"),
+    )) as {
+      numFailedTests: number;
+      numPassedTests: number;
+      success: boolean;
+    };
 
-      expect(junit).toContain("REQ-AUTH-002");
-      expect(report).toMatchObject({ success: true, numPassedTests: 1, numFailedTests: 0 });
-    },
-    30_000,
-  );
+    expect(junit).toContain("REQ-AUTH-002");
+    expect(report).toMatchObject({
+      success: true,
+      numPassedTests: 1,
+      numFailedTests: 0,
+    });
+  }, 30_000);
 });

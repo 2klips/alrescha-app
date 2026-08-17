@@ -5,7 +5,10 @@ import { createGitHubWebhookStore } from "../../../../lib/github/webhook-store";
 export async function POST(request: Request) {
   const secret = process.env.GITHUB_WEBHOOK_SECRET;
   if (!secret) {
-    return Response.json({ error: "github_webhook_not_configured" }, { status: 503 });
+    return Response.json(
+      { error: "github_webhook_not_configured" },
+      { status: 503 },
+    );
   }
 
   const result = await handleGitHubWebhook({

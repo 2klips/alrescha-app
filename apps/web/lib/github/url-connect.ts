@@ -1,4 +1,7 @@
-import { parseGitHubRepositoryUrl, type GitHubRepositoryUrlFailure } from "@arr/core";
+import {
+  parseGitHubRepositoryUrl,
+  type GitHubRepositoryUrlFailure,
+} from "@arr/core";
 
 /**
  * Decides what happens when a user pastes a repository URL during
@@ -19,7 +22,10 @@ export interface UrlConnectDependencies {
     fullName: string,
   ) => Promise<{ githubRepositoryId: number; installationId: string } | null>;
   /** Already-selected repository in this workspace. */
-  findConnectedRepository: (workspaceId: string, fullName: string) => Promise<boolean>;
+  findConnectedRepository: (
+    workspaceId: string,
+    fullName: string,
+  ) => Promise<boolean>;
   /** Whether the workspace has any GitHub App installation. */
   hasInstallation: (workspaceId: string) => Promise<boolean>;
   /**
@@ -27,7 +33,9 @@ export interface UrlConnectDependencies {
    * for the install-screen pre-selection hint, or null when the repository
    * is private or does not exist (GitHub does not distinguish the two).
    */
-  lookupPublicRepository: (fullName: string) => Promise<{ githubRepositoryId: number } | null>;
+  lookupPublicRepository: (
+    fullName: string,
+  ) => Promise<{ githubRepositoryId: number } | null>;
 }
 
 export type UrlConnectOutcome =
@@ -50,11 +58,19 @@ export async function decideUrlConnect(
     return { kind: "invalid_url", reason: parsed.reason };
   }
 
-  if (await dependencies.findConnectedRepository(input.workspaceId, parsed.fullName)) {
+  if (
+    await dependencies.findConnectedRepository(
+      input.workspaceId,
+      parsed.fullName,
+    )
+  ) {
     return { fullName: parsed.fullName, kind: "already_connected" };
   }
 
-  const available = await dependencies.findAvailableRepository(input.workspaceId, parsed.fullName);
+  const available = await dependencies.findAvailableRepository(
+    input.workspaceId,
+    parsed.fullName,
+  );
   if (available) {
     const repositoryId = await dependencies.connectRepository(available);
     return { fullName: parsed.fullName, kind: "connected", repositoryId };
@@ -65,7 +81,9 @@ export async function decideUrlConnect(
     return { fullName: parsed.fullName, kind: "no_access" };
   }
 
-  const publicRepository = await dependencies.lookupPublicRepository(parsed.fullName);
+  const publicRepository = await dependencies.lookupPublicRepository(
+    parsed.fullName,
+  );
   if (!publicRepository) {
     return { fullName: parsed.fullName, kind: "private_or_missing" };
   }

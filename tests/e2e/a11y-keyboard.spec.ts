@@ -22,9 +22,9 @@ test("the hit layer costs exactly one tab stop, with arrow-key node traversal", 
   const nodeCount = await page.locator(".brain-map-hit").count();
   // Exactly one button is in the tab order — the roving stop.
   await expect(page.locator('.brain-map-hit[tabindex="0"]')).toHaveCount(1);
-  expect(
-    await page.locator('.brain-map-hit[tabindex="-1"]').count(),
-  ).toBe(nodeCount - 1);
+  expect(await page.locator('.brain-map-hit[tabindex="-1"]').count()).toBe(
+    nodeCount - 1,
+  );
 
   // Enter the layer and walk it with arrows; focus moves node to node.
   await page.locator('.brain-map-hit[tabindex="0"]').focus();

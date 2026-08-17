@@ -9,7 +9,14 @@ import { parseNpmAuditReport } from "../packages/core/src/index";
 const VALID_REPORT = {
   auditReportVersion: 2,
   metadata: {
-    vulnerabilities: { critical: 1, high: 1, info: 0, low: 0, moderate: 1, total: 3 },
+    vulnerabilities: {
+      critical: 1,
+      high: 1,
+      info: 0,
+      low: 0,
+      moderate: 1,
+      total: 3,
+    },
   },
   vulnerabilities: {
     lodash: {
@@ -115,12 +122,17 @@ describe("parseNpmAuditReport", () => {
       "an unknown severity",
       {
         auditReportVersion: 2,
-        vulnerabilities: { x: { fixAvailable: true, severity: "severe", via: [] } },
+        vulnerabilities: {
+          x: { fixAvailable: true, severity: "severe", via: [] },
+        },
       },
     ],
-  ])("yields null for malformed input (%s) — never a fabricated zero", (_label, input) => {
-    expect(parseNpmAuditReport(input)).toBeNull();
-  });
+  ])(
+    "yields null for malformed input (%s) — never a fabricated zero",
+    (_label, input) => {
+      expect(parseNpmAuditReport(input)).toBeNull();
+    },
+  );
 });
 
 describe("inspection stays a collector, not a scanner (scope proof)", () => {

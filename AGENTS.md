@@ -5,6 +5,7 @@ This repository implements Arr (AI development assurance SaaS). Full product spe
 ## Before doing anything
 
 Read in this exact order:
+
 1. `spec/IMPLEMENTATION_GUIDE.md` — repo rules, prerequisite phases, decided defaults, session protocol
 2. `spec/WORK_SPEC.md` — normative spec (intent, 10 guardrails, screens, data model, rules, MCP contract)
 3. `spec/BUILD_PLAN.md` — 22 todos with waves, dependencies, acceptance criteria

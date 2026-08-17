@@ -35,8 +35,7 @@ const ROUTES = [
 const WARMUP_TIMEOUT_MS = 90_000;
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
-  const baseURL =
-    config.projects[0]?.use?.baseURL ?? "http://127.0.0.1:3000";
+  const baseURL = config.projects[0]?.use?.baseURL ?? "http://127.0.0.1:3000";
 
   for (const route of ROUTES) {
     const url = new URL(route, baseURL).toString();

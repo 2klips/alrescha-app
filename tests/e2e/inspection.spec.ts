@@ -51,7 +51,9 @@ test("document summaries render only under the inferred badge", async ({
 }) => {
   await page.goto("/inspection");
   const documents = page.getByTestId("inspection-documents");
-  await expect(documents.locator(".grade-badge.inferred").first()).toBeVisible();
+  await expect(
+    documents.locator(".grade-badge.inferred").first(),
+  ).toBeVisible();
   await expect(documents).toContainText(INSPECTION.documents.summaryMissing);
   await expect(documents).toContainText(
     INSPECTION.documents.freshness["drift-suspected"],

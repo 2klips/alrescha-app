@@ -22,7 +22,9 @@ export interface PersistedGitHubWebhookEvent extends NormalizedGitHubWebhookEven
 }
 
 export interface GitHubWebhookStore {
-  insertEvent(event: PersistedGitHubWebhookEvent): Promise<"duplicate" | "inserted">;
+  insertEvent(
+    event: PersistedGitHubWebhookEvent,
+  ): Promise<"duplicate" | "inserted">;
   resolveRepository(input: {
     installationId: number;
     repositoryFullName: string;
@@ -69,7 +71,9 @@ export function verifyGitHubWebhookSignature(
     return false;
   }
 
-  const expected = Buffer.from(`sha256=${createHmac("sha256", secret).update(rawBody, "utf8").digest("hex")}`);
+  const expected = Buffer.from(
+    `sha256=${createHmac("sha256", secret).update(rawBody, "utf8").digest("hex")}`,
+  );
   const actual = Buffer.from(signatureHeader);
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
@@ -79,14 +83,19 @@ export function normalizeGitHubWebhook(
   deliveryId: string,
   rawBody: string,
 ): NormalizedGitHubWebhookEvent | null {
-  if (eventHeader !== "push" && eventHeader !== "check_run" && eventHeader !== "workflow_run") {
+  if (
+    eventHeader !== "push" &&
+    eventHeader !== "check_run" &&
+    eventHeader !== "workflow_run"
+  ) {
     return null;
   }
 
   const body = record(JSON.parse(rawBody) as unknown, "webhook body");
   const repository = record(body.repository, "webhook body.repository");
   const installation = record(body.installation, "webhook body.installation");
-  const action = eventHeader === "push" ? null : stringField(body, "action", "webhook body");
+  const action =
+    eventHeader === "push" ? null : stringField(body, "action", "webhook body");
 
   if (eventHeader !== "push" && action !== "completed") {
     return null;
@@ -104,7 +113,9 @@ export function normalizeGitHubWebhook(
   }
 
   if (!/^[0-9a-f]{40}$/.test(commitSha)) {
-    throw new TypeError("Webhook commit SHA must contain 40 lowercase hexadecimal characters.");
+    throw new TypeError(
+      "Webhook commit SHA must contain 40 lowercase hexadecimal characters.",
+    );
   }
 
   return {
@@ -113,10 +124,22 @@ export function normalizeGitHubWebhook(
     conclusion,
     deliveryId,
     event: eventHeader,
-    installationId: numberField(installation, "id", "webhook body.installation"),
+    installationId: numberField(
+      installation,
+      "id",
+      "webhook body.installation",
+    ),
     payloadDigest: createHash("sha256").update(rawBody, "utf8").digest("hex"),
-    repositoryFullName: stringField(repository, "full_name", "webhook body.repository"),
-    repositoryGitHubId: numberField(repository, "id", "webhook body.repository"),
+    repositoryFullName: stringField(
+      repository,
+      "full_name",
+      "webhook body.repository",
+    ),
+    repositoryGitHubId: numberField(
+      repository,
+      "id",
+      "webhook body.repository",
+    ),
   };
 }
 
@@ -155,10 +178,14 @@ export async function handleGitHubWebhook(input: {
   readonly signature: string | null;
   readonly store: GitHubWebhookStore;
 }): Promise<{ body: Readonly<Record<string, unknown>>; status: number }> {
-  if (Buffer.byteLength(input.rawBody, "utf8") > MAX_GITHUB_WEBHOOK_BODY_BYTES) {
+  if (
+    Buffer.byteLength(input.rawBody, "utf8") > MAX_GITHUB_WEBHOOK_BODY_BYTES
+  ) {
     return { body: { error: "payload_too_large" }, status: 413 };
   }
-  if (!verifyGitHubWebhookSignature(input.secret, input.rawBody, input.signature)) {
+  if (
+    !verifyGitHubWebhookSignature(input.secret, input.rawBody, input.signature)
+  ) {
     return { body: { error: "invalid_signature" }, status: 401 };
   }
   if (!input.deliveryId || !input.event) {
@@ -193,7 +220,11 @@ export async function handleGitHubWebhook(input: {
 
   let event: NormalizedGitHubWebhookEvent | null;
   try {
-    event = normalizeGitHubWebhook(input.event, input.deliveryId, input.rawBody);
+    event = normalizeGitHubWebhook(
+      input.event,
+      input.deliveryId,
+      input.rawBody,
+    );
   } catch {
     return { body: { error: "invalid_payload" }, status: 400 };
   }
@@ -204,7 +235,10 @@ export async function handleGitHubWebhook(input: {
 
   const repository = await input.store.resolveRepository(event);
   if (!repository) {
-    return { body: { ignored: true, reason: "repository_not_selected" }, status: 202 };
+    return {
+      body: { ignored: true, reason: "repository_not_selected" },
+      status: 202,
+    };
   }
 
   const outcome = await input.store.insertEvent({
@@ -212,5 +246,8 @@ export async function handleGitHubWebhook(input: {
     repositoryId: repository.id,
     workspaceId: repository.workspaceId,
   });
-  return { body: { duplicate: outcome === "duplicate", received: true }, status: 200 };
+  return {
+    body: { duplicate: outcome === "duplicate", received: true },
+    status: 200,
+  };
 }

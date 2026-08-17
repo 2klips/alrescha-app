@@ -17,7 +17,9 @@ export const THEME_ATTRIBUTE = "data-theme";
 export const DEFAULT_THEME: Theme = "dark";
 
 export function isTheme(value: unknown): value is Theme {
-  return typeof value === "string" && (THEMES as readonly string[]).includes(value);
+  return (
+    typeof value === "string" && (THEMES as readonly string[]).includes(value)
+  );
 }
 
 export interface InitialThemeInput {

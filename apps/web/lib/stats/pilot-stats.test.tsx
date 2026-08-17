@@ -83,18 +83,32 @@ describe("pilot stats JSON export", () => {
       enabled: true,
       packs: [],
       receipts: [
-        { commitSha: "a".repeat(40), createdAt: "2026-08-12T00:00:00Z", findings: { opened: 2, openTotal: 2, resolved: 0 }, id: "r1" },
-        { commitSha: "b".repeat(40), createdAt: "2026-08-13T00:00:00Z", findings: { opened: 0, openTotal: 1, resolved: 1 }, id: "r2" },
+        {
+          commitSha: "a".repeat(40),
+          createdAt: "2026-08-12T00:00:00Z",
+          findings: { opened: 2, openTotal: 2, resolved: 0 },
+          id: "r1",
+        },
+        {
+          commitSha: "b".repeat(40),
+          createdAt: "2026-08-13T00:00:00Z",
+          findings: { opened: 0, openTotal: 1, resolved: 1 },
+          id: "r2",
+        },
       ],
       runs: [],
     });
     const response = await createPilotStatsExportResponse({
       getCurrentUserId: vi.fn().mockResolvedValue("user-owner"),
-      loadReport: vi.fn().mockResolvedValue({ report, workspaceId: "workspace-owner" }),
+      loadReport: vi
+        .fn()
+        .mockResolvedValue({ report, workspaceId: "workspace-owner" }),
     });
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("content-disposition")).toContain("arr-pilot-stats.json");
+    expect(response.headers.get("content-disposition")).toContain(
+      "arr-pilot-stats.json",
+    );
     await expect(response.json()).resolves.toEqual({
       report,
       schemaVersion: "arr.pilot-stats.v1",
@@ -117,7 +131,12 @@ describe("pilot stats JSON export", () => {
     const response = await createPilotStatsExportResponse({
       getCurrentUserId: vi.fn().mockResolvedValue("user-owner"),
       loadReport: vi.fn().mockResolvedValue({
-        report: computePilotStats({ enabled: false, packs: [], receipts: [], runs: [] }),
+        report: computePilotStats({
+          enabled: false,
+          packs: [],
+          receipts: [],
+          runs: [],
+        }),
         workspaceId: "workspace-owner",
       }),
     });
@@ -134,21 +153,58 @@ describe("pilot stats dashboard", () => {
     const report = computePilotStats({
       enabled: true,
       packs: [
-        { baselineTokens: 2_000, occurredAt: "2026-08-11T12:00:00Z", selectedTokens: 600 },
-        { baselineTokens: 1_900, occurredAt: "2026-08-12T12:00:00Z", selectedTokens: 500 },
+        {
+          baselineTokens: 2_000,
+          occurredAt: "2026-08-11T12:00:00Z",
+          selectedTokens: 600,
+        },
+        {
+          baselineTokens: 1_900,
+          occurredAt: "2026-08-12T12:00:00Z",
+          selectedTokens: 500,
+        },
       ],
       receipts: [
-        { commitSha: "a".repeat(40), createdAt: "2026-08-10T12:00:00Z", findings: { opened: 5, openTotal: 5, resolved: 0 }, id: "r1" },
-        { commitSha: "b".repeat(40), createdAt: "2026-08-11T12:00:00Z", findings: { opened: 2, openTotal: 4, resolved: 3 }, id: "r2" },
-        { commitSha: "c".repeat(40), createdAt: "2026-08-12T12:00:00Z", findings: { opened: 1, openTotal: 3, resolved: 2 }, id: "r3" },
+        {
+          commitSha: "a".repeat(40),
+          createdAt: "2026-08-10T12:00:00Z",
+          findings: { opened: 5, openTotal: 5, resolved: 0 },
+          id: "r1",
+        },
+        {
+          commitSha: "b".repeat(40),
+          createdAt: "2026-08-11T12:00:00Z",
+          findings: { opened: 2, openTotal: 4, resolved: 3 },
+          id: "r2",
+        },
+        {
+          commitSha: "c".repeat(40),
+          createdAt: "2026-08-12T12:00:00Z",
+          findings: { opened: 1, openTotal: 3, resolved: 2 },
+          id: "r3",
+        },
       ],
       runs: [
-        { completedAt: "2026-08-10T12:00:05Z", id: "run1", startedAt: "2026-08-10T12:00:00Z" },
-        { completedAt: "2026-08-11T12:00:03Z", id: "run2", startedAt: "2026-08-11T12:00:00Z" },
-        { completedAt: "2026-08-12T12:00:04Z", id: "run3", startedAt: "2026-08-12T12:00:00Z" },
+        {
+          completedAt: "2026-08-10T12:00:05Z",
+          id: "run1",
+          startedAt: "2026-08-10T12:00:00Z",
+        },
+        {
+          completedAt: "2026-08-11T12:00:03Z",
+          id: "run2",
+          startedAt: "2026-08-11T12:00:00Z",
+        },
+        {
+          completedAt: "2026-08-12T12:00:04Z",
+          id: "run3",
+          startedAt: "2026-08-12T12:00:00Z",
+        },
       ],
     });
-    const html = renderToStaticMarkup(createElement(PilotStatsDashboard, { report }));
+    const html = renderToStaticMarkup(
+      createElement(PilotStatsDashboard, { report }),
+    );
 
     expect(html).toContain(STATS.toolbar.receiptCount(3));
     expect(html).toContain(STATS.findings.resolvedOpened(5, 8));
@@ -163,8 +219,15 @@ describe("pilot stats dashboard", () => {
   });
 
   test("prompts for explicit consent before showing or collecting stats", () => {
-    const report = computePilotStats({ enabled: false, packs: [], receipts: [], runs: [] });
-    const html = renderToStaticMarkup(createElement(PilotStatsDashboard, { report }));
+    const report = computePilotStats({
+      enabled: false,
+      packs: [],
+      receipts: [],
+      runs: [],
+    });
+    const html = renderToStaticMarkup(
+      createElement(PilotStatsDashboard, { report }),
+    );
 
     expect(html).toContain(STATS.consent.title);
     expect(html).toContain(STATS.consent.scope);
@@ -178,11 +241,18 @@ describe("pilot stats dashboard", () => {
       enabled: true,
       packs: [],
       receipts: [
-        { commitSha: "a".repeat(40), createdAt: "2026-08-13T12:00:00Z", findings: { opened: 3, openTotal: 3, resolved: 0 }, id: "only-receipt" },
+        {
+          commitSha: "a".repeat(40),
+          createdAt: "2026-08-13T12:00:00Z",
+          findings: { opened: 3, openTotal: 3, resolved: 0 },
+          id: "only-receipt",
+        },
       ],
       runs: [],
     });
-    const html = renderToStaticMarkup(createElement(PilotStatsDashboard, { report }));
+    const html = renderToStaticMarkup(
+      createElement(PilotStatsDashboard, { report }),
+    );
 
     expect(html).toContain(STATS.insufficient.title);
     expect(html).toContain(STATS.insufficient.receiptsRecorded(1));

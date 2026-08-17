@@ -7,4 +7,3 @@ describe("mcp package", () => {
     expect(MCP_PACKAGE_NAME).toBe("@arr/mcp");
   });
 });
-

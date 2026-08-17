@@ -298,7 +298,10 @@ export async function buildArmContext(input: {
     const contents = seeds
       .map((seed) => getNodeContent(graphWorkspace, seed.nodeId))
       .filter((node): node is NonNullable<typeof node> => node !== null)
-      .map((node) => `## ${node.path ?? node.id}\n\n${node.content.slice(0, 6_000)}`);
+      .map(
+        (node) =>
+          `## ${node.path ?? node.id}\n\n${node.content.slice(0, 6_000)}`,
+      );
     return {
       arm: input.arm,
       text: [
@@ -477,16 +480,16 @@ export async function buildArmContext(input: {
   const techniques = input.techniques;
   const idFirst = techniques["id-first-loading"];
 
-  const idFirstArtifacts = selectedArtifactResults.slice(0, 2).flatMap(
-    (result) => {
+  const idFirstArtifacts = selectedArtifactResults
+    .slice(0, 2)
+    .flatMap((result) => {
       const selected = getWorkspaceArtifact(workspace, {
         id: result.nodeId,
       }).artifact;
       return selected
         ? [{ content: selected.content.slice(0, 4_000), path: selected.path }]
         : [];
-    },
-  );
+    });
   const searchSection = idFirst
     ? `## search_nodes\n\n${searchResults.map(({ id, path, rank }) => `${id} ${path} [${rank}]`).join("\n")}`
     : `## search_index\n\n${searchResults.map(({ excerpt, path, rank }) => `${path} [${rank}]\n${excerpt.slice(0, 160)}`).join("\n\n")}`;

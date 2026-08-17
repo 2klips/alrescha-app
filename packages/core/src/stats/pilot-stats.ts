@@ -40,8 +40,7 @@ export function computePilotStats(input: PilotStatsInput) {
   const runs = [...input.runs]
     .map((run) => ({
       ...run,
-      durationMs:
-        Date.parse(run.completedAt) - Date.parse(run.startedAt),
+      durationMs: Date.parse(run.completedAt) - Date.parse(run.startedAt),
     }))
     .sort((left, right) => left.startedAt.localeCompare(right.startedAt));
   const selectedTokens = input.packs.reduce(

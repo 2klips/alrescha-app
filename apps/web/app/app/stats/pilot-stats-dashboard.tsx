@@ -59,21 +59,32 @@ export function PilotStatsDashboard({
       <section className="pilot-stats-grid" aria-label={STATS.grid.aria}>
         <article className="pilot-stat-card">
           <span>{STATS.findings.label}</span>
-          <strong>{STATS.findings.openTotal(report.findings.latestOpenTotal)}</strong>
-          <p>{STATS.findings.resolvedOpened(report.findings.resolved, report.findings.opened)}</p>
+          <strong>
+            {STATS.findings.openTotal(report.findings.latestOpenTotal)}
+          </strong>
+          <p>
+            {STATS.findings.resolvedOpened(
+              report.findings.resolved,
+              report.findings.opened,
+            )}
+          </p>
           <small>{STATS.findings.trend(report.findings.netOpenChange)}</small>
         </article>
 
         <article className="pilot-stat-card">
           <span>{STATS.context.label}</span>
-          <strong>{STATS.context.reduction(report.context.tokenReductionPercent)}</strong>
+          <strong>
+            {STATS.context.reduction(report.context.tokenReductionPercent)}
+          </strong>
           <p>
             {STATS.context.tokensCompare(
               report.context.selectedTokens.toLocaleString("en-US"),
               report.context.baselineTokens.toLocaleString("en-US"),
             )}
           </p>
-          <small>{STATS.context.packRequests(report.context.packRequests)}</small>
+          <small>
+            {STATS.context.packRequests(report.context.packRequests)}
+          </small>
         </article>
 
         <article className="pilot-stat-card">

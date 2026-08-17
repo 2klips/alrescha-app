@@ -8,25 +8,15 @@
  */
 
 export type AnalysisTriggerKind =
-  | "manual"
-  | "push"
-  | "check_run"
-  | "workflow_run";
+  "manual" | "push" | "check_run" | "workflow_run";
 
 export type AnalysisJobKind = "scan" | "analyze" | "judge" | "pack";
 
 export type AnalysisJobStatus =
-  | "queued"
-  | "running"
-  | "succeeded"
-  | "failed"
-  | "cancelled";
+  "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
 export type CommitAnalysisStatus =
-  | "pending"
-  | "analyzing"
-  | "completed"
-  | "failed";
+  "pending" | "analyzing" | "completed" | "failed";
 
 /**
  * How much this run can be trusted to assert (ADR-015). `full` runs are
@@ -37,11 +27,7 @@ export type CommitAnalysisStatus =
 export type CommitAssuranceScope = "full" | "graph-only";
 
 export type AnalysisRunStatus =
-  | "pending"
-  | "running"
-  | "succeeded"
-  | "failed"
-  | "cancelled";
+  "pending" | "running" | "succeeded" | "failed" | "cancelled";
 
 export interface AnalysisRunInput {
   readonly commitSha: string;
@@ -147,9 +133,7 @@ function deriveStatus(
 }
 
 /** The stored error, verbatim — the UI's contract is to show it unedited. */
-function deriveFailureReason(
-  jobs: readonly AnalysisJobInput[],
-): string | null {
+function deriveFailureReason(jobs: readonly AnalysisJobInput[]): string | null {
   for (const job of jobs) {
     if (
       (job.status === "failed" || job.status === "cancelled") &&
@@ -223,7 +207,8 @@ function matchReceipt(
   return (
     receipts.find((receipt) => receipt.runId === run.id) ??
     receipts.find(
-      (receipt) => receipt.runId === null && receipt.commitSha === run.commitSha,
+      (receipt) =>
+        receipt.runId === null && receipt.commitSha === run.commitSha,
     ) ??
     null
   );

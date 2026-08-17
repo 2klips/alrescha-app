@@ -28,7 +28,11 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createClient();
-  const workspace = await supabase.from("workspaces").select("id").limit(1).single();
+  const workspace = await supabase
+    .from("workspaces")
+    .select("id")
+    .limit(1)
+    .single();
   if (workspace.error || !workspace.data) {
     return Response.json({ error: "forbidden" }, { status: 403 });
   }
@@ -55,9 +59,14 @@ export async function POST(request: Request) {
   if (!connection.ok) {
     return Response.json(
       { error: connection.error },
-      { status: connection.error === "github_installation_revoked" ? 409 : 403 },
+      {
+        status: connection.error === "github_installation_revoked" ? 409 : 403,
+      },
     );
   }
 
-  return NextResponse.redirect(new URL("/app?github=pending", requestUrl.origin), 303);
+  return NextResponse.redirect(
+    new URL("/app?github=pending", requestUrl.origin),
+    303,
+  );
 }

@@ -519,7 +519,9 @@ export function remainingSessionMs(session: Session, now: number): number {
     expect(report.hypotheses).toHaveLength(3);
     expect(report.hypotheses[0]?.model).toBeNull();
     expect(report.hypotheses[0]?.pairedUnitCount).toBe(taskIds.length * 5 * 2);
-    expect(report.run.overrides).toEqual([`tasks=${[...taskIds].sort().join(",")}`]);
+    expect(report.run.overrides).toEqual([
+      `tasks=${[...taskIds].sort().join(",")}`,
+    ]);
   }, 120_000);
 
   it("skips a model that has no API key instead of failing the run", async () => {
@@ -845,7 +847,9 @@ export function remainingSessionMs(session: Session, now: number): number {
       type: "tool",
     });
     expect(
-      (requests[0]?.init.headers as Record<string, string>)["anthropic-version"],
+      (requests[0]?.init.headers as Record<string, string>)[
+        "anthropic-version"
+      ],
     ).toBe("2023-06-01");
   });
 

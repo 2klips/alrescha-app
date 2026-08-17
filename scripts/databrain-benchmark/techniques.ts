@@ -67,7 +67,11 @@ async function measureSide(
   tasks: readonly BenchmarkTask[],
   flags: TechniqueFlags,
   compacted: boolean,
-): Promise<{ recallPercent: number; stablePrefixChars: number; tokens: number }> {
+): Promise<{
+  recallPercent: number;
+  stablePrefixChars: number;
+  tokens: number;
+}> {
   let tokens = 0;
   let recalledFacts = 0;
   let totalFacts = 0;

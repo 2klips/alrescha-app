@@ -173,9 +173,7 @@ export async function loadWorkspacePilotReport(
       .order("started_at", { ascending: true }),
     client
       .from("access_events")
-      .select(
-        "occurred_at,pack_selected_tokens,pack_baseline_tokens",
-      )
+      .select("occurred_at,pack_selected_tokens,pack_baseline_tokens")
       .eq("workspace_id", workspace.id)
       .eq("tool", "request_context_pack")
       .gte(

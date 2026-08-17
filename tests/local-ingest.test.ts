@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { scanRepository, type RepositoryScanPlan } from "../packages/core/src/index";
+import {
+  scanRepository,
+  type RepositoryScanPlan,
+} from "../packages/core/src/index";
 import { createLocalRepositorySource } from "../packages/cli/src/local-source";
 import {
   buildWorkspaceCommitCards,
@@ -137,7 +140,8 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
   }
 
   it("the CLI path and the GitHub path yield the same plan and the same graph", async () => {
-    const { commitSha, source } = await createLocalRepositorySource(DRIFTED_DEMO);
+    const { commitSha, source } =
+      await createLocalRepositorySource(DRIFTED_DEMO);
     const localPlan = await scanRepository({ commitSha, source });
     const githubPlan = await githubShapedPlan(DRIFTED_DEMO, commitSha);
 
@@ -146,7 +150,10 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
     expect(localPlan.artifacts.length).toBeGreaterThan(5);
 
     // Same apply function on both sides → identical graphs.
-    const repositoryA = await ensureRepository(workspaceA, "local/drifted-demo");
+    const repositoryA = await ensureRepository(
+      workspaceA,
+      "local/drifted-demo",
+    );
     const repositoryB = await ensureRepository(workspaceB, "arr/drifted-demo");
     await applyPlan(workspaceA, repositoryA, localPlan);
     await applyPlan(workspaceB, repositoryB, githubPlan);

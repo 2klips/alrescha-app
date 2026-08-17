@@ -20,4 +20,7 @@ export { PROGRESS } from "./progress";
 export { SETTINGS } from "./settings";
 export { STATS } from "./stats";
 export { TEAM } from "./team";
-export { CONVENTIONAL_ENGLISH_TERMS, type ConventionalEnglishTerm } from "./terms";
+export {
+  CONVENTIONAL_ENGLISH_TERMS,
+  type ConventionalEnglishTerm,
+} from "./terms";

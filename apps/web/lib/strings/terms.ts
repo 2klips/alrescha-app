@@ -133,4 +133,5 @@ export const CONVENTIONAL_ENGLISH_TERMS = [
   "tags",
 ] as const;
 
-export type ConventionalEnglishTerm = (typeof CONVENTIONAL_ENGLISH_TERMS)[number];
+export type ConventionalEnglishTerm =
+  (typeof CONVENTIONAL_ENGLISH_TERMS)[number];

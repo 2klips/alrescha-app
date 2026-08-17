@@ -8,4 +8,3 @@ export function createClient() {
   const environment = publicSupabaseEnv();
   return createBrowserClient(environment.url, environment.publishableKey);
 }
-

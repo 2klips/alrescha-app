@@ -1,4 +1,7 @@
-import { findRepository, isWorkspaceMember } from "../../../../lib/auth/repository-access";
+import {
+  findRepository,
+  isWorkspaceMember,
+} from "../../../../lib/auth/repository-access";
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { getRepositoryResponse } from "../../../../lib/auth/repository-route";
 
@@ -14,4 +17,3 @@ export async function GET(
     isWorkspaceMember,
   });
 }
-

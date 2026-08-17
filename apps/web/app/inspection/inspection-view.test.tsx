@@ -17,9 +17,7 @@ function render(state: "busy" | "empty"): string {
 describe("InspectionView", () => {
   it("labels every widget with its data source", () => {
     const html = render("busy");
-    const sources = html.match(
-      new RegExp(INSPECTION.sourcePrefix, "g"),
-    );
+    const sources = html.match(new RegExp(INSPECTION.sourcePrefix, "g"));
     expect(sources).toHaveLength(6);
     expect(html).toContain("npm audit --json ingest");
     expect(html).toContain("deterministic drift rules");
@@ -60,9 +58,7 @@ describe("InspectionView", () => {
 
   it("shows 증거 부족 in every widget when nothing is stored", () => {
     const html = render("empty");
-    const insufficient = html.match(
-      new RegExp(INSPECTION.insufficient, "g"),
-    );
+    const insufficient = html.match(new RegExp(INSPECTION.insufficient, "g"));
     expect(insufficient).toHaveLength(6);
     // No fabricated numbers appear in the empty state.
     expect(html).not.toContain("0%");

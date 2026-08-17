@@ -235,7 +235,8 @@ const INGEST_ASSURANCE_WRITE = new RegExp(
   `\\binsert\\s+into\\s+(?:public\\.)?(?:receipts|findings)\\b`,
   "i",
 );
-const INGEST_PATH_SEGMENT = /(?:^|[-_.])(?:ingest|ingests|upload|uploads|push|pushes)(?:[-_.]|$)/i;
+const INGEST_PATH_SEGMENT =
+  /(?:^|[-_.])(?:ingest|ingests|upload|uploads|push|pushes)(?:[-_.]|$)/i;
 
 function isIngestPathFile(file: string): boolean {
   return file.split("/").some((segment) => INGEST_PATH_SEGMENT.test(segment));

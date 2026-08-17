@@ -43,7 +43,9 @@ describe("minimal agent index", () => {
     const estimatedTokens = Math.ceil(PROGRESS_LOGGING_INSTRUCTION.length / 4);
 
     expect(estimatedTokens).toBeLessThanOrEqual(150);
-    expect(PROGRESS_LOGGING_INSTRUCTION).toContain('"summary":"<verified result; max 200 chars>"');
+    expect(PROGRESS_LOGGING_INSTRUCTION).toContain(
+      '"summary":"<verified result; max 200 chars>"',
+    );
     expect(PROGRESS_LOGGING_INSTRUCTION).toContain("never invent progress");
     expect(PROGRESS_LOGGING_INSTRUCTION).toContain("never log per turn");
   });
@@ -91,8 +93,8 @@ describe("minimal agent index", () => {
     expect(() =>
       applyManagedIndex("prefix\n<!-- ARR:END -->\n", section),
     ).toThrow("exactly one complete");
-    expect(() => applyManagedIndex(`${section}\n${section}\n`, section)).toThrow(
-      "exactly one complete",
-    );
+    expect(() =>
+      applyManagedIndex(`${section}\n${section}\n`, section),
+    ).toThrow("exactly one complete");
   });
 });

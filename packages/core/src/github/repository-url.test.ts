@@ -7,7 +7,10 @@ const ACCEPTED: ReadonlyArray<readonly [string, string]> = [
   ["https://github.com/2klips/arr-app.git", "2klips/arr-app"],
   ["https://github.com/2klips/arr-app/", "2klips/arr-app"],
   ["https://github.com/2klips/arr-app/tree/main/apps/web", "2klips/arr-app"],
-  ["https://github.com/2klips/arr-app?tab=readme-ov-file#readme", "2klips/arr-app"],
+  [
+    "https://github.com/2klips/arr-app?tab=readme-ov-file#readme",
+    "2klips/arr-app",
+  ],
   ["http://github.com/2klips/arr-app", "2klips/arr-app"],
   ["https://www.github.com/2klips/arr-app", "2klips/arr-app"],
   ["github.com/2klips/arr-app", "2klips/arr-app"],

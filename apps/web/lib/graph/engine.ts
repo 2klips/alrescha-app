@@ -234,7 +234,8 @@ export async function createGraphEngine(
     focusNode(nodeId) {
       const simulated = buffer.at(now()).get(nodeId);
       const fallback = data.nodes.find((node) => node.id === nodeId);
-      const position = simulated ?? (fallback ? { x: fallback.x, y: fallback.y } : null);
+      const position =
+        simulated ?? (fallback ? { x: fallback.x, y: fallback.y } : null);
       if (!position) return false;
       camera = {
         scale: camera.scale,

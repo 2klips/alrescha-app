@@ -85,7 +85,9 @@ export async function main(argv: readonly string[]): Promise<number> {
       console.error(CLI_MESSAGES.offline(outcome.detail));
       return 1;
     case "server-error":
-      console.error(CLI_MESSAGES.serverError(outcome.httpStatus, outcome.detail));
+      console.error(
+        CLI_MESSAGES.serverError(outcome.httpStatus, outcome.detail),
+      );
       return 1;
     case "invalid-payload":
       console.error(CLI_MESSAGES.invalidPayload(outcome.detail));
@@ -95,7 +97,8 @@ export async function main(argv: readonly string[]): Promise<number> {
 
 const executedDirectly =
   process.argv[1] !== undefined &&
-  import.meta.url === new URL(`file://${process.argv[1].replaceAll("\\", "/")}`).href;
+  import.meta.url ===
+    new URL(`file://${process.argv[1].replaceAll("\\", "/")}`).href;
 
 if (executedDirectly) {
   process.exitCode = await main(process.argv.slice(2));

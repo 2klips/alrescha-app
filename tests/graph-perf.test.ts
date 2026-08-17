@@ -257,7 +257,7 @@ describe(`${NODE_COUNT}-node frame budget`, () => {
     const small = measure(125);
     const large = measure(NODE_COUNT);
     const ratio = large / Math.max(small, 0.0005);
-      console.log(
+    console.log(
       `[perf] scaling 125→500 nodes         p50 ${small.toFixed(3)}ms → ` +
         `${large.toFixed(3)}ms (×${ratio.toFixed(2)}, quadratic would be ×16)`,
     );

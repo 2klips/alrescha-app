@@ -38,9 +38,7 @@ const INPUT: VibeInput = {
   resolvedFindings: [{ id: "finding-1", resolvedCommitSha: SHA_B }],
 };
 
-function gates(
-  adopted: readonly string[],
-): VibeGateResults {
+function gates(adopted: readonly string[]): VibeGateResults {
   return vibeGateResultsSchema.parse({
     experiment: "vibe-harness-injection-v0",
     generatedBy: "test",

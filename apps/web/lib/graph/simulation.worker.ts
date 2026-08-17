@@ -7,10 +7,7 @@
  * and torn down with `terminate()`, which also clears this interval.
  */
 
-import {
-  SIMULATION_FRAME_MS,
-  createSimulationRuntime,
-} from "./worker-runtime";
+import { SIMULATION_FRAME_MS, createSimulationRuntime } from "./worker-runtime";
 
 /**
  * The worker global. Typed locally rather than by adding the `webworker` lib,

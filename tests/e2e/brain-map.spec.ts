@@ -127,7 +127,9 @@ test("force panel values survive a reload", async ({ page }) => {
 
   await page.reload();
   await expect(
-    page.getByTestId("graph-force-panel").locator("[data-force-key='linkDistance']"),
+    page
+      .getByTestId("graph-force-panel")
+      .locator("[data-force-key='linkDistance']"),
   ).toHaveValue("140");
 
   // Collapsing is part of the workspace and persists too.
@@ -232,7 +234,9 @@ test("a hub chip focuses its node", async ({ page }) => {
   ).toHaveAttribute("aria-pressed", "true");
 });
 
-test("remounting the stage ten times leaks no WebGL context", async ({ page }) => {
+test("remounting the stage ten times leaks no WebGL context", async ({
+  page,
+}) => {
   test.setTimeout(120_000);
   const failures: string[] = [];
   page.on("console", (message) => {

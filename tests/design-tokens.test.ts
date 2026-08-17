@@ -297,17 +297,20 @@ describe("token contrast (WCAG 2.2 AA — Phase 2A todo 9)", () => {
     expect(on("--muted")).toBeGreaterThan(on("--faint"));
   });
 
-  test.each(THEMES)("%s: filled controls stay legible on their fill", (theme) => {
-    expect(
-      contrastRatio(resolve("--on-brand", theme), resolve("--brand", theme)),
-    ).toBeGreaterThan(3);
-    expect(
-      contrastRatio(
-        resolve("--on-verified", theme),
-        resolve("--verified", theme),
-      ),
-    ).toBeGreaterThan(3);
-  });
+  test.each(THEMES)(
+    "%s: filled controls stay legible on their fill",
+    (theme) => {
+      expect(
+        contrastRatio(resolve("--on-brand", theme), resolve("--brand", theme)),
+      ).toBeGreaterThan(3);
+      expect(
+        contrastRatio(
+          resolve("--on-verified", theme),
+          resolve("--verified", theme),
+        ),
+      ).toBeGreaterThan(3);
+    },
+  );
 
   test("the ratio calculation itself is calibrated", () => {
     expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 5);

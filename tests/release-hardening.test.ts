@@ -45,11 +45,16 @@ describe("pilot release hardening", () => {
       "insert into auth.users (id, email) values ($1, 'release-a@example.test'), ($2, 'release-b@example.test')",
       [USER_A, USER_B],
     );
-    const workspaces = await database.query<{ id: string; owner_user_id: string }>(
-      "select id, owner_user_id from public.workspaces",
-    );
-    workspaceA = workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_A)?.id ?? "";
-    workspaceB = workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_B)?.id ?? "";
+    const workspaces = await database.query<{
+      id: string;
+      owner_user_id: string;
+    }>("select id, owner_user_id from public.workspaces");
+    workspaceA =
+      workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_A)
+        ?.id ?? "";
+    workspaceB =
+      workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_B)
+        ?.id ?? "";
     await database.query(
       `insert into public.github_installations
         (id, workspace_id, github_installation_id, account_id, account_login)
@@ -82,10 +87,15 @@ describe("pilot release hardening", () => {
     const first = await database.query<{ revoke_github_installation: string }>(
       "select public.revoke_github_installation(777, 'deleted', 'delivery-release-1')",
     );
-    const duplicate = await database.query<{ revoke_github_installation: string }>(
+    const duplicate = await database.query<{
+      revoke_github_installation: string;
+    }>(
       "select public.revoke_github_installation(777, 'deleted', 'delivery-release-1')",
     );
-    const installation = await database.query<{ revoked_at: string | null; revocation_reason: string | null }>(
+    const installation = await database.query<{
+      revoked_at: string | null;
+      revocation_reason: string | null;
+    }>(
       "select revoked_at, revocation_reason from public.github_installations where id = $1",
       [INSTALLATION_ID],
     );
@@ -106,7 +116,9 @@ describe("pilot release hardening", () => {
     expect(installation.rows[0]?.revoked_at).not.toBeNull();
     expect(installation.rows[0]?.revocation_reason).toBe("deleted");
     expect(jobs.rows).toEqual([{ status: "cancelled" }]);
-    expect(audits.rows).toEqual([{ action: "github_installation_revoked", count: 1 }]);
+    expect(audits.rows).toEqual([
+      { action: "github_installation_revoked", count: 1 },
+    ]);
   });
 
   it("isolates minimal audit metadata by workspace", async () => {
@@ -115,18 +127,23 @@ describe("pilot release hardening", () => {
       [workspaceB],
     );
     const visible = await asAuthenticatedUser(database, USER_A, (transaction) =>
-      transaction.query<{ workspace_id: string }>("select workspace_id from public.security_audit_events"),
+      transaction.query<{ workspace_id: string }>(
+        "select workspace_id from public.security_audit_events",
+      ),
     );
 
     expect(visible.rows.length).toBeGreaterThan(0);
-    expect(visible.rows.every(({ workspace_id }) => workspace_id === workspaceA)).toBe(true);
+    expect(
+      visible.rows.every(({ workspace_id }) => workspace_id === workspaceA),
+    ).toBe(true);
   });
 
   it("enforces a durable workspace operation limit", async () => {
-    const consume = () => database.query<{ allowed: boolean }>(
-      "select public.consume_workspace_security_limit($1, 'repository_selection', 2, 60) as allowed",
-      [workspaceA],
-    );
+    const consume = () =>
+      database.query<{ allowed: boolean }>(
+        "select public.consume_workspace_security_limit($1, 'repository_selection', 2, 60) as allowed",
+        [workspaceA],
+      );
 
     expect((await consume()).rows[0]?.allowed).toBe(true);
     expect((await consume()).rows[0]?.allowed).toBe(true);
@@ -148,9 +165,9 @@ describe("pilot release hardening", () => {
       [workspaceA],
     );
 
-    const pruned = await database.query<{ prune_expired_access_events: number }>(
-      "select public.prune_expired_access_events()",
-    );
+    const pruned = await database.query<{
+      prune_expired_access_events: number;
+    }>("select public.prune_expired_access_events()");
     const remaining = await database.query<{ count: number }>(
       "select count(*)::integer as count from public.access_events where workspace_id = $1",
       [workspaceA],
@@ -162,9 +179,12 @@ describe("pilot release hardening", () => {
 
   it("ships explicit security, privacy, deployment, and pilot documents", async () => {
     const documents = await Promise.all(
-      ["SECURITY_CHECKLIST.md", "PRIVACY.md", "DEPLOYMENT_CHECKLIST.md", "PILOT_RECRUITMENT.md"].map(
-        (name) => readFile(resolve(ROOT, "docs", name), "utf8"),
-      ),
+      [
+        "SECURITY_CHECKLIST.md",
+        "PRIVACY.md",
+        "DEPLOYMENT_CHECKLIST.md",
+        "PILOT_RECRUITMENT.md",
+      ].map((name) => readFile(resolve(ROOT, "docs", name), "utf8")),
     );
     const releaseText = documents.join("\n");
 

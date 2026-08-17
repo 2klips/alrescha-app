@@ -30,17 +30,21 @@ export type InTotoStatement = z.infer<typeof inTotoStatementSchema>;
 function canonicalize(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`;
-  const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) =>
-    left.localeCompare(right),
+  const entries = Object.entries(value as Record<string, unknown>).sort(
+    ([left], [right]) => left.localeCompare(right),
   );
   return `{${entries.map(([key, child]) => `${JSON.stringify(key)}:${canonicalize(child)}`).join(",")}}`;
 }
 
-export async function digestInTotoStatement(statement: InTotoStatement): Promise<string> {
+export async function digestInTotoStatement(
+  statement: InTotoStatement,
+): Promise<string> {
   const parsed = inTotoStatementSchema.parse(statement);
   const encoded = new TextEncoder().encode(canonicalize(parsed));
   const digest = await globalThis.crypto.subtle.digest("SHA-256", encoded);
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return [...new Uint8Array(digest)]
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export type ReceiptVerification =
@@ -54,7 +58,10 @@ export async function verifyInTotoStatement(
 ): Promise<ReceiptVerification> {
   const parsed = inTotoStatementSchema.safeParse(statement);
   if (!parsed.success) {
-    return { issues: parsed.error.issues.map((issue) => issue.message), state: "invalid" };
+    return {
+      issues: parsed.error.issues.map((issue) => issue.message),
+      state: "invalid",
+    };
   }
   const actualDigest = await digestInTotoStatement(parsed.data);
   return actualDigest === expectedDigest

@@ -145,7 +145,9 @@ describe("collectNeighbors", () => {
   });
 
   it("returns null for an unknown node", () => {
-    expect(collectNeighbors(workspace(), "01K2000000000000000000XX99", 1)).toBeNull();
+    expect(
+      collectNeighbors(workspace(), "01K2000000000000000000XX99", 1),
+    ).toBeNull();
   });
 });
 
@@ -231,7 +233,9 @@ describe("getNodeContent", () => {
   });
 
   it("returns null for an unknown node", () => {
-    expect(getNodeContent(workspace(), "01K2000000000000000000XX99")).toBeNull();
+    expect(
+      getNodeContent(workspace(), "01K2000000000000000000XX99"),
+    ).toBeNull();
   });
 });
 

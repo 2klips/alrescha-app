@@ -210,7 +210,10 @@ export async function loadWorkspaceCommitCards(
           .select("id,run_id,commit_sha,summary")
           .eq("workspace_id", workspaceId)
           .in("run_id", runIds),
-    client.from("repositories").select("id,full_name").eq("workspace_id", workspaceId),
+    client
+      .from("repositories")
+      .select("id,full_name")
+      .eq("workspace_id", workspaceId),
   ]);
   for (const result of [jobsResult, receiptsResult, repositoriesResult]) {
     if (result.error) {
@@ -221,7 +224,8 @@ export async function loadWorkspaceCommitCards(
     cards: buildWorkspaceCommitCards({
       jobs: (jobsResult.data ?? []) as CommitCardJobRow[],
       receipts: (receiptsResult.data ?? []) as CommitCardReceiptRow[],
-      repositories: (repositoriesResult.data ?? []) as CommitCardRepositoryRow[],
+      repositories: (repositoriesResult.data ??
+        []) as CommitCardRepositoryRow[],
       runs,
     }),
     workspaceId,

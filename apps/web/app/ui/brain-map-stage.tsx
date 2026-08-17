@@ -71,7 +71,10 @@ export interface BrainMapStageProps {
 }
 
 /** The nodes that get a DOM hit target: highest degree first, capped. */
-export function hitTargets(data: GraphData, limit = HIT_TARGET_LIMIT): GraphNode[] {
+export function hitTargets(
+  data: GraphData,
+  limit = HIT_TARGET_LIMIT,
+): GraphNode[] {
   if (data.nodes.length <= limit) return [...data.nodes];
   const degrees = new Map<string, number>();
   for (const edge of data.edges) {
@@ -189,7 +192,11 @@ export function BrainMapStage({
         >
           {targets.map((node, index) => (
             <button
-              aria-label={DASHBOARD.nodeSummary(node.label, node.type, node.grade)}
+              aria-label={DASHBOARD.nodeSummary(
+                node.label,
+                node.type,
+                node.grade,
+              )}
               aria-pressed={node.id === selectedNodeId}
               className="brain-map-hit"
               data-grade={node.grade}
@@ -223,7 +230,11 @@ export function BrainMapStage({
       ) : null}
       <div aria-live="polite" className="sr-only">
         {data.edges.map((edge) => (
-          <button key={edge.id} onClick={() => onEdgeSelect?.(edge)} type="button">
+          <button
+            key={edge.id}
+            onClick={() => onEdgeSelect?.(edge)}
+            type="button"
+          >
             {edge.provenance.relation}: {edge.source} to {edge.target},{" "}
             {edge.provenance.grade}
           </button>

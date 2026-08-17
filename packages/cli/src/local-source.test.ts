@@ -70,9 +70,9 @@ describe("createLocalRepositorySource", () => {
       await symlink(join(root, "real.md"), join(root, "link.md"));
       const { source } = await createLocalRepositorySource(root);
       const tree = await source.listTree("0".repeat(40));
-      expect(
-        tree.entries.find(({ path }) => path === "link.md")?.mode,
-      ).toBe("120000");
+      expect(tree.entries.find(({ path }) => path === "link.md")?.mode).toBe(
+        "120000",
+      );
     },
   );
 

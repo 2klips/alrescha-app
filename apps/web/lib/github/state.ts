@@ -15,26 +15,43 @@ export function createGitHubInstallState(
   now = Date.now(),
 ): string {
   const payload = Buffer.from(
-    JSON.stringify({ ...context, expiresAt: now + 10 * 60 * 1000, nonce: randomUUID() } satisfies InstallState),
+    JSON.stringify({
+      ...context,
+      expiresAt: now + 10 * 60 * 1000,
+      nonce: randomUUID(),
+    } satisfies InstallState),
   ).toString("base64url");
-  const signature = createHmac("sha256", secret).update(payload).digest("base64url");
+  const signature = createHmac("sha256", secret)
+    .update(payload)
+    .digest("base64url");
   return `${payload}.${signature}`;
 }
 
-export function verifyGitHubInstallState(secret: string, state: string, now = Date.now()): InstallState {
+export function verifyGitHubInstallState(
+  secret: string,
+  state: string,
+  now = Date.now(),
+): InstallState {
   const [payload, suppliedSignature, extra] = state.split(".");
   if (!payload || !suppliedSignature || extra) {
     throw new Error("GitHub installation state is malformed.");
   }
 
-  const expectedSignature = createHmac("sha256", secret).update(payload).digest("base64url");
+  const expectedSignature = createHmac("sha256", secret)
+    .update(payload)
+    .digest("base64url");
   const expected = Buffer.from(expectedSignature);
   const supplied = Buffer.from(suppliedSignature);
-  if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
+  if (
+    expected.length !== supplied.length ||
+    !timingSafeEqual(expected, supplied)
+  ) {
     throw new Error("GitHub installation state signature is invalid.");
   }
 
-  const parsed: unknown = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+  const parsed: unknown = JSON.parse(
+    Buffer.from(payload, "base64url").toString("utf8"),
+  );
   if (
     typeof parsed !== "object" ||
     parsed === null ||

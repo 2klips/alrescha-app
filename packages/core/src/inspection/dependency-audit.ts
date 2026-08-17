@@ -10,11 +10,7 @@
  */
 
 export type DependencyAdvisorySeverity =
-  | "critical"
-  | "high"
-  | "info"
-  | "low"
-  | "moderate";
+  "critical" | "high" | "info" | "low" | "moderate";
 
 export type DependencyFixAvailability = "major" | "none" | "patch";
 
@@ -62,7 +58,10 @@ function optionalString(value: unknown): string | null {
 }
 
 /** The first advisory object in `via` carries the human title and URL. */
-function viaDetails(via: unknown): { title: string | null; url: string | null } {
+function viaDetails(via: unknown): {
+  title: string | null;
+  url: string | null;
+} {
   if (!Array.isArray(via)) {
     return { title: null, url: null };
   }

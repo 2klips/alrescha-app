@@ -22,7 +22,5 @@ test("shows the not-found surface for an unknown route", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: NOT_FOUND.title }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: NOT_FOUND.cta }),
-  ).toBeVisible();
+  await expect(page.getByRole("link", { name: NOT_FOUND.cta })).toBeVisible();
 });

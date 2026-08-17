@@ -1,6 +1,9 @@
 import { describe, expect, test } from "vitest";
 
-import { createFixtureGraph, type GraphData } from "../apps/web/lib/dashboard/graph-model";
+import {
+  createFixtureGraph,
+  type GraphData,
+} from "../apps/web/lib/dashboard/graph-model";
 import {
   RAW_RENDER_NODE_LIMIT,
   collapseGraph,
@@ -97,7 +100,11 @@ describe("grid label decluttering", () => {
       }),
     );
 
-    const selected = selectLabels(candidates, { farHubLimit: 3, lod: "far", viewport: VIEWPORT });
+    const selected = selectLabels(candidates, {
+      farHubLimit: 3,
+      lod: "far",
+      viewport: VIEWPORT,
+    });
 
     expect(selected).toEqual(["n37", "n38", "n39"]);
   });
@@ -111,10 +118,9 @@ describe("grid label decluttering", () => {
       candidate("d", { degree: 2, screenX: cell + 20, screenY: 10 }),
     ];
 
-    expect(selectLabels(candidates, { lod: "mid", viewport: VIEWPORT })).toEqual([
-      "b",
-      "d",
-    ]);
+    expect(
+      selectLabels(candidates, { lod: "mid", viewport: VIEWPORT }),
+    ).toEqual(["b", "d"]);
   });
 
   test("the cell winner is degree-weighted and ties break deterministically", () => {
@@ -123,10 +129,12 @@ describe("grid label decluttering", () => {
       candidate("alpha", { degree: 5, pixelSize: 20 }),
     ];
 
-    expect(selectLabels(tied, { lod: "mid", viewport: VIEWPORT })).toEqual(["alpha"]);
-    expect(selectLabels([...tied].reverse(), { lod: "mid", viewport: VIEWPORT })).toEqual([
+    expect(selectLabels(tied, { lod: "mid", viewport: VIEWPORT })).toEqual([
       "alpha",
     ]);
+    expect(
+      selectLabels([...tied].reverse(), { lod: "mid", viewport: VIEWPORT }),
+    ).toEqual(["alpha"]);
   });
 
   test("nodes rendered below the size threshold get no label", () => {
@@ -166,7 +174,9 @@ describe("grid label decluttering", () => {
       candidate("off", { screenX: 9_000, screenY: 400 }),
     ];
 
-    expect(selectLabels(candidates, { lod: "near", viewport: VIEWPORT })).toEqual(["on"]);
+    expect(
+      selectLabels(candidates, { lod: "near", viewport: VIEWPORT }),
+    ).toEqual(["on"]);
   });
 
   test("selection is stable across repeated calls", () => {
@@ -180,7 +190,9 @@ describe("grid label decluttering", () => {
     );
     const first = selectLabels(candidates, { lod: "mid", viewport: VIEWPORT });
 
-    expect(selectLabels(candidates, { lod: "mid", viewport: VIEWPORT })).toEqual(first);
+    expect(
+      selectLabels(candidates, { lod: "mid", viewport: VIEWPORT }),
+    ).toEqual(first);
     expect([...first].sort()).toEqual(first);
   });
 });
@@ -314,20 +326,43 @@ describe("community clustering", () => {
     });
 
     expect(collapsed.data.nodes.length).toBeLessThan(large.nodes.length);
-    expect(collapsed.data.nodes.every((node) => isSupernodeId(node.id))).toBe(true);
+    expect(collapsed.data.nodes.every((node) => isSupernodeId(node.id))).toBe(
+      true,
+    );
     expect(
-      collapsed.data.nodes.reduce((sum, node) => sum + (node.clusterCount ?? 0), 0),
+      collapsed.data.nodes.reduce(
+        (sum, node) => sum + (node.clusterCount ?? 0),
+        0,
+      ),
     ).toBe(large.nodes.length);
-    expect(partly.data.nodes.length).toBeGreaterThan(collapsed.data.nodes.length);
-    expect(partly.data.nodes.some((node) => !isSupernodeId(node.id))).toBe(true);
+    expect(partly.data.nodes.length).toBeGreaterThan(
+      collapsed.data.nodes.length,
+    );
+    expect(partly.data.nodes.some((node) => !isSupernodeId(node.id))).toBe(
+      true,
+    );
   });
 
   test("a supernode sits at the centroid of its members and keeps their worst grade", () => {
     const data: GraphData = {
       edges: [],
       nodes: [
-        { ...(large.nodes[0] as GraphData["nodes"][number]), findingCount: 1, grade: "broken", id: "a", x: 0, y: 0 },
-        { ...(large.nodes[0] as GraphData["nodes"][number]), findingCount: 2, grade: "verified", id: "b", x: 0, y: 0 },
+        {
+          ...(large.nodes[0] as GraphData["nodes"][number]),
+          findingCount: 1,
+          grade: "broken",
+          id: "a",
+          x: 0,
+          y: 0,
+        },
+        {
+          ...(large.nodes[0] as GraphData["nodes"][number]),
+          findingCount: 2,
+          grade: "verified",
+          id: "b",
+          x: 0,
+          y: 0,
+        },
       ],
     };
     const assignment = new Map([
@@ -358,7 +393,10 @@ describe("community clustering", () => {
   test("intra-community edges vanish and crossing edges merge at the worst grade", () => {
     const base = createFixtureGraph(15);
     const assignment = new Map(
-      base.nodes.map((node) => [node.id, node.type === "test" ? "tests" : "rest"]),
+      base.nodes.map((node) => [
+        node.id,
+        node.type === "test" ? "tests" : "rest",
+      ]),
     );
     const collapsed = collapseGraph({
       assignment,
@@ -431,7 +469,9 @@ describe("force panel settings", () => {
       textFadeThreshold: 0.8,
     });
 
-    expect(parsePanelSettings(serializePanelSettings(settings))).toEqual(settings);
+    expect(parsePanelSettings(serializePanelSettings(settings))).toEqual(
+      settings,
+    );
   });
 
   test("out-of-range and corrupt payloads degrade to the defaults", () => {
@@ -446,7 +486,9 @@ describe("force panel settings", () => {
   });
 
   test("a partial payload keeps the values it does carry", () => {
-    const restored = parsePanelSettings('{"repelStrength":700,"collapsed":true}');
+    const restored = parsePanelSettings(
+      '{"repelStrength":700,"collapsed":true}',
+    );
 
     expect(restored.repelStrength).toBe(700);
     expect(restored.collapsed).toBe(true);

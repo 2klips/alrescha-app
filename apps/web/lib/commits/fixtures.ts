@@ -1,7 +1,4 @@
-import {
-  buildCommitAnalysisCards,
-  type CommitAnalysisCard,
-} from "@arr/core";
+import { buildCommitAnalysisCards, type CommitAnalysisCard } from "@arr/core";
 
 export type DemoCommitState = "busy" | "empty";
 

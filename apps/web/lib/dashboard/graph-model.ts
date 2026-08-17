@@ -11,7 +11,6 @@ export type DashboardState =
   | "no-ci"
   | "large";
 
-
 export type EvidenceGrade = "verified" | "inferred" | "broken";
 export type GraphNodeType = "requirement" | "document" | "code" | "test";
 
@@ -69,33 +68,168 @@ export const DASHBOARD_STATES: readonly DashboardState[] = [
 ] as const;
 
 const BASE_NODES: readonly Omit<GraphNode, "x" | "y">[] = [
-  { id: "req-auth", label: "Tenant-safe auth", path: "spec/WORK_SPEC.md:118", type: "requirement", grade: "verified", findingCount: 0 },
-  { id: "req-webhook", label: "Idempotent webhooks", path: "spec/WORK_SPEC.md:164", type: "requirement", grade: "verified", findingCount: 0 },
-  { id: "req-ci", label: "CI-backed test proof", path: "spec/WORK_SPEC.md:207", type: "requirement", grade: "broken", findingCount: 1 },
-  { id: "req-context", label: "Bounded context packs", path: "spec/WORK_SPEC.md:241", type: "requirement", grade: "inferred", findingCount: 1 },
-  { id: "doc-guide", label: "Implementation guide", path: "spec/IMPLEMENTATION_GUIDE.md", type: "document", grade: "verified", findingCount: 0 },
-  { id: "doc-plan", label: "Build plan", path: "spec/BUILD_PLAN.md", type: "document", grade: "verified", findingCount: 0 },
-  { id: "doc-agents", label: "Agent instructions", path: "AGENTS.md", type: "document", grade: "inferred", findingCount: 1 },
-  { id: "code-auth", label: "repository-access.ts", path: "apps/web/lib/auth/repository-access.ts", type: "code", grade: "verified", findingCount: 0 },
-  { id: "code-webhook", label: "webhook.ts", path: "packages/core/src/github/webhook.ts", type: "code", grade: "verified", findingCount: 0 },
-  { id: "code-evidence", label: "ci-reports.ts", path: "packages/core/src/evidence/ci-reports.ts", type: "code", grade: "inferred", findingCount: 0 },
-  { id: "code-pack", label: "context-pack.ts", path: "packages/core/src/context/context-pack.ts", type: "code", grade: "broken", findingCount: 1 },
-  { id: "test-auth", label: "auth-tenancy.test.ts", path: "tests/auth-tenancy.test.ts", type: "test", grade: "verified", findingCount: 0 },
-  { id: "test-webhook", label: "github-app.test.ts", path: "tests/github-app.test.ts", type: "test", grade: "verified", findingCount: 0 },
-  { id: "test-ci", label: "ci-evidence.test.ts", path: "tests/ci-evidence.test.ts", type: "test", grade: "verified", findingCount: 0 },
-  { id: "test-pack", label: "context-pack.test.ts", path: "tests/context-pack.test.ts", type: "test", grade: "broken", findingCount: 1 },
+  {
+    id: "req-auth",
+    label: "Tenant-safe auth",
+    path: "spec/WORK_SPEC.md:118",
+    type: "requirement",
+    grade: "verified",
+    findingCount: 0,
+  },
+  {
+    id: "req-webhook",
+    label: "Idempotent webhooks",
+    path: "spec/WORK_SPEC.md:164",
+    type: "requirement",
+    grade: "verified",
+    findingCount: 0,
+  },
+  {
+    id: "req-ci",
+    label: "CI-backed test proof",
+    path: "spec/WORK_SPEC.md:207",
+    type: "requirement",
+    grade: "broken",
+    findingCount: 1,
+  },
+  {
+    id: "req-context",
+    label: "Bounded context packs",
+    path: "spec/WORK_SPEC.md:241",
+    type: "requirement",
+    grade: "inferred",
+    findingCount: 1,
+  },
+  {
+    id: "doc-guide",
+    label: "Implementation guide",
+    path: "spec/IMPLEMENTATION_GUIDE.md",
+    type: "document",
+    grade: "verified",
+    findingCount: 0,
+  },
+  {
+    id: "doc-plan",
+    label: "Build plan",
+    path: "spec/BUILD_PLAN.md",
+    type: "document",
+    grade: "verified",
+    findingCount: 0,
+  },
+  {
+    id: "doc-agents",
+    label: "Agent instructions",
+    path: "AGENTS.md",
+    type: "document",
+    grade: "inferred",
+    findingCount: 1,
+  },
+  {
+    id: "code-auth",
+    label: "repository-access.ts",
+    path: "apps/web/lib/auth/repository-access.ts",
+    type: "code",
+    grade: "verified",
+    findingCount: 0,
+  },
+  {
+    id: "code-webhook",
+    label: "webhook.ts",
+    path: "packages/core/src/github/webhook.ts",
+    type: "code",
+    grade: "verified",
+    findingCount: 0,
+  },
+  {
+    id: "code-evidence",
+    label: "ci-reports.ts",
+    path: "packages/core/src/evidence/ci-reports.ts",
+    type: "code",
+    grade: "inferred",
+    findingCount: 0,
+  },
+  {
+    id: "code-pack",
+    label: "context-pack.ts",
+    path: "packages/core/src/context/context-pack.ts",
+    type: "code",
+    grade: "broken",
+    findingCount: 1,
+  },
+  {
+    id: "test-auth",
+    label: "auth-tenancy.test.ts",
+    path: "tests/auth-tenancy.test.ts",
+    type: "test",
+    grade: "verified",
+    findingCount: 0,
+  },
+  {
+    id: "test-webhook",
+    label: "github-app.test.ts",
+    path: "tests/github-app.test.ts",
+    type: "test",
+    grade: "verified",
+    findingCount: 0,
+  },
+  {
+    id: "test-ci",
+    label: "ci-evidence.test.ts",
+    path: "tests/ci-evidence.test.ts",
+    type: "test",
+    grade: "verified",
+    findingCount: 0,
+  },
+  {
+    id: "test-pack",
+    label: "context-pack.test.ts",
+    path: "tests/context-pack.test.ts",
+    type: "test",
+    grade: "broken",
+    findingCount: 1,
+  },
 ] as const;
 
 const BASE_EDGES: readonly Omit<GraphEdge, "id" | "provenance">[] = [
   { source: "doc-guide", target: "req-auth", grade: "verified", broken: false },
-  { source: "doc-plan", target: "req-webhook", grade: "verified", broken: false },
+  {
+    source: "doc-plan",
+    target: "req-webhook",
+    grade: "verified",
+    broken: false,
+  },
   { source: "doc-plan", target: "req-ci", grade: "verified", broken: false },
-  { source: "doc-agents", target: "req-context", grade: "inferred", broken: false },
+  {
+    source: "doc-agents",
+    target: "req-context",
+    grade: "inferred",
+    broken: false,
+  },
   { source: "req-auth", target: "code-auth", grade: "verified", broken: false },
-  { source: "code-auth", target: "test-auth", grade: "verified", broken: false },
-  { source: "req-webhook", target: "code-webhook", grade: "verified", broken: false },
-  { source: "code-webhook", target: "test-webhook", grade: "verified", broken: false },
-  { source: "req-ci", target: "code-evidence", grade: "inferred", broken: false },
+  {
+    source: "code-auth",
+    target: "test-auth",
+    grade: "verified",
+    broken: false,
+  },
+  {
+    source: "req-webhook",
+    target: "code-webhook",
+    grade: "verified",
+    broken: false,
+  },
+  {
+    source: "code-webhook",
+    target: "test-webhook",
+    grade: "verified",
+    broken: false,
+  },
+  {
+    source: "req-ci",
+    target: "code-evidence",
+    grade: "inferred",
+    broken: false,
+  },
   { source: "code-evidence", target: "test-ci", grade: "broken", broken: true },
   { source: "req-context", target: "code-pack", grade: "broken", broken: true },
   { source: "code-pack", target: "test-pack", grade: "broken", broken: true },
@@ -125,14 +259,20 @@ function edgeProvenance(
   };
 }
 
-function initialPosition(index: number, total: number): { x: number; y: number } {
+function initialPosition(
+  index: number,
+  total: number,
+): { x: number; y: number } {
   const spoke = (index * 2.399963229728653) % (Math.PI * 2);
   const radius = 95 + (index % 5) * 58 + (index / Math.max(total, 1)) * 120;
   return { x: Math.cos(spoke) * radius, y: Math.sin(spoke) * radius * 0.7 };
 }
 
 /** Deterministic, bounded force layout. Large graphs are clustered before this runs. */
-export function forceDirectedLayout(data: GraphData, iterations = 48): GraphData {
+export function forceDirectedLayout(
+  data: GraphData,
+  iterations = 48,
+): GraphData {
   const nodes = data.nodes.map((node, index) => ({
     ...node,
     ...initialPosition(index, data.nodes.length),
@@ -267,7 +407,9 @@ export function clusterGraph(data: GraphData, threshold = 120): GraphData {
 export function filterGraph(data: GraphData, filters: GraphFilters): GraphData {
   const query = filters.query.trim().toLocaleLowerCase();
   const nodes = data.nodes.filter((node) => {
-    const matchesQuery = !query || `${node.label} ${node.path}`.toLocaleLowerCase().includes(query);
+    const matchesQuery =
+      !query ||
+      `${node.label} ${node.path}`.toLocaleLowerCase().includes(query);
     return (
       matchesQuery &&
       (filters.type === "all" || node.type === filters.type) &&
@@ -277,11 +419,17 @@ export function filterGraph(data: GraphData, filters: GraphFilters): GraphData {
   const ids = new Set(nodes.map((node) => node.id));
   return {
     nodes,
-    edges: data.edges.filter((edge) => ids.has(edge.source) && ids.has(edge.target)),
+    edges: data.edges.filter(
+      (edge) => ids.has(edge.source) && ids.has(edge.target),
+    ),
   };
 }
 
-export function focusLocalGraph(data: GraphData, nodeId: string, depth = 1): GraphData {
+export function focusLocalGraph(
+  data: GraphData,
+  nodeId: string,
+  depth = 1,
+): GraphData {
   const visible = new Set([nodeId]);
   let frontier = new Set([nodeId]);
   for (let level = 0; level < depth; level += 1) {
@@ -295,7 +443,9 @@ export function focusLocalGraph(data: GraphData, nodeId: string, depth = 1): Gra
   }
   return {
     nodes: data.nodes.filter((node) => visible.has(node.id)),
-    edges: data.edges.filter((edge) => visible.has(edge.source) && visible.has(edge.target)),
+    edges: data.edges.filter(
+      (edge) => visible.has(edge.source) && visible.has(edge.target),
+    ),
   };
 }
 
@@ -330,23 +480,43 @@ export function topHubNodes(data: GraphData, limit = 5): HubNode[] {
 }
 
 export interface CanvasFramePlan {
-  edgeSegments: readonly [number, number, number, number, EvidenceGrade, boolean][];
+  edgeSegments: readonly [
+    number,
+    number,
+    number,
+    number,
+    EvidenceGrade,
+    boolean,
+  ][];
   nodePoints: readonly [number, number, EvidenceGrade, number][];
 }
 
 /** Linear render-plan preparation kept separate so 500-node frame cost stays measurable. */
 export function planCanvasFrame(data: GraphData): CanvasFramePlan {
   const byId = new Map(data.nodes.map((node) => [node.id, node]));
-  const edgeSegments: CanvasFramePlan["edgeSegments"] = data.edges.flatMap((edge) => {
-    const source = byId.get(edge.source);
-    const target = byId.get(edge.target);
-    return source && target
-      ? [[source.x, source.y, target.x, target.y, edge.grade, edge.broken] as const]
-      : [];
-  });
+  const edgeSegments: CanvasFramePlan["edgeSegments"] = data.edges.flatMap(
+    (edge) => {
+      const source = byId.get(edge.source);
+      const target = byId.get(edge.target);
+      return source && target
+        ? [
+            [
+              source.x,
+              source.y,
+              target.x,
+              target.y,
+              edge.grade,
+              edge.broken,
+            ] as const,
+          ]
+        : [];
+    },
+  );
   return {
     edgeSegments,
-    nodePoints: data.nodes.map((node) => [node.x, node.y, node.grade, node.findingCount] as const),
+    nodePoints: data.nodes.map(
+      (node) => [node.x, node.y, node.grade, node.findingCount] as const,
+    ),
   };
 }
 
@@ -354,7 +524,12 @@ export interface DashboardViewModel {
   ciMessage: string;
   graph: GraphData;
   isClustered: boolean;
-  metrics: { implementation: number; tests: number; tokenCost: number; unresolved: number };
+  metrics: {
+    implementation: number;
+    tests: number;
+    tokenCost: number;
+    unresolved: number;
+  };
   repo: string;
   state: DashboardState;
 }
@@ -363,20 +538,29 @@ export function buildDashboardViewModel(
   state: DashboardState,
   repo = "2klips/arr-app",
 ): DashboardViewModel {
-  const source = createFixtureGraph(state === "large" ? 500 : BASE_NODES.length);
-  const graph = state === "large" ? clusterGraph(source) : forceDirectedLayout(source);
+  const source = createFixtureGraph(
+    state === "large" ? 500 : BASE_NODES.length,
+  );
+  const graph =
+    state === "large" ? clusterGraph(source) : forceDirectedLayout(source);
   return {
-    ciMessage:
-      state === "no-ci" ? DASHBOARD.ci.missing : DASHBOARD.ci.present,
+    ciMessage: state === "no-ci" ? DASHBOARD.ci.missing : DASHBOARD.ci.present,
     graph,
     isClustered: state === "large",
-    metrics: { implementation: 84, tests: state === "no-ci" ? 0 : 71, tokenCost: 1840, unresolved: 4 },
+    metrics: {
+      implementation: 84,
+      tests: state === "no-ci" ? 0 : 71,
+      tokenCost: 1840,
+      unresolved: 4,
+    },
     repo,
     state,
   };
 }
 
-export function parseDashboardState(value: string | string[] | undefined): DashboardState {
+export function parseDashboardState(
+  value: string | string[] | undefined,
+): DashboardState {
   const candidate = Array.isArray(value) ? value[0] : value;
   return DASHBOARD_STATES.includes(candidate as DashboardState)
     ? (candidate as DashboardState)

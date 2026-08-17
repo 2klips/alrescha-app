@@ -46,13 +46,18 @@ describe("repo ADRs", () => {
     },
   ] as const;
 
-  it.each(decisions)("ports $file without weakening its constraints", async ({ file, required }) => {
-    const adr = await readFile(join(ROOT, "docs", "adr", file), "utf8");
+  it.each(decisions)(
+    "ports $file without weakening its constraints",
+    async ({ file, required }) => {
+      const adr = await readFile(join(ROOT, "docs", "adr", file), "utf8");
 
-    for (const fragment of required) {
-      expect(adr, `Missing canonical ADR fragment: ${fragment}`).toContain(fragment);
-    }
-  });
+      for (const fragment of required) {
+        expect(adr, `Missing canonical ADR fragment: ${fragment}`).toContain(
+          fragment,
+        );
+      }
+    },
+  );
 });
 
 describe("machine-checkable guardrails", () => {
@@ -75,7 +80,8 @@ describe("machine-checkable guardrails", () => {
       await expect(scanGuardrails(fixtureRoot)).resolves.toEqual([
         expect.objectContaining({
           file: "packages/mcp/src/server.ts",
-          message: "MCP Sampling capability is forbidden; MCP 2026-07-28 is stateless.",
+          message:
+            "MCP Sampling capability is forbidden; MCP 2026-07-28 is stateless.",
           rule: "deprecated-mcp-capability",
         }),
       ]);
@@ -131,9 +137,9 @@ describe("machine-checkable guardrails", () => {
       "await gateway.updateDefaultBranch(input);",
       "await gateway.pushToDefaultBranch(input);",
     ]) {
-      expect(scanGuardrailFile("packages/github/src/index-pr/create.ts", source)).toEqual([
-        expect.objectContaining({ rule: "direct-branch-mutation" }),
-      ]);
+      expect(
+        scanGuardrailFile("packages/github/src/index-pr/create.ts", source),
+      ).toEqual([expect.objectContaining({ rule: "direct-branch-mutation" })]);
     }
   });
 });

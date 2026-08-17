@@ -7,7 +7,9 @@ import { AssuranceWorkspace } from "./assurance-workspace";
 
 describe("assurance UI", () => {
   test("keeps inferred labels visible across a finding and its evidence chain", () => {
-    const html = renderToStaticMarkup(createElement(AssuranceWorkspace, { surface: "findings" }));
+    const html = renderToStaticMarkup(
+      createElement(AssuranceWorkspace, { surface: "findings" }),
+    );
 
     expect(html).toContain(ASSURANCE.findings.chain.title);
     expect(html).toContain("grade-badge inferred");
@@ -15,7 +17,9 @@ describe("assurance UI", () => {
   });
 
   test("shows lint assumptions and both contradiction source spans", () => {
-    const html = renderToStaticMarkup(createElement(AssuranceWorkspace, { surface: "lint" }));
+    const html = renderToStaticMarkup(
+      createElement(AssuranceWorkspace, { surface: "lint" }),
+    );
 
     expect(html).toContain("cl100k_base-compatible tokenizer");
     expect(html).toContain("AGENTS.md:18-20");
@@ -24,7 +28,9 @@ describe("assurance UI", () => {
   });
 
   test("locks receipt verdict until digest verification", () => {
-    const html = renderToStaticMarkup(createElement(AssuranceWorkspace, { surface: "receipts" }));
+    const html = renderToStaticMarkup(
+      createElement(AssuranceWorkspace, { surface: "receipts" }),
+    );
 
     expect(html).toContain(ASSURANCE.receipts.verification.pending);
     expect(html).toContain(ASSURANCE.receipts.verdict.locked);

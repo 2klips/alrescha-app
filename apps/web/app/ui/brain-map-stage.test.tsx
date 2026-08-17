@@ -67,7 +67,11 @@ describe("brain map stage server rendering", () => {
   });
 
   test("names each target with its label, type and grade", () => {
-    const node = model.graph.nodes[0] as { grade: string; label: string; type: string };
+    const node = model.graph.nodes[0] as {
+      grade: string;
+      label: string;
+      type: string;
+    };
 
     expect(html).toContain(
       DASHBOARD.nodeSummary(node.label, node.type, node.grade),

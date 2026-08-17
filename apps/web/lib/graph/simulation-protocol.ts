@@ -224,5 +224,11 @@ export function createStartMessage(
       continue;
     links.push([source, target]);
   }
-  return { config: clampForceConfig(config), links, nodeIds, seed, type: "start" };
+  return {
+    config: clampForceConfig(config),
+    links,
+    nodeIds,
+    seed,
+    type: "start",
+  };
 }

@@ -34,10 +34,7 @@ export const BENCHMARK_PROVIDERS = ["anthropic", "openai"] as const;
 export type BenchmarkProvider = (typeof BENCHMARK_PROVIDERS)[number];
 
 export type BenchmarkTaskType =
-  | "implementation"
-  | "question-answering"
-  | "drift-judgment"
-  | "policy-audit";
+  "implementation" | "question-answering" | "drift-judgment" | "policy-audit";
 
 export type BenchmarkCorpus = "fixture" | "realistic";
 
@@ -95,9 +92,7 @@ export interface BenchmarkManifestV3 {
 }
 
 export type BenchmarkManifest =
-  | BenchmarkManifestV1
-  | BenchmarkManifestV2
-  | BenchmarkManifestV3;
+  BenchmarkManifestV1 | BenchmarkManifestV2 | BenchmarkManifestV3;
 
 export interface BenchmarkModelOutput {
   answer: string;
@@ -140,9 +135,7 @@ export interface BenchmarkModel {
 }
 
 export type BenchmarkTrialError =
-  | "invalid_model_output"
-  | "provider_failure"
-  | "test_failure";
+  "invalid_model_output" | "provider_failure" | "test_failure";
 
 /** Frozen schema-1 trial record (published release, audit-only). */
 export interface BenchmarkTrialResultV1 {

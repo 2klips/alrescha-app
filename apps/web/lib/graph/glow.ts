@@ -166,7 +166,9 @@ export function driftOverlay(data: {
   nodes: readonly { findingCount: number; id: string }[];
 }): DriftOverlay {
   return {
-    brokenEdgeIds: data.edges.filter((edge) => edge.broken).map((edge) => edge.id),
+    brokenEdgeIds: data.edges
+      .filter((edge) => edge.broken)
+      .map((edge) => edge.id),
     ringedNodeIds: data.nodes
       .filter((node) => node.findingCount > 0)
       .map((node) => node.id),

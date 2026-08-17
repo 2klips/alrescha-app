@@ -15,19 +15,23 @@
  */
 
 export type GitHubRepositoryUrlFailure =
-  | "empty"
-  | "unsupported_host"
-  | "missing_repository"
-  | "invalid_name";
+  "empty" | "unsupported_host" | "missing_repository" | "invalid_name";
 
 export type ParsedGitHubRepositoryUrl =
-  | { readonly ok: true; readonly owner: string; readonly repo: string; readonly fullName: string }
+  | {
+      readonly ok: true;
+      readonly owner: string;
+      readonly repo: string;
+      readonly fullName: string;
+    }
   | { readonly ok: false; readonly reason: GitHubRepositoryUrlFailure };
 
 const OWNER_PATTERN = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 const REPO_PATTERN = /^[A-Za-z0-9._-]{1,100}$/;
 
-function failure(reason: GitHubRepositoryUrlFailure): ParsedGitHubRepositoryUrl {
+function failure(
+  reason: GitHubRepositoryUrlFailure,
+): ParsedGitHubRepositoryUrl {
   return { ok: false, reason };
 }
 
@@ -35,7 +39,12 @@ function fromSegments(segments: readonly string[]): ParsedGitHubRepositoryUrl {
   const [owner, rawRepo] = segments;
   if (!owner || !rawRepo) return failure("missing_repository");
   const repo = rawRepo.endsWith(".git") ? rawRepo.slice(0, -4) : rawRepo;
-  if (!OWNER_PATTERN.test(owner) || !REPO_PATTERN.test(repo) || repo === "." || repo === "..") {
+  if (
+    !OWNER_PATTERN.test(owner) ||
+    !REPO_PATTERN.test(repo) ||
+    repo === "." ||
+    repo === ".."
+  ) {
     return failure("invalid_name");
   }
   return { fullName: `${owner}/${repo}`, ok: true, owner, repo };
@@ -46,7 +55,9 @@ function isGitHubHost(host: string): boolean {
   return normalized === "github.com" || normalized === "www.github.com";
 }
 
-export function parseGitHubRepositoryUrl(input: string): ParsedGitHubRepositoryUrl {
+export function parseGitHubRepositoryUrl(
+  input: string,
+): ParsedGitHubRepositoryUrl {
   const trimmed = input.trim();
   if (!trimmed) return failure("empty");
 
@@ -79,6 +90,7 @@ export function parseGitHubRepositoryUrl(input: string): ParsedGitHubRepositoryU
 
   // Bare shorthand: owner/repo, nothing more.
   const segments = trimmed.split("/").filter(Boolean);
-  if (segments.length !== 2 || trimmed.includes(" ")) return failure("missing_repository");
+  if (segments.length !== 2 || trimmed.includes(" "))
+    return failure("missing_repository");
   return fromSegments(segments);
 }

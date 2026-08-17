@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { getRepositoryResponse, type RepositoryRouteDependencies } from "../apps/web/lib/auth/repository-route";
+import {
+  getRepositoryResponse,
+  type RepositoryRouteDependencies,
+} from "../apps/web/lib/auth/repository-route";
 
 const REPOSITORY = {
   fullName: "owner/private-repo",
@@ -8,7 +11,9 @@ const REPOSITORY = {
   workspaceId: "01J0000000000000000000000W",
 } as const;
 
-function dependencies(overrides: Partial<RepositoryRouteDependencies> = {}): RepositoryRouteDependencies {
+function dependencies(
+  overrides: Partial<RepositoryRouteDependencies> = {},
+): RepositoryRouteDependencies {
   return {
     findRepository: vi.fn().mockResolvedValue(REPOSITORY),
     getVerifiedUserId: vi.fn().mockResolvedValue("user-a"),
@@ -22,7 +27,10 @@ describe("server-side repository authorization", () => {
     const findRepository = vi.fn().mockResolvedValue(REPOSITORY);
     const response = await getRepositoryResponse(
       REPOSITORY.id,
-      dependencies({ findRepository, getVerifiedUserId: vi.fn().mockResolvedValue(null) }),
+      dependencies({
+        findRepository,
+        getVerifiedUserId: vi.fn().mockResolvedValue(null),
+      }),
     );
 
     expect(response.status).toBe(401);
@@ -48,4 +56,3 @@ describe("server-side repository authorization", () => {
     });
   });
 });
-

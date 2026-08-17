@@ -66,10 +66,7 @@ function emitAccessEvent(
   principal: McpPrincipal,
   tool: string,
   targetNodeIds: readonly string[],
-  packTokens?: Pick<
-    McpPackMeasurement,
-    "baselineTokens" | "selectedTokens"
-  >,
+  packTokens?: Pick<McpPackMeasurement, "baselineTokens" | "selectedTokens">,
 ): void {
   const occurredAt = new Date();
   const event = {
@@ -91,9 +88,7 @@ function emitAccessEvent(
   const channel = `workspace:${principal.workspaceId}:access-events`;
   queueMicrotask(() => {
     void Promise.allSettled([
-      Promise.resolve().then(() =>
-        store.recordAccessEvent(event, measurement),
-      ),
+      Promise.resolve().then(() => store.recordAccessEvent(event, measurement)),
       Promise.resolve().then(() => store.publishAccessEvent(channel, event)),
     ]);
   });

@@ -78,13 +78,19 @@ export interface ContributionRow {
 
 export interface VibeIndex {
   /** Per-person rows — for the subject themselves (ADR-011-4). */
-  readonly personal: ReadonlyMap<string, Readonly<Partial<Record<VibeMetric, number>>>>;
+  readonly personal: ReadonlyMap<
+    string,
+    Readonly<Partial<Record<VibeMetric, number>>>
+  >;
   /**
    * The cross-person comparison table. `null` until the workspace policy
    * explicitly enables it — absence, not an empty list.
    */
   readonly comparisonTable:
-    | readonly { metrics: Readonly<Partial<Record<VibeMetric, number>>>; userId: string }[]
+    | readonly {
+        metrics: Readonly<Partial<Record<VibeMetric, number>>>;
+        userId: string;
+      }[]
     | null;
   readonly contributions: readonly ContributionRow[];
   /** Team view: aggregates only — mean per adopted metric. */
@@ -110,7 +116,9 @@ function candidateScores(
     ({ authorUserId }) => authorUserId === userId,
   );
   const shas = new Set(commits.map(({ sha }) => sha));
-  const receipts = input.receipts.filter(({ commitSha }) => shas.has(commitSha));
+  const receipts = input.receipts.filter(({ commitSha }) =>
+    shas.has(commitSha),
+  );
   const verified = receipts.reduce((sum, r) => sum + r.verifiedCount, 0);
   const inferred = receipts.reduce((sum, r) => sum + r.inferredCount, 0);
   const prompts = input.promptRecords.filter(
@@ -213,8 +221,8 @@ export function buildVibeIndex(
         .filter(({ provenCommitSha }) => shas.has(provenCommitSha))
         .map(({ id }) => id)
         .sort(),
-      resolvedFindingCount: input.resolvedFindings.filter(({ resolvedCommitSha }) =>
-        shas.has(resolvedCommitSha),
+      resolvedFindingCount: input.resolvedFindings.filter(
+        ({ resolvedCommitSha }) => shas.has(resolvedCommitSha),
       ).length,
       userId,
       verifiedEvidenceCount: input.receipts

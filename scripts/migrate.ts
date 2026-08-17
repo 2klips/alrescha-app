@@ -12,7 +12,10 @@ export interface MigrationFile {
 }
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-export const DEFAULT_MIGRATIONS_DIRECTORY = resolve(ROOT, "supabase/migrations");
+export const DEFAULT_MIGRATIONS_DIRECTORY = resolve(
+  ROOT,
+  "supabase/migrations",
+);
 
 export async function loadMigrations(
   directory = DEFAULT_MIGRATIONS_DIRECTORY,
@@ -33,7 +36,9 @@ export async function loadMigrations(
   );
 }
 
-export async function runMigrations(databaseUrl: string): Promise<readonly string[]> {
+export async function runMigrations(
+  databaseUrl: string,
+): Promise<readonly string[]> {
   const sql = postgres(databaseUrl, { max: 1 });
   const applied: string[] = [];
 
@@ -57,7 +62,9 @@ export async function runMigrations(databaseUrl: string): Promise<readonly strin
 
       if (existing[0]) {
         if (existing[0].checksum !== migration.checksum) {
-          throw new Error(`Applied migration checksum changed: ${migration.name}`);
+          throw new Error(
+            `Applied migration checksum changed: ${migration.name}`,
+          );
         }
         continue;
       }
@@ -90,7 +97,11 @@ async function main() {
   }
 
   const applied = await runMigrations(databaseUrl);
-  process.stdout.write(applied.length === 0 ? "Database already current.\n" : `Applied: ${applied.join(", ")}\n`);
+  process.stdout.write(
+    applied.length === 0
+      ? "Database already current.\n"
+      : `Applied: ${applied.join(", ")}\n`,
+  );
 }
 
 const entrypoint = process.argv[1];

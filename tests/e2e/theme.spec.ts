@@ -15,7 +15,9 @@ const SURFACES = ["/", "/findings", "/receipts"] as const;
 test.use({ colorScheme: "dark" });
 
 async function currentTheme(page: Page): Promise<string | null> {
-  return page.evaluate(() => document.documentElement.getAttribute("data-theme"));
+  return page.evaluate(() =>
+    document.documentElement.getAttribute("data-theme"),
+  );
 }
 
 async function bodyBackground(page: Page): Promise<string> {
@@ -52,7 +54,9 @@ for (const surface of SURFACES) {
   });
 }
 
-test("light is painted before first paint, with no dark flash", async ({ page }) => {
+test("light is painted before first paint, with no dark flash", async ({
+  page,
+}) => {
   await page.goto("/");
   await page.locator("[data-theme-toggle]").first().click();
   await expect.poll(() => currentTheme(page)).toBe("light");
@@ -62,7 +66,8 @@ test("light is painted before first paint, with no dark flash", async ({ page })
   const themeAtDocumentStart: string[] = [];
   await page.addInitScript(() => {
     document.addEventListener("readystatechange", () => {
-      (window as unknown as { __arrThemeProbe?: string[] }).__arrThemeProbe ??= [];
+      (window as unknown as { __arrThemeProbe?: string[] }).__arrThemeProbe ??=
+        [];
       (window as unknown as { __arrThemeProbe: string[] }).__arrThemeProbe.push(
         document.documentElement.getAttribute("data-theme") ?? "unset",
       );
@@ -71,7 +76,9 @@ test("light is painted before first paint, with no dark flash", async ({ page })
   await page.goto("/findings");
   themeAtDocumentStart.push(
     ...((await page.evaluate(
-      () => (window as unknown as { __arrThemeProbe?: string[] }).__arrThemeProbe ?? [],
+      () =>
+        (window as unknown as { __arrThemeProbe?: string[] }).__arrThemeProbe ??
+        [],
     )) as string[]),
   );
 

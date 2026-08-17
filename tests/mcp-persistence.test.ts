@@ -163,9 +163,7 @@ describe("hosted MCP persistence", () => {
       "select pilot_instrumentation_enabled from public.workspaces where id = $1",
       [workspaceA],
     );
-    expect(workspace.rows).toEqual([
-      { pilot_instrumentation_enabled: false },
-    ]);
+    expect(workspace.rows).toEqual([{ pilot_instrumentation_enabled: false }]);
 
     await database.query(
       `insert into public.access_events

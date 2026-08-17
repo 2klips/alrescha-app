@@ -44,7 +44,9 @@ describe("MCP token settings", () => {
     expect(html).toContain('value="mcp:write"');
     expect(html).toContain("sp_mcp_demo…");
     expect(html).toContain(
-      SETTINGS.mcp.tokens.lastUsed(SETTINGS.mcp.tokens.withUtc("2026-08-11 10:01")),
+      SETTINGS.mcp.tokens.lastUsed(
+        SETTINGS.mcp.tokens.withUtc("2026-08-11 10:01"),
+      ),
     );
     expect(html).toContain(SETTINGS.mcp.tokens.revoked);
     expect(html).not.toContain("tokenHash");

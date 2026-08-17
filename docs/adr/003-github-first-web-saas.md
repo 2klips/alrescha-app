@@ -30,4 +30,3 @@ ADR-002에서 다음은 유지한다: 보증 리드 MVP, 주문형 로드, $20 �
 - CI 리포트가 없는 상태는 조용히 `verified` 처리하지 않고 `inferred`와 설명을 노출한다.
 - 호스티드 MCP는 tenant-scoped token으로 인증하고 세션 상태를 만들지 않는다.
 - 권한 철회와 webhook 검증 실패는 안전하게 강등되며 미검증 payload를 처리하지 않는다.
-

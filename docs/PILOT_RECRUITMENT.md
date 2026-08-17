@@ -17,17 +17,17 @@ Do not promise time, token, cost, accuracy, or quality savings. Any later statem
 
 Capture before the first assisted task:
 
-| Field | Value |
-| --- | --- |
-| Participant/repository pseudonym | |
-| Date, model/tool version | |
-| Task statement fixed in advance | |
-| Repository commit SHA | |
-| Baseline start/end time | |
-| Baseline input/output tokens reported by model | |
-| Baseline tool calls | |
-| Baseline test/answer/finding grade | |
-| Errors or abandoned attempts | |
+| Field                                          | Value |
+| ---------------------------------------------- | ----- |
+| Participant/repository pseudonym               |       |
+| Date, model/tool version                       |       |
+| Task statement fixed in advance                |       |
+| Repository commit SHA                          |       |
+| Baseline start/end time                        |       |
+| Baseline input/output tokens reported by model |       |
+| Baseline tool calls                            |       |
+| Baseline test/answer/finding grade             |       |
+| Errors or abandoned attempts                   |       |
 
 Do not remove failed attempts or change the task between baseline and assisted runs.
 

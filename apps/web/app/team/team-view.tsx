@@ -21,10 +21,7 @@ const AXIS_ORDER = [
   "noOverInstruction",
 ] as const satisfies readonly (keyof PromptRubric)[];
 
-function memberName(
-  members: DemoTeam["members"],
-  userId: string,
-): string {
+function memberName(members: DemoTeam["members"], userId: string): string {
   return members.find((member) => member.userId === userId)?.name ?? userId;
 }
 
@@ -196,7 +193,11 @@ export function TeamView({ team }: TeamViewProps) {
                 <li key={metric}>
                   <code>{metric}</code>
                   <strong>
-                    {team.vibe.teamView[metric as keyof typeof team.vibe.teamView]}
+                    {
+                      team.vibe.teamView[
+                        metric as keyof typeof team.vibe.teamView
+                      ]
+                    }
                   </strong>
                 </li>
               ))}

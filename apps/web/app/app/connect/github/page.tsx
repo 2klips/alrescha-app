@@ -42,11 +42,18 @@ export default async function ConnectGitHubPage({
   if (!userId) {
     redirect("/auth/login");
   }
-  const { repository, repository_id: repositoryIdHint, url_status: urlStatus } =
-    await searchParams;
+  const {
+    repository,
+    repository_id: repositoryIdHint,
+    url_status: urlStatus,
+  } = await searchParams;
 
   const supabase = await createClient();
-  const workspaceResult = await supabase.from("workspaces").select("id").limit(1).single();
+  const workspaceResult = await supabase
+    .from("workspaces")
+    .select("id")
+    .limit(1)
+    .single();
   if (workspaceResult.error || !workspaceResult.data) {
     throw new Error(SETTINGS.errors.workspaceUnavailable);
   }
@@ -74,7 +81,9 @@ export default async function ConnectGitHubPage({
         <p>{SETTINGS.connect.github.intro}</p>
         <ul>
           <li>
-            <code>{SETTINGS.connect.github.permissions.contentsRead.scope}</code>
+            <code>
+              {SETTINGS.connect.github.permissions.contentsRead.scope}
+            </code>
             {" — "}
             {SETTINGS.connect.github.permissions.contentsRead.description}
           </li>
@@ -89,7 +98,9 @@ export default async function ConnectGitHubPage({
             {SETTINGS.connect.github.permissions.actionsRead.description}
           </li>
           <li>
-            <code>{SETTINGS.connect.github.permissions.metadataRead.scope}</code>
+            <code>
+              {SETTINGS.connect.github.permissions.metadataRead.scope}
+            </code>
             {" — "}
             {SETTINGS.connect.github.permissions.metadataRead.description}
           </li>
@@ -119,7 +130,9 @@ export default async function ConnectGitHubPage({
             </a>
           ) : null}
         </fieldset>
-        <a className="button" href={installationUrl}>{SETTINGS.connect.github.install}</a>
+        <a className="button" href={installationUrl}>
+          {SETTINGS.connect.github.install}
+        </a>
         <p>
           {SETTINGS.connect.github.prNotePrefix}
           <code>{SETTINGS.connect.github.prWritePermission}</code>

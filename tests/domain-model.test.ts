@@ -24,17 +24,25 @@ describe("typed evidence-graph domain and migrations", () => {
   let workspaceB: string;
 
   beforeAll(async () => {
-    database = await createTestDatabase([AUTH_TENANCY_MIGRATION, EVIDENCE_GRAPH_MIGRATION]);
+    database = await createTestDatabase([
+      AUTH_TENANCY_MIGRATION,
+      EVIDENCE_GRAPH_MIGRATION,
+    ]);
     await database.query(
       "insert into auth.users (id, email) values ($1, 'domain-a@example.test'), ($2, 'domain-b@example.test')",
       [USER_A, USER_B],
     );
 
-    const workspaces = await database.query<{ id: string; owner_user_id: string }>(
-      "select id, owner_user_id from public.workspaces",
-    );
-    workspaceA = workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_A)?.id ?? "";
-    workspaceB = workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_B)?.id ?? "";
+    const workspaces = await database.query<{
+      id: string;
+      owner_user_id: string;
+    }>("select id, owner_user_id from public.workspaces");
+    workspaceA =
+      workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_A)
+        ?.id ?? "";
+    workspaceB =
+      workspaces.rows.find(({ owner_user_id }) => owner_user_id === USER_B)
+        ?.id ?? "";
 
     await database.query(
       `insert into public.github_installations
@@ -46,7 +54,14 @@ describe("typed evidence-graph domain and migrations", () => {
       `insert into public.repositories
         (id, workspace_id, full_name, installation_id, github_repository_id)
        values ($1, $2, 'owner-a/repo', $3, 301), ($4, $5, 'owner-b/repo', $6, 302)`,
-      [REPOSITORY_A, workspaceA, fixedUlid("F"), REPOSITORY_B, workspaceB, fixedUlid("G")],
+      [
+        REPOSITORY_A,
+        workspaceA,
+        fixedUlid("F"),
+        REPOSITORY_B,
+        workspaceB,
+        fixedUlid("G"),
+      ],
     );
     await database.query(
       `insert into public.graph_nodes (id, workspace_id, repository_id, kind, label)
@@ -109,9 +124,13 @@ describe("typed evidence-graph domain and migrations", () => {
       "202608100002_evidence_graph_domain.sql",
     ]);
     expect(migrations.map(({ name }) => name)).toEqual(
-      [...migrations.map(({ name }) => name)].sort((left, right) => left.localeCompare(right)),
+      [...migrations.map(({ name }) => name)].sort((left, right) =>
+        left.localeCompare(right),
+      ),
     );
-    expect(migrations.every(({ checksum }) => /^[0-9a-f]{64}$/.test(checksum))).toBe(true);
+    expect(
+      migrations.every(({ checksum }) => /^[0-9a-f]{64}$/.test(checksum)),
+    ).toBe(true);
   });
 
   it("creates the full tenant-scoped schema with RLS, indexes, and foreign keys", async () => {
@@ -152,14 +171,20 @@ describe("typed evidence-graph domain and migrations", () => {
        ('edges_workspace_repository_source_idx', 'jobs_claimable_idx', 'findings_open_workspace_repository_idx')`,
     );
 
-    expect(tables.rows.map(({ table_name }) => table_name)).toEqual(expectedTables);
+    expect(tables.rows.map(({ table_name }) => table_name)).toEqual(
+      expectedTables,
+    );
     expect(rls.rows).toHaveLength(expectedTables.length);
     expect(constraints.rows).toHaveLength(3);
     expect(indexes.rows).toHaveLength(3);
   });
 
   it("builds a mini artifact → requirement → evidence graph", async () => {
-    const graph = await database.query<{ relation: string; source_kind: string; target_kind: string }>(
+    const graph = await database.query<{
+      relation: string;
+      source_kind: string;
+      target_kind: string;
+    }>(
       `select e.relation, source.kind as source_kind, target.kind as target_kind
        from public.edges e
        join public.graph_nodes source on source.id = e.source_node_id
@@ -167,7 +192,11 @@ describe("typed evidence-graph domain and migrations", () => {
     );
 
     expect(graph.rows).toEqual([
-      { relation: "implements", source_kind: "requirement", target_kind: "evidence" },
+      {
+        relation: "implements",
+        source_kind: "requirement",
+        target_kind: "evidence",
+      },
     ]);
   });
 
@@ -215,11 +244,20 @@ describe("typed evidence-graph domain and migrations", () => {
   });
 
   it("isolates domain reads through RLS", async () => {
-    const userAArtifacts = await asAuthenticatedUser(database, USER_A, (transaction) =>
-      transaction.query<{ workspace_id: string }>("select workspace_id from public.artifacts"),
+    const userAArtifacts = await asAuthenticatedUser(
+      database,
+      USER_A,
+      (transaction) =>
+        transaction.query<{ workspace_id: string }>(
+          "select workspace_id from public.artifacts",
+        ),
     );
 
     expect(userAArtifacts.rows).toEqual([{ workspace_id: workspaceA }]);
-    expect(userAArtifacts.rows.some(({ workspace_id }) => workspace_id === workspaceB)).toBe(false);
+    expect(
+      userAArtifacts.rows.some(
+        ({ workspace_id }) => workspace_id === workspaceB,
+      ),
+    ).toBe(false);
   });
 });

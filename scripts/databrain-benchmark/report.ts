@@ -30,7 +30,10 @@ function mean(values: number[]): number {
 function taskArmRows(
   trials: readonly (BenchmarkTrialResult | BenchmarkTrialResultV1)[],
 ): string[] {
-  const groups = new Map<string, (BenchmarkTrialResult | BenchmarkTrialResultV1)[]>();
+  const groups = new Map<
+    string,
+    (BenchmarkTrialResult | BenchmarkTrialResultV1)[]
+  >();
   for (const trial of trials) {
     const key = `${trial.taskId}\u0000${trial.arm}`;
     const existing = groups.get(key) ?? [];

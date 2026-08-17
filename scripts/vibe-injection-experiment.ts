@@ -27,9 +27,15 @@ import {
   type VibeGateResults,
   type VibeMetric,
 } from "../packages/core/src/index";
-import { buildArmContext, loadRepositoryCorpus } from "./databrain-benchmark/context";
+import {
+  buildArmContext,
+  loadRepositoryCorpus,
+} from "./databrain-benchmark/context";
 import { loadBenchmarkManifest } from "./databrain-benchmark/manifest";
-import type { BenchmarkModelSpec, BenchmarkTask } from "./databrain-benchmark/types";
+import type {
+  BenchmarkModelSpec,
+  BenchmarkTask,
+} from "./databrain-benchmark/types";
 
 export const HARNESS_VARIANTS = ["control", "injected"] as const;
 export type HarnessVariant = (typeof HARNESS_VARIANTS)[number];

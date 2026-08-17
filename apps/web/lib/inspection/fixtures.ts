@@ -1,7 +1,4 @@
-import {
-  buildInspectionDashboard,
-  type InspectionDashboard,
-} from "@arr/core";
+import { buildInspectionDashboard, type InspectionDashboard } from "@arr/core";
 
 export type DemoInspectionState = "busy" | "empty";
 
@@ -49,7 +46,11 @@ export function buildDemoInspectionDashboard(
           ],
         },
         minimist: {
-          fixAvailable: { isSemVerMajor: true, name: "mkdirp", version: "3.0.0" },
+          fixAvailable: {
+            isSemVerMajor: true,
+            name: "mkdirp",
+            version: "3.0.0",
+          },
           isDirect: false,
           name: "minimist",
           range: "<1.2.6",

@@ -25,7 +25,11 @@ export default async function SelectRepositoryPage({
     .order("full_name");
   // The repository pasted during URL onboarding is listed first.
   const repositories = [...(result.data ?? [])].sort((left, right) =>
-    left.full_name === suggestedFullName ? -1 : right.full_name === suggestedFullName ? 1 : 0,
+    left.full_name === suggestedFullName
+      ? -1
+      : right.full_name === suggestedFullName
+        ? 1
+        : 0,
   );
 
   return (
@@ -35,10 +39,24 @@ export default async function SelectRepositoryPage({
         <h1 id="repository-title">{SETTINGS.connect.repositories.title}</h1>
         <p>{SETTINGS.connect.repositories.intro}</p>
         {repositories.map((repository) => (
-          <form action="/api/github/repositories" method="post" key={repository.github_repository_id}>
-            <input name="installationId" type="hidden" value={repository.installation_id} />
-            <input name="githubRepositoryId" type="hidden" value={repository.github_repository_id} />
-            <button className="button" type="submit">{repository.full_name}</button>
+          <form
+            action="/api/github/repositories"
+            method="post"
+            key={repository.github_repository_id}
+          >
+            <input
+              name="installationId"
+              type="hidden"
+              value={repository.installation_id}
+            />
+            <input
+              name="githubRepositoryId"
+              type="hidden"
+              value={repository.github_repository_id}
+            />
+            <button className="button" type="submit">
+              {repository.full_name}
+            </button>
             {repository.full_name === suggestedFullName ? (
               <p role="note">{SETTINGS.connect.repositories.suggested}</p>
             ) : null}

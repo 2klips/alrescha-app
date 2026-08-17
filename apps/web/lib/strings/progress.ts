@@ -5,7 +5,10 @@
  */
 
 export const PROGRESS = {
-  header: { repoLine: "2klips/arr-app · 진행 원장", commitChip: "main · 출처 있는 상태" },
+  header: {
+    repoLine: "2klips/arr-app · 진행 원장",
+    commitChip: "main · 출처 있는 상태",
+  },
   kicker: "레포 진행 원장",
   sourceContract: "출처가 있는 항목만",
   ariaMetrics: "커버리지 지표",
@@ -22,15 +25,18 @@ export const PROGRESS = {
   states: {
     empty: {
       label: "기록된 진행 없음",
-      description: "TODO·진행 문서를 스캔하거나 log_progress 이벤트를 한 번 보내세요.",
+      description:
+        "TODO·진행 문서를 스캔하거나 log_progress 이벤트를 한 번 보내세요.",
     },
     partial: {
       label: "부분 증거",
-      description: "완료가 open 또는 blocked 상태입니다. 아래 수치는 저장된 출처에서만 옵니다.",
+      description:
+        "완료가 open 또는 blocked 상태입니다. 아래 수치는 저장된 출처에서만 옵니다.",
     },
     full: {
       label: "전부 추적됨",
-      description: "기록된 요구사항과 todo 모두 출처 있는 완료 증거를 가집니다.",
+      description:
+        "기록된 요구사항과 todo 모두 출처 있는 완료 증거를 가집니다.",
     },
   },
 
@@ -40,7 +46,12 @@ export const PROGRESS = {
     empty: "출처 있는 항목 없음",
     /** `<n>건 출처 확인` — 보드 헤더의 합계 접미사 */
     itemsSuffix: "건 출처 확인",
-    statuses: { open: "open", "in-progress": "진행 중", done: "완료", blocked: "blocked" },
+    statuses: {
+      open: "open",
+      "in-progress": "진행 중",
+      done: "완료",
+      blocked: "blocked",
+    },
   },
 
   timeline: {

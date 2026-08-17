@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { GraphData, GraphEdge, GraphNode } from "../../lib/dashboard/graph-model";
+import type {
+  GraphData,
+  GraphEdge,
+  GraphNode,
+} from "../../lib/dashboard/graph-model";
 import { DASHBOARD } from "../../lib/strings";
 import type { PulsePhase } from "../../lib/realtime/access-events";
 
@@ -56,7 +60,10 @@ export function GraphCanvas({
     pointerY: number;
   } | null>(null);
   const mutableData = useMemo(
-    () => ({ edges: data.edges, nodes: data.nodes.map((node) => ({ ...node })) }),
+    () => ({
+      edges: data.edges,
+      nodes: data.nodes.map((node) => ({ ...node })),
+    }),
     [data],
   );
   const [camera, setCamera] = useState<Camera>({ scale: 1, x: 0, y: 0 });
@@ -71,11 +78,18 @@ export function GraphCanvas({
     if (!focusNodeId) return;
     const node = nodesById.get(focusNodeId);
     if (!node) return;
-    setCamera((current) => ({ ...current, x: -node.x * current.scale, y: -node.y * current.scale }));
+    setCamera((current) => ({
+      ...current,
+      x: -node.x * current.scale,
+      y: -node.y * current.scale,
+    }));
   }, [focusNodeId, nodesById]);
 
   function nodeFromTarget(target: EventTarget | null): GraphNode | undefined {
-    const element = target instanceof Element ? target.closest<SVGElement>("[data-node-id]") : null;
+    const element =
+      target instanceof Element
+        ? target.closest<SVGElement>("[data-node-id]")
+        : null;
     return element ? nodesById.get(element.dataset.nodeId ?? "") : undefined;
   }
 
@@ -107,7 +121,11 @@ export function GraphCanvas({
           gesture.pointerX = event.clientX;
           gesture.pointerY = event.clientY;
           if (gesture.mode === "pan") {
-            setCamera((current) => ({ ...current, x: current.x + dx, y: current.y + dy }));
+            setCamera((current) => ({
+              ...current,
+              x: current.x + dx,
+              y: current.y + dy,
+            }));
           } else {
             const node = nodesById.get(gesture.nodeId ?? "");
             if (node) {
@@ -124,7 +142,10 @@ export function GraphCanvas({
           event.preventDefault();
           setCamera((current) => ({
             ...current,
-            scale: Math.max(0.48, Math.min(2.2, current.scale * (event.deltaY > 0 ? 0.9 : 1.1))),
+            scale: Math.max(
+              0.48,
+              Math.min(2.2, current.scale * (event.deltaY > 0 ? 0.9 : 1.1)),
+            ),
           }));
         }}
         preserveAspectRatio="xMidYMid slice"
@@ -133,14 +154,17 @@ export function GraphCanvas({
         viewBox="0 0 1000 700"
       >
         <title>{DASHBOARD.canvasTitle}</title>
-        <g transform={`translate(${500 + camera.x} ${350 + camera.y}) scale(${camera.scale})`}>
+        <g
+          transform={`translate(${500 + camera.x} ${350 + camera.y}) scale(${camera.scale})`}
+        >
           {mutableData.edges.map((edge) => {
             const source = nodesById.get(edge.source);
             const target = nodesById.get(edge.target);
             if (!source || !target) return null;
-            const flowing = [pulseStates[source.id], pulseStates[target.id]].some(
-              (phase) => phase === "pulse" || phase === "decay",
-            );
+            const flowing = [
+              pulseStates[source.id],
+              pulseStates[target.id],
+            ].some((phase) => phase === "pulse" || phase === "decay");
             return (
               <line
                 className={`graph-edge ${edge.grade}${edge.broken ? " broken" : ""}${flowing ? " flowing" : ""}${selectedEdgeId === edge.id ? " selected" : ""}${onEdgeSelect ? " interactive" : ""}`}
@@ -159,7 +183,9 @@ export function GraphCanvas({
             );
           })}
           {mutableData.nodes.map((node) => {
-            const radius = node.clusterCount ? 27 + Math.min(12, node.clusterCount / 6) : 18;
+            const radius = node.clusterCount
+              ? 27 + Math.min(12, node.clusterCount / 6)
+              : 18;
             const selected = node.id === (focusNodeId ?? selectedId);
             const color = NODE_COLORS[node.grade];
             const pulsePhase = pulseStates[node.id] ?? "idle";
@@ -178,14 +204,41 @@ export function GraphCanvas({
                 }}
                 transform={`translate(${node.x} ${node.y})`}
               >
-                {selected ? <circle className="node-halo" cx="0" cy="0" r={radius + 12} /> : null}
-                {node.findingCount > 0 ? <circle className="finding-ring" cx="0" cy="0" r={radius + 5} /> : null}
-                <circle className="node-core" cx="0" cy="0" r={radius} style={{ stroke: color }} />
-                <text className="node-glyph" style={{ fill: color }} textAnchor="middle" x="0" y="3">
+                {selected ? (
+                  <circle className="node-halo" cx="0" cy="0" r={radius + 12} />
+                ) : null}
+                {node.findingCount > 0 ? (
+                  <circle
+                    className="finding-ring"
+                    cx="0"
+                    cy="0"
+                    r={radius + 5}
+                  />
+                ) : null}
+                <circle
+                  className="node-core"
+                  cx="0"
+                  cy="0"
+                  r={radius}
+                  style={{ stroke: color }}
+                />
+                <text
+                  className="node-glyph"
+                  style={{ fill: color }}
+                  textAnchor="middle"
+                  x="0"
+                  y="3"
+                >
                   {node.clusterCount ?? TYPE_GLYPHS[node.type]}
                 </text>
-                <text className="node-label" x={radius + 9} y="-3">{node.label.length > 25 ? `${node.label.slice(0, 24)}…` : node.label}</text>
-                <text className="node-type" x={radius + 9} y="11">{node.type.toUpperCase()}</text>
+                <text className="node-label" x={radius + 9} y="-3">
+                  {node.label.length > 25
+                    ? `${node.label.slice(0, 24)}…`
+                    : node.label}
+                </text>
+                <text className="node-type" x={radius + 9} y="11">
+                  {node.type.toUpperCase()}
+                </text>
               </g>
             );
           })}
@@ -193,13 +246,22 @@ export function GraphCanvas({
       </svg>
       <div className="sr-only" aria-live="polite">
         {data.nodes.map((node) => (
-          <button key={node.id} onClick={() => onNodeSelect?.(node)} type="button">
+          <button
+            key={node.id}
+            onClick={() => onNodeSelect?.(node)}
+            type="button"
+          >
             {node.label}, {node.type}, {node.grade}
           </button>
         ))}
         {data.edges.map((edge) => (
-          <button key={edge.id} onClick={() => onEdgeSelect?.(edge)} type="button">
-            {edge.provenance.relation}: {edge.source} to {edge.target}, {edge.provenance.grade}
+          <button
+            key={edge.id}
+            onClick={() => onEdgeSelect?.(edge)}
+            type="button"
+          >
+            {edge.provenance.relation}: {edge.source} to {edge.target},{" "}
+            {edge.provenance.grade}
           </button>
         ))}
       </div>

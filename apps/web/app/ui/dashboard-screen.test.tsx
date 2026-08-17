@@ -21,11 +21,13 @@ test.each(DASHBOARD_STATES)(
     expect(html).toContain("%2Farr-mark.png");
     expect(html).toContain('href="/app/harness"');
     expect(html).toContain('href="/app/library"');
-    if (state === "loading") expect(html).toContain(DASHBOARD.states.loading.title);
+    if (state === "loading")
+      expect(html).toContain(DASHBOARD.states.loading.title);
     if (state === "empty") expect(html).toContain(DASHBOARD.states.empty.title);
     if (state === "scanning")
       expect(html).toContain(DASHBOARD.states.scanning.title);
-    if (state === "failed") expect(html).toContain(DASHBOARD.states.failed.title);
+    if (state === "failed")
+      expect(html).toContain(DASHBOARD.states.failed.title);
     if (state === "permission-error")
       expect(html).toContain(DASHBOARD.states.permissionError.title);
     if (state === "revoked") {
@@ -42,7 +44,9 @@ test.each(DASHBOARD_STATES)(
 
 test("dashboard copy is Korean-first with conventional terms kept in English", () => {
   const html = renderToStaticMarkup(
-    createElement(DashboardScreen, { model: buildDashboardViewModel("scanned") }),
+    createElement(DashboardScreen, {
+      model: buildDashboardViewModel("scanned"),
+    }),
   );
 
   // Korean-first: the headline, metric labels and inspector are Korean…

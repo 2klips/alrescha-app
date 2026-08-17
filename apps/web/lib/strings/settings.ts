@@ -22,7 +22,8 @@ export const SETTINGS = {
       /** `<n>개 사용` */
       used: (count: number) => `${count}개 사용`,
       /** `<createdAt 앞 16자, T→공백> UTC` */
-      timestamp: (isoDate: string) => `${isoDate.slice(0, 16).replace("T", " ")} UTC`,
+      timestamp: (isoDate: string) =>
+        `${isoDate.slice(0, 16).replace("T", " ")} UTC`,
       pausedTitle: "판단 일시 중지",
       pausedBody: "credits를 추가하거나 BYOK를 설정한 뒤 다시 시도하세요.",
       pausedNote: "결정론적 스캔과 드리프트 분석은 계속 동작합니다.",
@@ -60,7 +61,8 @@ export const SETTINGS = {
       eyebrow: "Graph 선택 · 필요할 때 로드",
       title: "컨텍스트 팩 구성",
       taskLabel: "작업",
-      taskPlaceholder: "GitHub OAuth 로그인을 구현하고 REQ-AUTH-001을 증명하세요",
+      taskPlaceholder:
+        "GitHub OAuth 로그인을 구현하고 REQ-AUTH-001을 증명하세요",
       targetAgentLabel: "대상 에이전트",
       agents: {
         codex: "Codex",
@@ -86,7 +88,8 @@ export const SETTINGS = {
       claudeFile: "CLAUDE.md",
       /** AGENTS.md와 CLAUDE.md 코드 조각을 감싸는 본문 */
       bodyMid: " 안에 범위가 제한된 관리 구역을 제안하고, 없을 때는 한 줄짜리 ",
-      bodySuffix: " 래퍼도 함께 제안합니다. 레포 문서 본문은 포함하지 않습니다.",
+      bodySuffix:
+        " 래퍼도 함께 제안합니다. 레포 문서 본문은 포함하지 않습니다.",
       preparing: "diff 준비 중…",
       create: "권고용 PR 생성",
       upToDate: "관리 인덱스가 이미 최신 상태입니다.",

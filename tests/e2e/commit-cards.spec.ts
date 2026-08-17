@@ -22,7 +22,9 @@ test("the card list shows every status and opens each detail", async ({
 }) => {
   await page.goto("/commits");
 
-  const list = page.getByRole("list").filter({ has: page.locator(".commit-card") });
+  const list = page
+    .getByRole("list")
+    .filter({ has: page.locator(".commit-card") });
   await expect(page.locator(".commit-card")).toHaveCount(6);
   for (const status of ["pending", "analyzing", "failed", "completed"]) {
     await expect(
@@ -50,7 +52,9 @@ test("the card list shows every status and opens each detail", async ({
   // receipt link. A graph-only ingest also completes, so the selector names
   // the assurance scope rather than relying on list order (ADR-015).
   await page
-    .locator('.commit-card[data-card-status="completed"][data-assurance="full"]')
+    .locator(
+      '.commit-card[data-card-status="completed"][data-assurance="full"]',
+    )
     .first()
     .click();
   const detail = page.locator(".commit-detail");

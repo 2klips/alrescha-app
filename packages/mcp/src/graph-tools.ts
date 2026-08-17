@@ -9,11 +9,7 @@
  * are marked so a caller can tell them from stored rows.
  */
 
-import type {
-  McpEdgeRelation,
-  McpNodeType,
-  McpWorkspaceData,
-} from "./store";
+import type { McpEdgeRelation, McpNodeType, McpWorkspaceData } from "./store";
 import { searchWorkspaceIndex } from "./data-brain";
 
 export interface GraphNodeRef {
@@ -309,9 +305,9 @@ export function impactOf(
   return {
     dependencies: {
       edges: dependencyEdges,
-      nodeIds: [...dependencyEdges.map(({ targetNodeId }) => targetNodeId)].sort(
-        (left, right) => left.localeCompare(right),
-      ),
+      nodeIds: [
+        ...dependencyEdges.map(({ targetNodeId }) => targetNodeId),
+      ].sort((left, right) => left.localeCompare(right)),
     },
     dependents: {
       edges: dependentEdges,
@@ -356,9 +352,7 @@ export function getNodeContent(
         type: "artifact",
       };
     }
-    const requirement = repository.requirements.find(
-      ({ id }) => id === nodeId,
-    );
+    const requirement = repository.requirements.find(({ id }) => id === nodeId);
     if (requirement) {
       return {
         content: requirement.statement,

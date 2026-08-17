@@ -15,9 +15,7 @@ export {
   createUlid,
   hashAccessToken,
 } from "./store";
-export type {
-  HostedMcpEndpoint,
-} from "./hosted";
+export type { HostedMcpEndpoint } from "./hosted";
 export type {
   ArtifactNeighbor,
   ArtifactWithNeighbors,

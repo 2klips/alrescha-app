@@ -60,7 +60,11 @@ describe("multi-language symbol extraction (todo 7 ⑵)", () => {
     );
     expect(engine).toBe("typescript-ast");
     expect(symbols).toEqual([
-      expect.objectContaining({ kind: "function", name: "decide", startLine: 1 }),
+      expect.objectContaining({
+        kind: "function",
+        name: "decide",
+        startLine: 1,
+      }),
     ]);
   });
 
@@ -243,10 +247,13 @@ describe("rationale nodes and handoff todos reach the database and dashboard", (
 
       const { commitSha, source } = await createLocalRepositorySource(root);
       const plan = await scanRepository({ commitSha, source });
-      const artifact = plan.artifacts.find(({ path }) => path === "src/queue.ts");
+      const artifact = plan.artifacts.find(
+        ({ path }) => path === "src/queue.ts",
+      );
       expect(artifact?.rationales).toHaveLength(1);
       expect(
-        plan.artifacts.find(({ path }) => path === "current-task.md")?.todoItems,
+        plan.artifacts.find(({ path }) => path === "current-task.md")
+          ?.todoItems,
       ).toHaveLength(2);
 
       const repositoryId = (
@@ -390,9 +397,7 @@ describe("rationale nodes and handoff todos reach the database and dashboard", (
       expect(boardTitles).toContain("큐 재시도 로직 마무리");
       expect(
         dashboard.columns.find(({ status }) => status === "done")?.items,
-      ).toEqual([
-        expect.objectContaining({ title: "lease 판정 정리" }),
-      ]);
+      ).toEqual([expect.objectContaining({ title: "lease 판정 정리" })]);
     } finally {
       await rm(root, { force: true, recursive: true });
     }
