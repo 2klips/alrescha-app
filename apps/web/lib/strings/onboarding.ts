@@ -52,6 +52,16 @@ export const ONBOARDING = {
     defaultRepo: "2klips/arr-app",
     demoMeta: "fixtures/drifted-demo · 시드된 예상 Findings",
     defaultMeta: "TypeScript · main · 방금 업데이트",
+    url: {
+      legend: "레포 주소 붙여넣기",
+      label: "GitHub 레포 주소",
+      placeholder: "https://github.com/owner/repo",
+      submit: "주소로 연결",
+      invalid: "레포 주소를 인식하지 못했습니다. https://github.com/owner/repo 형태인지 확인하세요.",
+      installNeeded: (repository: string) =>
+        `${repository}에는 아직 GitHub App이 설치되어 있지 않습니다. 설치 화면에서 이 레포가 미리 선택됩니다.`,
+      installCta: "이 레포로 App 설치",
+    },
   },
 
   scan: {

@@ -204,6 +204,27 @@ export const SETTINGS = {
       storageNote:
         "원본 소스와 설치 token은 저장되지 않습니다. Arr는 메타데이터, digest, span, Findings, Receipts를 저장합니다. 접근 이벤트는 파일럿 기간 동안 30일 보관됩니다.",
       install: "GitHub App 설치",
+      urlConnect: {
+        legend: "레포 주소로 바로 연결",
+        description:
+          "GitHub 레포 주소를 붙여넣으면 설치 여부를 확인해 바로 연결하거나 설치 화면으로 안내합니다.",
+        label: "레포 주소",
+        placeholder: "https://github.com/owner/repo 또는 owner/repo",
+        submit: "주소로 연결",
+        installCta: "이 레포로 GitHub App 설치",
+        statuses: {
+          invalidUrl:
+            "레포 주소를 인식하지 못했습니다. https://github.com/owner/repo 형태인지 확인하세요.",
+          alreadyConnected: (repository: string) =>
+            `${repository}은(는) 이미 이 workspace에 연결되어 있습니다.`,
+          noAccess: (repository: string) =>
+            `GitHub App이 ${repository}에 접근할 수 없습니다. GitHub 설치 설정에서 이 레포를 추가한 뒤 다시 시도하세요.`,
+          privateOrMissing: (repository: string) =>
+            `${repository}을(를) 찾을 수 없습니다. 비공개 레포이거나 존재하지 않는 주소입니다. App을 설치하면서 직접 선택할 수 있습니다.`,
+          install: (repository: string) =>
+            `${repository}을(를) 연결하려면 GitHub App 설치가 필요합니다. 아래 버튼을 누르면 해당 레포가 선택된 설치 화면으로 이동합니다.`,
+        },
+      },
       prNotePrefix: "PR 제안 기능은 기본적으로 꺼져 있습니다. 활성화하면 ",
       prWritePermission: "pull_requests:write",
       prNoteMid: " 권한만 추가로 요청합니다. 전체 경계는 ",
@@ -216,6 +237,7 @@ export const SETTINGS = {
         "선택 후 일시적 설치 token은 이 레포로 범위가 제한되며 저장되지 않습니다. 비공개 소스는 스캔이 실행되는 동안만 가져오며, 메타데이터 전용 증거만 보관됩니다.",
       empty:
         "선택할 수 있는 레포가 없습니다. GitHub App을 다시 설치하거나 Onboarding의 시드 데모를 사용해 보세요.",
+      suggested: "붙여넣은 주소의 레포입니다.",
     },
   },
 

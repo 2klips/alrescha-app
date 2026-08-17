@@ -3,13 +3,15 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 interface InstallState {
   readonly expiresAt: number;
   readonly nonce: string;
+  /** Repository pasted during URL onboarding; pre-selected after install. */
+  readonly repositoryFullName?: string;
   readonly userId: string;
   readonly workspaceId: string;
 }
 
 export function createGitHubInstallState(
   secret: string,
-  context: { userId: string; workspaceId: string },
+  context: { repositoryFullName?: string; userId: string; workspaceId: string },
   now = Date.now(),
 ): string {
   const payload = Buffer.from(
@@ -44,6 +46,9 @@ export function verifyGitHubInstallState(secret: string, state: string, now = Da
     typeof parsed.nonce !== "string" ||
     typeof parsed.userId !== "string" ||
     typeof parsed.workspaceId !== "string" ||
+    ("repositoryFullName" in parsed &&
+      parsed.repositoryFullName !== undefined &&
+      typeof parsed.repositoryFullName !== "string") ||
     parsed.expiresAt < now
   ) {
     throw new Error("GitHub installation state is invalid or expired.");

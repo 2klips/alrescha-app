@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./byok": "./src/ai/byok.ts",
     "./receipts": "./src/assurance/receipts.ts",
+    "./repository-url": "./src/github/repository-url.ts",
     "./stats": "./src/stats/pilot-stats.ts"
   },
   "dependencies": {

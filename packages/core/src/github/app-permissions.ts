@@ -36,12 +36,24 @@ export function assertMinimalGitHubPermissions(
   }
 }
 
-export function githubInstallationUrl(appSlug: string, state: string): string {
+export function githubInstallationUrl(
+  appSlug: string,
+  state: string,
+  options: { repositoryIds?: readonly number[] } = {},
+): string {
   if (!/^[a-z0-9-]+$/.test(appSlug)) {
     throw new Error("GitHub App slug is invalid.");
   }
 
   const url = new URL(`https://github.com/apps/${appSlug}/installations/new`);
   url.searchParams.set("state", state);
+  // Pre-selects the pasted repository on GitHub's install screen. GitHub
+  // ignores unknown ids, so a stale id degrades to manual selection.
+  for (const repositoryId of options.repositoryIds ?? []) {
+    if (!Number.isSafeInteger(repositoryId) || repositoryId <= 0) {
+      throw new Error("GitHub repository id hint is invalid.");
+    }
+    url.searchParams.append("repository_ids[]", String(repositoryId));
+  }
   return url.toString();
 }

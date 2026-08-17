@@ -176,6 +176,12 @@ export type {
   GitHubPermissions,
 } from "./github/app-permissions";
 
+export { parseGitHubRepositoryUrl } from "./github/repository-url";
+export type {
+  GitHubRepositoryUrlFailure,
+  ParsedGitHubRepositoryUrl,
+} from "./github/repository-url";
+
 export {
   GITHUB_API_VERSION,
   requestInstallationToken,

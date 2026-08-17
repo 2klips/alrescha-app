@@ -132,3 +132,29 @@ export async function getVerifiedUserInstallation(input: {
     repositories: repositoryResponse.repositories.map(repositoryChoice),
   };
 }
+
+/**
+ * Unauthenticated public-repository lookup for the URL onboarding path.
+ * Returns the numeric repository id used to pre-select the repository on
+ * GitHub's install screen, or null when GitHub answers 404 — which covers
+ * both private and nonexistent repositories (GitHub does not distinguish
+ * them for anonymous callers).
+ */
+export async function lookupPublicGitHubRepository(
+  fullName: string,
+  fetchImplementation: typeof fetch = fetch,
+): Promise<{ githubRepositoryId: number } | null> {
+  const response = await fetchImplementation(
+    `https://api.github.com/repos/${fullName}`,
+    { headers: { Accept: "application/vnd.github+json" } },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`GitHub repository lookup failed with status ${response.status}.`);
+  }
+  const body = (await response.json()) as { id?: unknown };
+  if (typeof body.id !== "number" || !Number.isSafeInteger(body.id) || body.id <= 0) {
+    throw new Error("GitHub repository lookup response is malformed.");
+  }
+  return { githubRepositoryId: body.id };
+}

@@ -13,6 +13,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
+import { parseGitHubRepositoryUrl } from "@arr/core/repository-url";
+
 import { buildDashboardViewModel } from "../../lib/dashboard/graph-model";
 import { BRAND, ONBOARDING } from "../../lib/strings";
 import { DashboardScreen } from "./dashboard-screen";
@@ -32,6 +34,26 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
   const [step, setStep] = useState(0);
   const [permissionError, setPermissionError] = useState(initialPermissionError);
   const [seededDemo, setSeededDemo] = useState(false);
+  const [pastedUrl, setPastedUrl] = useState("");
+  const [urlState, setUrlState] = useState<
+    | { kind: "idle" }
+    | { kind: "invalid" }
+    | { kind: "install"; fullName: string }
+  >({ kind: "idle" });
+
+  const submitPastedUrl = () => {
+    const parsed = parseGitHubRepositoryUrl(pastedUrl);
+    if (!parsed.ok) {
+      setUrlState({ kind: "invalid" });
+      return;
+    }
+    if (parsed.fullName === ONBOARDING.repository.defaultRepo) {
+      // Already visible to the App in this demo — connect right away.
+      setStep(3);
+      return;
+    }
+    setUrlState({ fullName: parsed.fullName, kind: "install" });
+  };
 
   if (step === 4) {
     return (
@@ -133,6 +155,43 @@ export function OnboardingFlow({ initialPermissionError = false }: OnboardingFlo
             </span>
             <ChevronRight size={17} />
           </button>
+          <form
+            className="repo-url-connect"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitPastedUrl();
+            }}
+          >
+            <span className="panel-kicker">{ONBOARDING.repository.url.legend}</span>
+            <label>
+              {ONBOARDING.repository.url.label}
+              <input
+                onChange={(event) => {
+                  setPastedUrl(event.target.value);
+                  setUrlState({ kind: "idle" });
+                }}
+                placeholder={ONBOARDING.repository.url.placeholder}
+                type="text"
+                value={pastedUrl}
+              />
+            </label>
+            <button className="primary-action" type="submit">
+              {ONBOARDING.repository.url.submit} <ChevronRight size={16} />
+            </button>
+            {urlState.kind === "invalid" ? (
+              <p role="alert">
+                <AlertTriangle size={14} /> {ONBOARDING.repository.url.invalid}
+              </p>
+            ) : null}
+            {urlState.kind === "install" ? (
+              <div role="status">
+                <p>{ONBOARDING.repository.url.installNeeded(urlState.fullName)}</p>
+                <button className="primary-action" onClick={() => setStep(3)} type="button">
+                  {ONBOARDING.repository.url.installCta} <ChevronRight size={16} />
+                </button>
+              </div>
+            ) : null}
+          </form>
         </section>
       ) : null}
 

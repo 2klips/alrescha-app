@@ -121,12 +121,12 @@
       "target": ".arr-proof-heading > div:nth-child(1) > .arr-kicker"
     },
     {
-      "html": "<h1 id=\"proof-map-title\">프로젝트 증명 맵<span class=\"arr-proof-repo\">2klips/specproof-app</span></h1>",
+      "html": "<h1 id=\"proof-map-title\">프로젝트 증명 맵<span class=\"arr-proof-repo\">2klips/arr-app</span></h1>",
       "message": "Element's background color could not be determined due to a background gradient",
       "target": "#proof-map-title"
     },
     {
-      "html": "<span class=\"arr-proof-repo\">2klips/specproof-app</span>",
+      "html": "<span class=\"arr-proof-repo\">2klips/arr-app</span>",
       "message": "Element's background color could not be determined due to a background gradient",
       "target": ".arr-proof-repo"
     },

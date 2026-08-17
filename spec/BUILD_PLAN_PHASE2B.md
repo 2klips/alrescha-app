@@ -18,7 +18,7 @@ Phase 2A가 "보이는 것"을 끝냈다면 2B는 **제품이 실제로 팔리�
 
 MVP는 GitHub App 설치가 유일한 입구다. 공개 전 진입 장벽을 없앤다.
 
-- [ ] **1. 레포 URL 등록 경로**
+- [x] **1. 레포 URL 등록 경로**
   온보딩에 "레포 주소 붙여넣기" 입력을 추가 — URL을 파싱해 owner/repo를 뽑고, 미설치면 **해당 레포만 선택된 상태로** GitHub App 설치 화면으로 유도, 설치돼 있으면 즉시 연결. 잘못된 URL·비공개 레포·권한 없음·이미 연결됨을 각각 구분해 안내. (Vercel Import Git Repository UX 벤치마크)
   수용 기준: URL 파서 단위 테스트(https/ssh/짧은 형태/쿼리·해시 포함/오타), 각 실패 상태의 라우트 테스트, Playwright로 붙여넣기→설치 유도→연결 완료 여정.
   Commit: `feat(onboarding): connect a repository by url`

@@ -119,6 +119,14 @@ const TECHNICAL_TOKENS = [
   "mcp",
   "REQ-AUTH-001",
   "BYOK_ENCRYPTION_KEY",
+  // URL onboarding (Phase 2B todo 1): the placeholder/example address shown
+  // verbatim. "hub" covers the github residue left after "git" is stripped.
+  "https",
+  "hub",
+  "com",
+  "owner",
+  "repo",
+  "App",
 ];
 
 function collectStrings(module: object, path = ""): Array<[string, string]> {

@@ -46,6 +46,9 @@ export async function GET(request: Request) {
 
     const selectionUrl = new URL("/app/connect/github/repositories", requestUrl.origin);
     selectionUrl.searchParams.set("installation", prepared.installationId);
+    if (state.repositoryFullName) {
+      selectionUrl.searchParams.set("repository", state.repositoryFullName);
+    }
     return NextResponse.redirect(selectionUrl);
   } catch {
     return NextResponse.redirect(errorUrl);
