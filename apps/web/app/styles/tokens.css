@@ -132,33 +132,36 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  /* Surfaces — ADR-009-3 light ("paper") */
-  --bg: #faf7f1;
+  /* Surfaces — Phase 2D 사용자 판정: 라이트는 Toss형(친근한 연회색+흰 카드).
+     다크는 Ink & Seal 그대로(먹색+주홍 인장). */
+  --bg: #f2f4f6;
   --surface: #ffffff;
-  --surface-2: #f3efe7;
-  --code-bg: #f3efe7;
-  --line: #e3ddd0;
-  --line-strong: #cfc6b4;
+  --surface-2: #f9fafb;
+  --code-bg: #f2f4f6;
+  --line: #e5e8eb;
+  --line-strong: #d1d6db;
 
-  /* Text — `--faint` raised from #8a8f9e (2.82:1 on --surface-2) to clear AA. */
-  --text: #20242e;
-  --muted: #5b6272;
-  --faint: #666c7b;
+  /* Text — Toss 그레이 램프. --faint는 --surface-2 대비 AA를 지켜야 한다. */
+  --text: #191f28;
+  --muted: #4e5968;
+  --faint: #62697a;
 
-  /* Identity + status — ADR-009-3 light ("paper") values, unchanged. */
+  /* Identity + status — 브랜드 주홍은 유지(제품 인장), info는 Toss 블루로. */
   --brand: #d6402e;
   --verified: #1e8a5e;
   --inferred: #b07a14;
-  --info: #3b6fdb;
+  --info: #3182f6;
 
-  /* AA-safe small-text variants (worst case measured against #ffffff,
-     #faf7f1, #f3efe7 and the #edf2fc code-highlight row):
-       brand    4.59:1   verified 4.65:1
-       inferred 4.62:1   info     4.68:1 */
+  /* AA-safe small-text variants — worst case is the lightest painted ground
+     (#ffffff / #f9fafb / #f2f4f6); tests/design-tokens.test.ts measures. */
   --brand-text: #c43a2b;
   --verified-text: #177a52;
   --inferred-text: #8f6310;
-  --info-text: #3766ca;
+  --info-text: #1b64da;
+
+  /* Accent text/fill must clear AA on white; the brighter Toss blue stays on
+     --info for graphics (nodes, bars) where large-area color is the point. */
+  --accent: #1b64da;
 
   --on-brand: #ffffff;
   --on-accent: #ffffff;
