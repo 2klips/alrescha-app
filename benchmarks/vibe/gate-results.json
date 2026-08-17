@@ -1,0 +1,41 @@
+{
+  "experiment": "vibe-harness-injection-v0",
+  "generatedBy": "scripts/vibe-injection-experiment.ts",
+  "verdicts": [
+    {
+      "detail": "실모델 실행 대기(크레딧). 채택 조건: 주입 하네스에서 지표↑ AND 숨긴 정답 정확도↑ — 지표만 오르면 폐기.",
+      "metric": "V1-verified-evidence-ratio",
+      "status": "pending"
+    },
+    {
+      "detail": "실모델 실행 대기(크레딧). 채택 조건: 주입 하네스에서 지표↑ AND 숨긴 정답 정확도↑ — 지표만 오르면 폐기.",
+      "metric": "V2-finding-resolution-rate",
+      "status": "pending"
+    },
+    {
+      "detail": "실모델 실행 대기(크레딧). 채택 조건: 주입 하네스에서 지표↑ AND 숨긴 정답 정확도↑ — 지표만 오르면 폐기.",
+      "metric": "V3-requirement-proof-throughput",
+      "status": "pending"
+    },
+    {
+      "detail": "실모델 실행 대기(크레딧). 채택 조건: 주입 하네스에서 지표↑ AND 숨긴 정답 정확도↑ — 지표만 오르면 폐기.",
+      "metric": "V4-prompt-rubric-mean",
+      "status": "pending"
+    },
+    {
+      "detail": "실모델 실행 대기(크레딧). 채택 조건: 주입 하네스에서 지표↑ AND 숨긴 정답 정확도↑ — 지표만 오르면 폐기.",
+      "metric": "V5-receipt-chain-continuity",
+      "status": "pending"
+    },
+    {
+      "detail": "실모델 실행 대기(크레딧). 채택 조건: 주입 하네스에서 지표↑ AND 숨긴 정답 정확도↑ — 지표만 오르면 폐기.",
+      "metric": "V6-verified-commit-ratio",
+      "status": "pending"
+    },
+    {
+      "detail": "실모델 실행 대기(크레딧). 채택 조건: 주입 하네스에서 지표↑ AND 숨긴 정답 정확도↑ — 지표만 오르면 폐기.",
+      "metric": "V7-prompt-verifiability-share",
+      "status": "pending"
+    }
+  ]
+}
