@@ -70,12 +70,19 @@ export interface ScannedArtifact {
   readonly sizeBytes: number;
   readonly sourceBlobSha: string;
   readonly sourceCommitSha: string;
+  /**
+   * Which extractor produced `exportedSymbols` (ADR-014). Recorded as
+   * artifact provenance so a consumer can tell an exact AST reading from a
+   * structural one instead of assuming uniform precision. `null` when the
+   * artifact carries no symbols.
+   */
+  readonly symbolEngine: SymbolExtractionEngine | null;
   readonly todoItems: readonly ParsedTodoItem[];
 }
 
 export type PreviousScannedArtifact = Omit<
   ScannedArtifact,
-  "rationales" | "todoItems"
+  "rationales" | "symbolEngine" | "todoItems"
 >;
 
 export interface ScanSkip {
@@ -491,13 +498,15 @@ export async function scanRepository(input: {
       continue;
     }
 
+    const extraction =
+      classification === "code_metadata"
+        ? extractSymbols(entry.path, source)
+        : null;
+
     artifacts.push({
       classification,
       digest,
-      exportedSymbols:
-        classification === "code_metadata"
-          ? extractSymbols(entry.path, source).symbols
-          : [],
+      exportedSymbols: extraction?.symbols ?? [],
       kind: persistedKind(classification),
       path: entry.path,
       rationales:
@@ -507,6 +516,7 @@ export async function scanRepository(input: {
       sizeBytes: bytes.byteLength,
       sourceBlobSha: entry.sha,
       sourceCommitSha: input.commitSha,
+      symbolEngine: extraction?.engine ?? null,
       todoItems:
         classification === "todo_progress"
           ? parseTodoDocument({ path: entry.path, source })

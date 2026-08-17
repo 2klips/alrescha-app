@@ -26,6 +26,7 @@ import {
   RELEASE_HARDENING_MIGRATION,
   REPOSITORY_SCAN_MIGRATION,
   RUN_LIFECYCLE_MIGRATION,
+  SYMBOL_ENGINE_MIGRATION,
   WORKER_CREDIT_MIGRATION,
   createTestDatabase,
 } from "./helpers/database";
@@ -90,6 +91,30 @@ describe("multi-language symbol extraction (todo 7 ⑵)", () => {
       "class:JobRunner",
     ]);
     expect(symbols[0]).toMatchObject({ startLine: 3 });
+  });
+
+  it("records which engine read the symbols, so precision is not assumed (ADR-014)", async () => {
+    const root = await mkdtemp(join(tmpdir(), "arr-engine-provenance-"));
+    try {
+      await writeFile(join(root, "a.ts"), "export const a = 1;\n", "utf8");
+      await writeFile(join(root, "b.py"), "def handle():\n    pass\n", "utf8");
+      await writeFile(join(root, "c.go"), "package c\nfunc Do() {}\n", "utf8");
+      await writeFile(join(root, "TODO.md"), "- [ ] 문서\n", "utf8");
+
+      const { commitSha, source } = await createLocalRepositorySource(root);
+      const plan = await scanRepository({ commitSha, source });
+      const engines = Object.fromEntries(
+        plan.artifacts.map(({ path, symbolEngine }) => [path, symbolEngine]),
+      );
+      expect(engines).toEqual({
+        "TODO.md": null,
+        "a.ts": "typescript-ast",
+        "b.py": "python-structural",
+        "c.go": "go-structural",
+      });
+    } finally {
+      await rm(root, { force: true, recursive: true });
+    }
   });
 
   it("extracts exported Go declarations by the capital-initial rule", () => {
@@ -189,6 +214,7 @@ describe("rationale nodes and handoff todos reach the database and dashboard", (
       RUN_LIFECYCLE_MIGRATION,
       LOCAL_INGEST_MIGRATION,
       RATIONALE_NODES_MIGRATION,
+      SYMBOL_ENGINE_MIGRATION,
     ]);
     await database.query(
       "insert into auth.users (id, email) values ($1, 'scanner-ext@example.test')",
@@ -259,6 +285,15 @@ describe("rationale nodes and handoff todos reach the database and dashboard", (
         [workspace],
       );
       expect(nodeRows.rows).toHaveLength(1);
+
+      // ADR-014: the engine reaches the artifact row as provenance. A
+      // judgment summary written here must survive the rescan below —
+      // `metadata` is merged, never replaced (asserted after the rescan).
+      await database.query(
+        `update public.artifacts set metadata = metadata || '{"summary":"판단 잡 요약"}'::jsonb
+         where workspace_id = $1 and path = 'src/queue.ts'`,
+        [workspace],
+      );
       const edgeRows = await database.query<{
         provenance: { span?: { path?: string; startLine?: number } };
         relation: string;
@@ -298,6 +333,23 @@ describe("rationale nodes and handoff todos reach the database and dashboard", (
           )
         ).rows,
       ).toEqual([]);
+
+      // The rescan refreshed the engine provenance without clobbering the
+      // stored summary, and a non-code artifact carries no engine at all.
+      const metadataRows = await database.query<{
+        metadata: { summary?: string; symbolEngine?: string };
+        path: string;
+      }>(
+        "select path, metadata from public.artifacts where workspace_id = $1 order by path",
+        [workspace],
+      );
+      expect(
+        metadataRows.rows.find(({ path }) => path === "src/queue.ts")?.metadata,
+      ).toEqual({ summary: "판단 잡 요약", symbolEngine: "typescript-ast" });
+      expect(
+        metadataRows.rows.find(({ path }) => path === "current-task.md")
+          ?.metadata,
+      ).toEqual({});
 
       // Handoff file → todos rows → progress dashboard board.
       const todoRows = await database.query<{

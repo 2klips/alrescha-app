@@ -69,6 +69,9 @@ const scannedArtifactSchema = z.strictObject({
   sizeBytes: z.number().int().nonnegative(),
   sourceBlobSha: sha1Schema,
   sourceCommitSha: sha1Schema,
+  symbolEngine: z
+    .enum(["go-structural", "python-structural", "typescript-ast"])
+    .nullable(),
   todoItems: z.array(todoItemSchema).max(10_000),
 });
 

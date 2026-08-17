@@ -57,6 +57,8 @@ export const TEAM_ROLES_MIGRATION =
   "supabase/migrations/202608170004_team_roles.sql";
 export const PROMPT_CAPTURE_MIGRATION =
   "supabase/migrations/202608170005_prompt_capture.sql";
+export const SYMBOL_ENGINE_MIGRATION =
+  "supabase/migrations/202608170006_symbol_engine.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -76,6 +78,7 @@ export const ALL_MIGRATIONS = [
   RATIONALE_NODES_MIGRATION,
   TEAM_ROLES_MIGRATION,
   PROMPT_CAPTURE_MIGRATION,
+  SYMBOL_ENGINE_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(
