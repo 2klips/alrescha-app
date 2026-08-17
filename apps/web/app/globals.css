@@ -3561,10 +3561,24 @@ a {
   outline-offset: 2px;
 }
 
-/* Parked in the clear channel between the repo rail and the inspector: those
-   are separate stacking contexts, so a panel tucked into a screen corner would
-   sit *under* them however high its z-index. Bottom-right of that channel keeps
-   the middle of the graph — where the nodes live — free of chrome. */
+/* OQ-007 resolved: the HUD cards live in `.arr-hud-channel`, a workspace-grid
+   SIBLING of the rail and inspector that occupies the middle column. The grid
+   owns the geometry, so the cards position against the channel's own edges —
+   the old passage constants (right: 22.5rem / left: 17.5rem, mirroring the
+   side-panel widths) are gone; changing a rail width can no longer strand a
+   card under another stacking context. */
+.arr-hud-channel {
+  grid-column: 2;
+  grid-row: 1;
+  pointer-events: none;
+  position: relative;
+  z-index: 5;
+}
+
+.arr-hud-channel > * {
+  pointer-events: auto;
+}
+
 .graph-force-panel {
   backdrop-filter: blur(18px) saturate(120%);
   background: var(--panel);
@@ -3572,18 +3586,14 @@ a {
   bottom: 3.4rem;
   box-shadow: 0 18px 44px var(--panel-shadow);
   /* Capped and scrollable so a short viewport cannot grow the card up into the
-     controls strip — a HUD card that overlaps another control is unusable.
-     The reserve is 16rem, not the original 12rem: the controls strip sits a
-     fixed distance below the title band, so anything that makes the heading
-     taller walks the strip down into this card. At 12rem the measured clearance
-     was 4px, which is why `force panel values survive a reload` could
-     intermittently not click the collapse button. brain-map.spec.ts now asserts
-     the two boxes never intersect, so this constant cannot silently rot. */
+     controls strip overlaying the top of this channel. brain-map.spec.ts
+     asserts the two boxes never intersect, so this reserve cannot silently
+     rot. */
   max-height: min(20rem, calc(100% - 16rem));
   overflow-y: auto;
   padding: 0 0.85rem 0.7rem;
   position: absolute;
-  right: 22.5rem;
+  right: 1.5rem;
   width: 13rem;
   z-index: 4;
 }
@@ -3700,10 +3710,9 @@ a {
   gap: 0.5rem;
   padding: 1rem;
   position: absolute;
-  /* Top-left of the clear channel: below the controls strip, opposite the force
-     card, and clear of the inspector — which is a separate stacking context and
-     would otherwise swallow this panel's close button. */
-  left: 17.5rem;
+  /* Channel-relative (OQ-007): below the controls strip, opposite the force
+     card. The channel itself can never overlap the inspector. */
+  left: 1.5rem;
   top: 11rem;
   width: min(19rem, calc(100% - 2rem));
   z-index: 6;
@@ -4068,7 +4077,7 @@ a {
     padding-right: 1.25rem;
   }
   .arr-metric-evidence {
-    left: 15rem;
+    left: 1rem;
   }
   .graph-force-panel {
     right: 1rem;
@@ -4148,6 +4157,11 @@ a {
     flex-direction: column;
     height: auto;
     overflow: visible;
+  }
+  /* The HUD channel dissolves: its absolute children position against the
+     workspace itself, governed by the mobile overrides below/above. */
+  .arr-hud-channel {
+    display: contents;
   }
   .arr-repo-rail,
   .arr-inspector,

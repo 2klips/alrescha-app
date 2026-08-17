@@ -17,14 +17,17 @@
  */
 
 import dynamic from "next/dynamic";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import type {
   GraphData,
   GraphEdge,
   GraphNode,
 } from "../../lib/dashboard/graph-model";
-import { forceConfigOf } from "../../lib/graph/graph-panel-settings";
+import {
+  forceConfigOf,
+  type GraphPanelSettings,
+} from "../../lib/graph/graph-panel-settings";
 import type { LodLevel } from "../../lib/graph/lod";
 import { DASHBOARD } from "../../lib/strings";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
@@ -53,8 +56,16 @@ export interface BrainMapStageProps {
   /** Double-click / Enter on a node — the drill-down to evidence detail. */
   onNodeActivate?: (node: GraphNode) => void;
   onNodeSelect?: (node: GraphNode) => void;
+  /**
+   * OQ-007: when the surrounding HUD hosts the force panel itself (as a
+   * workspace-grid sibling), it owns the settings and receives LOD updates
+   * through these props instead of the stage's internal state.
+   */
+  onLodReport?: (lod: LodLevel, labels: number) => void;
+  onSettingsChange?: (patch: Partial<GraphPanelSettings>) => void;
   seed?: number;
   selectedNodeId?: string | null;
+  settings?: GraphPanelSettings;
   /** Set false when a surrounding HUD supplies its own controls. */
   showForcePanel?: boolean;
 }
@@ -81,13 +92,18 @@ export function BrainMapStage({
   focusNodeId,
   glow,
   onEdgeSelect,
+  onLodReport,
   onNodeActivate,
   onNodeSelect,
+  onSettingsChange,
   seed,
   selectedNodeId,
+  settings: externalSettings,
   showForcePanel = true,
 }: BrainMapStageProps) {
-  const [settings, updateSettings] = useGraphPanelSettings();
+  const [internalSettings, updateInternalSettings] = useGraphPanelSettings();
+  const settings = externalSettings ?? internalSettings;
+  const updateSettings = onSettingsChange ?? updateInternalSettings;
   const [lod, setLod] = useState<{ labels: number; level: LodLevel }>({
     labels: 0,
     level: "near",
@@ -96,6 +112,42 @@ export function BrainMapStage({
   const hitLayerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const targets = useMemo(() => hitTargets(data), [data]);
+
+  // OQ-006: roving tabindex. 600 buttons were 600 tab stops — unusable for a
+  // keyboard or screen-reader user. The layer is now ONE stop: Tab enters on
+  // the active node, arrow keys walk the nodes, Tab leaves.
+  const [activeHitIndex, setActiveHitIndex] = useState(0);
+  const boundedActiveIndex = Math.min(
+    activeHitIndex,
+    Math.max(targets.length - 1, 0),
+  );
+  const moveHitFocus = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      const step =
+        event.key === "ArrowRight" || event.key === "ArrowDown"
+          ? 1
+          : event.key === "ArrowLeft" || event.key === "ArrowUp"
+            ? -1
+            : event.key === "Home"
+              ? Number.NEGATIVE_INFINITY
+              : event.key === "End"
+                ? Number.POSITIVE_INFINITY
+                : null;
+      if (step === null || targets.length === 0) return;
+      event.preventDefault();
+      const next =
+        step === Number.NEGATIVE_INFINITY
+          ? 0
+          : step === Number.POSITIVE_INFINITY
+            ? targets.length - 1
+            : (boundedActiveIndex + step + targets.length) % targets.length;
+      setActiveHitIndex(next);
+      const buttons =
+        hitLayerRef.current?.querySelectorAll<HTMLButtonElement>("button");
+      buttons?.[next]?.focus();
+    },
+    [boundedActiveIndex, targets.length],
+  );
 
   return (
     <div
@@ -116,9 +168,10 @@ export function BrainMapStage({
           forceConfig={forceConfig}
           {...(glow ? { glow } : {})}
           hitLayer={hitLayerRef}
-          onLodChange={(level, labels) =>
-            setLod({ labels, level: level as LodLevel })
-          }
+          onLodChange={(level, labels) => {
+            setLod({ labels, level: level as LodLevel });
+            onLodReport?.(level as LodLevel, labels);
+          }}
           {...(seed === undefined ? {} : { seed })}
           selectedNodeId={selectedNodeId ?? null}
           textFadeThreshold={settings.textFadeThreshold}
@@ -127,11 +180,14 @@ export function BrainMapStage({
         {/* Positions below are the pre-simulation fixture layout; `BrainMap`
             takes over as soon as the renderer produces its first frame. */}
         <div
+          aria-label={DASHBOARD.hitLayerLabel}
           className="brain-map-hits"
           data-testid="brain-map-hits"
+          onKeyDown={moveHitFocus}
           ref={hitLayerRef}
+          role="toolbar"
         >
-          {targets.map((node) => (
+          {targets.map((node, index) => (
             <button
               aria-label={DASHBOARD.nodeSummary(node.label, node.type, node.grade)}
               aria-pressed={node.id === selectedNodeId}
@@ -141,6 +197,7 @@ export function BrainMapStage({
               key={node.id}
               onClick={() => onNodeSelect?.(node)}
               onDoubleClick={() => onNodeActivate?.(node)}
+              onFocus={() => setActiveHitIndex(index)}
               onKeyDown={(event) => {
                 if (event.key !== "Enter") return;
                 event.preventDefault();
@@ -150,6 +207,7 @@ export function BrainMapStage({
                 left: `calc(50% + ${node.x}px)`,
                 top: `calc(50% + ${node.y}px)`,
               }}
+              tabIndex={index === boundedActiveIndex ? 0 : -1}
               type="button"
             />
           ))}

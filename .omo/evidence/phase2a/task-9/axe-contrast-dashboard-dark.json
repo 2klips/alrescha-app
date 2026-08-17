@@ -117,37 +117,57 @@
     },
     {
       "html": "<span class=\"arr-kicker\">현재 commit<!-- --> · bad0551</span>",
-      "message": "Element's background color could not be determined due to a background gradient",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
       "target": ".arr-proof-heading > div:nth-child(1) > .arr-kicker"
     },
     {
       "html": "<h1 id=\"proof-map-title\">프로젝트 증명 맵<span class=\"arr-proof-repo\">2klips/arr-app</span></h1>",
-      "message": "Element's background color could not be determined due to a background gradient",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
       "target": "#proof-map-title"
     },
     {
       "html": "<span class=\"arr-proof-repo\">2klips/arr-app</span>",
-      "message": "Element's background color could not be determined due to a background gradient",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
       "target": ".arr-proof-repo"
     },
     {
       "html": "<span><i class=\"requirement\"></i>요구사항</span>",
-      "message": "Element's background color could not be determined due to a background gradient",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
       "target": ".arr-legend > span:nth-child(1)"
     },
     {
       "html": "<span><i class=\"code\"></i>코드</span>",
-      "message": "Element's background color could not be determined due to a background gradient",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
       "target": ".arr-legend > span:nth-child(2)"
     },
     {
       "html": "<span><i class=\"test\"></i>verified 테스트</span>",
-      "message": "Element's background color could not be determined due to a background gradient",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
       "target": ".arr-legend > span:nth-child(3)"
     },
     {
+      "html": "<input placeholder=\"증명 맵 검색\" type=\"search\" value=\"\">",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "input[placeholder=\"증명 맵 검색\"]"
+    },
+    {
+      "html": "<select aria-label=\"노드 유형\"><option value=\"all\" selected=\"\">전체 노드</option><option value=\"requirement\">요구사항</option><option value=\"document\">문서</option><option value=\"code\">코드</option><option value=\"test\">테스트</option></sel",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "select[aria-label=\"노드 유형\"]"
+    },
+    {
+      "html": "<select aria-label=\"증거 등급\"><option value=\"all\" selected=\"\">전체 증거</option><option value=\"verified\">verified</option><option value=\"inferred\">inferred</option><option value=\"broken\">broken</option></select>",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "select[aria-label=\"증거 등급\"]"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-focus\" type=\"button\">",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": ".arr-focus"
+    },
+    {
       "html": "<footer class=\"arr-ci-note \" role=\"status\">",
-      "message": "Element's background color could not be determined because element contains an image node",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
       "target": "footer"
     },
     {
@@ -224,10 +244,55 @@
       "html": "<code>tests/auth-tenancy.test.ts</code>",
       "message": "Element's background color could not be determined because element contains an image node",
       "target": ".verified:nth-child(3) > div > code"
+    },
+    {
+      "html": "<strong>Graph 힘</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "header > strong"
+    },
+    {
+      "html": "<button aria-expanded=\"true\" type=\"button\">힘 패널 접기</button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-panel > header > button[type=\"button\"]"
+    },
+    {
+      "html": "<span>중앙 인력</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-sliders > label:nth-child(1) > span"
+    },
+    {
+      "html": "<span>반발력</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-sliders > label:nth-child(2) > span"
+    },
+    {
+      "html": "<span>링크 인력</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-sliders > label:nth-child(3) > span"
+    },
+    {
+      "html": "<span>링크 거리</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "label:nth-child(4) > span"
+    },
+    {
+      "html": "<span>라벨 페이드</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "label:nth-child(5) > span"
+    },
+    {
+      "html": "<button class=\"graph-force-reset\" type=\"button\">기본값 복원</button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-reset"
+    },
+    {
+      "html": "<small data-testid=\"graph-lod-status\">줌 단계 중경 · 라벨 13개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "small[data-testid=\"graph-lod-status\"]"
     }
   ],
-  "incompleteCount": 45,
-  "passes": 28,
+  "incompleteCount": 58,
+  "passes": 24,
   "route": "/",
   "theme": "dark",
   "violationCount": 0,

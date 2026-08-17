@@ -16,11 +16,11 @@ import { THEME_STORAGE_KEY } from "../../apps/web/lib/theme/theme-preference";
  * regression hard to see.
  *
  * Two scoping decisions worth knowing:
- *  - the WebGL canvas and its transparent DOM hit layer are excluded. axe reads
- *    computed CSS, and a transparent button stacked over a canvas has no
- *    computable background, so axe reports `incomplete`, not a real failure.
- *    Node labels are painted by Pixi into the canvas and are outside axe's
- *    reach entirely — they are covered by the LOD unit tests instead.
+ *  - only the CANVASES are excluded: node labels are painted by Pixi into the
+ *    canvas and are outside axe's reach entirely — they are covered by the LOD
+ *    unit tests instead. The DOM hit layer IS in scope (OQ-006 resolved): its
+ *    buttons carry no visible text, so the color-contrast rule has nothing to
+ *    misjudge, and every other enabled check applies to them normally.
  *  - `incomplete` results (axe could not determine the background) are recorded
  *    in the report but do not fail the gate; only definite `violations` do.
  *
@@ -37,13 +37,9 @@ const SURFACES = [
 
 const THEMES = ["dark", "light"] as const;
 
-/** Pixi paints into a canvas; axe cannot read pixels, so it is out of scope. */
-const EXCLUDED = [
-  '[data-testid="brain-map-stage"]',
-  '[data-testid="brain-map-hits"]',
-  ".local-graph-canvas",
-  "canvas",
-];
+/** Pixi paints into a canvas; axe cannot read pixels, so it is out of scope.
+    The DOM hit layer is deliberately NOT excluded any more (OQ-006). */
+const EXCLUDED = [".local-graph-canvas", "canvas"];
 
 test.use({ colorScheme: "dark" });
 

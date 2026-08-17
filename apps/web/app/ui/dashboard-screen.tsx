@@ -53,8 +53,10 @@ import {
   relativeEventTime,
   subscribeWorkspaceRealtime,
 } from "../../lib/realtime/access-events";
+import type { LodLevel } from "../../lib/graph/lod";
 import { BRAND, DASHBOARD, GRADE, NAV } from "../../lib/strings";
 import { BrainMapStage } from "./brain-map-stage";
+import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
 import { ThemeToggle } from "./theme-toggle";
 
 interface DashboardScreenProps {
@@ -298,6 +300,13 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
       null,
   );
   const [metricPanel, setMetricPanel] = useState<MetricPanel | null>(null);
+  // OQ-007: the HUD cards live in a workspace-grid channel (a sibling of the
+  // rail and inspector), so the dashboard owns the panel settings and LOD.
+  const [panelSettings, updatePanelSettings] = useGraphPanelSettings();
+  const [hudLod, setHudLod] = useState<{ labels: number; level: LodLevel }>({
+    labels: 0,
+    level: "near",
+  });
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [recovered, setRecovered] = useState(false);
   const [clock, setClock] = useState(0);
@@ -644,13 +653,17 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
                 data={visibleGraph}
                 focusNodeId={cameraFocusNodeId}
                 glow={glow}
+                onLodReport={(level, labels) => setHudLod({ labels, level })}
                 onNodeActivate={(node) =>
                   window.location.assign(
                     `/graph?node=${encodeURIComponent(node.id)}`,
                   )
                 }
                 onNodeSelect={setSelectedNode}
+                onSettingsChange={updatePanelSettings}
                 selectedNodeId={selectedNode?.id ?? null}
+                settings={panelSettings}
+                showForcePanel={false}
               />
             )}
             {model.isClustered ? (
@@ -658,12 +671,6 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
                 <Braces size={14} />
                 {DASHBOARD.clusterNote(500)}
               </div>
-            ) : null}
-            {metricPanel ? (
-              <MetricEvidence
-                onClose={() => setMetricPanel(null)}
-                panel={metricPanel}
-              />
             ) : null}
           </div>
           <footer
@@ -780,6 +787,29 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
                 ))}
           </div>
         </section>
+
+        {/* OQ-007: the HUD channel — a grid SIBLING of the rail and the
+            inspector, occupying the middle column. Cards positioned here can
+            never collide with the side panels: the grid owns the geometry,
+            so the old passage constants (17.5rem/22.5rem) are gone. */}
+        <div className="arr-hud-channel">
+          {/* No force panel while a status surface owns the stage — the card
+              would sit over the recovery controls. */}
+          {blocked ? null : (
+            <GraphForcePanel
+              labelCount={hudLod.labels}
+              lod={hudLod.level}
+              onChange={updatePanelSettings}
+              settings={panelSettings}
+            />
+          )}
+          {metricPanel ? (
+            <MetricEvidence
+              onClose={() => setMetricPanel(null)}
+              panel={metricPanel}
+            />
+          ) : null}
+        </div>
       </div>
     </main>
   );

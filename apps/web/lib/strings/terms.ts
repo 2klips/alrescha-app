@@ -43,6 +43,8 @@ export const CONVENTIONAL_ENGLISH_TERMS = [
   "append-only",
   "major",
   "patch",
+  // Keyboard key names render verbatim (OQ-006 hit-layer affordance).
+  "Enter",
   // Platform + protocol
   "MCP",
   "GitHub",

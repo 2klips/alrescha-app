@@ -86,6 +86,9 @@ export const DASHBOARD = {
   /** `증거 Graph · 노드 <n>개 표시` */
   canvasLabel: (count: number) => `증거 Graph · 노드 ${count}개 표시`,
 
+  /** 히트 레이어(단일 탭 정지) — 방향키로 노드 순회 (OQ-006) */
+  hitLayerLabel: "Graph 노드 — 방향키로 이동, Enter로 상세",
+
   /**
    * Accessible name of one node hit target on the canvas —
    * `<라벨> · <유형> · <등급>`. Type and grade are product vocabulary and stay
