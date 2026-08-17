@@ -353,6 +353,7 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
     - `get_node_content(node_id)` → ID-first 순회 뒤의 명시적 2단계 본문 — 저장된 내용만(원본 코드 비저장 불변).
     - `impact_of(node_id, depth≤2)` → 직접 의존/피의존 엣지 + 깊이 제한 이행 폐쇄.
   - `route_query(question)` → 결정론 질의 라우팅 (Phase 2B todo 5): 단순 조회→검색, 멀티홉·관계형→그래프. 응답에 매칭 신호·근거·폴백 경로 포함. 질문 원문은 저장하지 않는다.
+  - `record_prompt({tool_name, token_count, target_node_ids?, rubric?, raw_text?})` → 프롬프트 기록 (ADR-011, 후속 배선). **이중 옵트인·원문 스위치는 DB 트리거가 강제**하므로 이 툴로 우회할 수 없다. access_event를 발행하지 않는다 — 발광 스트림과 프롬프트 저장소는 분리 유지(ADR-004).
   - **레포를 변경하는 tool 없음.**
 - **Access 이벤트 (발광 소스):** 모든 read성 tool/resource 호출은 대상 노드 ID들과 함께 `access_events`에 기록되고 워크스페이스 실시간 채널로 브로드캐스트된다 → 대시보드 그래프 발광(§5.2-①). 기록 실패가 tool 응답을 막아선 안 된다(fire-and-forget). 이벤트에는 프롬프트/작업 내용 원문을 저장하지 않는다 — tool명·대상·타임스탬프만.
 - 에러: 스키마 불일치 입력은 typed error, 부분 상태 저장 금지.

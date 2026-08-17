@@ -255,6 +255,62 @@ describe("prompt capture privacy (ADR-011)", () => {
     expect(after).toEqual([{ records: 0 }]);
   });
 
+  it("the MCP service-role path obeys the same consent gate", async () => {
+    // `record_prompt_as` is how the hosted MCP writes (no auth.uid() there).
+    // It must not become a way around the double opt-in.
+    await expect(
+      database.query(
+        "select public.record_prompt_as($1::text, $2::uuid, 'log_progress', '{}'::text[], 10, '{}'::jsonb, null::text, false)",
+        [workspace, ALICE],
+      ),
+    ).rejects.toThrow(/not enabled for this workspace/);
+
+    await call(OWNER, "select public.set_prompt_capture($1, true)", [workspace]);
+    await expect(
+      database.query(
+        "select public.record_prompt_as($1::text, $2::uuid, 'log_progress', '{}'::text[], 10, '{}'::jsonb, null::text, false)",
+        [workspace, BOB],
+      ),
+    ).rejects.toThrow(/has not consented/);
+
+    // A non-member cannot be recorded at all, consent or not.
+    const stranger = "79999999-9999-4999-8999-999999999999";
+    await database.query(
+      "insert into auth.users (id, email) values ($1, 'p-stranger@example.test')",
+      [stranger],
+    );
+    await expect(
+      database.query(
+        "select public.record_prompt_as($1::text, $2::uuid, 'log_progress', '{}'::text[], 10, '{}'::jsonb, null::text, false)",
+        [workspace, stranger],
+      ),
+    ).rejects.toThrow(/not an active member/);
+
+    // With consent, the same call succeeds — and raw text still needs the
+    // separate switch.
+    await call(ALICE, "select public.set_prompt_consent($1, true, false)", [
+      workspace,
+    ]);
+    await database.query(
+      "select public.record_prompt_as($1::text, $2::uuid, 'log_progress', '{}'::text[], 10, '{}'::jsonb, null::text, false)",
+      [workspace, ALICE],
+    );
+    await expect(
+      database.query(
+        "select public.record_prompt_as($1::text, $2::uuid, 'log_progress', '{}'::text[], 10, '{}'::jsonb, $3::text, false)",
+        [workspace, ALICE, SENSITIVE_PROMPT],
+      ),
+    ).rejects.toThrow(/Raw prompt sync is not enabled/);
+    expect(
+      (
+        await database.query(
+          "select id from public.prompt_records where workspace_id = $1",
+          [workspace],
+        )
+      ).rows,
+    ).toHaveLength(1);
+  });
+
   it("the local-first log keeps raw text on disk unless raw sync is explicitly on", () => {
     const recordEntry: LocalPromptRecord = {
       occurredAt: "2026-08-17T10:00:00.000Z",

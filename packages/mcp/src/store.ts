@@ -252,6 +252,22 @@ export interface McpStore {
   }): Promise<PublicMcpTokenRecord[]>;
   loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData>;
   publishAccessEvent(channel: string, event: McpAccessEvent): Promise<void>;
+  /**
+   * Record one prompt for the authenticated member (ADR-011). The store is
+   * a pass-through: workspace enablement, the member's consent and the
+   * separate raw-text switch are enforced in the database, so no caller —
+   * this one included — can write around them.
+   */
+  recordPrompt(
+    principal: McpPrincipal,
+    input: {
+      rawText?: string | undefined;
+      rubric?: Record<string, number> | undefined;
+      targetNodeIds?: string[] | undefined;
+      tokenCount: number;
+      toolName: string;
+    },
+  ): Promise<{ id: string }>;
   recordAccessEvent(
     event: McpAccessEvent,
     measurement?: McpPackMeasurement,
@@ -299,6 +315,17 @@ export class InMemoryMcpStore implements McpStore {
   readonly #accessEvents: McpAccessEvent[] = [];
   readonly #packMeasurements: McpPackMeasurement[] = [];
   readonly #notes: McpNote[] = [];
+  readonly #promptRecords: Array<{
+    id: string;
+    occurredAt: string;
+    rawText: string | null;
+    rubric: Record<string, number>;
+    targetNodeIds: string[];
+    tokenCount: number;
+    toolName: string;
+    userId: string;
+    workspaceId: string;
+  }> = [];
   readonly #now: () => Date;
   readonly #progressEvents: McpProgressEvent[] = [];
   readonly #publishedAccessEvents: Array<{
@@ -345,6 +372,40 @@ export class InMemoryMcpStore implements McpStore {
     };
     this.#notes.push(note);
     return { ...note };
+  }
+
+  async recordPrompt(
+    principal: McpPrincipal,
+    input: {
+      rawText?: string | undefined;
+      rubric?: Record<string, number> | undefined;
+      targetNodeIds?: string[] | undefined;
+      tokenCount: number;
+      toolName: string;
+    },
+  ): Promise<{ id: string }> {
+    await this.loadWorkspace(principal);
+    const now = this.#now();
+    const record = {
+      id: createUlid(now),
+      occurredAt: now.toISOString(),
+      rawText: input.rawText ?? null,
+      rubric: input.rubric ?? {},
+      targetNodeIds: input.targetNodeIds ?? [],
+      tokenCount: input.tokenCount,
+      toolName: input.toolName,
+      userId: principal.userId,
+      workspaceId: principal.workspaceId,
+    };
+    this.#promptRecords.push(record);
+    return { id: record.id };
+  }
+
+  /** Test inspector — the consent gate itself lives in the database. */
+  promptRecordsForWorkspace(workspaceId: string) {
+    return this.#promptRecords.filter(
+      (record) => record.workspaceId === workspaceId,
+    );
   }
 
   async appendProgress(

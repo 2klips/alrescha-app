@@ -346,6 +346,7 @@ export {
   coachPrompt,
   coachingCreditCost,
   coachingSuggestions,
+  isNonBillableAiError,
   promptCoachingOutputSchema,
   promptRubricSchema,
   rubricCeilings,

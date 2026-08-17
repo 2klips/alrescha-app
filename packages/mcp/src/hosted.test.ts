@@ -367,6 +367,7 @@ describe("hosted MCP contract", () => {
       "log_progress",
       "query_brain",
       "record_note",
+      "record_prompt",
       "request_context_pack",
       "route_query",
       "search_index",
@@ -1108,6 +1109,66 @@ describe("hosted MCP contract", () => {
       name: "get_node_content",
     });
     expect(content.structuredContent).toMatchObject({ node: null });
+  });
+
+  it("records a prompt without emitting an access event or leaking its text", async () => {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const writable = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Prompt capture",
+      scopes: ["mcp:read", "mcp:write"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      writable.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const result = await client.callTool({
+      arguments: {
+        raw_text: "PRIVATE_MCP_PROMPT_7ab3 인증 흐름을 고쳐줘",
+        rubric: { verifiability: 2 },
+        target_node_ids: ["01K287J3D18V7A1MZG9E8D1Y11"],
+        token_count: 120,
+        tool_name: "log_progress",
+      },
+      name: "record_prompt",
+    });
+    expect(result.isError).not.toBe(true);
+    expect(store.promptRecordsForWorkspace(WORKSPACE_ID)).toHaveLength(1);
+
+    // ADR-004/ADR-011: prompt capture and the glow stream stay separate.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const events = store.accessEventsForWorkspace(WORKSPACE_ID);
+    expect(events.map(({ tool }) => tool)).not.toContain("record_prompt");
+    expect(JSON.stringify(events)).not.toContain("PRIVATE_MCP_PROMPT_7ab3");
+  });
+
+  it("refuses prompt capture on a read-only token", async () => {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const readOnly = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Read only",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      readOnly.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const result = await client.callTool({
+      arguments: { token_count: 10, tool_name: "log_progress" },
+      name: "record_prompt",
+    });
+    expect(result.isError).toBe(true);
+    expect(store.promptRecordsForWorkspace(WORKSPACE_ID)).toEqual([]);
   });
 
   it("routes by question shape and always carries a fallback", async () => {

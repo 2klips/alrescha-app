@@ -36,10 +36,26 @@ export const promptCoachingOutputSchema = z.strictObject({
 export type PromptCoachingOutput = z.infer<typeof promptCoachingOutputSchema>;
 
 export class CoachingValidationError extends Error {
+  /**
+   * Same marker as `JudgmentValidationError`: an invalid AI output is never
+   * billed. The worker keys its no-charge rejection on this code, so both
+   * judgment kinds share one rule instead of two lookalike branches.
+   */
+  readonly code = "schema_invalid" as const;
+
   constructor(message: string) {
     super(message);
     this.name = "CoachingValidationError";
   }
+}
+
+/** True for any AI-output failure that must not be charged for. */
+export function isNonBillableAiError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === "schema_invalid"
+  );
 }
 
 /** Observable signals the floor rules key on — deterministic, no model. */

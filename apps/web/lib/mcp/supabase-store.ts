@@ -123,6 +123,35 @@ export class SupabaseMcpStore implements McpStore {
     if (!result.data) throw new Error("Workspace access denied");
   }
 
+  async recordPrompt(
+    principal: McpPrincipal,
+    input: {
+      rawText?: string | undefined;
+      rubric?: Record<string, number> | undefined;
+      targetNodeIds?: string[] | undefined;
+      tokenCount: number;
+      toolName: string;
+    },
+  ): Promise<{ id: string }> {
+    await this.assertOwner(principal.userId, principal.workspaceId);
+    // The consent gate lives in the database trigger, so this call cannot
+    // write around workspace enablement or the member's own consent.
+    const result = await this.client.rpc("record_prompt_as", {
+      target_node_ids: input.targetNodeIds ?? [],
+      target_raw_text: input.rawText ?? null,
+      target_rubric: input.rubric ?? {},
+      target_shared: false,
+      target_token_count: input.tokenCount,
+      target_tool_name: input.toolName,
+      target_user_id: principal.userId,
+      target_workspace_id: principal.workspaceId,
+    });
+    if (result.error || typeof result.data !== "string") {
+      throw new Error(result.error?.message ?? "Prompt record failed");
+    }
+    return { id: result.data };
+  }
+
   async appendNote(
     principal: McpPrincipal,
     input: { target?: string | undefined; text: string },

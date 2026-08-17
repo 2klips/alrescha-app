@@ -6,6 +6,7 @@ import {
   coachPrompt,
   coachingCreditCost,
   coachingSuggestions,
+  isNonBillableAiError,
   parseLocalPromptLog,
   promptCoachingOutputSchema,
   rubricCeilings,
@@ -108,6 +109,21 @@ describe("prompt coaching (todo 11)", () => {
     }
     const success = await coachPrompt(RICH_PROMPT, async () => output({}));
     expect(coachingCreditCost(success)).toBe(1);
+  });
+
+  it("marks coaching failures with the shared non-billable code the worker keys on", async () => {
+    const error = await coachPrompt(SHELL_PROMPT, async () =>
+      output({ verifiability: 2 }),
+    ).then(
+      () => null,
+      (thrown) => thrown as CoachingValidationError,
+    );
+    expect(error).toBeInstanceOf(CoachingValidationError);
+    expect(error!.code).toBe("schema_invalid");
+    // The worker rejects (no charge) on exactly this marker — one rule for
+    // judgment and coaching alike.
+    expect(isNonBillableAiError(error)).toBe(true);
+    expect(isNonBillableAiError(new Error("network down"))).toBe(false);
   });
 
   it("derives concrete suggestions from the missing signals", () => {

@@ -681,6 +681,44 @@ function createServer(
   );
 
   server.registerTool(
+    "record_prompt",
+    {
+      annotations: WRITE_METADATA_TOOL,
+      description:
+        "Record one prompt for the authenticated member (ADR-011). Metadata by default; `raw_text` is stored only when the member's separate raw-sync switch is on, and the database rejects the write outright unless the workspace enabled capture AND the member consented.",
+      inputSchema: z.object({
+        raw_text: z.string().trim().min(1).max(20_000).optional(),
+        rubric: z.record(z.string(), z.number().min(0).max(2)).optional(),
+        target_node_ids: z.array(z.string().trim().min(1)).max(50).optional(),
+        token_count: z.number().int().nonnegative().max(10_000_000),
+        tool_name: z.string().trim().min(1).max(120),
+      }),
+      outputSchema: z.object({
+        recordId: z.string(),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ raw_text, rubric, target_node_ids, token_count, tool_name }) => {
+      requireScope("mcp:write");
+      const recorded = await store.recordPrompt(principal, {
+        ...(raw_text === undefined ? {} : { rawText: raw_text }),
+        ...(rubric === undefined ? {} : { rubric }),
+        ...(target_node_ids === undefined
+          ? {}
+          : { targetNodeIds: target_node_ids }),
+        tokenCount: token_count,
+        toolName: tool_name,
+      });
+      // No access event: prompt capture is a separate store with separate
+      // consent, and the glow stream must never carry prompt text (ADR-004).
+      return toolResult({
+        recordId: recorded.id,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
     "request_context_pack",
     {
       annotations: READ_ONLY_TOOL,

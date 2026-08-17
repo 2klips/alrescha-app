@@ -1,5 +1,5 @@
 import type { ClaimedJob, JobKind, WorkerQueue } from "./queue";
-import { JudgmentValidationError } from "@arr/core";
+import { isNonBillableAiError } from "@arr/core";
 
 export interface JobContext {
   readonly heartbeat: () => Promise<boolean>;
@@ -56,7 +56,9 @@ export async function runWorkerOnce(input: {
       );
       return "failed";
     }
-    if (error instanceof JudgmentValidationError) {
+    // Schema-invalid AI output (judgment or coaching) is terminal and never
+    // charged — `reject_job` settles the reservation as a refund.
+    if (isNonBillableAiError(error)) {
       await input.queue.reject(job.id, input.workerId, message);
       return "failed";
     }
