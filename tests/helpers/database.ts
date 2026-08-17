@@ -53,6 +53,30 @@ export const LOCAL_INGEST_MIGRATION =
   "supabase/migrations/202608170002_local_ingest.sql";
 export const RATIONALE_NODES_MIGRATION =
   "supabase/migrations/202608170003_rationale_nodes.sql";
+export const TEAM_ROLES_MIGRATION =
+  "supabase/migrations/202608170004_team_roles.sql";
+export const PROMPT_CAPTURE_MIGRATION =
+  "supabase/migrations/202608170005_prompt_capture.sql";
+
+/** Every migration, in order — the production `scripts/migrate.ts` set. */
+export const ALL_MIGRATIONS = [
+  "supabase/migrations/202608100001_auth_tenancy.sql",
+  "supabase/migrations/202608100002_evidence_graph_domain.sql",
+  "supabase/migrations/202608100003_github_app_webhooks.sql",
+  "supabase/migrations/202608100004_worker_credit_lifecycle.sql",
+  "supabase/migrations/202608100005_repository_scans.sql",
+  "supabase/migrations/202608100006_hosted_mcp.sql",
+  "supabase/migrations/202608100007_ai_judgment.sql",
+  "supabase/migrations/202608100008_pilot_instrumentation.sql",
+  "supabase/migrations/202608100009_release_hardening.sql",
+  "supabase/migrations/202608100010_progress_dashboard.sql",
+  "supabase/migrations/202608100011_personal_library.sql",
+  "supabase/migrations/202608170001_run_lifecycle.sql",
+  "supabase/migrations/202608170002_local_ingest.sql",
+  RATIONALE_NODES_MIGRATION,
+  TEAM_ROLES_MIGRATION,
+  PROMPT_CAPTURE_MIGRATION,
+] as const;
 
 export async function createTestDatabase(
   migrations: readonly string[],
