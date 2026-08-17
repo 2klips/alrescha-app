@@ -123,3 +123,11 @@
 - 임시 결정: 현행 유지. 실레포 구현 과제가 필요해지면 ⑴ 복사 대신 스파스 체크아웃/하드링크 복사, 또는 ⑵ 이 레포 안의 자족적 하위 패키지(자체 `vitest.config.ts` 보유)를 별도 realistic 레포로 등록하는 방식이 선택지다.
 - 근거: `scripts/databrain-benchmark/implementation-runner.ts`
 - 상태: open (낮은 우선순위)
+
+## OQ-013 — Phase 2B todo 3(`arr push` CLI)가 local-cli 스코프 가드레일과 충돌 (기획 판단 필요)
+
+- 발견: Phase 2B Wave 1 착수 조사 / `scripts/verify-scope-boundaries.ts:147-168`, `tests/scope-fidelity.test.ts:20-26`
+- 내용: `BUILD_PLAN_PHASE2B.md` todo 3은 로컬 인제스트 CLI(`arr push`)를 요구하지만, 스코프 가드레일 `local-cli`가 CLI의 존재 자체를 기계적으로 금지한다 — 경로에 `/cli/` 포함, `package.json`의 `"bin"` 키, `#!/usr/bin/env node` 셰뱅이 전부 실패 처리된다. 근거는 ADR-002 §5 "로컬 CLI 드리프트 체커: 2단계로 연기"와 WORK_SPEC §12(비목표)다. Phase 2B가 그 "2단계"라고 읽을 수 있으나, 가드레일과 WORK_SPEC 비목표 항목은 갱신되지 않았고, AGENTS.md는 가드레일 약화를 금지한다. 에이전트가 임의로 경계를 풀 수 없는 구조이므로 진행 불가.
+- 필요한 결정: ⑴ ADR 개정으로 local-cli 경계를 해제하고, 금지 대상을 "CLI 존재"에서 **"원본 코드 전송/저장"**으로 교체할지 (todo 3의 Must NOT과 raw-code-persistence 가드레일이 이미 후자를 커버) ⑵ 아니면 todo 3을 재연기할지. ⑴ 선택 시 가드레일 개정은 삭제가 아니라 대체여야 하며(약화 금지), 위반 심기 테스트로 새 경계를 재증명해야 한다.
+- 임시 결정: todo 3은 착수하지 않고 보류. Wave 1의 todo 1은 완료, todo 2는 이 결정과 무관하게 진행 가능.
+- 상태: open
