@@ -326,6 +326,19 @@ export type {
   RuledOutAttemptInput,
 } from "./inspection/dashboard";
 
+export {
+  LOCAL_PROMPT_LOG_GITIGNORE_ENTRY,
+  LOCAL_PROMPT_LOG_PATH,
+  localPromptRecordSchema,
+  parseLocalPromptLog,
+  serializeLocalPromptLog,
+  toServerPromptSync,
+} from "./team/prompt-log";
+export type {
+  LocalPromptRecord,
+  ServerPromptSyncPayload,
+} from "./team/prompt-log";
+
 export { computePilotStats } from "./stats/pilot-stats";
 export type {
   PilotPackMeasurement,
