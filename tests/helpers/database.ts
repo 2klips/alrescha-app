@@ -47,6 +47,8 @@ export const PROGRESS_DASHBOARD_MIGRATION =
   "supabase/migrations/202608100010_progress_dashboard.sql";
 export const LIBRARY_MIGRATION =
   "supabase/migrations/202608100011_personal_library.sql";
+export const RUN_LIFECYCLE_MIGRATION =
+  "supabase/migrations/202608170001_run_lifecycle.sql";
 
 export async function createTestDatabase(
   migrations: readonly string[],
