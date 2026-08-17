@@ -43,6 +43,7 @@ const SCREENS = [
   ["harness", "/harness"],
   ["inspection", "/inspection"],
   ["library", "/library"],
+  ["team", "/team"],
   ["graph-detail", "/graph?node=req-auth"],
   ["onboarding", "/onboarding"],
   ["not-found", "/route-that-does-not-exist"],

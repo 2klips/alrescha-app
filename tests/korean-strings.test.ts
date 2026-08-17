@@ -17,6 +17,7 @@ import * as ONBOARDING_MODULE from "../apps/web/lib/strings/onboarding";
 import * as PROGRESS_MODULE from "../apps/web/lib/strings/progress";
 import * as SETTINGS_MODULE from "../apps/web/lib/strings/settings";
 import * as STATS_MODULE from "../apps/web/lib/strings/stats";
+import * as TEAM_MODULE from "../apps/web/lib/strings/team";
 import { CONVENTIONAL_ENGLISH_TERMS } from "../apps/web/lib/strings/terms";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -41,6 +42,8 @@ const CONVERTED_SCREENS = [
   "apps/web/app/commits/commit-cards.tsx",
   "apps/web/app/inspection/page.tsx",
   "apps/web/app/inspection/inspection-view.tsx",
+  "apps/web/app/team/page.tsx",
+  "apps/web/app/team/team-view.tsx",
   // Wave 3 (todo 8)
   "apps/web/app/ui/onboarding-flow.tsx",
   "apps/web/app/ui/graph-detail.tsx",
@@ -242,6 +245,7 @@ describe("korean-first copy policy", () => {
     PROGRESS: PROGRESS_MODULE.PROGRESS,
     SETTINGS: SETTINGS_MODULE.SETTINGS,
     STATS: STATS_MODULE.STATS,
+    TEAM: TEAM_MODULE.TEAM,
   };
   const entries = Object.entries(modules).flatMap(([name, value]) =>
     collectStrings(value, name),

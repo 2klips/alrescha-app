@@ -4790,3 +4790,155 @@ a {
   font-family: var(--font-mono);
   font-size: 0.64rem;
 }
+
+/* ------------------------------------------------------------------ */
+/* Team surface (Phase 2B todo 9–13 wiring)                            */
+/* ------------------------------------------------------------------ */
+
+.team-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin: 0 auto;
+  max-width: 78rem;
+  padding: 1.5rem 1.75rem 3rem;
+  width: 100%;
+}
+
+.team-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+}
+
+.team-member {
+  align-items: baseline;
+  display: grid;
+  font-size: 0.8rem;
+  gap: 0.5rem;
+  grid-template-columns: 1fr auto auto;
+}
+
+.team-member code,
+.team-table code,
+.team-gate-list code {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+
+.team-status,
+.team-verdict {
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.32rem;
+  text-transform: uppercase;
+}
+
+.team-status.active,
+.team-verdict.adopted {
+  color: var(--verified-text);
+}
+
+.team-status.invited,
+.team-verdict.pending {
+  color: var(--warn-text);
+}
+
+.team-status.revoked,
+.team-verdict.rejected {
+  color: var(--broken-text);
+}
+
+.team-graded {
+  align-items: baseline;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.team-graded small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.team-rubric {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+}
+
+.team-rubric span {
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.5rem;
+}
+
+.team-rubric small {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.team-rubric strong {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.team-prompt summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+}
+
+.team-prompt p {
+  border-left: 2px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 0.74rem;
+  margin: 0.4rem 0 0;
+  padding-left: 0.6rem;
+}
+
+.inspection-widget h3 {
+  color: var(--muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.team-table {
+  border-collapse: collapse;
+  font-size: 0.76rem;
+  width: 100%;
+}
+
+.team-table th {
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.4rem 0.3rem 0;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.team-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.35rem 0.4rem 0.35rem 0;
+}
+
+.team-none {
+  color: var(--faint);
+}
+
+.team-gate-list li {
+  align-items: baseline;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}

@@ -45,6 +45,16 @@ export const CONVENTIONAL_ENGLISH_TERMS = [
   "patch",
   // Keyboard key names render verbatim (OQ-006 hit-layer affordance).
   "Enter",
+  // Team vocabulary (ADR-011): role names are the product's own identifiers
+  // and the metric family has a fixed name.
+  "admin",
+  "member",
+  "viewer",
+  "receipt",
+  "VIBE Index",
+  "VIBE",
+  "A/B",
+  "ADR",
   // Platform + protocol
   "MCP",
   "GitHub",

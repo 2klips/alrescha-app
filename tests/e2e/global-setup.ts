@@ -28,6 +28,7 @@ const ROUTES = [
   "/onboarding",
   "/progress",
   "/receipts",
+  "/team",
   "/route-that-does-not-exist",
 ];
 
