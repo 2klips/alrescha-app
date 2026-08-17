@@ -106,6 +106,7 @@
 - **내부 식별자 (3순위, 완료):** `DEMO_WORKSPACE_ID`, AI 판단 툴명 `arr_judgment`, `arrReceiptPredicateSchema`, 마이그레이션 advisory lock `arr_migrations`, 벤치마크·테스트 임시 디렉터리 접두어.
 - **남긴 것 (의도적):** ⑶ `spec/`·`docs/adr/`·`docs/reports/`·`benchmarks/`·`CHANGELOG.md`·`.omo/`는 **역사 기록**이므로 손대지 않았다 (`spec/IMPLEMENTATION_GUIDE.md` 제목 포함). README 3행의 "Arr(구 SpecProof)"는 개명 사실을 알리는 문장이지 잔여 네이밍이 아니다 — 푸터는 이미 "© 2026 Arr". ⑷ `.omo/evidence/docshub-product-strategy/` 디렉터리명도 역사 기록이라 유지. `scripts/verify-plan-coverage.ts`의 `<!-- specproof-coverage:start/end -->` 마커는 짝이 되는 마커가 `.omo/plans/docshub-product-strategy.md`(역사 기록)에 있어 함께 바꿀 수 없으므로 그대로 뒀다 — **이 하나가 유일한 잔여 `specproof` 문자열이다.**
 - **판단이 필요한 잔여 항목:** MCP 설정 화면의 대체 호스트명을 `https://app.arr.app`·`https://mcp.arr.app`으로, receipt `predicateType`을 `https://arr.dev/receipt/v1`로 바꿨다. 둘 다 **소유가 확인되지 않은 자리표시자 도메인**이다(이전 `specproof.app`/`specproof.dev`도 마찬가지였다). 실제 도메인이 정해지면 다시 손봐야 한다.
+- **잔여 항목 판정 (2026-08-17 사용자 결정):** 도메인은 **솔루션이 완성된 뒤 구매·확정**한다. 그 전까지 자리표시자를 유지하며, 확정 시 수정 지점은 두 곳 — MCP 설정 화면 호스트명, receipt `predicateType`(`packages/core/src/assurance/receipts.ts`의 `https://arr.dev/receipt/v1`). predicateType 변경은 **기존 receipt 다이제스트와의 호환을 깨므로**, 실데이터 receipt가 쌓이기 전(도메인 확정 직후)에 한 번에 처리해야 한다.
 - 게이트: lint·typecheck 무결점, vitest **416/416**, playwright **49/49**, `pnpm --filter @arr/web build` 성공. 가드레일 재검증 결과는 `.omo/evidence/naming-cleanup.md`.
 
 ## OQ-011 — 벤치마크 v3: 신뢰구간 게이트가 v2 결과를 뒤집는다 (기획 판단 필요)
