@@ -35,6 +35,7 @@ test.use({ colorScheme: "dark" });
  */
 const SCREENS = [
   ["dashboard", "/"],
+  ["overview", "/overview"],
   ["commits", "/commits"],
   ["findings", "/findings"],
   ["lint", "/lint"],

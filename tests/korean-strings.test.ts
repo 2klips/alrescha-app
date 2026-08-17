@@ -14,6 +14,7 @@ import * as HARNESS_MODULE from "../apps/web/lib/strings/harness";
 import * as INSPECTION_MODULE from "../apps/web/lib/strings/inspection";
 import * as LIBRARY_MODULE from "../apps/web/lib/strings/library";
 import * as ONBOARDING_MODULE from "../apps/web/lib/strings/onboarding";
+import * as OVERVIEW_MODULE from "../apps/web/lib/strings/overview";
 import * as PROGRESS_MODULE from "../apps/web/lib/strings/progress";
 import * as SETTINGS_MODULE from "../apps/web/lib/strings/settings";
 import * as STATS_MODULE from "../apps/web/lib/strings/stats";
@@ -66,6 +67,8 @@ const CONVERTED_SCREENS = [
   "apps/web/app/auth/auth-code-error/page.tsx",
   "apps/web/app/auth/login/page.tsx",
   "apps/web/app/auth/login/sign-in-button.tsx",
+  // Phase 2D Wave 1
+  "apps/web/app/overview/overview-screen.tsx",
 ];
 
 /**
@@ -253,6 +256,7 @@ describe("korean-first copy policy", () => {
     INSPECTION: INSPECTION_MODULE.INSPECTION,
     LIBRARY: LIBRARY_MODULE.LIBRARY,
     ONBOARDING: ONBOARDING_MODULE.ONBOARDING,
+    OVERVIEW: OVERVIEW_MODULE.OVERVIEW,
     PROGRESS: PROGRESS_MODULE.PROGRESS,
     SETTINGS: SETTINGS_MODULE.SETTINGS,
     STATS: STATS_MODULE.STATS,

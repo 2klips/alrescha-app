@@ -11,6 +11,7 @@ import {
   FileText,
   Filter,
   GitBranch,
+  LayoutDashboard,
   Link2,
   LoaderCircle,
   Menu,
@@ -82,6 +83,7 @@ const GRADE_OPTIONS: readonly {
 ];
 
 const NAV_ITEMS = [
+  { href: "/overview", icon: LayoutDashboard, label: NAV.overview },
   { href: "/", icon: Network, label: NAV.graph },
   { href: "/findings", icon: AlertTriangle, label: NAV.findings },
   { href: "/lint", icon: Braces, label: NAV.lint },

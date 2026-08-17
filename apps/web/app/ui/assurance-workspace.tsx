@@ -66,8 +66,12 @@ function AppHeader({ surface }: { surface: AssuranceSurface }) {
         </span>
       </Link>
       <nav aria-label={NAV.ariaSurfaces}>
-        <Link href="/">
+        <Link href="/overview">
           <LayoutDashboard size={15} />
+          {NAV.overview}
+        </Link>
+        <Link href="/">
+          <Network size={15} />
           {NAV.graph}
         </Link>
         <Link

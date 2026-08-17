@@ -14,6 +14,7 @@ export const NAV = {
   ariaPrimary: "주요 내비게이션",
   ariaSurfaces: "보증 화면",
   toggle: "내비게이션 열기",
+  overview: "한눈에 보기",
   graph: "Graph",
   findings: "Findings",
   lint: "지시문 린트",
