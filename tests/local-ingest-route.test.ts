@@ -50,6 +50,10 @@ function fakeStore(): { calls: FakeCall[]; store: LocalIngestStore } {
     async loadPreviousScan() {
       return { artifacts: [], commitSha: "c".repeat(40) };
     },
+    async recordIngestRun(input) {
+      calls.push({ method: "recordIngestRun", payload: input });
+      return "run-local-1";
+    },
   };
   return { calls, store };
 }
@@ -100,22 +104,33 @@ describe("local ingest route handlers", () => {
     expect(calls).toEqual([]);
   });
 
-  it("accepts a valid metadata payload and applies it", async () => {
+  it("accepts a valid metadata payload, applies it, and records a run", async () => {
     const { calls, store } = fakeStore();
     const response = await handleLocalIngestUpload(
       postRequest({ plan: EMPTY_PLAN, repositoryFullName: "local/demo" }),
       store,
+      () => new Date("2026-08-17T10:00:00.000Z"),
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({
       commitSha: EMPTY_PLAN.commitSha,
       repositoryId: "repo-1",
+      runId: "run-local-1",
       touchedRows: 1,
     });
     expect(calls.map(({ method }) => method)).toEqual([
       "ensureRepository",
       "applyScanPlan",
+      "recordIngestRun",
     ]);
+    // The run's start time is measured by the server at request entry — the
+    // client never supplies timing.
+    expect(calls[2]?.payload).toEqual({
+      commitSha: EMPTY_PLAN.commitSha,
+      repositoryId: "repo-1",
+      startedAt: "2026-08-17T10:00:00.000Z",
+      workspaceId: "ws-1",
+    });
   });
 
   it.each([

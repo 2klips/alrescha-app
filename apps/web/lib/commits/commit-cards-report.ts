@@ -4,6 +4,7 @@ import {
   buildCommitAnalysisCards,
   type AnalysisJobInput,
   type AnalysisReceiptInput,
+  type AnalysisRunStatus,
   type AnalysisTriggerKind,
   type CommitAnalysisCard,
   type CommitFindingsDelta,
@@ -12,9 +13,12 @@ import {
 /** Raw rows as Supabase returns them (snake_case). */
 export interface CommitCardRunRow {
   readonly commit_sha: string;
+  readonly completed_at?: string | null;
   readonly created_at: string;
   readonly id: string;
   readonly repository_id: string;
+  readonly started_at?: string | null;
+  readonly status?: string;
   readonly trigger_kind: string;
 }
 
@@ -64,6 +68,21 @@ const JOB_STATUSES = [
 
 function isTriggerKind(value: string): value is AnalysisTriggerKind {
   return (TRIGGER_KINDS as readonly string[]).includes(value);
+}
+
+const RUN_STATUSES: readonly AnalysisRunStatus[] = [
+  "pending",
+  "running",
+  "succeeded",
+  "failed",
+  "cancelled",
+];
+
+function isRunStatus(value: unknown): value is AnalysisRunStatus {
+  return (
+    typeof value === "string" &&
+    (RUN_STATUSES as readonly string[]).includes(value)
+  );
 }
 
 /**
@@ -134,10 +153,13 @@ export function buildWorkspaceCommitCards(
         ? [
             {
               commitSha: run.commit_sha,
+              completedAt: run.completed_at ?? null,
               createdAt: run.created_at,
               id: run.id,
               repository:
                 repositoryNames.get(run.repository_id) ?? run.repository_id,
+              startedAt: run.started_at ?? null,
+              ...(isRunStatus(run.status) ? { status: run.status } : {}),
               triggerKind: run.trigger_kind,
             },
           ]
@@ -162,7 +184,9 @@ export async function loadWorkspaceCommitCards(
   const workspaceId = String(workspaceResult.data.id);
   const runsResult = await client
     .from("runs")
-    .select("id,commit_sha,created_at,repository_id,trigger_kind")
+    .select(
+      "id,commit_sha,created_at,repository_id,trigger_kind,status,started_at,completed_at",
+    )
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: false })
     .limit(50);

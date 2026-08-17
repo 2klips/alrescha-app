@@ -113,6 +113,24 @@ export class SupabaseLocalIngestStore implements LocalIngestStore {
     };
   }
 
+  async recordIngestRun(input: {
+    commitSha: string;
+    repositoryId: string;
+    startedAt: string;
+    workspaceId: string;
+  }): Promise<string> {
+    const result = await this.client.rpc("record_local_ingest_run", {
+      target_commit_sha: input.commitSha,
+      target_repository_id: input.repositoryId,
+      target_started_at: input.startedAt,
+      target_workspace_id: input.workspaceId,
+    });
+    if (result.error || typeof result.data !== "string") {
+      throw new Error(result.error?.message ?? "ingest run record failed");
+    }
+    return result.data;
+  }
+
   async applyScanPlan(
     workspaceId: string,
     repositoryId: string,

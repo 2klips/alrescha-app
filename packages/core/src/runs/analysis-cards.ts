@@ -28,11 +28,27 @@ export type CommitAnalysisStatus =
   | "completed"
   | "failed";
 
+export type AnalysisRunStatus =
+  | "pending"
+  | "running"
+  | "succeeded"
+  | "failed"
+  | "cancelled";
+
 export interface AnalysisRunInput {
   readonly commitSha: string;
+  readonly completedAt?: string | null;
   readonly createdAt: string;
   readonly id: string;
   readonly repository: string;
+  readonly startedAt?: string | null;
+  /**
+   * The stored run status. Authoritative for runs with no jobs — a local
+   * ingest is synchronous and settles on arrival, so there is nothing to
+   * derive from. For job-backed runs the jobs stay the source of truth and
+   * this acts as a second ledger (a mismatch is a regression signal).
+   */
+  readonly status?: AnalysisRunStatus;
   readonly triggerKind: AnalysisTriggerKind;
 }
 
@@ -90,11 +106,22 @@ const JOB_KIND_ORDER: readonly AnalysisJobKind[] = [
   "pack",
 ];
 
+const RUN_STATUS_CARD: Readonly<
+  Record<AnalysisRunStatus, CommitAnalysisStatus>
+> = {
+  cancelled: "failed",
+  failed: "failed",
+  pending: "pending",
+  running: "analyzing",
+  succeeded: "completed",
+};
+
 function deriveStatus(
   jobs: readonly AnalysisJobInput[],
+  runStatus: AnalysisRunStatus | undefined,
 ): CommitAnalysisStatus {
   if (jobs.length === 0) {
-    return "pending";
+    return runStatus ? RUN_STATUS_CARD[runStatus] : "pending";
   }
   if (
     jobs.some(({ status }) => status === "failed" || status === "cancelled")
@@ -141,9 +168,19 @@ function parseInstant(value: string | null): number | null {
 function deriveDurationMs(
   status: CommitAnalysisStatus,
   jobs: readonly AnalysisJobInput[],
+  run: AnalysisRunInput,
 ): number | null {
   if (status !== "completed" && status !== "failed") {
     return null;
+  }
+  if (jobs.length === 0) {
+    // Job-less run (local ingest): the run's own server-measured timestamps.
+    const started = parseInstant(run.startedAt ?? null);
+    const completed = parseInstant(run.completedAt ?? null);
+    if (started === null || completed === null || completed < started) {
+      return null;
+    }
+    return completed - started;
   }
   const starts = jobs
     .map(({ claimedAt }) => parseInstant(claimedAt))
@@ -183,12 +220,12 @@ export function buildCommitAnalysisCards(
             JOB_KIND_ORDER.indexOf(left.kind) -
             JOB_KIND_ORDER.indexOf(right.kind),
         );
-      const status = deriveStatus(jobs);
+      const status = deriveStatus(jobs, run.status);
       const receipt = matchReceipt(run, input.receipts);
       return {
         commitSha: run.commitSha,
         createdAt: run.createdAt,
-        durationMs: deriveDurationMs(status, jobs),
+        durationMs: deriveDurationMs(status, jobs, run),
         failureReason: status === "failed" ? deriveFailureReason(jobs) : null,
         findingsDelta: receipt?.findings ?? null,
         jobs: jobs.map(({ kind, status: jobStatus }) => ({

@@ -129,6 +129,17 @@ export interface LocalIngestStore {
     workspaceId: string,
     fullName: string,
   ): Promise<string | null>;
+  /**
+   * Record the ingest as a run so the commit appears on the analysis cards.
+   * `startedAt` is measured by the server at request entry — never supplied
+   * by the client.
+   */
+  recordIngestRun(input: {
+    commitSha: string;
+    repositoryId: string;
+    startedAt: string;
+    workspaceId: string;
+  }): Promise<string>;
 }
 
 export const MAX_LOCAL_INGEST_BODY_BYTES = 8 * 1024 * 1024;
@@ -199,7 +210,9 @@ export async function handleLocalIngestPreviousState(
 export async function handleLocalIngestUpload(
   request: Request,
   store: LocalIngestStore,
+  now: () => Date = () => new Date(),
 ): Promise<Response> {
+  const startedAt = now().toISOString();
   const principal = await authenticate(request, store, "mcp:write");
   if (principal instanceof Response) {
     return principal;
@@ -232,9 +245,16 @@ export async function handleLocalIngestUpload(
     repositoryId,
     parsed.data.plan,
   );
+  const runId = await store.recordIngestRun({
+    commitSha: parsed.data.plan.commitSha,
+    repositoryId,
+    startedAt,
+    workspaceId: principal.workspaceId,
+  });
   return json(200, {
     commitSha: parsed.data.plan.commitSha,
     repositoryId,
+    runId,
     touchedRows,
   });
 }

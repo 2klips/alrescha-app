@@ -200,6 +200,78 @@ describe("commit card findings delta", () => {
   });
 });
 
+describe("job-less runs (local ingest)", () => {
+  const localRun: AnalysisRunInput = {
+    ...RUN,
+    commitSha: "d".repeat(40),
+    completedAt: "2026-08-17T09:00:03.500Z",
+    id: "run-local",
+    startedAt: "2026-08-17T09:00:00.000Z",
+    status: "succeeded",
+    triggerKind: "manual",
+  };
+
+  it("trusts the stored run status and its server-measured duration", () => {
+    const cards = buildCommitAnalysisCards({
+      jobs: [],
+      receipts: [],
+      runs: [localRun],
+    });
+    expect(cards[0]).toMatchObject({
+      durationMs: 3_500,
+      status: "completed",
+      triggerKind: "manual",
+    });
+    expect(cards[0]!.jobs).toEqual([]);
+  });
+
+  it("maps every stored status onto a card status", () => {
+    const statuses = (
+      ["pending", "running", "succeeded", "failed", "cancelled"] as const
+    ).map(
+      (status) =>
+        buildCommitAnalysisCards({
+          jobs: [],
+          receipts: [],
+          runs: [{ ...localRun, status }],
+        })[0]!.status,
+    );
+    expect(statuses).toEqual([
+      "pending",
+      "analyzing",
+      "completed",
+      "failed",
+      "failed",
+    ]);
+  });
+
+  it("still reports pending for a run with neither jobs nor a stored status", () => {
+    const cards = buildCommitAnalysisCards({
+      jobs: [],
+      receipts: [],
+      runs: [RUN],
+    });
+    expect(cards[0]).toMatchObject({ durationMs: null, status: "pending" });
+  });
+
+  it("keeps jobs authoritative when a run has them", () => {
+    const cards = buildCommitAnalysisCards({
+      jobs: [
+        job({
+          claimedAt: "2026-08-17T09:01:00.000Z",
+          completedAt: "2026-08-17T09:01:10.000Z",
+          kind: "scan",
+          status: "running",
+        }),
+      ],
+      receipts: [],
+      // A stale "succeeded" on the run must not override an in-flight job.
+      runs: [{ ...RUN, status: "succeeded" }],
+    });
+    expect(cards[0]!.status).toBe("analyzing");
+  });
+});
+
 describe("commit card ordering", () => {
   it("lists the newest run first", () => {
     const cards = buildCommitAnalysisCards({

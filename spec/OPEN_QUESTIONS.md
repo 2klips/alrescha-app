@@ -148,3 +148,11 @@
 - 임시 결정: 추출기를 **엔진 체인**으로 구조화했다 — `extractSymbols(path, source)`가 언어별 엔진을 고르고, ts/js는 기존 TypeScript 컴파일러 **AST**(진짜 AST 파싱), Python·Go는 결정론적 구조 파서(폴백 계층)로 처리한다. 언어별 픽스처 테스트(ts + python + go)는 수용 기준을 충족하며, tree-sitter가 채택되면 엔진 하나를 갈아끼우는 구조다(`SymbolExtractionEngine` 판별자 노출).
 - 필요한 결정: ⑴ wasm 경로 채택(크기 비용 감수) ⑵ 네이티브 경로 채택(빌드 비용 감수) ⑶ 현행 체인 유지(코드 언어 추가 시 구조 파서 확장). CLI(`packages/cli`)가 같은 스캐너를 로컬 실행한다는 점이 배포 판단에 걸린다.
 - 상태: **resolved(ADR-014, 2026-08-17 — ⑶ 채택)**. 결정적 논거: tree-sitter를 "있으면 쓰는" 선택적 의존성으로 넣으면 같은 커밋이 환경에 따라 다른 심볼을 낳아 **ADR-013의 CLI/GitHub 동등성 보장을 깬다** → 전면 채택 아니면 미채택뿐이고, 전면 채택 비용(네이티브 node-gyp / wasm 수 MB)이 현재 측정된 수요를 넘는다. 대신 **심볼 provenance**를 도입: 아티팩트가 `metadata.symbolEngine`(`typescript-ast`/`python-structural`/`go-structural`, 비코드 null)으로 정밀도 출처를 밝히고, `metadata`는 병합 저장이라 판단 잡 요약이 재스캔에서 살아남는다(`202608170006_symbol_engine.sql`, `tests/scanner-extensions.test.ts`). 재검토 트리거는 ADR-014-5에 명시.
+
+## OQ-016 — 로컬 인제스트 경로는 findings·receipt를 만들 수 없다 (아키텍처 제약)
+
+- 발견: 후속 배선 작업(로컬 인제스트 run 생성) / `packages/cli`, `apps/web/app/api/ingest/local/route.ts`
+- 내용: `arr push`는 스캔(구조·메타데이터)만 수행하고 업로드한다. 그런데 **드리프트 분석과 receipt는 파일 본문을 필요로 한다** — GitHub 경로는 워커가 설치 토큰으로 본문을 일시 조회해 분석하지만, 로컬 경로의 서버는 본문을 받지도 저장하지도 않는다(ADR-013 불변). 따라서 서버는 로컬 인제스트 커밋에 대해 findings를 산출할 수 없고, findings 없는 receipt는 **근거 없는 증명서**가 되므로 발급해서도 안 된다.
+- 임시 결정: 로컬 인제스트는 **run만** 기록한다(`record_local_ingest_run` — trigger_kind `manual`, 서버 측정 타임스탬프, 커밋당 멱등). receipt는 만들지 않으며, 그 부재를 테스트로 고정했다. 커밋 카드는 잡 없는 run에 대해 저장된 run 상태를 신뢰하도록 확장했다(OQ-014 루프 완결).
+- 필요한 결정: ⑴ **CLI가 분석까지 로컬 수행**하고 findings 메타데이터(+스팬)를 업로드 → 서버가 receipt 발급. 원본 비저장을 유지하면서 기능 동등에 가장 가깝지만, 분석 엔진을 CLI에 싣고 두 경로의 결정론 동등성을 다시 증명해야 한다. ⑵ 로컬 경로는 "그래프만" 제공하고 보증(findings·receipt)은 GitHub 연결 시에만 — 현행이며, ADR-013 §5의 "GitHub 유도"와 정합한다. ⑶ 사용자가 CI 아티팩트를 업로드하면 그것으로 부분 보증.
+- 상태: open (⑵가 현행 기본값)

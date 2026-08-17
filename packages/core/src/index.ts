@@ -293,6 +293,7 @@ export type {
   AnalysisJobStatus,
   AnalysisReceiptInput,
   AnalysisRunInput,
+  AnalysisRunStatus,
   AnalysisTriggerKind,
   BuildCommitAnalysisCardsInput,
   CommitAnalysisCard,

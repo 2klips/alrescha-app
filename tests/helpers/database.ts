@@ -59,6 +59,8 @@ export const PROMPT_CAPTURE_MIGRATION =
   "supabase/migrations/202608170005_prompt_capture.sql";
 export const SYMBOL_ENGINE_MIGRATION =
   "supabase/migrations/202608170006_symbol_engine.sql";
+export const LOCAL_INGEST_RUN_MIGRATION =
+  "supabase/migrations/202608170007_local_ingest_run.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -79,6 +81,7 @@ export const ALL_MIGRATIONS = [
   TEAM_ROLES_MIGRATION,
   PROMPT_CAPTURE_MIGRATION,
   SYMBOL_ENGINE_MIGRATION,
+  LOCAL_INGEST_RUN_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

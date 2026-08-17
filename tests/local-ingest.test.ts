@@ -8,22 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { scanRepository, type RepositoryScanPlan } from "../packages/core/src/index";
 import { createLocalRepositorySource } from "../packages/cli/src/local-source";
 import { GitHubRepositorySource } from "../apps/worker/src/github-repository-source";
-import {
-  AI_JUDGMENT_MIGRATION,
-  AUTH_TENANCY_MIGRATION,
-  EVIDENCE_GRAPH_MIGRATION,
-  GITHUB_APP_MIGRATION,
-  HOSTED_MCP_MIGRATION,
-  LIBRARY_MIGRATION,
-  LOCAL_INGEST_MIGRATION,
-  PILOT_INSTRUMENTATION_MIGRATION,
-  PROGRESS_DASHBOARD_MIGRATION,
-  RELEASE_HARDENING_MIGRATION,
-  REPOSITORY_SCAN_MIGRATION,
-  RUN_LIFECYCLE_MIGRATION,
-  WORKER_CREDIT_MIGRATION,
-  createTestDatabase,
-} from "./helpers/database";
+import { ALL_MIGRATIONS, createTestDatabase } from "./helpers/database";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const DRIFTED_DEMO = resolve(repoRoot, "fixtures/drifted-demo");
@@ -77,21 +62,7 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
   let workspaceB: string;
 
   beforeEach(async () => {
-    database = await createTestDatabase([
-      AUTH_TENANCY_MIGRATION,
-      EVIDENCE_GRAPH_MIGRATION,
-      GITHUB_APP_MIGRATION,
-      WORKER_CREDIT_MIGRATION,
-      REPOSITORY_SCAN_MIGRATION,
-      HOSTED_MCP_MIGRATION,
-      AI_JUDGMENT_MIGRATION,
-      PILOT_INSTRUMENTATION_MIGRATION,
-      RELEASE_HARDENING_MIGRATION,
-      PROGRESS_DASHBOARD_MIGRATION,
-      LIBRARY_MIGRATION,
-      RUN_LIFECYCLE_MIGRATION,
-      LOCAL_INGEST_MIGRATION,
-    ]);
+    database = await createTestDatabase([...ALL_MIGRATIONS]);
     await database.query(
       "insert into auth.users (id, email) values ($1, 'ingest-a@example.test'), ($2, 'ingest-b@example.test')",
       [USER_A, USER_B],
@@ -265,6 +236,59 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
     } finally {
       await rm(root, { force: true, recursive: true });
     }
+  });
+
+  it("records the ingest as a terminal run so the commit reaches the cards", async () => {
+    const repositoryId = await ensureRepository(workspaceA, "local/runs");
+    const commitSha = "f".repeat(40);
+    const startedAt = new Date(Date.now() - 2_000).toISOString();
+
+    const first = await database.query<{ id: string }>(
+      "select public.record_local_ingest_run($1, $2, $3, $4::timestamptz) as id",
+      [workspaceA, repositoryId, commitSha, startedAt],
+    );
+    const runId = first.rows[0]!.id;
+
+    const runRow = await database.query<{
+      completed_at: string | null;
+      started_at: string | null;
+      status: string;
+      trigger_kind: string;
+    }>(
+      "select status, trigger_kind, started_at, completed_at from public.runs where id = $1",
+      [runId],
+    );
+    expect(runRow.rows[0]).toMatchObject({
+      status: "succeeded",
+      trigger_kind: "manual",
+    });
+    expect(runRow.rows[0]!.started_at).not.toBeNull();
+    expect(runRow.rows[0]!.completed_at).not.toBeNull();
+
+    // Re-pushing the same commit updates the run instead of duplicating it.
+    const second = await database.query<{ id: string }>(
+      "select public.record_local_ingest_run($1, $2, $3, $4::timestamptz) as id",
+      [workspaceA, repositoryId, commitSha, startedAt],
+    );
+    expect(second.rows[0]!.id).toBe(runId);
+    expect(
+      (
+        await database.query(
+          "select id from public.runs where workspace_id = $1 and repository_id = $2",
+          [workspaceA, repositoryId],
+        )
+      ).rows,
+    ).toHaveLength(1);
+
+    // No receipt is claimed for a scan-only ingest (OQ-016).
+    expect(
+      (
+        await database.query(
+          "select id from public.receipts where workspace_id = $1",
+          [workspaceA],
+        )
+      ).rows,
+    ).toEqual([]);
   });
 
   it("ensure_local_repository is idempotent per workspace", async () => {
