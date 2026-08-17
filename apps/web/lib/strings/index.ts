@@ -13,6 +13,7 @@ export { COMMITS } from "./commits";
 export { DASHBOARD } from "./dashboard";
 export { GRAPH } from "./graph";
 export { HARNESS } from "./harness";
+export { INSPECTION } from "./inspection";
 export { LIBRARY } from "./library";
 export { ONBOARDING } from "./onboarding";
 export { PROGRESS } from "./progress";

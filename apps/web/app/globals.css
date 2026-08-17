@@ -4564,3 +4564,215 @@ a {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Project inspection dashboard (Phase 2B todo 8)                      */
+/* ------------------------------------------------------------------ */
+
+.inspection-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin: 0 auto;
+  max-width: 78rem;
+  padding: 1.5rem 1.75rem 3rem;
+  width: 100%;
+}
+
+.inspection-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr));
+}
+
+.inspection-widget {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.9rem 1rem;
+}
+
+.inspection-widget > header {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  gap: 0.4rem;
+}
+
+.inspection-widget > header h2 {
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.inspection-figure {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+}
+
+.inspection-note {
+  color: var(--muted);
+  font-size: 0.74rem;
+  margin: 0;
+}
+
+.inspection-insufficient {
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: 0.76rem;
+  margin: 0;
+  padding: 0.6rem 0.7rem;
+}
+
+.inspection-source {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  color: var(--faint);
+  display: inline-flex;
+  font-size: 0.66rem;
+  gap: 0.3rem;
+  margin-top: auto;
+  padding-top: 0.45rem;
+}
+
+.inspection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inspection-finding,
+.inspection-advisory {
+  align-items: baseline;
+  display: grid;
+  font-size: 0.78rem;
+  gap: 0.2rem 0.6rem;
+  grid-template-columns: auto 1fr auto;
+}
+
+.inspection-finding code,
+.inspection-document code {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+}
+
+.inspection-advisory span strong {
+  margin-right: 0.4rem;
+}
+
+.inspection-advisory span code {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  margin-right: 0.4rem;
+}
+
+.inspection-advisory span small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.68rem;
+}
+
+.inspection-advisory em {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-style: normal;
+}
+
+.severity-label.moderate {
+  color: var(--warn-text);
+}
+
+.severity-label.info {
+  color: var(--info-text);
+}
+
+.inspection-document {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.inspection-document-head {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.inspection-freshness {
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: 0.57rem;
+  letter-spacing: 0.08em;
+  padding: 0.12rem 0.35rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.inspection-freshness.current {
+  color: var(--verified-text);
+}
+
+.inspection-freshness.outdated {
+  color: var(--warn-text);
+}
+
+.inspection-freshness.drift-suspected {
+  color: var(--broken-text);
+}
+
+.inspection-summary {
+  align-items: baseline;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.inspection-summary small,
+.inspection-summary-missing {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.inspection-ruled-out li {
+  border-left: 2px solid var(--line-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.1rem 0 0.1rem 0.65rem;
+}
+
+.inspection-ruled-out time {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+}
+
+.inspection-ruled-out strong {
+  font-size: 0.78rem;
+}
+
+.inspection-ruled-out p {
+  color: var(--muted);
+  font-size: 0.72rem;
+  margin: 0;
+}
+
+.inspection-ruled-out p span {
+  color: var(--faint);
+  margin-right: 0.35rem;
+}
+
+.inspection-ruled-out code {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+}

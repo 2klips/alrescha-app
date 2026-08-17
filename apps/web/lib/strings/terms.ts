@@ -34,7 +34,15 @@ export const CONVENTIONAL_ENGLISH_TERMS = [
   "critical",
   "high",
   "medium",
+  "moderate",
   "low",
+  "info",
+  // Dependency-audit ingestion (Phase 2B todo 8) — the npm audit vocabulary
+  // developers already read verbatim.
+  "npm audit",
+  "append-only",
+  "major",
+  "patch",
   // Platform + protocol
   "MCP",
   "GitHub",

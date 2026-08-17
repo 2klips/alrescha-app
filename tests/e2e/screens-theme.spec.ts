@@ -41,6 +41,7 @@ const SCREENS = [
   ["receipts", "/receipts"],
   ["progress", "/progress"],
   ["harness", "/harness"],
+  ["inspection", "/inspection"],
   ["library", "/library"],
   ["graph-detail", "/graph?node=req-auth"],
   ["onboarding", "/onboarding"],

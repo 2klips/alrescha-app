@@ -296,6 +296,28 @@ export type {
   CommitFindingsDelta,
 } from "./runs/analysis-cards";
 
+export { parseNpmAuditReport } from "./inspection/dependency-audit";
+export type {
+  DependencyAdvisory,
+  DependencyAdvisorySeverity,
+  DependencyAuditReport,
+  DependencyFixAvailability,
+} from "./inspection/dependency-audit";
+
+export { buildInspectionDashboard } from "./inspection/dashboard";
+export type {
+  BuildInspectionDashboardInput,
+  DocumentFreshness,
+  InspectionDashboard,
+  InspectionDocumentEntry,
+  InspectionDocumentInput,
+  InspectionFindingInput,
+  InspectionFindingKind,
+  InspectionSectionState,
+  InspectionSeverity,
+  RuledOutAttemptInput,
+} from "./inspection/dashboard";
+
 export { computePilotStats } from "./stats/pilot-stats";
 export type {
   PilotPackMeasurement,

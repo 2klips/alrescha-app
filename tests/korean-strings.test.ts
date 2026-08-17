@@ -11,6 +11,7 @@ import * as COMMON_MODULE from "../apps/web/lib/strings/common";
 import * as DASHBOARD_MODULE from "../apps/web/lib/strings/dashboard";
 import * as GRAPH_MODULE from "../apps/web/lib/strings/graph";
 import * as HARNESS_MODULE from "../apps/web/lib/strings/harness";
+import * as INSPECTION_MODULE from "../apps/web/lib/strings/inspection";
 import * as LIBRARY_MODULE from "../apps/web/lib/strings/library";
 import * as ONBOARDING_MODULE from "../apps/web/lib/strings/onboarding";
 import * as PROGRESS_MODULE from "../apps/web/lib/strings/progress";
@@ -35,9 +36,11 @@ const CONVERTED_SCREENS = [
   "apps/web/app/ui/theme-toggle.tsx",
   "apps/web/app/progress/page.tsx",
   "apps/web/app/progress/progress-dashboard.tsx",
-  // Phase 2B (todo 2)
+  // Phase 2B (todo 2, todo 8)
   "apps/web/app/commits/page.tsx",
   "apps/web/app/commits/commit-cards.tsx",
+  "apps/web/app/inspection/page.tsx",
+  "apps/web/app/inspection/inspection-view.tsx",
   // Wave 3 (todo 8)
   "apps/web/app/ui/onboarding-flow.tsx",
   "apps/web/app/ui/graph-detail.tsx",
@@ -233,6 +236,7 @@ describe("korean-first copy policy", () => {
     DASHBOARD: DASHBOARD_MODULE.DASHBOARD,
     GRAPH: GRAPH_MODULE.GRAPH,
     HARNESS: HARNESS_MODULE.HARNESS,
+    INSPECTION: INSPECTION_MODULE.INSPECTION,
     LIBRARY: LIBRARY_MODULE.LIBRARY,
     ONBOARDING: ONBOARDING_MODULE.ONBOARDING,
     PROGRESS: PROGRESS_MODULE.PROGRESS,

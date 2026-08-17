@@ -22,6 +22,7 @@ const ROUTES = [
   "/findings",
   "/graph?node=req-auth",
   "/harness",
+  "/inspection",
   "/library",
   "/lint",
   "/onboarding",
