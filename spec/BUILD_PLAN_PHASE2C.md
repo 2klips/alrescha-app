@@ -45,12 +45,12 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 ## 사람 준비물 게이트 (에이전트가 대신 만들 수 없는 것)
 
-| 게이트                 | 필요한 것                                                                                                                      | 막히는 웨이브 |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------- |
-| **G1 — 로컬 Supabase** | Docker + supabase CLI, `supabase start` 성공                                                                                   | Wave 1 전체   |
-| **G2 — GitHub App**    | App 등록(GUIDE §2 Phase B 권한·이벤트), `.env`: `GITHUB_APP_ID`·`GITHUB_APP_PRIVATE_KEY`·`GITHUB_WEBHOOK_SECRET`, smee.io 채널 | Wave 2        |
-| **G3 — AI 크레딧**     | `ANTHROPIC_API_KEY` + 실행 예산 승인(벤치 v3 예상 ~8.15M 토큰 + VIBE 112시행 + 기법 A/B)                                       | Wave 3        |
-| **G4 — 배포 계정**     | Supabase 클라우드 프로젝트, Vercel(web), Fly.io(worker/MCP), **도메인 구매**(이 시점 사용자 결정)                              | Wave 4        |
+| 게이트                 | 필요한 것                                                                                                                                                                                                                                                         | 막히는 웨이브       |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **G1 — 로컬 Supabase** | Docker Desktop + supabase CLI, `supabase start` 성공. **2026-08-18 확인: Docker 미설치.** 단 테스트 하네스가 PGlite(임베디드 Postgres)라 마이그레이션·RLS·트리거는 Docker 없이 실행·증명된다 — 실제로 막히는 것은 **브라우저로 auth 화면을 띄우는 todo 4뿐**이다. | Wave 1 **todo 4만** |
+| **G2 — GitHub App**    | App 등록(GUIDE §2 Phase B 권한·이벤트), `.env`: `GITHUB_APP_ID`·`GITHUB_APP_PRIVATE_KEY`·`GITHUB_WEBHOOK_SECRET`, smee.io 채널                                                                                                                                    | Wave 2              |
+| **G3 — AI 크레딧**     | `ANTHROPIC_API_KEY` + 실행 예산 승인(벤치 v3 예상 ~8.15M 토큰 + VIBE 112시행 + 기법 A/B)                                                                                                                                                                          | Wave 3              |
+| **G4 — 배포 계정**     | Supabase 클라우드 프로젝트, Vercel(web), Fly.io(worker/MCP), **도메인 구매**(이 시점 사용자 결정)                                                                                                                                                                 | Wave 4              |
 
 **에이전트 규칙:** 게이트가 닫혀 있으면 그 웨이브를 통째로 보류하고 열려 있는 웨이브를 먼저 진행하라. 게이트 단위로 사용자에게 요청하고, 개별 키를 하나씩 조르지 말 것.
 
@@ -60,22 +60,22 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 픽스처로 증명된 화면을 실제 DB 위에서 다시 증명한다. **로더는 "데모 폴백"이 아니라 별도 경로다** — 실데이터가 비어 있으면 데모가 아니라 빈 상태("증거 부족")를 보여야 한다.
 
-- [ ] **1. `/inspection` 실데이터 로더**
+- [x] **1. `/inspection` 실데이터 로더**
       `apps/web/lib/inspection/`에 Supabase 로더 신설 — 판단 잡 요약(`inferred` 라벨 유지), npm-audit 업로드 인제스트 경로(수집 전용 경계 유지), 배제 이력 읽기. 6위젯 전부 출처 라벨과 "증거 부족" 상태가 실데이터에서도 성립해야 한다.
       수용 기준: 로더 단위 테스트(실DB 헬퍼), 빈 워크스페이스 → 전 위젯 "증거 부족", RLS 교차 테넌트 차단, 데모 라우트(`?state=`)와 실데이터 라우트의 분리.
       Commit: `feat(inspection): load the dashboard from stored evidence`
 
-- [ ] **2. 배제 이력 수집 경로 (Phase 2B todo 8 이월)**
+- [x] **2. 배제 이력 수집 경로 (Phase 2B todo 8 이월)** _(순서 조정: 1번이 이 테이블을 읽으므로 2 → 1 순으로 진행)_
       MCP 툴 `record_ruled_out`(mcp:write) — 시도했다 배제한 가설을 append-only로 기록. 삭제·수정 API 없음(append-only가 스키마 수준 성질이어야 함). `/inspection` 위젯이 이 경로의 데이터를 읽는다.
       수용 기준: append-only 증명(UPDATE/DELETE 거부 테스트), 툴 계약 테스트, 테넌트 격리, access_event 발행 여부는 기존 write 툴 규약과 동일하게.
       Commit: `feat(mcp): record ruled-out attempts append-only`
 
-- [ ] **3. `/team` 실데이터 로더**
+- [x] **3. `/team` 실데이터 로더**
       `apps/web/lib/team/`에 Supabase 로더 — 구성원·역할, 프롬프트 기록 메타(동의 상태는 **본인 것만**), 코칭 결과, 기여도 집계, VIBE 게이트 판정. ADR-011 음성 성질이 로더 계층에서도 성립해야 한다: 타인 동의 상태·타인 원문이 쿼리 결과에 아예 없을 것.
       수용 기준: 역할별 가시성 테스트(양성·음성), 동의 상태 비노출을 로더 출력에서 증명, VIBE는 `benchmarks/vibe/gate-results.json`의 adopted만(현재 전부 pending → 0개), 솔로 워크스페이스 무영향.
       Commit: `feat(teams): load the team view from stored rows`
 
-- [ ] **4. Auth 실기동 + OQ-008 해소 (마지막 열린 OQ)**
+- [ ] **4. Auth 실기동 + OQ-008 해소 (마지막 열린 OQ)** _(**G1 차단**: Docker Desktop 미설치. 이 todo만 실제로 막힌다 — 아래 게이트 표 참조)_
       로컬 Supabase Auth(GitHub OAuth 또는 이메일)로 `/auth/*`·`/app/*` 화면을 실제로 띄우고 axe AA 명암비 검증을 CI 스위트에 편입. `/commits` 실데이터 경로에서 **graph-only 카드가 실DB run으로 렌더되는지** 이 기회에 확인(ADR-015 잔여 확인 항목 — 단위 증명은 `tests/local-ingest.test.ts`에 이미 있음).
       수용 기준: auth 화면 axe 통과가 Playwright 스위트에 편입, OQ-008 resolved 갱신, `arr push` → `/commits` graph-only 카드 e2e 1건.
       Commit: `fix(auth): verify contrast on live auth screens`

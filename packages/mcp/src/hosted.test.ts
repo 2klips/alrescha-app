@@ -368,6 +368,7 @@ describe("hosted MCP contract", () => {
       "query_brain",
       "record_note",
       "record_prompt",
+      "record_ruled_out",
       "request_context_pack",
       "route_query",
       "search_index",
@@ -1182,6 +1183,75 @@ describe("hosted MCP contract", () => {
     });
     expect(result.isError).toBe(true);
     expect(store.promptRecordsForWorkspace(WORKSPACE_ID)).toEqual([]);
+  });
+
+  it("appends a ruled-out attempt without touching the glow stream", async () => {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const writable = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Ruled out",
+      scopes: ["mcp:read", "mcp:write"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      writable.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const result = await client.callTool({
+      arguments: {
+        hypothesis: "웹훅 서명 검증이 실패 원인이다",
+        outcome: "재현되지 않음 — 서명은 정상이었다",
+        refs: ["spec/WORK_SPEC.md"],
+      },
+      name: "record_ruled_out",
+    });
+    expect(result.isError).not.toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      workspaceId: WORKSPACE_ID,
+    });
+
+    const logged = store.ruledOutForWorkspace(WORKSPACE_ID);
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).toMatchObject({
+      hypothesis: "웹훅 서명 검증이 실패 원인이다",
+      refs: ["spec/WORK_SPEC.md"],
+      userId: USER_ID,
+    });
+
+    // The inspection log is not the graph: no nodes were touched, so nothing
+    // should light up (ADR-004).
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(
+      store.accessEventsForWorkspace(WORKSPACE_ID).map(({ tool }) => tool),
+    ).not.toContain("record_ruled_out");
+  });
+
+  it("refuses a ruled-out write on a read-only token", async () => {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const readOnly = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Read only",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      readOnly.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const result = await client.callTool({
+      arguments: { hypothesis: "무언가", outcome: "무언가" },
+      name: "record_ruled_out",
+    });
+    expect(result.isError).toBe(true);
+    expect(store.ruledOutForWorkspace(WORKSPACE_ID)).toEqual([]);
   });
 
   it("routes by question shape and always carries a fallback", async () => {

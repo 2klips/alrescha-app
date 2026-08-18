@@ -714,6 +714,40 @@ function createServer(
   );
 
   server.registerTool(
+    "record_ruled_out",
+    {
+      annotations: WRITE_METADATA_TOOL,
+      description:
+        "Append one ruled-out attempt to the workspace log: a hypothesis that was tried and what happened. The log is append-only in the database, so a recorded dead end cannot later be edited or removed — that permanence is the point, since the next agent reads it to avoid repeating the attempt.",
+      inputSchema: z.object({
+        hypothesis: z.string().trim().min(1).max(2000),
+        outcome: z.string().trim().min(1).max(2000),
+        refs: z.array(z.string().trim().min(1)).max(50).optional(),
+        repository_id: z.string().trim().min(1).optional(),
+      }),
+      outputSchema: z.object({
+        attemptId: z.string(),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ hypothesis, outcome, refs, repository_id }) => {
+      requireScope("mcp:write");
+      const recorded = await store.recordRuledOut(principal, {
+        hypothesis,
+        outcome,
+        ...(refs === undefined ? {} : { refs }),
+        ...(repository_id === undefined ? {} : { repositoryId: repository_id }),
+      });
+      // No access event: this writes to the inspection log, not the graph, so
+      // there are no touched nodes to light up (ADR-004).
+      return toolResult({
+        attemptId: recorded.id,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
     "request_context_pack",
     {
       annotations: READ_ONLY_TOOL,

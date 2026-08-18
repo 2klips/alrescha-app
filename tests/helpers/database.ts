@@ -61,6 +61,10 @@ export const SYMBOL_ENGINE_MIGRATION =
   "supabase/migrations/202608170006_symbol_engine.sql";
 export const LOCAL_INGEST_RUN_MIGRATION =
   "supabase/migrations/202608170007_local_ingest_run.sql";
+export const DEPENDENCY_AUDIT_MIGRATION =
+  "supabase/migrations/202608180002_dependency_audit_uploads.sql";
+export const RULED_OUT_MIGRATION =
+  "supabase/migrations/202608180001_ruled_out_attempts.sql";
 export const PROMPT_CAPTURE_MCP_MIGRATION =
   "supabase/migrations/202608170008_prompt_capture_mcp.sql";
 
@@ -85,6 +89,8 @@ export const ALL_MIGRATIONS = [
   SYMBOL_ENGINE_MIGRATION,
   LOCAL_INGEST_RUN_MIGRATION,
   PROMPT_CAPTURE_MCP_MIGRATION,
+  RULED_OUT_MIGRATION,
+  DEPENDENCY_AUDIT_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

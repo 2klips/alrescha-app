@@ -152,6 +152,32 @@ export class SupabaseMcpStore implements McpStore {
     return { id: result.data };
   }
 
+  async recordRuledOut(
+    principal: McpPrincipal,
+    input: {
+      hypothesis: string;
+      outcome: string;
+      refs?: string[] | undefined;
+      repositoryId?: string | undefined;
+    },
+  ): Promise<{ id: string }> {
+    await this.assertOwner(principal.userId, principal.workspaceId);
+    // Append-only is a schema property (a BEFORE trigger refuses update and
+    // delete), so this writer cannot rewrite what it recorded either.
+    const result = await this.client.rpc("record_ruled_out_as", {
+      actor_user_id: principal.userId,
+      attempt_hypothesis: input.hypothesis,
+      attempt_outcome: input.outcome,
+      attempt_refs: input.refs ?? [],
+      target_repository_id: input.repositoryId ?? null,
+      target_workspace_id: principal.workspaceId,
+    });
+    if (result.error || typeof result.data !== "string") {
+      throw new Error(result.error?.message ?? "Ruled-out record failed");
+    }
+    return { id: result.data };
+  }
+
   async appendNote(
     principal: McpPrincipal,
     input: { target?: string | undefined; text: string },

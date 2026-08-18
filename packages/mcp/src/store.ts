@@ -268,6 +268,20 @@ export interface McpStore {
       toolName: string;
     },
   ): Promise<{ id: string }>;
+  /**
+   * Append one ruled-out attempt (Phase 2C todo 2). The store is a
+   * pass-through: the log is append-only in the schema, so no caller — this
+   * one included — can rewrite or remove what it wrote.
+   */
+  recordRuledOut(
+    principal: McpPrincipal,
+    input: {
+      hypothesis: string;
+      outcome: string;
+      refs?: string[] | undefined;
+      repositoryId?: string | undefined;
+    },
+  ): Promise<{ id: string }>;
   recordAccessEvent(
     event: McpAccessEvent,
     measurement?: McpPackMeasurement,
@@ -323,6 +337,16 @@ export class InMemoryMcpStore implements McpStore {
     targetNodeIds: string[];
     tokenCount: number;
     toolName: string;
+    userId: string;
+    workspaceId: string;
+  }> = [];
+  readonly #ruledOut: Array<{
+    hypothesis: string;
+    id: string;
+    outcome: string;
+    recordedAt: string;
+    refs: string[];
+    repositoryId: string | null;
     userId: string;
     workspaceId: string;
   }> = [];
@@ -405,6 +429,38 @@ export class InMemoryMcpStore implements McpStore {
   promptRecordsForWorkspace(workspaceId: string) {
     return this.#promptRecords.filter(
       (record) => record.workspaceId === workspaceId,
+    );
+  }
+
+  async recordRuledOut(
+    principal: McpPrincipal,
+    input: {
+      hypothesis: string;
+      outcome: string;
+      refs?: string[] | undefined;
+      repositoryId?: string | undefined;
+    },
+  ): Promise<{ id: string }> {
+    await this.loadWorkspace(principal);
+    const now = this.#now();
+    const attempt = {
+      hypothesis: input.hypothesis,
+      id: createUlid(now),
+      outcome: input.outcome,
+      recordedAt: now.toISOString(),
+      refs: input.refs ?? [],
+      repositoryId: input.repositoryId ?? null,
+      userId: principal.userId,
+      workspaceId: principal.workspaceId,
+    };
+    this.#ruledOut.push(attempt);
+    return { id: attempt.id };
+  }
+
+  /** Test inspector — append-only itself is a schema property. */
+  ruledOutForWorkspace(workspaceId: string) {
+    return this.#ruledOut.filter(
+      (attempt) => attempt.workspaceId === workspaceId,
     );
   }
 
