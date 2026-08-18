@@ -383,9 +383,14 @@ export type {
   PilotStatsInput,
   PilotStatsReport,
 } from "./stats/pilot-stats";
-export { deriveArtifactFacets } from "./ingest/artifact-facets";
+export {
+  BRAIN_AREAS,
+  deriveArtifactFacets,
+  deriveBrainArea,
+} from "./ingest/artifact-facets";
 export type {
   ArtifactFacets,
+  BrainArea,
   FacetDomain,
   FacetUnit,
 } from "./ingest/artifact-facets";

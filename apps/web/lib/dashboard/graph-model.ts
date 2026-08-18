@@ -1,3 +1,10 @@
+import {
+  BRAIN_AREAS,
+  deriveBrainArea,
+  type ArtifactClassification,
+  type BrainArea,
+} from "@arr/core";
+
 import { DASHBOARD } from "../strings";
 
 export type DashboardState =
@@ -50,9 +57,29 @@ export interface GraphData {
 }
 
 export interface GraphFilters {
+  /** Phase 2D todo 5 — Data Brain area, the same axis the overview groups by. */
+  area: BrainArea | "all";
   grade: EvidenceGrade | "all";
   query: string;
   type: GraphNodeType | "all";
+}
+
+/**
+ * The graph carries display types; the facet engine reads persisted
+ * classifications. This is the one place the two vocabularies meet, so the
+ * map and the overview cannot drift apart (Phase 2D todo 5).
+ */
+const NODE_TYPE_CLASSIFICATION: Readonly<
+  Record<GraphNodeType, ArtifactClassification>
+> = {
+  code: "code_metadata",
+  document: "spec",
+  requirement: "spec",
+  test: "code_metadata",
+};
+
+export function graphNodeArea(node: GraphNode): BrainArea {
+  return deriveBrainArea(node.path, NODE_TYPE_CLASSIFICATION[node.type]);
 }
 
 export const DASHBOARD_STATES: readonly DashboardState[] = [
@@ -404,6 +431,33 @@ export function clusterGraph(data: GraphData, threshold = 120): GraphData {
   return forceDirectedLayout({ edges, nodes }, 32);
 }
 
+/**
+ * Group mode (Phase 2D todo 5): lay the graph out in horizontal area bands
+ * instead of one force field, so "what is frontend / backend / docs / tests"
+ * is readable at a glance. Deterministic — no simulation, no randomness — and
+ * empty areas collapse rather than leaving a gap.
+ */
+export function facetLayout(data: GraphData): GraphData {
+  const present = BRAIN_AREAS.filter((area) =>
+    data.nodes.some((node) => graphNodeArea(node) === area),
+  );
+  if (present.length === 0) return data;
+
+  const bandHeight = 1 / present.length;
+  const nodes = data.nodes.map((node) => {
+    const area = graphNodeArea(node);
+    const band = present.indexOf(area);
+    const peers = data.nodes.filter((other) => graphNodeArea(other) === area);
+    const column = peers.findIndex((peer) => peer.id === node.id);
+    return {
+      ...node,
+      x: ((column + 1) / (peers.length + 1)) * 100,
+      y: (band + 0.5) * bandHeight * 100,
+    };
+  });
+  return { edges: data.edges, nodes };
+}
+
 export function filterGraph(data: GraphData, filters: GraphFilters): GraphData {
   const query = filters.query.trim().toLocaleLowerCase();
   const nodes = data.nodes.filter((node) => {
@@ -413,6 +467,7 @@ export function filterGraph(data: GraphData, filters: GraphFilters): GraphData {
     return (
       matchesQuery &&
       (filters.type === "all" || node.type === filters.type) &&
+      (filters.area === "all" || graphNodeArea(node) === filters.area) &&
       (filters.grade === "all" || node.grade === filters.grade)
     );
   });

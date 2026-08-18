@@ -67,3 +67,27 @@ export function deriveArtifactFacets(
 
   return { domain, page, unit };
 }
+
+/**
+ * The four areas the product groups knowledge by. Collapsing the two facets
+ * into one axis here — rather than at each call site — is what makes the
+ * overview's Data Brain zone and the graph's facet mode provably agree.
+ */
+export type BrainArea = "backend" | "docs" | "frontend" | "tests";
+
+export const BRAIN_AREAS: readonly BrainArea[] = [
+  "frontend",
+  "backend",
+  "docs",
+  "tests",
+];
+
+export function deriveBrainArea(
+  path: string,
+  classification: ArtifactClassification,
+): BrainArea {
+  const { domain, unit } = deriveArtifactFacets(path, classification);
+  if (unit === "test") return "tests";
+  if (unit === "doc") return "docs";
+  return domain === "frontend" ? "frontend" : "backend";
+}

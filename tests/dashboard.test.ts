@@ -31,6 +31,7 @@ describe("graph-centered dashboard", () => {
   test("searches and filters graph nodes", () => {
     const graph = buildDashboardViewModel("scanned").graph;
     const result = filterGraph(graph, {
+      area: "all",
       grade: "verified",
       query: "auth",
       type: "all",

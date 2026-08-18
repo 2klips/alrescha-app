@@ -6485,3 +6485,159 @@ li[data-todo-status="blocked"] .overview-todo-status {
   margin-top: auto;
   padding-top: 0.8rem;
 }
+
+/* Phase 2D todo 5 — Data Brain area chips on the graph controls. */
+
+.arr-area-chips {
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.7rem 0 0;
+}
+
+.arr-area-chip {
+  align-items: center;
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  gap: 0.35rem;
+  padding: 0.22rem 0.55rem;
+}
+
+.arr-area-chip:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.arr-area-chip[aria-pressed="true"] {
+  background: var(--tint-accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.arr-area-chip small {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.arr-area-chip[aria-pressed="true"] small {
+  color: var(--accent-text);
+}
+
+/* Group mode — Data Brain area bands (Phase 2D todo 5). */
+
+.facet-bands {
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.facet-bands-empty {
+  align-items: center;
+  color: var(--faint);
+  display: flex;
+  font-size: 0.8rem;
+  justify-content: center;
+}
+
+.facet-band {
+  border-top: 1px solid var(--line);
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.facet-band:first-of-type {
+  border-top: none;
+}
+
+.facet-band h3 {
+  color: var(--faint);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  margin: 0;
+  padding: 0.5rem 0.9rem;
+  text-transform: uppercase;
+}
+
+.facet-band-edges {
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.facet-band-edge {
+  stroke: var(--line-strong);
+  stroke-width: 0.12;
+  vector-effect: non-scaling-stroke;
+}
+
+.facet-band-edge[data-cross-area="true"] {
+  stroke: var(--accent);
+  stroke-width: 0.2;
+}
+
+.facet-band-node {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  color: var(--text);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  gap: 0.3rem;
+  max-width: 11rem;
+  padding: 0.2rem 0.5rem;
+  position: absolute;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+
+.facet-band-node span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.facet-band-node::before {
+  border-radius: 50%;
+  content: "";
+  flex-shrink: 0;
+  height: 0.45rem;
+  width: 0.45rem;
+}
+
+.facet-band-node.req::before {
+  background: var(--node-requirement);
+}
+.facet-band-node.doc::before {
+  background: var(--node-doc);
+}
+.facet-band-node.code::before {
+  background: var(--node-code);
+}
+.facet-band-node.test::before {
+  background: var(--node-test);
+}
+
+.facet-band-node:hover {
+  border-color: var(--accent);
+}
+
+.facet-band-node[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--tint-accent);
+}

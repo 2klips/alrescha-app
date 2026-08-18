@@ -12,6 +12,7 @@ import {
   Filter,
   GitBranch,
   LayoutDashboard,
+  LayoutGrid,
   Link2,
   LoaderCircle,
   Menu,
@@ -32,6 +33,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   filterGraph,
   focusLocalGraph,
+  graphNodeArea,
   topHubNodes,
   type DashboardViewModel,
   type EvidenceGrade,
@@ -39,6 +41,7 @@ import {
   type GraphNode,
   type GraphNodeType,
 } from "../../lib/dashboard/graph-model";
+import { BRAIN_AREAS, type BrainArea } from "@arr/core";
 import { glowAfterglowNodes, glowFromRealtime } from "../../lib/graph/glow";
 import {
   DEMO_REVOKED_TOKEN_ID,
@@ -54,6 +57,7 @@ import {
 import type { LodLevel } from "../../lib/graph/lod";
 import { BRAND, DASHBOARD, GRADE, NAV } from "../../lib/strings";
 import { BrainMapStage } from "./brain-map-stage";
+import { FacetBandView } from "./facet-band-view";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -80,6 +84,14 @@ const GRADE_OPTIONS: readonly {
   { label: DASHBOARD.filters.grades.verified, value: "verified" },
   { label: DASHBOARD.filters.grades.inferred, value: "inferred" },
   { label: DASHBOARD.filters.grades.broken, value: "broken" },
+];
+
+const AREA_OPTIONS: readonly { label: string; value: BrainArea | "all" }[] = [
+  { label: DASHBOARD.filters.areas.all, value: "all" },
+  ...BRAIN_AREAS.map((area) => ({
+    label: DASHBOARD.filters.areas[area],
+    value: area,
+  })),
 ];
 
 const NAV_ITEMS = [
@@ -284,11 +296,13 @@ function requirementCode(node: GraphNode): string {
 
 export function DashboardScreen({ model }: DashboardScreenProps) {
   const [filters, setFilters] = useState<GraphFilters>({
+    area: "all",
     grade: "all",
     query: "",
     type: "all",
   });
   const [localFocus, setLocalFocus] = useState(false);
+  const [groupByArea, setGroupByArea] = useState(false);
   const [cameraFocusNodeId, setCameraFocusNodeId] = useState<string | null>(
     null,
   );
@@ -316,13 +330,14 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
     () => filterGraph(model.graph, filters),
     [filters, model.graph],
   );
-  const visibleGraph = useMemo(
+  const focusedGraph = useMemo(
     () =>
       localFocus && selectedNode
         ? focusLocalGraph(baseGraph, selectedNode.id)
         : baseGraph,
     [baseGraph, localFocus, selectedNode],
   );
+  const visibleGraph = focusedGraph;
   const evidenceChain = useMemo(() => {
     if (!selectedNode) return [];
     const connected = new Set([selectedNode.id]);
@@ -490,6 +505,35 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
               value={Number((model.metrics.tokenCost / 1000).toFixed(1))}
             />
           </div>
+          <div
+            className="arr-area-chips"
+            aria-label={DASHBOARD.filters.areaLabel}
+            role="group"
+          >
+            {AREA_OPTIONS.map((option) => (
+              <button
+                aria-pressed={filters.area === option.value}
+                className="arr-area-chip"
+                data-area={option.value}
+                key={option.value}
+                onClick={() =>
+                  setFilters((current) => ({ ...current, area: option.value }))
+                }
+                type="button"
+              >
+                {option.label}
+                {option.value === "all" ? null : (
+                  <small>
+                    {
+                      model.graph.nodes.filter(
+                        (node) => graphNodeArea(node) === option.value,
+                      ).length
+                    }
+                  </small>
+                )}
+              </button>
+            ))}
+          </div>
           <HubChips
             hubs={hubs}
             onFocus={(node) => {
@@ -644,11 +688,33 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
               <Network size={14} />
               {DASHBOARD.filters.localFocus}
             </button>
+            <button
+              aria-label={DASHBOARD.filters.groupModeAria}
+              aria-pressed={groupByArea}
+              className="arr-focus"
+              data-testid="graph-group-mode"
+              onClick={() => setGroupByArea((value) => !value)}
+              type="button"
+            >
+              <LayoutGrid size={14} />
+              {DASHBOARD.filters.groupMode}
+            </button>
           </div>
           <div className="arr-graph-stage">
             <div className="graph-grid" />
             {blocked ? (
               <StatusSurface model={model} onRetry={() => setRecovered(true)} />
+            ) : groupByArea ? (
+              <FacetBandView
+                data={visibleGraph}
+                onNodeActivate={(node) =>
+                  window.location.assign(
+                    `/graph?node=${encodeURIComponent(node.id)}`,
+                  )
+                }
+                onNodeSelect={setSelectedNode}
+                selectedNodeId={selectedNode?.id ?? null}
+              />
             ) : (
               <BrainMapStage
                 afterglow={afterglow}

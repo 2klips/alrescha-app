@@ -6,10 +6,11 @@
  * agree with the screens each zone links to.
  */
 
-import type { ProgressTodo } from "@arr/core";
+import { BRAIN_AREAS, type BrainArea, type ProgressTodo } from "@arr/core";
 
 import {
   buildDashboardViewModel,
+  graphNodeArea,
   type DashboardViewModel,
   type EvidenceGrade,
   type GraphNode,
@@ -17,9 +18,6 @@ import {
 } from "../dashboard/graph-model";
 import { buildDemoProgressReport } from "../progress/fixtures";
 import { DASHBOARD } from "../strings/dashboard";
-
-/** Data Brain area, derived from a node's path by monorepo convention. */
-export type BrainArea = "backend" | "docs" | "frontend" | "tests";
 
 export interface OverviewAgentRecord {
   readonly detail: string;
@@ -56,29 +54,14 @@ export interface OverviewViewModel {
 }
 
 /**
- * Monorepo path convention (documented in BUILD_PLAN_PHASE2D_UI Wave 3): the
- * real facet engine lands in `packages/core`; until then the overview derives
- * the same split from the node paths the demo graph already carries.
+ * Kept as the zone-facing name; the derivation itself lives in core so the
+ * overview and the graph facet mode cannot drift apart (Phase 2D todo 5).
  */
 export function areaOfPath(path: string, type: GraphNodeType): BrainArea {
-  if (type === "test" || /(?:^|\/)tests?\//.test(path)) return "tests";
-  if (
-    type === "document" ||
-    type === "requirement" ||
-    /\.mdc?(?::|$)/.test(path)
-  ) {
-    return "docs";
-  }
-  if (path.startsWith("apps/web/")) return "frontend";
-  return "backend";
+  return graphNodeArea({ path, type } as GraphNode);
 }
 
-const AREA_ORDER: readonly BrainArea[] = [
-  "frontend",
-  "backend",
-  "docs",
-  "tests",
-];
+const AREA_ORDER = BRAIN_AREAS;
 const GRADE_ORDER: readonly EvidenceGrade[] = [
   "verified",
   "inferred",

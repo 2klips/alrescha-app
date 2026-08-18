@@ -56,6 +56,17 @@ export const DASHBOARD = {
       inferred: "inferred",
       broken: "broken",
     },
+    /** Phase 2D todo 5 — Data Brain 영역 칩·그룹 모드. */
+    areaLabel: "영역",
+    areas: {
+      all: "전체 영역",
+      frontend: "프론트엔드",
+      backend: "백엔드",
+      docs: "문서",
+      tests: "테스트",
+    },
+    groupMode: "영역별로 묶기",
+    groupModeAria: "노드를 영역별 띠로 배치",
   },
 
   /** Obsidian식 힘 파라미터 HUD 카드 (Phase 2A todo 5) */

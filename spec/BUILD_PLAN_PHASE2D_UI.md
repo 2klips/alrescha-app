@@ -62,7 +62,7 @@
       수용 기준: 분류 결정론 픽스처 테스트(ts/py/go·문서·라우트 파일), CLI/GitHub 두 경로 동일 facet(ADR-013 동등성), 미분류는 발명하지 않고 `unclassified`.
       Commit: `feat(ingest): derive domain and page facets for every artifact`
 
-- [ ] **5. 그래프 영역 뷰** _(부분 완료: MCP search_nodes domain_filter + overview Data Brain 존은 배선됨. 남음: /map 캔버스의 facet 그룹 모드·필터 칩)_
+- [x] **5. 그래프 영역 뷰** _(구현 판단: 그룹 모드는 캔버스 재배치가 아니라 **별도 밴드 뷰**다 — force 시뮬레이션이 노드 좌표를 소유하므로 어떤 배치도 다음 tick에 흩어진다. 힘 그래프는 "무엇이 무엇과 연결되는가", 밴드 뷰는 "무엇이 어디에 속하는가"로 역할을 나눴고, 영역을 넘는 엣지는 강조해 남긴다)_
       `/`(전체 그래프)에 facet 그룹 모드 — 영역별 클러스터 배경·필터 칩(프론트/백/페이지/파일/코드/문서), Data Brain 존과 `/graph` 탐색에 같은 facet 필터. MCP `search_nodes`에 facet 인자 추가(선택적, 스키마 하위 호환).
       수용 기준: facet 필터 e2e, 그룹 모드 토글 상태 유지, MCP 계약 테스트(기존 호출 무변경 통과).
       Commit: `feat(brain): group and filter the graph by facet`
