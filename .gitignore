@@ -9,3 +9,6 @@ test-results/
 !.env.example
 *.tsbuildinfo
 
+
+# Supabase CLI scratch (version cache, linked project state)
+supabase/.temp
