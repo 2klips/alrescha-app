@@ -35,6 +35,7 @@ describe("background worker orchestration", () => {
     const outcome = await runWorkerOnce({
       handlers: {
         analyze: handler,
+        coach: handler,
         judge: handler,
         pack: handler,
         scan: handler,
@@ -57,6 +58,7 @@ describe("background worker orchestration", () => {
     const outcome = await runWorkerOnce({
       handlers: {
         analyze: handler,
+        coach: handler,
         judge: handler,
         pack: handler,
         scan: handler,
@@ -89,6 +91,7 @@ describe("background worker orchestration", () => {
     const outcome = await runWorkerOnce({
       handlers: {
         analyze: handler,
+        coach: handler,
         judge: handler,
         pack: handler,
         scan: handler,
@@ -117,6 +120,7 @@ describe("background worker orchestration", () => {
     const outcome = await runWorkerOnce({
       handlers: {
         analyze: handler,
+        coach: handler,
         judge: handler,
         pack: handler,
         scan: handler,

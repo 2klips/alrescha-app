@@ -61,6 +61,8 @@ export const SYMBOL_ENGINE_MIGRATION =
   "supabase/migrations/202608170006_symbol_engine.sql";
 export const LOCAL_INGEST_RUN_MIGRATION =
   "supabase/migrations/202608170007_local_ingest_run.sql";
+export const COACHING_JOB_KIND_MIGRATION =
+  "supabase/migrations/202608180003_coaching_job_kind.sql";
 export const DEPENDENCY_AUDIT_MIGRATION =
   "supabase/migrations/202608180002_dependency_audit_uploads.sql";
 export const RULED_OUT_MIGRATION =
@@ -91,6 +93,7 @@ export const ALL_MIGRATIONS = [
   PROMPT_CAPTURE_MCP_MIGRATION,
   RULED_OUT_MIGRATION,
   DEPENDENCY_AUDIT_MIGRATION,
+  COACHING_JOB_KIND_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

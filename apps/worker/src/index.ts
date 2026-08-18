@@ -18,6 +18,8 @@ export {
 } from "./ai-providers";
 export { JudgmentProviderLoader } from "./provider-loader";
 export type { ByokKeyStore } from "./provider-loader";
+export { createCoachingJobHandler } from "./coaching-job";
+export type { CoachingJobStore, CoachingProvider } from "./coaching-job";
 export { createJudgmentJobHandler } from "./judgment-job";
 export type { JudgmentJobStore } from "./judgment-job";
 export {

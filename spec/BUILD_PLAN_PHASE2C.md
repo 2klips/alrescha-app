@@ -101,7 +101,7 @@ arr-app 레포에서 Phase 2C를 이어간다.
       수용 기준: 판정 기록이 게시 파일에 반영, 미채택 지표 비노출 유지, 실모델 델타가 리포트에 사전등록 대비로 기록.
       Commit: `feat(bench): judge vibe metrics and techniques on real models`
 
-- [ ] **8. 코칭 판단 잡 — 크레딧 원장 실연결**
+- [x] **8. 코칭 판단 잡 — 크레딧 원장 실연결** _(2026-08-18 완료. G3 불필요 — 원장 배선은 실모델 호출 없이 증명된다)_
       코칭 잡을 크레딧 원장에 실연결(판단 잡과 같은 라이프사이클). 이미 준비된 무과금 마커(`schema_invalid`)가 실경로에서 환불로 이어지는지 실증.
       수용 기준: 성공 과금·실패 환불·멱등(재시도 이중 과금 없음)을 실DB 테스트로, BYOK 0크레딧 경로.
       Commit: `feat(teams): charge coaching through the credit ledger`
