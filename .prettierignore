@@ -12,3 +12,6 @@ fixtures
 benchmarks
 # Historical evidence records stay byte-for-byte as written.
 .omo
+
+# Supabase CLI runtime scratch
+supabase/.temp

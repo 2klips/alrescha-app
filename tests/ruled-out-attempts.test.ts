@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { ALL_MIGRATIONS, createTestDatabase } from "./helpers/database";
+import {
+  ALL_MIGRATIONS,
+  asServiceRole,
+  createTestDatabase,
+} from "./helpers/database";
 
 /**
  * Phase 2C todo 2 — the append-only ruled-out log.
@@ -115,6 +119,26 @@ describe("ruled-out attempts (Phase 2C todo 2)", () => {
       [workspaceA],
     );
     expect(inA.rows).toEqual([{ hypothesis: "A의 가설" }]);
+  });
+
+  it("is reachable by service_role — the role the MCP server runs as", async () => {
+    // A table created after the 202608100001 blanket grant needs its own
+    // grant. Without it the hosted MCP server gets a 403 in production while
+    // every superuser-run test still passes, so the role is named here.
+    await record(workspaceA, USER_A, "권한 확인");
+    const seen = await asServiceRole(database, (tx) =>
+      tx.query("select id from public.ruled_out_attempts"),
+    );
+    expect(seen.rows).toHaveLength(1);
+  });
+
+  it("stays append-only for service_role too", async () => {
+    const id = await record(workspaceA, USER_A, "삭제 시도");
+    await expect(
+      asServiceRole(database, (tx) =>
+        tx.query("delete from public.ruled_out_attempts where id = $1", [id]),
+      ),
+    ).rejects.toThrow(/append-only/i);
   });
 
   it("bounds the stored text rather than accepting anything", async () => {

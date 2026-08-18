@@ -40,3 +40,4 @@ create policy dependency_audit_reports_insert_member
   with check ((select public.is_workspace_member(workspace_id)));
 
 grant select, insert on public.dependency_audit_reports to authenticated;
+grant all on public.dependency_audit_reports to service_role;

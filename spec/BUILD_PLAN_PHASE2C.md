@@ -23,7 +23,7 @@ Phase 2B까지 **모든 기능이 픽스처 기반으로 증명**됐다(vitest 6
 **완료된 것 (재확인 불필요, git log와 `.omo/evidence/`가 증거):**
 
 - Phase 2A(UI 전면 재구축) · Phase 2B(15/15) · 후속 배선(로컬 인제스트 run, MCP `record_prompt`, `/team` 화면) · ADR-013/014/015 판정 전부 완료.
-- 열린 OPEN_QUESTIONS는 **OQ-008 하나**(auth 화면 명암비 — Supabase 기동 필요, 이 계획 todo 4).
+- 열린 OPEN_QUESTIONS: **없음.** OQ-008은 Phase 2C todo 4에서 해소됐다(2026-08-18).
 - 데모 데이터로 도는 공개 화면: `/commits` `/inspection` `/team` `/progress` `/graph` 등 전부. Supabase 로더가 이미 있는 것: commits·progress·stats·library·mcp·local-ingest. **없는 것: inspection·team** (`apps/web/lib/{inspection,team}/fixtures.ts`만 존재).
 - 워커: 스캔·분석·판단(크레딧 과금·BYOK 0크레딧·실패 무과금)·코칭이 잡 큐에 배선됨. 마이그레이션은 `tests/helpers/database.ts`의 `ALL_MIGRATIONS`에 전부 등록.
 
@@ -45,12 +45,12 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 ## 사람 준비물 게이트 (에이전트가 대신 만들 수 없는 것)
 
-| 게이트                 | 필요한 것                                                                                                                                                                                                                                                         | 막히는 웨이브       |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| **G1 — 로컬 Supabase** | Docker Desktop + supabase CLI, `supabase start` 성공. **2026-08-18 확인: Docker 미설치.** 단 테스트 하네스가 PGlite(임베디드 Postgres)라 마이그레이션·RLS·트리거는 Docker 없이 실행·증명된다 — 실제로 막히는 것은 **브라우저로 auth 화면을 띄우는 todo 4뿐**이다. | Wave 1 **todo 4만** |
-| **G2 — GitHub App**    | App 등록(GUIDE §2 Phase B 권한·이벤트), `.env`: `GITHUB_APP_ID`·`GITHUB_APP_PRIVATE_KEY`·`GITHUB_WEBHOOK_SECRET`, smee.io 채널                                                                                                                                    | Wave 2              |
-| **G3 — AI 크레딧**     | `ANTHROPIC_API_KEY` + 실행 예산 승인(벤치 v3 예상 ~8.15M 토큰 + VIBE 112시행 + 기법 A/B)                                                                                                                                                                          | Wave 3              |
-| **G4 — 배포 계정**     | Supabase 클라우드 프로젝트, Vercel(web), Fly.io(worker/MCP), **도메인 구매**(이 시점 사용자 결정)                                                                                                                                                                 | Wave 4              |
+| 게이트                 | 필요한 것                                                                                                                                                                          | 막히는 웨이브       |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| **G1 — 로컬 Supabase** | ~~Docker Desktop + supabase CLI~~ → **2026-08-18 열림.** Docker Desktop 설치 후 `supabase start`로 마이그레이션 21개 적용. 재기동 절차는 `.omo/evidence/phase2c/wave-1-todo-4.md`. | ~~Wave 1~~ **해제** |
+| **G2 — GitHub App**    | App 등록(GUIDE §2 Phase B 권한·이벤트), `.env`: `GITHUB_APP_ID`·`GITHUB_APP_PRIVATE_KEY`·`GITHUB_WEBHOOK_SECRET`, smee.io 채널                                                     | Wave 2              |
+| **G3 — AI 크레딧**     | `ANTHROPIC_API_KEY` + 실행 예산 승인(벤치 v3 예상 ~8.15M 토큰 + VIBE 112시행 + 기법 A/B)                                                                                           | Wave 3              |
+| **G4 — 배포 계정**     | Supabase 클라우드 프로젝트, Vercel(web), Fly.io(worker/MCP), **도메인 구매**(이 시점 사용자 결정)                                                                                  | Wave 4              |
 
 **에이전트 규칙:** 게이트가 닫혀 있으면 그 웨이브를 통째로 보류하고 열려 있는 웨이브를 먼저 진행하라. 게이트 단위로 사용자에게 요청하고, 개별 키를 하나씩 조르지 말 것.
 
@@ -75,7 +75,7 @@ arr-app 레포에서 Phase 2C를 이어간다.
       수용 기준: 역할별 가시성 테스트(양성·음성), 동의 상태 비노출을 로더 출력에서 증명, VIBE는 `benchmarks/vibe/gate-results.json`의 adopted만(현재 전부 pending → 0개), 솔로 워크스페이스 무영향.
       Commit: `feat(teams): load the team view from stored rows`
 
-- [ ] **4. Auth 실기동 + OQ-008 해소 (마지막 열린 OQ)** _(**G1 차단**: Docker Desktop 미설치. 이 todo만 실제로 막힌다 — 아래 게이트 표 참조)_
+- [x] **4. Auth 실기동 + OQ-008 해소** _(2026-08-18 완료. 잔여 이관: `/app/*` 순회와 실데이터 화면 배선은 **로그인 수단이 GitHub OAuth뿐**이라 G2(GitHub App)가 필요 — Wave 2 todo 5로 옮긴다)_
       로컬 Supabase Auth(GitHub OAuth 또는 이메일)로 `/auth/*`·`/app/*` 화면을 실제로 띄우고 axe AA 명암비 검증을 CI 스위트에 편입. `/commits` 실데이터 경로에서 **graph-only 카드가 실DB run으로 렌더되는지** 이 기회에 확인(ADR-015 잔여 확인 항목 — 단위 증명은 `tests/local-ingest.test.ts`에 이미 있음).
       수용 기준: auth 화면 axe 통과가 Playwright 스위트에 편입, OQ-008 resolved 갱신, `arr push` → `/commits` graph-only 카드 e2e 1건.
       Commit: `fix(auth): verify contrast on live auth screens`
@@ -84,7 +84,7 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 녹화 픽스처로 만든 파이프라인을 실제 GitHub에 1회 완주시킨다. 목적은 기능 추가가 아니라 **픽스처와 실물의 차이 발견**이다.
 
-- [ ] **5. 실기 파일럿: install → push → 카드 → receipt**
+- [ ] **5. 실기 파일럿: install → push → 카드 → receipt** _(Wave 1에서 이관된 잔여 포함: `/app/*` 두 테마 순회, `arr push` → `/commits` graph-only 카드 실데이터 e2e — 둘 다 로그인 세션이 있어야 한다)_
       실제 레포(2klips 소유 테스트 레포)에 App 설치 → push → webhook 수신(smee) → 스캔·분석 잡 → 커밋 카드 `full` 보증 → receipt 발급·검증까지 완주. 발견된 픽스처-실물 차이는 코드 수정이 아니라 **픽스처 갱신**으로 반영(녹화 절차를 evidence에 기록).
       수용 기준: 완주 스크린샷·receipt digest를 evidence로, 갱신된 녹화 픽스처로 기존 테스트 전부 green, 차이점 목록 문서화.
       Commit: `test(github): refresh recorded fixtures from a live run`

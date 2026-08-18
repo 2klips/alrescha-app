@@ -27,11 +27,10 @@ test.use({ colorScheme: "dark" });
 /**
  * Public routes. Two families are missing on purpose:
  *  - `/app/*` needs a live Supabase session.
- *  - `/auth/*` answers 500 in this environment, before any of this phase's
- *    changes reach it — the theme boot script never runs, so there is nothing
- *    to walk.
- * Both are covered by vitest component tests here and belong to Wave 4's
- * authenticated browser walk. See OQ-008.
+ *  - `/auth/*` used to answer 500 without a running Supabase; Phase 2C todo 4
+ *    stood the local stack up, so the two unauthenticated auth screens are
+ *    walked here now (OQ-008 resolved). `/app/*` still needs a signed-in
+ *    session and belongs to the authenticated walk.
  */
 const SCREENS = [
   ["dashboard", "/map"],
@@ -48,6 +47,9 @@ const SCREENS = [
   ["graph-detail", "/graph?node=req-auth"],
   ["onboarding", "/onboarding"],
   ["not-found", "/route-that-does-not-exist"],
+  // OQ-008 resolved (Phase 2C todo 4): a live Supabase makes these render.
+  ["auth-login", "/auth/login"],
+  ["auth-code-error", "/auth/auth-code-error"],
 ] as const;
 
 /** Every distinct painted colour on the page, as computed values. */

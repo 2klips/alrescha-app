@@ -105,3 +105,8 @@ grant execute on function public.record_ruled_out_as(
 -- Read and append only: update/delete are not granted, so the append-only
 -- property holds at the privilege layer too, not just in the trigger.
 grant select, insert on public.ruled_out_attempts to authenticated;
+-- The 202608100001 blanket grant only covered tables that existed then, so
+-- every new table has to name service_role itself — the hosted MCP server
+-- runs as service_role and would otherwise get a 403. The append-only
+-- trigger still refuses its updates and deletes.
+grant all on public.ruled_out_attempts to service_role;

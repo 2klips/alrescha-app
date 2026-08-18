@@ -17,6 +17,8 @@ export default tseslint.config(
       "**/node_modules/**",
       "**/playwright-report/**",
       "**/test-results/**",
+      // Supabase CLI runtime scratch — vendored Deno bundles, not our source.
+      "supabase/.temp/**",
     ],
   },
   eslint.configs.recommended,

@@ -33,6 +33,11 @@ const EVIDENCE = path.resolve(".omo/evidence/phase2a/task-9");
 const SURFACES = [
   ["dashboard", "/map"],
   ["findings", "/findings"],
+  // OQ-008: these two answered 500 without a live Supabase, so they were
+  // outside every browser sweep. Phase 2C todo 4 stood the stack up; they
+  // are audited like any other screen now.
+  ["auth-login", "/auth/login"],
+  ["auth-code-error", "/auth/auth-code-error"],
 ] as const;
 
 const THEMES = ["dark", "light"] as const;

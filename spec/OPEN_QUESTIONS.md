@@ -80,6 +80,7 @@
 - 근거: `tests/e2e/screens-theme.spec.ts`, `.omo/evidence/phase2a/task-8.md`
 - 상태: open — **Wave 4에서도 해소하지 못했다.** Supabase가 이 환경에 여전히 없어서 `/auth/*`는 500, `/app/*`는 세션 부재로 접근 불가다. 따라서 todo 9의 axe-core 대비 검사도 계획이 지정한 두 화면(`/`, `/findings`)만 덮으며, 인증 화면군의 대비는 **검증되지 않았다**(토큰 단위 대비 테스트가 간접적으로만 덮는다). Supabase 프로젝트가 붙는 Phase D 준비물이 필요하다.
 - Phase 2B todo 14 재점검(2026-08-17): 환경 재확인 결과 `.env.local`에는 AI API 키만 있고 Supabase 설정이 없다 — **여전히 사람 준비물 차단**. OQ-006·OQ-007은 해소됐고, 이 항목만 Phase 2B의 알려진 한계로 CHANGELOG에 명기한 채 open으로 남긴다. Supabase 프로젝트가 연결되면 `screens-theme`·`a11y-contrast` 순회에 `/auth/*`·`/app/*`를 추가하는 것이 남은 전부다.
+- 상태: **resolved(Phase 2C todo 4, 2026-08-18)**. 사용자가 Docker Desktop을 설치해 로컬 Supabase 스택을 기동했다(마이그레이션 21개 적용). ·가 처음으로 실제 렌더되어 **· 두 순회에 편입**했고, 양 테마 AA 위반 0으로 통과한다. **는 여전히 남는다** — 로그인 수단이 GitHub OAuth뿐이라 실제 세션을 만들려면 GitHub App(G2)이 필요하다. 그 잔여분은 Wave 2 실기 파일럿으로 이관하며, 이 항목은 원래 질문("두 테마 순회에서 빠지는 라우트")의 몫이 닫힌 것으로 종료한다.
 
 ## OQ-009 — ADR-009-3 라이트 팔레트가 작은 텍스트에서 WCAG AA를 통과하지 못함
 

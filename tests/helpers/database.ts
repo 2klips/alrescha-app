@@ -107,6 +107,22 @@ export async function createTestDatabase(
   return database;
 }
 
+/**
+ * Run as  — the role the hosted MCP server and the worker use.
+ * It bypasses RLS but NOT table privileges, so a table created after the
+ * blanket grant in 202608100001 must name service_role itself. Reaching for
+ * this helper is how a missing grant fails here instead of in production.
+ */
+export async function asServiceRole<T>(
+  database: PGlite,
+  callback: (transaction: Transaction) => Promise<T>,
+): Promise<T> {
+  return database.transaction(async (transaction) => {
+    await transaction.exec("set local role service_role");
+    return callback(transaction);
+  });
+}
+
 export async function asAuthenticatedUser<T>(
   database: PGlite,
   userId: string,

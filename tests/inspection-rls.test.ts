@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   ALL_MIGRATIONS,
   asAuthenticatedUser,
+  asServiceRole,
   createTestDatabase,
 } from "./helpers/database";
 
@@ -89,6 +90,13 @@ describe("inspection inputs are tenant-scoped (Phase 2C todo 1)", () => {
         ),
       ),
     ).rejects.toThrow();
+  });
+
+  it("the audit table is reachable by service_role (the worker's role)", async () => {
+    const seen = await asServiceRole(database, (tx) =>
+      tx.query("select id from public.dependency_audit_reports"),
+    );
+    expect(seen.rows).toEqual([]);
   });
 
   it("uploaded dependency audits stay inside their workspace", async () => {
