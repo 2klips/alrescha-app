@@ -23,6 +23,12 @@ importers:
       '@playwright/test':
         specifier: 1.62.1
         version: 1.62.1
+      '@supabase/ssr':
+        specifier: 0.12.4
+        version: 0.12.4(@supabase/supabase-js@2.112.2)
+      '@supabase/supabase-js':
+        specifier: 2.112.2
+        version: 2.112.2
       '@types/node':
         specifier: 26.2.0
         version: 26.2.0

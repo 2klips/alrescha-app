@@ -1,0 +1,40 @@
+{
+  "incomplete": [
+    {
+      "html": "<p class=\"progress-kicker\">레포 진행 원장</p>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".progress-kicker"
+    },
+    {
+      "html": "<h1 id=\"progress-title\">기록된 진행 없음</h1>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "#progress-title"
+    },
+    {
+      "html": "<p>TODO·진행 문서를 스캔하거나 log_progress 이벤트를 한 번 보내세요.</p>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "p:nth-child(3)"
+    },
+    {
+      "html": "<span class=\"source-contract\"><span></span>출처가 있는 항목만</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".source-contract"
+    },
+    {
+      "html": "<span>0</span>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": ".done > header > span"
+    },
+    {
+      "html": "<span>0</span>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": ".blocked > header > span"
+    }
+  ],
+  "incompleteCount": 6,
+  "passes": 25,
+  "route": "/app/progress",
+  "theme": "light",
+  "violationCount": 0,
+  "violations": []
+}

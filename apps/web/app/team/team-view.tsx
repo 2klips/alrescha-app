@@ -8,8 +8,23 @@ import { Ban, KeyRound, ShieldCheck, Sparkles, Users } from "lucide-react";
 import type { DemoTeam } from "../../lib/team/fixtures";
 import { GRADE, TEAM } from "../../lib/strings";
 
+/**
+ * What the screen needs, from either source. The demo fixture satisfies it as
+ * written; the workspace loader satisfies it with `coaching: null`, because a
+ * workspace that has never run a coaching job has no graded prompt — and an
+ * ungraded workspace must read as "no evidence", never as the demo's rubric
+ * (Phase 2C: demo fixtures are not a fallback for real data).
+ */
+export interface TeamViewModel {
+  readonly capture: DemoTeam["capture"];
+  readonly coaching: DemoTeam["coaching"] | null;
+  readonly gate: DemoTeam["gate"];
+  readonly members: DemoTeam["members"];
+  readonly vibe: DemoTeam["vibe"];
+}
+
 interface TeamViewProps {
-  readonly team: DemoTeam;
+  readonly team: TeamViewModel;
 }
 
 const AXIS_ORDER = [
@@ -21,7 +36,7 @@ const AXIS_ORDER = [
   "noOverInstruction",
 ] as const satisfies readonly (keyof PromptRubric)[];
 
-function memberName(members: DemoTeam["members"], userId: string): string {
+function memberName(members: TeamViewModel["members"], userId: string): string {
   return members.find((member) => member.userId === userId)?.name ?? userId;
 }
 
@@ -61,6 +76,39 @@ function ContributionTable({
         ))}
       </tbody>
     </table>
+  );
+}
+
+function CoachingDetail({
+  coaching,
+}: {
+  readonly coaching: NonNullable<TeamViewModel["coaching"]>;
+}) {
+  return (
+    <>
+      <div className="team-rubric">
+        {AXIS_ORDER.map((axis) => (
+          <span key={axis}>
+            <small>{TEAM.coaching.axes[axis]}</small>
+            <strong>{TEAM.coaching.axisScore(coaching.rubric[axis])}</strong>
+          </span>
+        ))}
+      </div>
+      <details className="team-prompt">
+        <summary>{TEAM.coaching.samplePromptTitle}</summary>
+        <p>{coaching.promptText}</p>
+      </details>
+      {coaching.suggestions.length > 0 ? (
+        <>
+          <h3>{TEAM.coaching.suggestionsTitle}</h3>
+          <ul className="inspection-list">
+            {coaching.suggestions.map((suggestion) => (
+              <li key={suggestion}>{suggestion}</li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </>
   );
 }
 
@@ -138,30 +186,13 @@ export function TeamView({ team }: TeamViewProps) {
             <span className="grade-badge inferred">{GRADE.inferred}</span>
             <small>{TEAM.coaching.note}</small>
           </span>
-          <div className="team-rubric">
-            {AXIS_ORDER.map((axis) => (
-              <span key={axis}>
-                <small>{TEAM.coaching.axes[axis]}</small>
-                <strong>
-                  {TEAM.coaching.axisScore(team.coaching.rubric[axis])}
-                </strong>
-              </span>
-            ))}
-          </div>
-          <details className="team-prompt">
-            <summary>{TEAM.coaching.samplePromptTitle}</summary>
-            <p>{team.coaching.promptText}</p>
-          </details>
-          {team.coaching.suggestions.length > 0 ? (
-            <>
-              <h3>{TEAM.coaching.suggestionsTitle}</h3>
-              <ul className="inspection-list">
-                {team.coaching.suggestions.map((suggestion) => (
-                  <li key={suggestion}>{suggestion}</li>
-                ))}
-              </ul>
-            </>
-          ) : null}
+          {team.coaching === null ? (
+            <p className="inspection-insufficient">
+              {TEAM.coaching.insufficient}
+            </p>
+          ) : (
+            <CoachingDetail coaching={team.coaching} />
+          )}
         </section>
 
         <section className="inspection-widget" data-testid="team-contribution">

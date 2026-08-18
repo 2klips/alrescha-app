@@ -100,6 +100,7 @@ export default async function CommitsPage({
         ))}
       </nav>
       <CommitAnalysisBoard
+        basePath="/commits"
         cards={cards}
         selectedRunId={selectedRunId}
         stateQuery={state === "empty" ? "empty" : null}

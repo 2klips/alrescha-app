@@ -5,6 +5,12 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
 import { THEME_STORAGE_KEY } from "../../apps/web/lib/theme/theme-preference";
+import { AUTHENTICATED_SCREENS } from "./helpers/app-screens";
+import {
+  createWorkspaceUser,
+  deleteWorkspaceUser,
+  signIn,
+} from "./helpers/session";
 
 /**
  * Phase 2A todo 9 — axe-core WCAG 2.1 AA colour-contrast audit.
@@ -74,62 +80,98 @@ function summarise(
   }));
 }
 
+async function auditContrast(
+  page: Page,
+  surface: string,
+  route: string,
+  theme: (typeof THEMES)[number],
+): Promise<void> {
+  await mkdir(EVIDENCE, { recursive: true });
+
+  await page.addInitScript(
+    ([key, value]: readonly string[]) =>
+      window.localStorage.setItem(key as string, value as string),
+    [THEME_STORAGE_KEY, theme] as const,
+  );
+  await page.goto(route);
+  await expect.poll(() => themeOf(page)).toBe(theme);
+  // Let the graph mount and the HUD settle so transient skeletons are not
+  // what gets audited.
+  await page.waitForTimeout(1_500);
+
+  let builder = new AxeBuilder({ page })
+    .withTags(["wcag2aa", "wcag21aa"])
+    .withRules(["color-contrast"]);
+  for (const selector of EXCLUDED) builder = builder.exclude(selector);
+  const results = await builder.analyze();
+
+  const violations = results.violations.flatMap((violation) =>
+    summarise(violation.nodes),
+  );
+  const incomplete = results.incomplete.flatMap((entry) =>
+    summarise(entry.nodes),
+  );
+
+  await writeFile(
+    path.join(EVIDENCE, `axe-contrast-${surface}-${theme}.json`),
+    `${JSON.stringify(
+      {
+        incomplete,
+        incompleteCount: incomplete.length,
+        passes: results.passes.reduce(
+          (sum, entry) => sum + entry.nodes.length,
+          0,
+        ),
+        route,
+        theme,
+        violationCount: violations.length,
+        violations,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+
+  expect(
+    violations,
+    `axe color-contrast violations on ${route} (${theme})`,
+  ).toEqual([]);
+}
+
 for (const [surface, route] of SURFACES) {
   for (const theme of THEMES) {
     test(`${surface} has no AA contrast violations in ${theme}`, async ({
       page,
     }) => {
-      await mkdir(EVIDENCE, { recursive: true });
+      await auditContrast(page, surface, route, theme);
+    });
+  }
+}
 
-      await page.addInitScript(
-        ([key, value]: readonly string[]) =>
-          window.localStorage.setItem(key as string, value as string),
-        [THEME_STORAGE_KEY, theme] as const,
-      );
-      await page.goto(route);
-      await expect.poll(() => themeOf(page)).toBe(theme);
-      // Let the graph mount and the HUD settle so transient skeletons are not
-      // what gets audited.
-      await page.waitForTimeout(1_500);
-
-      let builder = new AxeBuilder({ page })
-        .withTags(["wcag2aa", "wcag21aa"])
-        .withRules(["color-contrast"]);
-      for (const selector of EXCLUDED) builder = builder.exclude(selector);
-      const results = await builder.analyze();
-
-      const violations = results.violations.flatMap((violation) =>
-        summarise(violation.nodes),
-      );
-      const incomplete = results.incomplete.flatMap((entry) =>
-        summarise(entry.nodes),
-      );
-
-      await writeFile(
-        path.join(EVIDENCE, `axe-contrast-${surface}-${theme}.json`),
-        `${JSON.stringify(
-          {
-            incomplete,
-            incompleteCount: incomplete.length,
-            passes: results.passes.reduce(
-              (sum, entry) => sum + entry.nodes.length,
-              0,
-            ),
-            route,
-            theme,
-            violationCount: violations.length,
-            violations,
-          },
-          null,
-          2,
-        )}\n`,
-        "utf8",
-      );
-
-      expect(
-        violations,
-        `axe color-contrast violations on ${route} (${theme})`,
-      ).toEqual([]);
+/**
+ * The `/app/*` family (Phase 2C todo 5). These screens were outside every axe
+ * sweep for as long as they needed a session nobody could mint; they are held
+ * to the same AA bar as the public surfaces now. `walkBothThemes` in
+ * screens-theme.spec asserts the route did not fall through to the login
+ * screen, so a redirect cannot pass this off as a clean audit.
+ */
+for (const [surface, route] of AUTHENTICATED_SCREENS) {
+  for (const theme of THEMES) {
+    test(`${surface} has no AA contrast violations in ${theme}`, async ({
+      context,
+      page,
+    }) => {
+      const user = await createWorkspaceUser("axe");
+      try {
+        await signIn(context, user);
+        await auditContrast(page, surface, route, theme);
+        expect(new URL(page.url()).pathname).toBe(
+          new URL(route, "http://127.0.0.1").pathname,
+        );
+      } finally {
+        await deleteWorkspaceUser(user.userId);
+      }
     });
   }
 }

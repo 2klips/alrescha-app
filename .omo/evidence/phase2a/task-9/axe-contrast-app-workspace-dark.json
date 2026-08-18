@@ -1,0 +1,325 @@
+{
+  "incomplete": [
+    {
+      "html": "<span class=\"arr-kicker\">레포</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-repo-block > .arr-kicker"
+    },
+    {
+      "html": "<strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-repo-block > strong"
+    },
+    {
+      "html": "<small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-repo-block > small"
+    },
+    {
+      "html": "<strong>4</strong>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(1) > strong"
+    },
+    {
+      "html": "<span>미해소 Findings</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(1) > span"
+    },
+    {
+      "html": "<strong>84<!-- -->%</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(2) > strong"
+    },
+    {
+      "html": "<span>구현 커버리지</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(2) > span"
+    },
+    {
+      "html": "<strong>71<!-- -->%</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(3) > strong"
+    },
+    {
+      "html": "<span>테스트 커버리지</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(3) > span"
+    },
+    {
+      "html": "<strong>1.8<!-- -->k</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(4) > strong"
+    },
+    {
+      "html": "<span>상시 로드</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(4) > span"
+    },
+    {
+      "html": "<button aria-pressed=\"true\" class=\"arr-area-chip\" data-area=\"all\" type=\"button\">전체 영역</button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"all\"]"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"frontend\" type=\"button\">프론트엔드<small>1</small></button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"frontend\"]"
+    },
+    {
+      "html": "<small>1</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"frontend\"] > small"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"backend\" type=\"button\">백엔드<small>3</small></button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"backend\"]"
+    },
+    {
+      "html": "<small>3</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"backend\"] > small"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"docs\" type=\"button\">문서<small>7</small></button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"docs\"]"
+    },
+    {
+      "html": "<small>7</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"docs\"] > small"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"tests\" type=\"button\">테스트<small>4</small></button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"tests\"]"
+    },
+    {
+      "html": "<small>4</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"tests\"] > small"
+    },
+    {
+      "html": "<span class=\"arr-kicker\">허브 노드</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-hubs > .arr-kicker"
+    },
+    {
+      "html": "<span>repository-access.ts</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-auth\"] > span"
+    },
+    {
+      "html": "<small>연결 2개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-auth\"] > small"
+    },
+    {
+      "html": "<span>ci-reports.ts</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-evidence\"] > span"
+    },
+    {
+      "html": "<small>연결 2개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-evidence\"] > small"
+    },
+    {
+      "html": "<span>context-pack.ts</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-pack\"] > span"
+    },
+    {
+      "html": "<small>연결 2개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-hub-node=\"code-pack\"] > small"
+    },
+    {
+      "html": "<span class=\"arr-kicker\">현재 commit<!-- --> · bad0551</span>",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": ".arr-proof-heading > div:nth-child(1) > .arr-kicker"
+    },
+    {
+      "html": "<h1 id=\"proof-map-title\">프로젝트 증명 맵<span class=\"arr-proof-repo\">2klips/arr-app</span></h1>",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "#proof-map-title"
+    },
+    {
+      "html": "<span class=\"arr-proof-repo\">2klips/arr-app</span>",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": ".arr-proof-repo"
+    },
+    {
+      "html": "<span><i class=\"requirement\"></i>요구사항</span>",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": ".arr-legend > span:nth-child(1)"
+    },
+    {
+      "html": "<span><i class=\"code\"></i>코드</span>",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": ".arr-legend > span:nth-child(2)"
+    },
+    {
+      "html": "<span><i class=\"test\"></i>verified 테스트</span>",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": ".arr-legend > span:nth-child(3)"
+    },
+    {
+      "html": "<input placeholder=\"증명 맵 검색\" type=\"search\" value=\"\">",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "input[placeholder=\"증명 맵 검색\"]"
+    },
+    {
+      "html": "<select aria-label=\"노드 유형\"><option value=\"all\" selected=\"\">전체 노드</option><option value=\"requirement\">요구사항</option><option value=\"document\">문서</option><option value=\"code\">코드</option><option value=\"test\">테스트</option></sel",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "select[aria-label=\"노드 유형\"]"
+    },
+    {
+      "html": "<select aria-label=\"증거 등급\"><option value=\"all\" selected=\"\">전체 증거</option><option value=\"verified\">verified</option><option value=\"inferred\">inferred</option><option value=\"broken\">broken</option></select>",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "select[aria-label=\"증거 등급\"]"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-focus\" type=\"button\">",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": ".arr-focus[type=\"button\"]:nth-child(4)"
+    },
+    {
+      "html": "<button aria-label=\"노드를 영역별 띠로 배치\" aria-pressed=\"false\" class=\"arr-focus\" data-testid=\"graph-group-mode\" type=\"button\">",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "button[aria-label=\"노드를 영역별 띠로 배치\"]"
+    },
+    {
+      "html": "<footer class=\"arr-ci-note \" role=\"status\">",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "footer"
+    },
+    {
+      "html": "<span class=\"arr-kicker\">Inspector</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "header > .arr-kicker"
+    },
+    {
+      "html": "<span class=\"arr-grade verified\">verified</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-grade"
+    },
+    {
+      "html": "<h2>REQ-AUTH-001</h2>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-inspector > h2"
+    },
+    {
+      "html": "<p>이 주장을 요구사항에서 구현·테스트 증거까지 따라갑니다.</p>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "p"
+    },
+    {
+      "html": "<code class=\"arr-selected-path\">spec/WORK_SPEC.md:118</code>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".arr-selected-path"
+    },
+    {
+      "html": "<span class=\"arr-kicker\" id=\"evidence-chain-title\">증거 체인</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "#evidence-chain-title"
+    },
+    {
+      "html": "<small>requirement</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(1) > div > small"
+    },
+    {
+      "html": "<strong>Tenant-safe auth</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(1) > div > strong"
+    },
+    {
+      "html": "<code>spec/WORK_SPEC.md:118</code>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(1) > div > code"
+    },
+    {
+      "html": "<small>code</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(2) > div > small"
+    },
+    {
+      "html": "<strong>repository-access.ts</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(2) > div > strong"
+    },
+    {
+      "html": "<code>apps/web/lib/auth/repository-access.ts</code>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(2) > div > code"
+    },
+    {
+      "html": "<small>test</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(3) > div > small"
+    },
+    {
+      "html": "<strong>auth-tenancy.test.ts</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(3) > div > strong"
+    },
+    {
+      "html": "<code>tests/auth-tenancy.test.ts</code>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".verified:nth-child(3) > div > code"
+    },
+    {
+      "html": "<strong>Graph 힘</strong>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "header > strong"
+    },
+    {
+      "html": "<button aria-expanded=\"true\" type=\"button\">힘 패널 접기</button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-panel > header > button[type=\"button\"]"
+    },
+    {
+      "html": "<span>중앙 인력</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-sliders > label:nth-child(1) > span"
+    },
+    {
+      "html": "<span>반발력</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-sliders > label:nth-child(2) > span"
+    },
+    {
+      "html": "<span>링크 인력</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-sliders > label:nth-child(3) > span"
+    },
+    {
+      "html": "<span>링크 거리</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "label:nth-child(4) > span"
+    },
+    {
+      "html": "<span>라벨 페이드</span>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "label:nth-child(5) > span"
+    },
+    {
+      "html": "<button class=\"graph-force-reset\" type=\"button\">기본값 복원</button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": ".graph-force-reset"
+    },
+    {
+      "html": "<small data-testid=\"graph-lod-status\">줌 단계 중경 · 라벨 10개</small>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "small[data-testid=\"graph-lod-status\"]"
+    }
+  ],
+  "incompleteCount": 63,
+  "passes": 25,
+  "route": "/app",
+  "theme": "dark",
+  "violationCount": 0,
+  "violations": []
+}

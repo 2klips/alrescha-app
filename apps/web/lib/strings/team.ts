@@ -62,6 +62,7 @@ export const TEAM = {
     axisScore: (score: number) => `${score} / 2`,
     suggestionsTitle: "개선 제안",
     samplePromptTitle: "채점한 프롬프트",
+    insufficient: "증거 부족 — 이 워크스페이스에는 채점된 프롬프트가 없습니다.",
   },
 
   contribution: {

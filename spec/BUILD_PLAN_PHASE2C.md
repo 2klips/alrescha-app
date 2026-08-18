@@ -24,7 +24,7 @@ Phase 2B까지 **모든 기능이 픽스처 기반으로 증명**됐다(vitest 6
 
 - Phase 2A(UI 전면 재구축) · Phase 2B(15/15) · 후속 배선(로컬 인제스트 run, MCP `record_prompt`, `/team` 화면) · ADR-013/014/015 판정 전부 완료.
 - 열린 OPEN_QUESTIONS: **없음.** OQ-008은 Phase 2C todo 4에서 해소됐다(2026-08-18).
-- 데모 데이터로 도는 공개 화면: `/commits` `/inspection` `/team` `/progress` `/graph` 등 전부. Supabase 로더가 이미 있는 것: commits·progress·stats·library·mcp·local-ingest. **없는 것: inspection·team** (`apps/web/lib/{inspection,team}/fixtures.ts`만 존재).
+- 데모 데이터로 도는 **공개** 화면: `/commits` `/inspection` `/team` `/progress` `/graph` 등 전부 — 이건 의도된 것이고 실데이터는 인증된 `/app/*` 쌍이 렌더한다. 로더는 commits·progress·stats·library·mcp·local-ingest·inspection·team 전부 존재하고, 2C todo 5에서 **전부 화면에 배선됐다**.
 - 워커: 스캔·분석·판단(크레딧 과금·BYOK 0크레딧·실패 무과금)·코칭이 잡 큐에 배선됨. 마이그레이션은 `tests/helpers/database.ts`의 `ALL_MIGRATIONS`에 전부 등록.
 
 **하드 룰 (기계 강제, 약화 금지):** `scripts/verify-scope-boundaries.ts` 12경계 + `scripts/adr-guardrails.ts`. 특히 — 원본 코드 본문 저장·전송 금지, 클라이언트 제출 findings/receipt 금지, verified는 실행 증거만, 실패 출력 무과금, 측정 없는 수치 금지, 테스트 약화 금지.
@@ -45,12 +45,12 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 ## 사람 준비물 게이트 (에이전트가 대신 만들 수 없는 것)
 
-| 게이트                 | 필요한 것                                                                                                                                                                          | 막히는 웨이브       |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| **G1 — 로컬 Supabase** | ~~Docker Desktop + supabase CLI~~ → **2026-08-18 열림.** Docker Desktop 설치 후 `supabase start`로 마이그레이션 21개 적용. 재기동 절차는 `.omo/evidence/phase2c/wave-1-todo-4.md`. | ~~Wave 1~~ **해제** |
-| **G2 — GitHub App**    | App 등록(GUIDE §2 Phase B 권한·이벤트), `.env`: `GITHUB_APP_ID`·`GITHUB_APP_PRIVATE_KEY`·`GITHUB_WEBHOOK_SECRET`, smee.io 채널                                                     | Wave 2              |
-| **G3 — AI 크레딧**     | `ANTHROPIC_API_KEY` + 실행 예산 승인(벤치 v3 예상 ~8.15M 토큰 + VIBE 112시행 + 기법 A/B)                                                                                           | Wave 3              |
-| **G4 — 배포 계정**     | Supabase 클라우드 프로젝트, Vercel(web), Fly.io(worker/MCP), **도메인 구매**(이 시점 사용자 결정)                                                                                  | Wave 4              |
+| 게이트                 | 필요한 것                                                                                                                                                                                                                                                                                                                                                                            | 막히는 웨이브       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| **G1 — 로컬 Supabase** | ~~Docker Desktop + supabase CLI~~ → **2026-08-18 열림.** Docker Desktop 설치 후 `supabase start`로 마이그레이션 21개 적용. 재기동 절차는 `.omo/evidence/phase2c/wave-1-todo-4.md`.                                                                                                                                                                                                   | ~~Wave 1~~ **해제** |
+| **G2 — GitHub App**    | App 등록(GUIDE §2 Phase B 권한·이벤트), `.env.local`: `GITHUB_APP_ID`·`GITHUB_APP_SLUG`·`GITHUB_APP_CLIENT_ID`·`GITHUB_APP_CLIENT_SECRET`·`GITHUB_APP_PRIVATE_KEY`·`GITHUB_INSTALL_STATE_SECRET`·`GITHUB_WEBHOOK_SECRET`, smee.io 채널, 2klips 테스트 레포. **2026-08-18 재판정: 막는 것은 실기 완주와 `/app/connect/github` 두 화면뿐** — 인증 세션은 G2 없이 만들 수 있다(todo 5). | Wave 2 (일부)       |
+| **G3 — AI 크레딧**     | `ANTHROPIC_API_KEY` + 실행 예산 승인(벤치 v3 예상 ~8.15M 토큰 + VIBE 112시행 + 기법 A/B)                                                                                                                                                                                                                                                                                             | Wave 3              |
+| **G4 — 배포 계정**     | Supabase 클라우드 프로젝트, Vercel(web), Fly.io(worker/MCP), **도메인 구매**(이 시점 사용자 결정)                                                                                                                                                                                                                                                                                    | Wave 4              |
 
 **에이전트 규칙:** 게이트가 닫혀 있으면 그 웨이브를 통째로 보류하고 열려 있는 웨이브를 먼저 진행하라. 게이트 단위로 사용자에게 요청하고, 개별 키를 하나씩 조르지 말 것.
 
@@ -84,8 +84,9 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 녹화 픽스처로 만든 파이프라인을 실제 GitHub에 1회 완주시킨다. 목적은 기능 추가가 아니라 **픽스처와 실물의 차이 발견**이다.
 
-- [ ] **5. 실기 파일럿: install → push → 카드 → receipt** _(Wave 1에서 이관된 잔여 포함: `/app/*` 두 테마 순회, `arr push` → `/commits` graph-only 카드 실데이터 e2e — 둘 다 로그인 세션이 있어야 한다)_
-      실제 레포(2klips 소유 테스트 레포)에 App 설치 → push → webhook 수신(smee) → 스캔·분석 잡 → 커밋 카드 `full` 보증 → receipt 발급·검증까지 완주. 발견된 픽스처-실물 차이는 코드 수정이 아니라 **픽스처 갱신**으로 반영(녹화 절차를 evidence에 기록).
+- [ ] **5. 실기 파일럿: install → push → 카드 → receipt** _(2026-08-18 부분 완료 — 이관된 잔여는 전부 끝났고 GitHub 실기 완주만 G2 대기)_
+      **완료(G2 불필요)**: Wave 1 로더 3종을 `/app/commits`·`/app/inspection`·`/app/team`에 배선, `/app/*` 11화면 두 테마 순회 + axe AA 편입, `arr push` → 실 Supabase → `/app/commits` graph-only 카드 e2e. 세션은 `tests/e2e/helpers/session.ts`가 Supabase 이메일 계정으로 만든다 — **이관 사유였던 "GitHub App 없이는 세션 불가"는 오판**이었고, 브라우저 스위트는 G2가 열려도 실제 OAuth를 몰 수 없다. G2가 실제로 막는 화면은 `/app/connect/github` 둘뿐. 상세: `.omo/evidence/phase2c/wave-2-todo-5.md`.
+      **잔여(G2 필요)**: 실제 레포(2klips 소유 테스트 레포)에 App 설치 → push → webhook 수신(smee) → 스캔·분석 잡 → 커밋 카드 `full` 보증 → receipt 발급·검증까지 완주. 발견된 픽스처-실물 차이는 코드 수정이 아니라 **픽스처 갱신**으로 반영(녹화 절차를 evidence에 기록).
       수용 기준: 완주 스크린샷·receipt digest를 evidence로, 갱신된 녹화 픽스처로 기존 테스트 전부 green, 차이점 목록 문서화.
       Commit: `test(github): refresh recorded fixtures from a live run`
 

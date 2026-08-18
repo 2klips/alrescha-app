@@ -1,0 +1,25 @@
+{
+  "incomplete": [
+    {
+      "html": "<p>레포지토리 하네스 · 소스 기반 자산</p>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "header > p"
+    },
+    {
+      "html": "<h1>이미 작동하는 것을 저장합니다.</h1>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "h1"
+    },
+    {
+      "html": "<span>재사용을 위해 정확한 지시문 스냅샷을 캡처합니다. 소스 레포지토리는 그대로 유지됩니다.</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "span"
+    }
+  ],
+  "incompleteCount": 3,
+  "passes": 2,
+  "route": "/app/harness",
+  "theme": "light",
+  "violationCount": 0,
+  "violations": []
+}

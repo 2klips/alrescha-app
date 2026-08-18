@@ -18,6 +18,21 @@ import type { FullConfig } from "@playwright/test";
 /** Every route any spec navigates to. `/onboarding` also warms the dashboard. */
 const ROUTES = [
   "/",
+  // The authenticated family answers a redirect without a session, which still
+  // compiles the route — which is all the warm-up is after.
+  "/app",
+  "/app/commits",
+  "/app/harness",
+  "/app/inspection",
+  "/app/library",
+  "/app/progress",
+  "/app/settings/ai",
+  "/app/settings/mcp",
+  "/app/settings/privacy",
+  "/app/stats",
+  "/app/team",
+  "/auth/auth-code-error",
+  "/auth/login",
   "/commits",
   "/findings",
   "/graph?node=req-auth",

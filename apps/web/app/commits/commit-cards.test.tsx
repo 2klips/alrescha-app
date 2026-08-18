@@ -10,6 +10,7 @@ function render(state: "busy" | "empty", selectedRunId: string | null = null) {
   const cards = buildDemoCommitCards(state);
   return renderToStaticMarkup(
     createElement(CommitAnalysisBoard, {
+      basePath: "/commits",
       cards,
       selectedRunId: selectedRunId ?? cards[0]?.runId ?? null,
       stateQuery: state === "empty" ? "empty" : null,
@@ -44,6 +45,7 @@ describe("CommitAnalysisBoard", () => {
     const failed = cards.find((card) => card.status === "failed")!;
     const html = renderToStaticMarkup(
       createElement(CommitAnalysisBoard, {
+        basePath: "/commits",
         cards,
         selectedRunId: failed.runId,
         stateQuery: null,

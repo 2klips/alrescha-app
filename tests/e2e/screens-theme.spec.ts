@@ -4,6 +4,12 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 import { THEME_STORAGE_KEY } from "../../apps/web/lib/theme/theme-preference";
+import { AUTHENTICATED_SCREENS } from "./helpers/app-screens";
+import {
+  createWorkspaceUser,
+  deleteWorkspaceUser,
+  signIn,
+} from "./helpers/session";
 
 /**
  * Phase 2A todo 8 — every remaining screen, in both themes.
@@ -26,7 +32,8 @@ test.use({ colorScheme: "dark" });
 
 /**
  * Public routes. Two families are missing on purpose:
- *  - `/app/*` needs a live Supabase session.
+ *  - `/app/*` needs a live Supabase session, which `helpers/session.ts` now
+ *    mints (Phase 2C todo 5) — that family is walked in its own loop below.
  *  - `/auth/*` used to answer 500 without a running Supabase; Phase 2C todo 4
  *    stood the local stack up, so the two unauthenticated auth screens are
  *    walked here now (OQ-008 resolved). `/app/*` still needs a signed-in
@@ -86,39 +93,73 @@ async function themeOf(page: Page): Promise<string | null> {
   );
 }
 
+/** The walk itself, shared by the public and the authenticated families. */
+async function walkBothThemes(
+  page: Page,
+  name: string,
+  route: string,
+): Promise<void> {
+  await mkdir(EVIDENCE, { recursive: true });
+
+  await page.goto(route);
+  // A signed-out `/app/*` redirects to `/auth/login`, which is itself themed —
+  // so without this the authenticated walk would pass while auditing the login
+  // screen eleven times. Assert the route actually rendered.
+  expect(new URL(page.url()).pathname, `${name} did not stay on ${route}`).toBe(
+    new URL(route, "http://127.0.0.1").pathname,
+  );
+  await expect.poll(() => themeOf(page)).toBe("dark");
+  await page.waitForTimeout(500);
+
+  const darkColors = await paintedColors(page);
+  expect(darkColors.length).toBeGreaterThan(2);
+  expect(await unthemedTextNodes(page)).toEqual([]);
+  await page.screenshot({
+    fullPage: true,
+    path: path.join(EVIDENCE, `${name}-dark.png`),
+  });
+
+  // Not every surface carries the header toggle, so the stored preference is
+  // flipped directly — the same value the toggle and the boot script use.
+  await page.evaluate(
+    (key: string) => window.localStorage.setItem(key, "light"),
+    THEME_STORAGE_KEY,
+  );
+  await page.reload();
+  await expect.poll(() => themeOf(page)).toBe("light");
+  await page.waitForTimeout(500);
+
+  const lightColors = await paintedColors(page);
+  // A screen that does not re-theme is a screen with hardcoded colours.
+  expect(lightColors).not.toEqual(darkColors);
+  expect(await unthemedTextNodes(page)).toEqual([]);
+  await page.screenshot({
+    fullPage: true,
+    path: path.join(EVIDENCE, `${name}-light.png`),
+  });
+}
+
 for (const [name, route] of SCREENS) {
   test(`${name} is fully themed in dark and light`, async ({ page }) => {
-    await mkdir(EVIDENCE, { recursive: true });
+    await walkBothThemes(page, name, route);
+  });
+}
 
-    await page.goto(route);
-    await expect.poll(() => themeOf(page)).toBe("dark");
-    await page.waitForTimeout(500);
-
-    const darkColors = await paintedColors(page);
-    expect(darkColors.length).toBeGreaterThan(2);
-    expect(await unthemedTextNodes(page)).toEqual([]);
-    await page.screenshot({
-      fullPage: true,
-      path: path.join(EVIDENCE, `${name}-dark.png`),
-    });
-
-    // Not every surface carries the header toggle, so the stored preference is
-    // flipped directly — the same value the toggle and the boot script use.
-    await page.evaluate(
-      (key: string) => window.localStorage.setItem(key, "light"),
-      THEME_STORAGE_KEY,
-    );
-    await page.reload();
-    await expect.poll(() => themeOf(page)).toBe("light");
-    await page.waitForTimeout(500);
-
-    const lightColors = await paintedColors(page);
-    // A screen that does not re-theme is a screen with hardcoded colours.
-    expect(lightColors).not.toEqual(darkColors);
-    expect(await unthemedTextNodes(page)).toEqual([]);
-    await page.screenshot({
-      fullPage: true,
-      path: path.join(EVIDENCE, `${name}-light.png`),
-    });
+/**
+ * The same walk, signed in. The user is created per test so each one gets its
+ * own empty workspace, and deleted afterwards so the next run starts clean.
+ */
+for (const [name, route] of AUTHENTICATED_SCREENS) {
+  test(`${name} is fully themed in dark and light`, async ({
+    context,
+    page,
+  }) => {
+    const user = await createWorkspaceUser("theme");
+    try {
+      await signIn(context, user);
+      await walkBothThemes(page, name, route);
+    } finally {
+      await deleteWorkspaceUser(user.userId);
+    }
   });
 }

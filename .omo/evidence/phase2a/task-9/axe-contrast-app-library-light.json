@@ -1,0 +1,30 @@
+{
+  "incomplete": [
+    {
+      "html": "<p>워크스페이스 전체 · 불변 스냅샷</p>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".library-hero > div:nth-child(2) > p"
+    },
+    {
+      "html": "<h1>개인 라이브러리</h1>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "h1"
+    },
+    {
+      "html": "<span>저장한 지시문은 레포지토리가 나중에 바뀌어도 정확한 소스 commit에 고정됩니다.</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "div:nth-child(2) > span"
+    },
+    {
+      "html": "<strong>저장 00개</strong>",
+      "message": "Element's background color could not be determined due to a pseudo element",
+      "target": "strong"
+    }
+  ],
+  "incompleteCount": 4,
+  "passes": 12,
+  "route": "/app/library",
+  "theme": "light",
+  "violationCount": 0,
+  "violations": []
+}

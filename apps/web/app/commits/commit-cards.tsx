@@ -14,6 +14,9 @@ import Link from "next/link";
 import { COMMITS } from "../../lib/strings";
 
 interface CommitAnalysisBoardProps {
+  /** Route the cards link back to — `/commits` for the demo board and
+      `/app/commits` for the workspace's own runs. */
+  readonly basePath: string;
   readonly cards: readonly CommitAnalysisCard[];
   readonly selectedRunId: string | null;
   readonly stateQuery: string | null;
@@ -49,13 +52,17 @@ function StatusBadge({ status }: { status: CommitAnalysisStatus }) {
   );
 }
 
-function cardHref(card: CommitAnalysisCard, stateQuery: string | null): string {
+function cardHref(
+  card: CommitAnalysisCard,
+  basePath: string,
+  stateQuery: string | null,
+): string {
   const query = new URLSearchParams();
   if (stateQuery) {
     query.set("state", stateQuery);
   }
   query.set("run", card.runId);
-  return `/commits?${query.toString()}`;
+  return `${basePath}?${query.toString()}`;
 }
 
 function formatInstant(iso: string): string {
@@ -198,6 +205,7 @@ function CommitDetail({ card }: { card: CommitAnalysisCard }) {
 }
 
 export function CommitAnalysisBoard({
+  basePath,
   cards,
   selectedRunId,
   stateQuery,
@@ -231,7 +239,7 @@ export function CommitAnalysisBoard({
                   data-run-id={card.runId}
                   data-card-status={card.status}
                   data-assurance={card.assurance}
-                  href={cardHref(card, stateQuery)}
+                  href={cardHref(card, basePath, stateQuery)}
                 >
                   <span className="commit-card-sha">
                     <GitCommitHorizontal size={13} />
