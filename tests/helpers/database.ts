@@ -63,6 +63,8 @@ export const LOCAL_INGEST_RUN_MIGRATION =
   "supabase/migrations/202608170007_local_ingest_run.sql";
 export const COACHING_JOB_KIND_MIGRATION =
   "supabase/migrations/202608180003_coaching_job_kind.sql";
+export const FINDING_FINGERPRINT_MIGRATION =
+  "supabase/migrations/202608210001_finding_fingerprints.sql";
 export const DEPENDENCY_AUDIT_MIGRATION =
   "supabase/migrations/202608180002_dependency_audit_uploads.sql";
 export const RULED_OUT_MIGRATION =
@@ -94,6 +96,7 @@ export const ALL_MIGRATIONS = [
   RULED_OUT_MIGRATION,
   DEPENDENCY_AUDIT_MIGRATION,
   COACHING_JOB_KIND_MIGRATION,
+  FINDING_FINGERPRINT_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

@@ -194,16 +194,34 @@ function pushUnique(
   findings.push(findingFromDraft(draft));
 }
 
+const TEST_PATH =
+  /(^|\/)(?:tests?|__tests__)(\/|$)|\.(?:spec|test)\.[cm]?[jt]sx?$/i;
+
+/**
+ * Whether the rules read this file's body.
+ *
+ * Only two kinds are read: documents, whose spans are sliced for provenance,
+ * and test files, which are scanned for requirement ids. Everything else is
+ * judged from `exportedSymbols`, which the scan already stored.
+ *
+ * A caller fetching bodies for analysis needs this — a repository of a few
+ * hundred files usually needs a couple of dozen bodies, not all of them. It
+ * lives here, beside the rules that decide it, so a rule that starts reading
+ * code bodies cannot leave a fetcher elsewhere quietly under-supplying them.
+ */
+export function assuranceSourceRequired(file: {
+  readonly classification: ArtifactClassification;
+  readonly path: string;
+}): boolean {
+  return isDocument(file.classification) || TEST_PATH.test(file.path);
+}
+
 function requirementIdsInTests(
   files: readonly AssuranceSourceFile[],
 ): ReadonlySet<string> {
   const ids = new Set<string>();
   for (const file of files) {
-    if (
-      !/(^|\/)(?:tests?|__tests__)(\/|$)|\.(?:spec|test)\.[cm]?[jt]sx?$/i.test(
-        file.path,
-      )
-    ) {
+    if (!TEST_PATH.test(file.path)) {
       continue;
     }
     for (const match of file.source.matchAll(

@@ -19,7 +19,9 @@ import { createSign } from "node:crypto";
 import { requestInstallationToken } from "@arr/core";
 import postgres from "postgres";
 
+import { createAnalysisJobHandler } from "./analysis-job";
 import { GitHubRepositorySource } from "./github-repository-source";
+import { PostgresAnalysisStore } from "./postgres-analysis-store";
 import { RepositoryScanStore } from "./repository-scan-store";
 import { runRepositoryScan } from "./repository-scan";
 import { runWorkerOnce, type JobHandler, type JobHandlers } from "./worker";
@@ -69,24 +71,27 @@ interface RepositoryRow {
   readonly github_repository_id: string;
 }
 
-/** Scan reads the repository through a short-lived installation token. */
-function createScanHandler(sql: postgres.Sql): JobHandler {
-  const store = new RepositoryScanStore(sql);
+/**
+ * A repository source on a short-lived installation token, cached per
+ * repository. Analysis reads a body per file, and minting a token for each of
+ * them would be both slow and pointless — the token already outlives the job.
+ */
+function createSourceFactory(sql: postgres.Sql) {
+  const sources = new Map<string, Promise<GitHubRepositorySource>>();
 
-  return async (job) => {
-    const commitSha = (job.payload as { commitSha?: string }).commitSha;
-    if (!commitSha) throw new Error("scan job payload has no commitSha");
-
+  async function build(
+    workspaceId: string,
+    repositoryId: string,
+  ): Promise<GitHubRepositorySource> {
     const rows = await sql<RepositoryRow[]>`
       select r.full_name, r.github_repository_id, i.github_installation_id
       from public.repositories r
       join public.github_installations i on i.id = r.installation_id
-      where r.id = ${job.repositoryId} and r.workspace_id = ${job.workspaceId}
+      where r.id = ${repositoryId} and r.workspace_id = ${workspaceId}
       limit 1
     `;
     const row = rows[0];
-    if (!row)
-      throw new Error(`repository ${job.repositoryId} is not connected`);
+    if (!row) throw new Error(`repository ${repositoryId} is not connected`);
 
     const [owner, repository] = row.full_name.split("/");
     if (!owner || !repository) {
@@ -103,16 +108,40 @@ function createScanHandler(sql: postgres.Sql): JobHandler {
       // on the connect screen, enforced by the API rather than by the copy.
       repositoryIds: [Number(row.github_repository_id)],
     });
+    return new GitHubRepositorySource(owner, repository, token.token);
+  }
+
+  return (workspaceId: string, repositoryId: string) => {
+    const key = `${workspaceId}:${repositoryId}`;
+    const existing = sources.get(key);
+    if (existing) return existing;
+    const created = build(workspaceId, repositoryId);
+    sources.set(key, created);
+    return created;
+  };
+}
+
+type SourceFactory = ReturnType<typeof createSourceFactory>;
+
+function createScanHandler(
+  sql: postgres.Sql,
+  sourceFor: SourceFactory,
+): JobHandler {
+  const store = new RepositoryScanStore(sql);
+
+  return async (job) => {
+    const commitSha = (job.payload as { commitSha?: string }).commitSha;
+    if (!commitSha) throw new Error("scan job payload has no commitSha");
 
     const result = await runRepositoryScan({
       commitSha,
       repositoryId: job.repositoryId,
-      source: new GitHubRepositorySource(owner, repository, token.token),
+      source: await sourceFor(job.workspaceId, job.repositoryId),
       store,
       workspaceId: job.workspaceId,
     });
     console.log(
-      `  scan ${row.full_name}@${commitSha.slice(0, 7)} → ${result.touchedRows} rows`,
+      `  scan @${commitSha.slice(0, 7)} → ${result.touchedRows} rows`,
     );
   };
 }
@@ -124,12 +153,28 @@ async function main(): Promise<void> {
   const workerId = `local-${process.pid}`;
   const once = process.argv.includes("--once");
 
+  const sourceFor = createSourceFactory(sql);
+
   const handlers: JobHandlers = {
-    analyze: notImplemented("analyze"),
+    analyze: createAnalysisJobHandler({
+      // Transient: the body is decoded, handed to the rules, and dropped.
+      readSource: async ({ commitSha, path, repositoryId, workspaceId }) => {
+        const source = await sourceFor(workspaceId, repositoryId);
+        try {
+          const bytes = await source.fetchContent(path, commitSha);
+          return Buffer.from(bytes).toString("utf8");
+        } catch {
+          // A file can disappear between the scan and the analysis; that is a
+          // smaller repository, not a failed job.
+          return null;
+        }
+      },
+      store: new PostgresAnalysisStore(sql),
+    }),
     coach: notImplemented("coach"),
     judge: notImplemented("judge"),
     pack: notImplemented("pack"),
-    scan: createScanHandler(sql),
+    scan: createScanHandler(sql, sourceFor),
   };
 
   const workspaces = await sql<{ id: string }[]>`

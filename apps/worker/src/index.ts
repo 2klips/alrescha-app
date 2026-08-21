@@ -5,6 +5,14 @@ export { GitHubCiEvidenceSource } from "./github-ci-evidence-source";
 export type { CollectedGitHubCiEvidence } from "./github-ci-evidence-source";
 export { RepositoryScanStore } from "./repository-scan-store";
 export { runRepositoryScan } from "./repository-scan";
+export { createAnalysisJobHandler } from "./analysis-job";
+export type {
+  AnalysisJobStore,
+  FindingsDelta,
+  PersistedFinding,
+  StoredArtifact,
+} from "./analysis-job";
+export { PostgresAnalysisStore } from "./postgres-analysis-store";
 export { runWorkerOnce } from "./worker";
 export type {
   JobContext,

@@ -164,3 +164,11 @@
 - 임시 결정: 파일럿은 로그인 경로를 우회해 진행한다(`tests/e2e/helpers/session.ts`가 만드는 Supabase 이메일 세션). GitHub App 권한은 최소 프로필 그대로 두고, 가드레일도 손대지 않는다. **제품의 GitHub 로그인 경로는 미검증 상태로 남는다.**
 - 필요한 결정: ⑴ **로그인용 OAuth App을 따로 등록**하고 Supabase provider에는 그 자격증명을 쓴다 — GitHub App은 레포 접근 전용으로 최소 권한 유지. 앱이 둘이 되지만 두 권한 모델(계정 신원 / 레포 접근)이 실제로 다른 것이라 분리가 정직하다. ⑵ GitHub App에 Email addresses 권한을 추가하고 `assertMinimalGitHubPermissions`의 프로필을 확장한다 — 가드레일 약화이므로 ADR 개정과 위반 심기 재증명이 필요하다. ⑶ Supabase provider를 버리고 GitHub App user token을 직접 교환하는 자체 로그인 라우트를 만든다(`/api/github/callback`이 이미 하는 일과 겹친다).
 - 상태: open. ⑴이 기본 후보 — 가드레일을 건드리지 않는 유일한 선택지다. 사용자 판정 필요(OAuth App 등록은 사람 준비물).
+
+## OQ-018 — 구현된 receipt 포맷이 WORK_SPEC §13과 다르다
+
+- 발견: Phase 2C todo 5 후속(analyze 핸들러 구현, 2026-08-21) / `packages/core/src/assurance/receipts.ts`, `spec/WORK_SPEC.md` §13
+- 내용: §13은 규범 포맷을 이렇게 정한다 — subject에 `{"name":"git:commit","digest":{"sha1":…}}`가 포함되고, `predicateType`은 `https://specproof.app/attestation/analysis/v1`, predicate는 `tool`·`analyzedAt`·`findings{opened,resolved,open_total}`·`coverage{requirements,implVerified,testVerified}`·`evidenceGrades{verified,inferred}`, 그리고 `signatures: []`. **구현된 `arrReceiptPredicateSchema`는 다르다** — subject는 `sha256`만 허용하는 strict object라 `git:commit`(sha1) 항목을 표현할 수 없고, `predicateType`은 `https://arr.dev/receipt/v1`, predicate는 `commitSha`·`evidence{inferred,verified}`·`previousReceiptDigest`·`repository`·`runId`이며 `signatures` 필드가 없다. 충돌 우선순위상 WORK_SPEC이 위이므로 **구현이 스펙을 벗어난 상태**다.
+- 임시 결정: analyze 핸들러는 **구현된 스키마 그대로** 발급한다. 포맷을 지금 바꾸면 ⑴ 기존 receipt 테스트·다이제스트가 전부 깨지고 ⑵ OQ-010이 Wave 4로 예약해둔 `predicateType` 변경과 충돌한다. §13이 요구하는 `findings{opened,resolved,open_total}`는 predicate가 아니라 **`receipts.summary`에 저장**했다 — 커밋 카드가 읽는 곳이 거기이고(`receiptFindings`), 그래서 화면 기능은 스펙대로 동작한다. `coverage`는 아직 어디에도 없다.
+- 필요한 결정: ⑴ **스펙에 맞춰 구현 개정**(subject에 sha1 커밋 항목 허용, predicate 확장, `signatures: []` 추가) — Sigstore 서명을 마이그레이션 없이 붙일 수 있어야 한다는 §13 요구를 지키려면 이쪽이다. ⑵ **구현을 정본으로 삼고 §13 개정** — 단, `coverage`·`analyzedAt` 같은 정보가 사라지는 손실을 감수할지 판단 필요. ⑶ 현행 유지(스펙-구현 불일치를 남김) — 비권장.
+- 상태: open. **시급도 주의** — OQ-010이 "실데이터 receipt가 쌓이기 전에 predicateType을 처리하라"고 했는데, 이 구현으로 **로컬에 실 receipt가 쌓이기 시작했다**(현재는 개발 DB뿐이라 폐기 가능). ⑴을 택한다면 Wave 4 배포 전에 두 변경을 같은 세션에서 처리해야 한다.

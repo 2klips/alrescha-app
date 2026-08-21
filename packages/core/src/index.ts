@@ -135,6 +135,7 @@ export {
   AI_ASSIST_STATUS,
   DISABLED_ASSURANCE_AI_ASSIST,
   analyzeRepositoryAssurance,
+  assuranceSourceRequired,
 } from "./assurance/rules";
 
 export {
