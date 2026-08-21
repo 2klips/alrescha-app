@@ -12,3 +12,6 @@ test-results/
 
 # Supabase CLI scratch (version cache, linked project state)
 supabase/.temp
+
+# GitHub App private keys must never enter the repo, in any form.
+*.pem

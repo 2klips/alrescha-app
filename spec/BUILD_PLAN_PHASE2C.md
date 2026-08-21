@@ -84,11 +84,11 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 녹화 픽스처로 만든 파이프라인을 실제 GitHub에 1회 완주시킨다. 목적은 기능 추가가 아니라 **픽스처와 실물의 차이 발견**이다.
 
-- [ ] **5. 실기 파일럿: install → push → 카드 → receipt** _(2026-08-18 부분 완료 — 이관된 잔여는 전부 끝났고 GitHub 실기 완주만 G2 대기)_
-      **완료(G2 불필요)**: Wave 1 로더 3종을 `/app/commits`·`/app/inspection`·`/app/team`에 배선, `/app/*` 11화면 두 테마 순회 + axe AA 편입, `arr push` → 실 Supabase → `/app/commits` graph-only 카드 e2e. 세션은 `tests/e2e/helpers/session.ts`가 Supabase 이메일 계정으로 만든다 — **이관 사유였던 "GitHub App 없이는 세션 불가"는 오판**이었고, 브라우저 스위트는 G2가 열려도 실제 OAuth를 몰 수 없다. G2가 실제로 막는 화면은 `/app/connect/github` 둘뿐. 상세: `.omo/evidence/phase2c/wave-2-todo-5.md`.
-      **잔여(G2 필요)**: 실제 레포(2klips 소유 테스트 레포)에 App 설치 → push → webhook 수신(smee) → 스캔·분석 잡 → 커밋 카드 `full` 보증 → receipt 발급·검증까지 완주. 발견된 픽스처-실물 차이는 코드 수정이 아니라 **픽스처 갱신**으로 반영(녹화 절차를 evidence에 기록).
-      수용 기준: 완주 스크린샷·receipt digest를 evidence로, 갱신된 녹화 픽스처로 기존 테스트 전부 green, 차이점 목록 문서화.
-      Commit: `test(github): refresh recorded fixtures from a live run`
+- [ ] **5. 실기 파일럿: install → push → 카드 → receipt** _(2026-08-21 대부분 완료 — receipt는 기능 미구현으로 도달 불가)_
+      **완료**: 이관된 잔여 전부(로더 3종 `/app/*` 배선, 11화면 두 테마 순회 + axe, `arr push` graph-only e2e) + **실기 완주 — install → 콜백 → 레포 선택 → push → webhook(서명 검증) → scan 잡 → 실데이터 아티팩트 370개 · 커밋 카드 `assurance=full`**.
+      **발견(이 페이즈의 산출물)**: ⑴ **GitHub 스캔 경로는 한 번도 저장에 성공한 적이 없었다** — postgres.js가 `${JSON.stringify(plan)}::jsonb`를 문자열 스칼라로 보내 `apply_repository_scan`이 조용히 0을 반환. PGlite 하네스는 드라이버가 달라 원리적으로 못 잡는다. `sql.json`으로 수정 + 이음매 회귀 테스트(위반 심기 재증명). ⑵ **워커에 실행 진입점이 없었고 `analyze` 핸들러와 receipt writer는 아예 없다** — `run-local.ts` 추가로 진입점은 해소. ⑶ 같은 출처 가드가 호스트 별칭(`127.0.0.1` vs `localhost`)에서 깨진다. ⑷ OQ-017(로그인 vs 최소 권한 App). 상세: `.omo/evidence/phase2c/wave-2-todo-5-pilot.md`.
+      **잔여**: analyze 핸들러 + receipt 발급 구현(별도 작업 단위), 같은 출처 가드 수정(Wave 4), OQ-017 판정.
+      Commit: `feat(worker): drain jobs locally and fix the scan plan encoding`
 
 ## Wave 3 — 동결 실험 실행 _(G3)_ — **사전등록 수정 금지**
 

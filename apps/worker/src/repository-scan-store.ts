@@ -64,9 +64,19 @@ export class RepositoryScanStore {
     repositoryId: string,
     plan: RepositoryScanPlan,
   ): Promise<number> {
+    // `sql.json`, not `JSON.stringify`: postgres.js sends an interpolated
+    // string as a JSON *string scalar*, so `plan->>'treeSha'` and
+    // `plan->>'touchedRows'` both read null inside the function, its
+    // unchanged-commit guard fires, and it returns 0 having written nothing.
+    // That silence is why the GitHub scan path never persisted a row.
     const rows = await this.sql<{ touched: number }[]>`
       select public.apply_repository_scan(
-        ${workspaceId}, ${repositoryId}, ${JSON.stringify(plan)}::jsonb
+        ${workspaceId}, ${repositoryId}, ${this.sql.json(
+          // `sql.json` is typed for index-signature objects; the plan is a
+          // closed interface of plain JSON values, which satisfies it in fact
+          // but not in type.
+          plan as unknown as postgres.JSONValue,
+        )}::jsonb
       ) as touched
     `;
     return rows[0]?.touched ?? 0;

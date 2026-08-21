@@ -319,6 +319,18 @@ max_frequency = "5s"
 # Use an external OAuth provider. The full list of providers are: `apple`, `azure`, `bitbucket`,
 # `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
+[auth.external.github]
+enabled = true
+client_id = "env(GITHUB_APP_CLIENT_ID)"
+secret = "env(GITHUB_APP_CLIENT_SECRET)"
+redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
+# The GitHub App is held to a read-only repository profile that carries no
+# account permissions (scripts/adr-guardrails + assertMinimalGitHubPermissions
+# reject anything more), so GitHub hands back no email address. Accepting a
+# user without one keeps the App minimal instead of widening its grant just to
+# satisfy sign-in.
+email_optional = true
+
 [auth.external.apple]
 enabled = false
 client_id = ""
