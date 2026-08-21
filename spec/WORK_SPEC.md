@@ -395,35 +395,42 @@ SpecProof가 레포마다 구축하는 지식 시스템의 공식 명칭은 **Da
 
 ## 13. 영수증(Receipt) 포맷
 
-in-toto Statement 형태(서명은 Phase 2, `signatures: []`).
+> **2026-08-22 개정 (OQ-018 판정, 사용자 결정).** 이 절의 이전 판은 구 제품명 시절의 초안이었고, 서명을 statement 안의 `signatures: []`로 그려 자기 요구("마이그레이션 없이 Sigstore 서명")와 충돌했다 — in-toto v1에서 서명은 statement **밖** DSSE envelope에 있고, statement를 서명 없이 canonical하게 두어야 서명을 붙여도 digest가 바뀌지 않는다. 현행 구현(`packages/core/src/assurance/receipts.ts`)을 **운영 v1 정본**으로 삼고, 이전 판의 실질 필드는 아래 "Wave 4 예약"으로 옮긴다.
+
+in-toto Statement v1. 서명은 statement에 포함하지 않는다 — Sigstore 도입 시 이 statement를 페이로드로 DSSE envelope에 감싼다(statement·digest 불변).
 
 ```json
 {
   "_type": "https://in-toto.io/Statement/v1",
   "subject": [
-    { "name": "git:commit", "digest": { "sha1": "<commit sha>" } },
-    { "name": "spec/prd.md", "digest": { "sha256": "<file digest>" } }
+    {
+      "name": "spec/prd.md",
+      "digest": { "sha256": "<스캔이 기록한 파일 digest>" }
+    }
   ],
-  "predicateType": "https://specproof.app/attestation/analysis/v1",
+  "predicateType": "https://arr.dev/receipt/v1",
   "predicate": {
-    "tool": { "name": "specproof", "version": "0.1.0" },
-    "analyzedAt": "2026-08-09T12:00:00Z",
-    "findings": {
-      "opened": [/* finding 요약 */],
-      "resolved": [],
-      "open_total": 7
-    },
-    "coverage": { "requirements": 24, "implVerified": 11, "testVerified": 6 },
-    "evidenceGrades": { "verified": 17, "inferred": 14 }
-  },
-  "signatures": []
+    "commitSha": "<40-hex commit sha>",
+    "repository": "owner/name",
+    "runId": "<run ULID>",
+    "evidence": { "verified": 17, "inferred": 14 },
+    "previousReceiptDigest": "<직전 receipt digest | null>"
+  }
 }
 ```
 
-- `verify` 동작: subject digest 재계산 → 불일치 시 tampered, 대상 파일이 이후 커밋에서 변경됐으면 stale 표시.
-- 마이그레이션 없이 Sigstore 서명을 붙일 수 있어야 한다(포맷 변경 금지).
+- **subject**: 분석된 모든 아티팩트, digest는 스캔이 저장한 sha256 그대로.
+- **digest**: 키 정렬 canonical JSON의 sha256(`digestInTotoStatement`). `receipts.digest`에 저장.
+- **체인**: `previousReceiptDigest`가 같은 레포의 직전 receipt를 가리킨다.
+- **findings 델타**(`opened`/`resolved`/`open_total`)는 predicate가 아니라 `receipts.summary`에 저장한다 — 커밋 카드가 읽는 자리이며, statement의 불변성과 분리된다.
+- `verify` 동작: statement를 canonical 재계산 → 저장된 digest와 불일치 시 tampered, 스키마 불일치 시 invalid. 대상 파일이 이후 커밋에서 변경됐으면 stale 표시(2단계).
 
----
+**Wave 4 예약 (도메인 확정 시 한 번에, digest 호환이 깨지는 유일한 시점 — OQ-010·OQ-018):**
+
+- `predicateType`을 확정 도메인 값으로 교체 (현행 `arr.dev`는 소유 미확인 자리표시자).
+- subject에 `{ "name": "git:commit", "digest": { "sha1": "<commit sha>" } }` 항목 추가.
+- predicate에 `tool { name, version }` · `analyzedAt` · `coverage { requirements, implVerified, testVerified }` 추가.
+- 이 개정 전에 발급된 receipt(로컬 개발 데이터)는 폐기한다. 프로덕션 첫 receipt부터 최종 포맷이어야 한다.
 
 ## 14. AI 판단 레이어와 크레딧 규칙
 
