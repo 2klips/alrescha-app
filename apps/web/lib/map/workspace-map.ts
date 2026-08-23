@@ -103,9 +103,18 @@ export interface MapCoChangeRow {
   readonly path_b: string;
 }
 
+export interface MapAssertionRow {
+  readonly id: string;
+  readonly reason: string;
+  readonly relation: string;
+  readonly source_node_id: string;
+  readonly target_node_id: string;
+}
+
 export interface WorkspaceMapRows {
   readonly accessEvents: readonly MapAccessEventRow[];
   readonly artifacts: readonly MapArtifactRow[];
+  readonly assertions: readonly MapAssertionRow[];
   readonly coChanges: readonly MapCoChangeRow[];
   readonly edges: readonly MapEdgeRow[];
   readonly findings: readonly MapFindingRow[];
@@ -246,15 +255,21 @@ function isDisplayRelation(
 ): value is GraphEdgeProvenance["relation"] {
   return [
     "calls",
+    "configures",
     "contradicts",
     "declares",
+    "depends_on",
     "implements",
     "imports",
+    "part_of",
+    "produces",
     "references",
     "requires",
     "supersedes",
     "supports",
     "tests",
+    "uses",
+    "validates",
   ].includes(value);
 }
 
@@ -435,6 +450,34 @@ export function buildWorkspaceMapModel(
     });
   }
 
+  // Agent assertions (Wave D todo 9): active bi-temporal edges, rendered in
+  // the agent_asserted style (dashed accent) — visibly an agent's claim.
+  for (const assertion of rows.assertions) {
+    if (
+      !nodeIds.has(assertion.source_node_id) ||
+      !nodeIds.has(assertion.target_node_id)
+    )
+      continue;
+    edges.push({
+      broken: false,
+      grade: "inferred",
+      id: `assert:${assertion.id}`,
+      provenance: {
+        confidence: 0.5,
+        endLine: 0,
+        grade: "inferred",
+        relation: isDisplayRelation(assertion.relation)
+          ? assertion.relation
+          : "references",
+        sourcePath: "",
+        startLine: 0,
+      },
+      source: assertion.source_node_id,
+      target: assertion.target_node_id,
+      tier: "agent_asserted",
+    });
+  }
+
   const isClustered = nodes.length > MAP_CLUSTER_THRESHOLD;
   const graph = isClustered
     ? clusterGraph({ edges, nodes }, MAP_CLUSTER_THRESHOLD)
@@ -499,6 +542,7 @@ export async function loadWorkspaceMap(
   const [
     accessEvents,
     artifacts,
+    assertions,
     coChanges,
     edges,
     findings,
@@ -520,6 +564,12 @@ export async function loadWorkspaceMap(
       .select("id,classification,path")
       .eq("workspace_id", workspaceId)
       .limit(NODE_LIMIT),
+    client
+      .from("agent_assertions")
+      .select("id,source_node_id,target_node_id,relation,reason")
+      .eq("workspace_id", workspaceId)
+      .is("invalidated_at", null)
+      .limit(EDGE_LIMIT),
     client
       .from("file_co_changes")
       .select("path_a,path_b,change_count")
@@ -572,6 +622,7 @@ export async function loadWorkspaceMap(
   for (const result of [
     accessEvents,
     artifacts,
+    assertions,
     coChanges,
     edges,
     findings,
@@ -590,6 +641,7 @@ export async function loadWorkspaceMap(
   return buildWorkspaceMapModel(workspaceId, {
     accessEvents: (accessEvents.data ?? []) as MapAccessEventRow[],
     artifacts: (artifacts.data ?? []) as MapArtifactRow[],
+    assertions: (assertions.data ?? []) as MapAssertionRow[],
     coChanges: (coChanges.data ?? []) as MapCoChangeRow[],
     edges: (edges.data ?? []) as MapEdgeRow[],
     evidence: (evidence.data ?? []) as MapEvidenceRow[],

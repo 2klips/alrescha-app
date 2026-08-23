@@ -40,11 +40,17 @@ export type {
   SelectedContextPack,
   WorkspaceFinding,
 } from "./data-brain";
+export { AGENT_ASSERTION_RELATIONS, MEMORY_BLOCK_NAMES } from "./store";
 export type {
+  AgentAssertionRelation,
   IssueAccessTokenInput,
   IssuedAccessToken,
   McpAccessEvent,
   McpArtifactData,
+  McpAssertLinkResult,
+  McpMemoryBlockName,
+  McpMemoryEntryData,
+  McpWriteMemoryResult,
   McpContextPackData,
   McpEdgeData,
   McpEdgeRelation,

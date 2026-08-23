@@ -10,7 +10,8 @@ export type McpNodeType =
   | "evidence"
   | "finding"
   | "receipt"
-  | "context_pack";
+  | "context_pack"
+  | "memory";
 
 export type McpEdgeRelation =
   | "requires"
@@ -121,8 +122,58 @@ export interface McpRepositoryData {
   requirements: McpRequirementData[];
 }
 
+/** Closed concept-relation vocabulary (Graft) — agents assert only these. */
+export const AGENT_ASSERTION_RELATIONS = [
+  "part_of",
+  "uses",
+  "depends_on",
+  "produces",
+  "configures",
+  "validates",
+  "implements",
+] as const;
+export type AgentAssertionRelation = (typeof AGENT_ASSERTION_RELATIONS)[number];
+
+export const MEMORY_BLOCK_NAMES = [
+  "conventions",
+  "decisions",
+  "gotchas",
+] as const;
+export type McpMemoryBlockName = (typeof MEMORY_BLOCK_NAMES)[number];
+
+/** One active memory entry, as workspace data for reads and search. */
+export interface McpMemoryEntryData {
+  anchorNodeId: string | null;
+  anchorPath: string | null;
+  entryKey: string;
+  id: string;
+  name: McpMemoryBlockName;
+  text: string;
+  updatedAt: string;
+}
+
+export interface McpAssertLinkResult {
+  id: string | null;
+  invalidatedId: string | null;
+  outcome: "added" | "noop" | "superseded" | "unknown_node";
+}
+
+export interface McpWriteMemoryResult {
+  id: string | null;
+  invalidatedId: string | null;
+  outcome:
+    | "added"
+    | "invalidated"
+    | "noop"
+    | "rejected_cap"
+    | "unknown_node"
+    | "updated";
+}
+
 export interface McpWorkspaceData {
   id: string;
+  /** Active memory entries (Wave D todo 10); absent on older fixtures. */
+  memoryEntries?: McpMemoryEntryData[];
   ownerUserId: string;
   repositories: McpRepositoryData[];
 }
@@ -237,6 +288,37 @@ export interface McpStore {
     principal: McpPrincipal,
     input: { target?: string | undefined; text: string },
   ): Promise<McpNote>;
+  /**
+   * Record an agent-asserted edge (Wave D todo 9). Bi-temporal and
+   * reconciled at write time: same active pair + same relation is a noop, a
+   * different relation supersedes (invalidates) the old edge. Deletion does
+   * not exist — the schema forbids it.
+   */
+  assertLink(
+    principal: McpPrincipal,
+    input: {
+      reason: string;
+      relation: AgentAssertionRelation;
+      sourceNodeId: string;
+      targetNodeId: string;
+    },
+  ): Promise<McpAssertLinkResult>;
+  /**
+   * Write one bounded memory-block entry (Wave D todo 10) with Mem0-style
+   * reconciliation: ADD / UPDATE (invalidate+insert) / NOOP / remove
+   * (invalidate). At most 12 active entries per (anchor, name) — over the
+   * cap the write is rejected, forcing distillation instead of rotation.
+   */
+  writeMemory(
+    principal: McpPrincipal,
+    input: {
+      anchorNodeId?: string | undefined;
+      entryKey: string;
+      name: McpMemoryBlockName;
+      remove?: boolean | undefined;
+      text?: string | undefined;
+    },
+  ): Promise<McpWriteMemoryResult>;
   appendProgress(
     principal: McpPrincipal,
     input: {
@@ -379,6 +461,174 @@ export class InMemoryMcpStore implements McpStore {
     return this.#packMeasurements
       .filter((measurement) => measurement.workspaceId === workspaceId)
       .map((measurement) => ({ ...measurement }));
+  }
+
+  readonly #assertions: Array<{
+    id: string;
+    invalidatedAt: string | null;
+    invalidatedBy: string | null;
+    reason: string;
+    relation: AgentAssertionRelation;
+    sourceNodeId: string;
+    targetNodeId: string;
+    tokenId: string;
+    validFrom: string;
+    workspaceId: string;
+  }> = [];
+  readonly #memoryEntries: Array<{
+    anchorNodeId: string | null;
+    entryKey: string;
+    id: string;
+    invalidatedAt: string | null;
+    name: McpMemoryBlockName;
+    text: string;
+    tokenId: string;
+    validFrom: string;
+    workspaceId: string;
+  }> = [];
+
+  /** Test inspector — bi-temporal state, invalidated rows included. */
+  assertionsForWorkspace(workspaceId: string) {
+    return this.#assertions.filter(
+      (assertion) => assertion.workspaceId === workspaceId,
+    );
+  }
+
+  /** Test inspector — invalidated entries included. */
+  memoryEntriesForWorkspace(workspaceId: string) {
+    return this.#memoryEntries.filter(
+      (entry) => entry.workspaceId === workspaceId,
+    );
+  }
+
+  #workspaceNodeIds(workspace: McpWorkspaceData): Set<string> {
+    const ids = new Set<string>();
+    for (const repository of workspace.repositories) {
+      for (const artifact of repository.artifacts) ids.add(artifact.id);
+      for (const requirement of repository.requirements)
+        ids.add(requirement.id);
+      for (const evidence of repository.evidence) ids.add(evidence.id);
+      for (const finding of repository.findings) ids.add(finding.id);
+    }
+    return ids;
+  }
+
+  async assertLink(
+    principal: McpPrincipal,
+    input: {
+      reason: string;
+      relation: AgentAssertionRelation;
+      sourceNodeId: string;
+      targetNodeId: string;
+    },
+  ): Promise<McpAssertLinkResult> {
+    const workspace = await this.loadWorkspace(principal);
+    const nodeIds = this.#workspaceNodeIds(workspace);
+    if (
+      !nodeIds.has(input.sourceNodeId) ||
+      !nodeIds.has(input.targetNodeId) ||
+      input.sourceNodeId === input.targetNodeId
+    ) {
+      return { id: null, invalidatedId: null, outcome: "unknown_node" };
+    }
+    const existing = this.#assertions.find(
+      (assertion) =>
+        assertion.workspaceId === principal.workspaceId &&
+        assertion.sourceNodeId === input.sourceNodeId &&
+        assertion.targetNodeId === input.targetNodeId &&
+        assertion.invalidatedAt === null,
+    );
+    if (existing && existing.relation === input.relation) {
+      return { id: existing.id, invalidatedId: null, outcome: "noop" };
+    }
+    const now = this.#now();
+    const created = {
+      id: createUlid(now),
+      invalidatedAt: null,
+      invalidatedBy: null,
+      reason: input.reason,
+      relation: input.relation,
+      sourceNodeId: input.sourceNodeId,
+      targetNodeId: input.targetNodeId,
+      tokenId: principal.tokenId,
+      validFrom: now.toISOString(),
+      workspaceId: principal.workspaceId,
+    };
+    this.#assertions.push(created);
+    if (existing) {
+      existing.invalidatedAt = now.toISOString();
+      existing.invalidatedBy = created.id;
+      return {
+        id: created.id,
+        invalidatedId: existing.id,
+        outcome: "superseded",
+      };
+    }
+    return { id: created.id, invalidatedId: null, outcome: "added" };
+  }
+
+  async writeMemory(
+    principal: McpPrincipal,
+    input: {
+      anchorNodeId?: string | undefined;
+      entryKey: string;
+      name: McpMemoryBlockName;
+      remove?: boolean | undefined;
+      text?: string | undefined;
+    },
+  ): Promise<McpWriteMemoryResult> {
+    const workspace = await this.loadWorkspace(principal);
+    const anchorNodeId = input.anchorNodeId ?? null;
+    if (anchorNodeId && !this.#workspaceNodeIds(workspace).has(anchorNodeId)) {
+      return { id: null, invalidatedId: null, outcome: "unknown_node" };
+    }
+    const existing = this.#memoryEntries.find(
+      (entry) =>
+        entry.workspaceId === principal.workspaceId &&
+        entry.anchorNodeId === anchorNodeId &&
+        entry.name === input.name &&
+        entry.entryKey === input.entryKey &&
+        entry.invalidatedAt === null,
+    );
+    const now = this.#now();
+    if (input.remove) {
+      if (!existing) return { id: null, invalidatedId: null, outcome: "noop" };
+      existing.invalidatedAt = now.toISOString();
+      return { id: existing.id, invalidatedId: null, outcome: "invalidated" };
+    }
+    const text = input.text ?? "";
+    if (existing && existing.text === text) {
+      return { id: existing.id, invalidatedId: null, outcome: "noop" };
+    }
+    if (!existing) {
+      const activeCount = this.#memoryEntries.filter(
+        (entry) =>
+          entry.workspaceId === principal.workspaceId &&
+          entry.anchorNodeId === anchorNodeId &&
+          entry.name === input.name &&
+          entry.invalidatedAt === null,
+      ).length;
+      if (activeCount >= 12) {
+        return { id: null, invalidatedId: null, outcome: "rejected_cap" };
+      }
+    }
+    const created = {
+      anchorNodeId,
+      entryKey: input.entryKey,
+      id: createUlid(now),
+      invalidatedAt: null,
+      name: input.name,
+      text,
+      tokenId: principal.tokenId,
+      validFrom: now.toISOString(),
+      workspaceId: principal.workspaceId,
+    };
+    this.#memoryEntries.push(created);
+    if (existing) {
+      existing.invalidatedAt = now.toISOString();
+      return { id: created.id, invalidatedId: existing.id, outcome: "updated" };
+    }
+    return { id: created.id, invalidatedId: null, outcome: "added" };
   }
 
   async appendNote(
@@ -585,7 +835,31 @@ export class InMemoryMcpStore implements McpStore {
     if (!workspace || workspace.ownerUserId !== principal.userId) {
       throw new Error("Workspace access denied");
     }
-    return workspace;
+    const artifactPaths = new Map(
+      workspace.repositories.flatMap((repository) =>
+        repository.artifacts.map(({ id, path }) => [id, path] as const),
+      ),
+    );
+    const written: McpMemoryEntryData[] = this.#memoryEntries
+      .filter(
+        (entry) =>
+          entry.workspaceId === workspace.id && entry.invalidatedAt === null,
+      )
+      .map((entry) => ({
+        anchorNodeId: entry.anchorNodeId,
+        anchorPath: entry.anchorNodeId
+          ? (artifactPaths.get(entry.anchorNodeId) ?? null)
+          : null,
+        entryKey: entry.entryKey,
+        id: entry.id,
+        name: entry.name,
+        text: entry.text,
+        updatedAt: entry.validFrom,
+      }));
+    return {
+      ...workspace,
+      memoryEntries: [...(workspace.memoryEntries ?? []), ...written],
+    };
   }
 
   async listAccessTokens(input: {

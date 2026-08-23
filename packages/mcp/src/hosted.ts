@@ -30,6 +30,8 @@ import {
   buildRepoMap,
 } from "./repo-map";
 import {
+  AGENT_ASSERTION_RELATIONS,
+  MEMORY_BLOCK_NAMES,
   createUlid,
   type McpPackMeasurement,
   type McpPrincipal,
@@ -50,6 +52,7 @@ const NODE_TYPE_SCHEMA = z.enum([
   "finding",
   "receipt",
   "context_pack",
+  "memory",
 ]);
 const RELATION_SCHEMA = z.enum([
   "requires",
@@ -319,6 +322,46 @@ function createServer(
         payload: { contextPacks, workspaceId: workspace.id },
         targetNodeIds: contextPacks.flatMap(({ nodeIds }) => nodeIds),
       };
+    },
+  );
+
+  server.registerTool(
+    "assert_link",
+    {
+      annotations: WRITE_METADATA_TOOL,
+      description:
+        "Assert a concept edge between two nodes (closed relation vocabulary). Bi-temporal: a conflicting assertion on the same pair is superseded, never deleted; an identical one is a noop.",
+      inputSchema: z.object({
+        reason: z.string().trim().min(1).max(500),
+        relation: z.enum(AGENT_ASSERTION_RELATIONS),
+        source_node_id: z.string().trim().min(1),
+        target_node_id: z.string().trim().min(1),
+      }),
+      outputSchema: z.object({
+        assertion: z.object({
+          id: z.string().nullable(),
+          invalidatedId: z.string().nullable(),
+          outcome: z.enum(["added", "noop", "superseded", "unknown_node"]),
+        }),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ reason, relation, source_node_id, target_node_id }) => {
+      requireScope("mcp:write");
+      const assertion = await store.assertLink(principal, {
+        reason,
+        relation,
+        sourceNodeId: source_node_id,
+        targetNodeId: target_node_id,
+      });
+      emitAccessEvent(store, principal, "assert_link", [
+        source_node_id,
+        target_node_id,
+      ]);
+      return toolResult({
+        assertion,
+        workspaceId: principal.workspaceId,
+      });
     },
   );
 
@@ -634,6 +677,110 @@ function createServer(
           task: event.task,
           todoId: event.todoId,
         },
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  const MEMORY_ENTRY_SCHEMA = z.object({
+    anchorNodeId: z.string().nullable(),
+    anchorPath: z.string().nullable(),
+    entryKey: z.string(),
+    id: z.string(),
+    name: z.enum(MEMORY_BLOCK_NAMES),
+    text: z.string(),
+    updatedAt: z.string(),
+  });
+
+  server.registerTool(
+    "memory_read",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "Read the workspace's bounded memory blocks (gotchas / conventions / decisions) — durable notes earlier agents distilled. Filter by block name or anchor node.",
+      inputSchema: z.object({
+        anchor_node_id: z.string().trim().min(1).optional(),
+        name: z.enum(MEMORY_BLOCK_NAMES).optional(),
+      }),
+      outputSchema: z.object({
+        entries: z.array(MEMORY_ENTRY_SCHEMA),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ anchor_node_id, name }) => {
+      const workspace = await readWorkspace();
+      const entries = (workspace.memoryEntries ?? []).filter(
+        (entry) =>
+          (!name || entry.name === name) &&
+          (!anchor_node_id || entry.anchorNodeId === anchor_node_id),
+      );
+      emitAccessEvent(
+        store,
+        principal,
+        "memory_read",
+        entries.flatMap((entry) =>
+          entry.anchorNodeId ? [entry.anchorNodeId] : [],
+        ),
+      );
+      return toolResult({
+        entries,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
+    "memory_write",
+    {
+      annotations: WRITE_METADATA_TOOL,
+      description:
+        "Write one bounded memory entry (gotchas / conventions / decisions), keyed for reconciliation: same key + same text is a noop, a new text supersedes the old (never deleted), `remove` invalidates. At most 12 active entries per block — over the cap the write is rejected: distill, don't accumulate.",
+      inputSchema: z.object({
+        anchor_node_id: z.string().trim().min(1).optional(),
+        entry_key: z
+          .string()
+          .trim()
+          .regex(/^[a-z0-9][a-z0-9-]{0,79}$/),
+        name: z.enum(MEMORY_BLOCK_NAMES),
+        remove: z.boolean().optional(),
+        text: z.string().trim().min(1).max(500).optional(),
+      }),
+      outputSchema: z.object({
+        entry: z.object({
+          id: z.string().nullable(),
+          invalidatedId: z.string().nullable(),
+          outcome: z.enum([
+            "added",
+            "invalidated",
+            "noop",
+            "rejected_cap",
+            "unknown_node",
+            "updated",
+          ]),
+        }),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ anchor_node_id, entry_key, name, remove, text }) => {
+      requireScope("mcp:write");
+      if (!remove && !text) {
+        throw new Error("memory_write requires text unless remove is true");
+      }
+      const entry = await store.writeMemory(principal, {
+        anchorNodeId: anchor_node_id,
+        entryKey: entry_key,
+        name,
+        remove,
+        text,
+      });
+      emitAccessEvent(
+        store,
+        principal,
+        "memory_write",
+        anchor_node_id ? [anchor_node_id] : [],
+      );
+      return toolResult({
+        entry,
         workspaceId: principal.workspaceId,
       });
     },

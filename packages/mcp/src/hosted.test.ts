@@ -359,6 +359,7 @@ describe("hosted MCP contract", () => {
     const listed = await client.listTools();
     expect(listed).toMatchObject({ cacheScope: "private", ttlMs: 60_000 });
     expect(listed.tools.map(({ name }) => name)).toEqual([
+      "assert_link",
       "get_artifact",
       "get_findings",
       "get_graph_schema",
@@ -366,6 +367,8 @@ describe("hosted MCP contract", () => {
       "get_node_content",
       "impact_of",
       "log_progress",
+      "memory_read",
+      "memory_write",
       "query_brain",
       "record_note",
       "record_prompt",

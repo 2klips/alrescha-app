@@ -54,15 +54,21 @@ export interface GraphEdgeProvenance {
   relation:
     | "calls"
     | "co_changed"
+    | "configures"
     | "contradicts"
     | "declares"
+    | "depends_on"
     | "implements"
     | "imports"
+    | "part_of"
+    | "produces"
     | "references"
     | "requires"
     | "supersedes"
     | "supports"
-    | "tests";
+    | "tests"
+    | "uses"
+    | "validates";
   sourcePath: string;
   startLine: number;
 }

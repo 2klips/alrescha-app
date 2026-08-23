@@ -28,6 +28,7 @@ function emptyRows(): WorkspaceMapRows {
   return {
     accessEvents: [],
     artifacts: [],
+    assertions: [],
     coChanges: [],
     edges: [],
     evidence: [],
@@ -417,6 +418,7 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
     const model = buildWorkspaceMapModel(workspaceA, {
       ...seenByA,
       accessEvents: [],
+      assertions: [],
       coChanges: [],
       evidence: [],
       findings: [],

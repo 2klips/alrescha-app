@@ -4,9 +4,13 @@ import {
   createAccessTokenSecret,
   createUlid,
   hashAccessToken,
+  type AgentAssertionRelation,
   type IssueAccessTokenInput,
   type IssuedAccessToken,
   type McpAccessEvent,
+  type McpAssertLinkResult,
+  type McpMemoryBlockName,
+  type McpWriteMemoryResult,
   type McpEdgeRelation,
   type McpNodeType,
   type McpNote,
@@ -178,6 +182,70 @@ export class SupabaseMcpStore implements McpStore {
       throw new Error(result.error?.message ?? "Ruled-out record failed");
     }
     return { id: result.data };
+  }
+
+  async assertLink(
+    principal: McpPrincipal,
+    input: {
+      reason: string;
+      relation: AgentAssertionRelation;
+      sourceNodeId: string;
+      targetNodeId: string;
+    },
+  ): Promise<McpAssertLinkResult> {
+    await this.assertOwner(principal.userId, principal.workspaceId);
+    // Reconciliation (noop / supersede) is one atomic SQL call, and the
+    // bi-temporal property is enforced by triggers — no caller can delete.
+    const result = await this.client.rpc("record_agent_assertion", {
+      target_reason: input.reason,
+      target_relation: input.relation,
+      target_source_node_id: input.sourceNodeId,
+      target_target_node_id: input.targetNodeId,
+      target_token_id: principal.tokenId,
+      target_user_id: principal.userId,
+      target_workspace_id: principal.workspaceId,
+    });
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    const payload = record(result.data);
+    return {
+      id: nullableString(payload.id),
+      invalidatedId: nullableString(payload.invalidated_id),
+      outcome: String(payload.outcome) as McpAssertLinkResult["outcome"],
+    };
+  }
+
+  async writeMemory(
+    principal: McpPrincipal,
+    input: {
+      anchorNodeId?: string | undefined;
+      entryKey: string;
+      name: McpMemoryBlockName;
+      remove?: boolean | undefined;
+      text?: string | undefined;
+    },
+  ): Promise<McpWriteMemoryResult> {
+    await this.assertOwner(principal.userId, principal.workspaceId);
+    const result = await this.client.rpc("write_memory_entry", {
+      remove_entry: input.remove ?? false,
+      target_anchor_node_id: input.anchorNodeId ?? null,
+      target_entry_key: input.entryKey,
+      target_name: input.name,
+      target_text: input.text ?? "",
+      target_token_id: principal.tokenId,
+      target_user_id: principal.userId,
+      target_workspace_id: principal.workspaceId,
+    });
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    const payload = record(result.data);
+    return {
+      id: nullableString(payload.id),
+      invalidatedId: nullableString(payload.invalidated_id),
+      outcome: String(payload.outcome) as McpWriteMemoryResult["outcome"],
+    };
   }
 
   async appendNote(
@@ -355,6 +423,7 @@ export class SupabaseMcpStore implements McpStore {
       findings,
       receipts,
       indexEntries,
+      memoryEntries,
     ] = await Promise.all([
       this.client
         .from("repositories")
@@ -398,6 +467,11 @@ export class SupabaseMcpStore implements McpStore {
           "id, repository_id, node_id, neighbor_ids, search_key, entry_type, title, path, headings, tags, symbols",
         )
         .eq("workspace_id", workspaceId),
+      this.client
+        .from("memory_block_entries")
+        .select("id, anchor_node_id, name, entry_key, text, valid_from")
+        .eq("workspace_id", workspaceId)
+        .is("invalidated_at", null),
     ]);
     for (const [label, result] of [
       ["repositories", repositories],
@@ -409,6 +483,7 @@ export class SupabaseMcpStore implements McpStore {
       ["findings", findings],
       ["receipts", receipts],
       ["index entries", indexEntries],
+      ["memory entries", memoryEntries],
     ] as const)
       queryError(`MCP ${label} query failed`, result.error);
 
@@ -426,8 +501,38 @@ export class SupabaseMcpStore implements McpStore {
     const receiptRows = rows(receipts.data);
     const indexRows = rows(indexEntries.data);
 
+    const artifactPathById = new Map(
+      artifactRows.map((row) => [
+        requiredString(row, "id"),
+        requiredString(row, "path"),
+      ]),
+    );
+
     return {
       id: workspaceId,
+      memoryEntries: rows(memoryEntries.data).flatMap((row) => {
+        const name = String(row.name);
+        if (
+          name !== "conventions" &&
+          name !== "decisions" &&
+          name !== "gotchas"
+        )
+          return [];
+        const anchorNodeId = nullableString(row.anchor_node_id);
+        return [
+          {
+            anchorNodeId,
+            anchorPath: anchorNodeId
+              ? (artifactPathById.get(anchorNodeId) ?? null)
+              : null,
+            entryKey: requiredString(row, "entry_key"),
+            id: requiredString(row, "id"),
+            name,
+            text: requiredString(row, "text"),
+            updatedAt: requiredString(row, "valid_from"),
+          },
+        ];
+      }),
       ownerUserId: principal.userId,
       repositories: rows(repositories.data).map((repository) => {
         const repositoryId = requiredString(repository, "id");

@@ -255,8 +255,33 @@ export function searchWorkspaceIndex(
 
   const bonus = connectivityBonus(workspace, directNodeIds);
 
-  return entries
-    .flatMap(({ entry, repositoryId }) => {
+  // Memory blocks surface next to code (Wave D todo 10): what an earlier
+  // agent distilled is retrievable through the same search the next agent
+  // already uses. Path-symbol tier — a stored note is never an exact hit.
+  const memoryResults: SearchIndexResult[] = (workspace.memoryEntries ?? [])
+    .filter((entry) =>
+      !input.typeFilter || input.typeFilter === "memory"
+        ? includesEveryToken(
+            `${entry.name} ${entry.entryKey} ${entry.text}`,
+            tokens,
+          )
+        : false,
+    )
+    .map((entry) => ({
+      excerpt: entry.text.slice(0, 280),
+      id: entry.id,
+      neighborIds: entry.anchorNodeId ? [entry.anchorNodeId] : [],
+      nodeId: entry.id,
+      path: entry.anchorPath ?? `memory/${entry.name}/${entry.entryKey}`,
+      rank: "path-symbol" as const,
+      repositoryId: "",
+      score: scoreFor("path-symbol"),
+      title: `${entry.name}: ${entry.entryKey}`,
+      type: "memory" as const,
+    }));
+
+  const entryResults: SearchIndexResult[] = entries.flatMap(
+    ({ entry, repositoryId }) => {
       const rank = ranks.get(entry.id);
       if (!rank || (input.typeFilter && entry.type !== input.typeFilter))
         return [];
@@ -274,7 +299,10 @@ export function searchWorkspaceIndex(
           type: entry.type,
         },
       ];
-    })
+    },
+  );
+
+  return [...entryResults, ...memoryResults]
     .sort(
       (left, right) =>
         right.score - left.score ||

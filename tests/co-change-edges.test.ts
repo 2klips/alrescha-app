@@ -92,6 +92,7 @@ describe("co-change display edges (Wave B todo 4)", () => {
       { classification: "code_metadata", id: "node-a", path: "src/a.ts" },
       { classification: "code_metadata", id: "node-b", path: "src/b.ts" },
     ],
+    assertions: [],
     coChanges: [],
     edges: [],
     evidence: [],
