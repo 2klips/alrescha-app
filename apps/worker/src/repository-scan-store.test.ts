@@ -21,6 +21,7 @@ import { RepositoryScanStore } from "./repository-scan-store";
 
 const PLAN: RepositoryScanPlan = {
   artifacts: [],
+  codeLinks: [],
   commitSha: "a".repeat(40),
   removedPaths: [],
   skipped: [],

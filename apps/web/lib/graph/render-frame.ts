@@ -153,10 +153,22 @@ export function edgeStroke(
     return { alpha: 0.85, colorToken: null, dashed: true, width: 1.6 };
   }
   switch (edge.tier) {
+    // Structural facts paint the neutral line colour, not an evidence colour:
+    // an import proves wiring, not a claim (Wave B keeps the vocabularies apart).
     case "resolved":
-      return { alpha: 0.5, colorToken: null, dashed: false, width: 1.25 };
+      return {
+        alpha: 0.55,
+        colorToken: "line-strong",
+        dashed: false,
+        width: 1.25,
+      };
     case "reference":
-      return { alpha: 0.3, colorToken: null, dashed: false, width: 0.7 };
+      return {
+        alpha: 0.35,
+        colorToken: "line-strong",
+        dashed: false,
+        width: 0.7,
+      };
     case "inferred":
       return { alpha: 0.42, colorToken: null, dashed: true, width: 1 };
     case "agent_asserted":

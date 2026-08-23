@@ -61,6 +61,7 @@ const PALETTE: GraphPalette = {
   "focus-in": 0x00f0f0,
   "focus-out": 0xf0a000,
   inferred: 0x333333,
+  "line-strong": 0x777777,
   "node-code": 0x444444,
   text: 0x555555,
   verified: 0x00d000,
@@ -68,15 +69,16 @@ const PALETTE: GraphPalette = {
 
 describe("edge stroke grammar (todo 2)", () => {
   it("renders each confidence tier as its own line style", () => {
+    // Structural tiers paint the neutral line colour — wiring, not evidence.
     expect(edgeStroke({ broken: false, tier: "resolved" })).toEqual({
-      alpha: 0.5,
-      colorToken: null,
+      alpha: 0.55,
+      colorToken: "line-strong",
       dashed: false,
       width: 1.25,
     });
     expect(edgeStroke({ broken: false, tier: "reference" })).toEqual({
-      alpha: 0.3,
-      colorToken: null,
+      alpha: 0.35,
+      colorToken: "line-strong",
       dashed: false,
       width: 0.7,
     });
@@ -162,8 +164,8 @@ describe("directional focus (todo 2)", () => {
     expect(byId.get("in")?.color).toBe(PALETTE["focus-in"]);
     expect(byId.get("in")?.alpha).toBe(0.9);
     // Unconnected edges keep their colour but drop to a fraction of their alpha.
-    expect(byId.get("far")?.color).toBe(PALETTE.inferred);
-    expect(byId.get("far")?.alpha).toBeCloseTo(0.5 * 0.15, 5);
+    expect(byId.get("far")?.color).toBe(PALETTE["line-strong"]);
+    expect(byId.get("far")?.alpha).toBeCloseTo(0.55 * 0.15, 5);
   });
 
   it("fades nodes outside the neighborhood and keeps it labeled only", () => {
@@ -193,7 +195,7 @@ describe("directional focus (todo 2)", () => {
       selectedNodeId: "island",
     });
     expect(frame.nodes.every((entry) => entry.alpha === 1)).toBe(true);
-    expect(frame.edges.every((entry) => entry.alpha === 0.5)).toBe(true);
+    expect(frame.edges.every((entry) => entry.alpha === 0.55)).toBe(true);
   });
 
   it("does nothing without the flag or without a selection", () => {
@@ -204,9 +206,9 @@ describe("directional focus (todo 2)", () => {
       selectedNodeId: "sel",
     });
     expect(plain.nodes.every((entry) => entry.alpha === 1)).toBe(true);
-    expect(plain.edges.every((entry) => entry.color === PALETTE.inferred)).toBe(
-      true,
-    );
+    expect(
+      plain.edges.every((entry) => entry.color === PALETTE["line-strong"]),
+    ).toBe(true);
 
     const unselected = buildRenderFrame({
       data,

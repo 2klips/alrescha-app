@@ -65,7 +65,7 @@ MVP의 "확인" 단계부터 막는다: 파일럿이 만든 실데이터 370노�
 
 Graft 패스 1 상당 — LLM 없이 그래프의 정보 밀도를 올린다. **tree-sitter 도입 없이** 기존 엔진 체인으로(ADR-014 준수; 다언어 확장 필요 시 OQ-019 판정 후).
 
-- [ ] **3. import/call 엣지 추출 — 신뢰도 2티어**
+- [x] **3. import/call 엣지 추출 — 신뢰도 2티어** _(2026-08-23 완료 — TS는 모듈 해석·import 바인딩 호출까지 resolved, 이름 매칭은 단독 소유자만 reference, Python은 import만. Go는 go.mod 해석 필요라 OQ-019와 함께 재검토. `.omo/evidence/phase3/wave-b-todo-3.md`)_
       `repository-scanner.ts`의 TS/JS 엔진(TS 컴파일러 API)에 import 엣지(모듈 해석 = `resolved`)와 call 엣지(체커로 해석되면 `resolved`, 이름 매칭 폴백은 `reference`) 추가. Python/Go 구조 파서는 import만(`reference`). 엣지는 `edges` 테이블에 provenance(소스 스팬)와 함께 — 하드룰 "모든 엣지는 provenance" 준수. 스캔은 여전히 0크레딧·본문 transient.
       수용 기준: 픽스처 레포에서 기대 엣지 스냅샷(티어별), 증분 재스캔 시 변경 파일의 엣지만 교체됨을 증명, `symbolEngine` provenance 유지, 스캔 시간 회귀 가드(파일럿 레포 기준 상한 기록).
       Commit: `feat(ingest): extract import and call edges with confidence tiers`

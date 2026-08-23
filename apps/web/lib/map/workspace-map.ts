@@ -235,9 +235,11 @@ function isDisplayRelation(
   value: string,
 ): value is GraphEdgeProvenance["relation"] {
   return [
+    "calls",
     "contradicts",
     "declares",
     "implements",
+    "imports",
     "references",
     "requires",
     "supersedes",

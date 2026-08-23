@@ -11,6 +11,7 @@ const READONLY_TOKEN = "sp_mcp_readonly";
 
 const EMPTY_PLAN = {
   artifacts: [],
+  codeLinks: [],
   commitSha: "a".repeat(40),
   removedPaths: [],
   skipped: [],

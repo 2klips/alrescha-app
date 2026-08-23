@@ -73,6 +73,8 @@ export const PROMPT_CAPTURE_MCP_MIGRATION =
   "supabase/migrations/202608170008_prompt_capture_mcp.sql";
 export const RATIONALE_READ_GRANTS_MIGRATION =
   "supabase/migrations/202608230001_rationale_read_grants.sql";
+export const CODE_LINK_EDGES_MIGRATION =
+  "supabase/migrations/202608230002_code_link_edges.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -100,6 +102,7 @@ export const ALL_MIGRATIONS = [
   COACHING_JOB_KIND_MIGRATION,
   FINDING_FINGERPRINT_MIGRATION,
   RATIONALE_READ_GRANTS_MIGRATION,
+  CODE_LINK_EDGES_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

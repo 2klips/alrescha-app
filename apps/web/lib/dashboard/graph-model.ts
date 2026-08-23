@@ -52,9 +52,11 @@ export interface GraphEdgeProvenance {
    * vocabulary — `/app/map` renders stored rows verbatim (Phase 3 Wave A).
    */
   relation:
+    | "calls"
     | "contradicts"
     | "declares"
     | "implements"
+    | "imports"
     | "references"
     | "requires"
     | "supersedes"

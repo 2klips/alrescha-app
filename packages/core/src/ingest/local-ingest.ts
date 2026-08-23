@@ -78,8 +78,22 @@ const scannedArtifactSchema = z.strictObject({
   todoItems: z.array(todoItemSchema).max(10_000),
 });
 
+const codeLinkSchema = z.strictObject({
+  kind: z.enum(["calls", "imports"]),
+  method: z.enum(["import-binding", "module-resolution", "name-match"]),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  symbols: z.array(z.string().min(1).max(400)).max(8),
+  targetPath: z.string().min(1).max(1000),
+  tier: z.enum(["reference", "resolved"]),
+});
+
 export const repositoryScanPlanSchema = z.strictObject({
   artifacts: z.array(scannedArtifactSchema).max(100_000),
+  codeLinks: z.array(codeLinkSchema).max(200_000),
   commitSha: sha1Schema,
   removedPaths: z.array(z.string().min(1).max(1000)).max(100_000),
   skipped: z

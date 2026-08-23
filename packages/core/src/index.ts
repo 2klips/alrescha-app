@@ -43,6 +43,20 @@ export type {
 } from "./ai/judgment";
 
 export {
+  parsePythonLinks,
+  parseTypeScriptLinks,
+  resolveCodeLinks,
+  resolvePythonModule,
+  resolveTypeScriptSpecifier,
+} from "./ingest/code-links";
+export type {
+  CodeLink,
+  CodeLinkKind,
+  CodeLinkMethod,
+  CodeLinkTier,
+} from "./ingest/code-links";
+
+export {
   classifyArtifactPath,
   extractExportedSymbols,
   extractRationales,

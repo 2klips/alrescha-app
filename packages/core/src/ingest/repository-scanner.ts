@@ -3,6 +3,13 @@ import { createHash } from "node:crypto";
 import ts from "typescript";
 
 import { parseTodoDocument, type ParsedTodoItem } from "../progress/todos";
+import {
+  parsePythonLinks,
+  parseTypeScriptLinks,
+  resolveCodeLinks,
+  type CodeLink,
+  type ParsedFileLinks,
+} from "./code-links";
 
 export type ArtifactClassification =
   | "adr"
@@ -94,6 +101,12 @@ export interface ScanSkip {
 
 export interface RepositoryScanPlan {
   readonly artifacts: readonly ScannedArtifact[];
+  /**
+   * Cross-file structure links from the files scanned this pass (Phase 3
+   * Wave B todo 3). Links from unchanged files are not recomputed — their
+   * stored edges remain valid, which is what makes the rescan incremental.
+   */
+  readonly codeLinks: readonly CodeLink[];
   readonly commitSha: string;
   readonly removedPaths: readonly string[];
   readonly skipped: readonly ScanSkip[];
@@ -490,6 +503,7 @@ export async function scanRepository(input: {
   if (input.previousCommitSha === input.commitSha) {
     return {
       artifacts: [],
+      codeLinks: [],
       commitSha: input.commitSha,
       removedPaths: [],
       skipped: [],
@@ -517,6 +531,8 @@ export async function scanRepository(input: {
   const artifacts: ScannedArtifact[] = [];
   const skipped: ScanSkip[] = [];
   const unchangedPaths: string[] = [];
+  const parsedLinks = new Map<string, ParsedFileLinks>();
+  const knownCodePaths = new Set<string>();
 
   for (const entry of [...tree.entries].sort((left, right) =>
     left.path.localeCompare(right.path),
@@ -546,6 +562,9 @@ export async function scanRepository(input: {
       continue;
     }
     observedPaths.add(entry.path);
+    if (classification === "code_metadata") {
+      knownCodePaths.add(entry.path);
+    }
 
     if ((entry.size ?? 0) > maxFileBytes) {
       skipped.push({
@@ -592,6 +611,12 @@ export async function scanRepository(input: {
         ? extractSymbols(entry.path, source)
         : null;
 
+    if (extraction?.engine === "typescript-ast") {
+      parsedLinks.set(entry.path, parseTypeScriptLinks(entry.path, source));
+    } else if (extraction?.engine === "python-structural") {
+      parsedLinks.set(entry.path, parsePythonLinks(source));
+    }
+
     artifacts.push({
       classification,
       digest,
@@ -616,8 +641,35 @@ export async function scanRepository(input: {
   const removedPaths = [...previousByPath.keys()]
     .filter((path) => !observedPaths.has(path))
     .sort();
+
+  // Name-match resolution sees every known export: files scanned this pass
+  // override their previous record; unchanged files keep their stored symbols.
+  const exportsByPath = new Map<string, ReadonlySet<string>>();
+  for (const [path, previous] of previousByPath) {
+    if (observedPaths.has(path)) {
+      exportsByPath.set(
+        path,
+        new Set(previous.exportedSymbols.map(({ name }) => name)),
+      );
+    }
+  }
+  for (const artifact of artifacts) {
+    if (artifact.classification === "code_metadata") {
+      exportsByPath.set(
+        artifact.path,
+        new Set(artifact.exportedSymbols.map(({ name }) => name)),
+      );
+    }
+  }
+  const codeLinks = resolveCodeLinks({
+    exportsByPath,
+    files: parsedLinks,
+    knownPaths: knownCodePaths,
+  });
+
   return {
     artifacts,
+    codeLinks,
     commitSha: input.commitSha,
     removedPaths,
     skipped,
