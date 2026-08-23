@@ -31,6 +31,13 @@ export const WORKSPACE_MAP = {
     connect: "GitHub 레포 연결",
   },
 
+  /** 방향 포커스 범례 — 선택한 노드 기준 엣지 색의 의미. */
+  focus: {
+    aria: "방향 포커스 범례",
+    out: "의존한다",
+    in: "의존받는다",
+  },
+
   inspector: {
     kicker: "선택한 노드",
     aria: "선택한 노드 상세",

@@ -21,6 +21,16 @@ export type DashboardState =
 export type EvidenceGrade = "verified" | "inferred" | "broken";
 export type GraphNodeType = "requirement" | "document" | "code" | "test";
 
+/**
+ * How a link was derived (Phase 3 Wave A todo 2) — separate from the evidence
+ * grade, which says what the link *proves*. `resolved` = deterministic
+ * extraction with a source span, `reference` = name matching, `inferred` = AI
+ * synthesis, `agent_asserted` = written by an agent over MCP. Rendered as line
+ * style: solid / thin solid / dashed / dashed in the accent colour.
+ */
+export type EdgeConfidenceTier =
+  "agent_asserted" | "inferred" | "reference" | "resolved";
+
 export interface GraphNode {
   clusterCount?: number;
   findingCount: number;
@@ -61,6 +71,8 @@ export interface GraphEdge {
   provenance: GraphEdgeProvenance;
   source: string;
   target: string;
+  /** Absent on demo fixtures — the renderer then keeps the legacy stroke. */
+  tier?: EdgeConfidenceTier;
 }
 
 export interface GraphData {

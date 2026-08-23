@@ -101,6 +101,12 @@
   --node-code: var(--verified);
   --node-test: var(--inferred);
 
+  /* Focus-mode direction strokes (Phase 3 Wave A todo 2, Graft focus UX):
+     선택한 노드의 진출 엣지 = "의존한다"(앰버), 진입 엣지 = "의존받는다"(틸).
+     Graph strokes and legend dots only — never text. */
+  --focus-out: #ff9e57;
+  --focus-in: #4fd8c6;
+
   /* Derived roles used across the app chrome. */
   --accent: var(--info);
   --danger: var(--brand);
@@ -166,6 +172,10 @@
   /* Accent text/fill must clear AA on white; the brighter Toss blue stays on
      --info for graphics (nodes, bars) where large-area color is the point. */
   --accent: #1b64da;
+
+  /* Focus-mode direction strokes — darkened for the paper ground. */
+  --focus-out: #b45309;
+  --focus-in: #0f766e;
 
   --on-brand: #ffffff;
   --on-accent: #ffffff;

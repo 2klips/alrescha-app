@@ -364,6 +364,21 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
                 <i className="test" />
                 {DASHBOARD.legend.test}
               </span>
+              {selectedNode ? (
+                <>
+                  <span
+                    aria-label={WORKSPACE_MAP.focus.aria}
+                    data-testid="focus-legend-out"
+                  >
+                    <i className="focus-out" />
+                    {WORKSPACE_MAP.focus.out}
+                  </span>
+                  <span data-testid="focus-legend-in">
+                    <i className="focus-in" />
+                    {WORKSPACE_MAP.focus.in}
+                  </span>
+                </>
+              ) : null}
             </div>
           </header>
           <div
@@ -462,6 +477,7 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
               <BrainMapStage
                 afterglow={afterglow}
                 data={visibleGraph}
+                directionalFocus
                 focusNodeId={cameraFocusNodeId}
                 glow={glow}
                 onLodReport={(level, labels) => setHudLod({ labels, level })}

@@ -89,20 +89,30 @@ test("a scanned workspace renders its own nodes on the map", async ({
     await expect(page.getByTestId("workspace-map-empty")).toHaveCount(0);
 
     // The header names the connected repository and the scanned commit.
-    await expect(
-      page.getByRole("heading", { level: 1 }),
-    ).toContainText("local/map-e2e");
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      "local/map-e2e",
+    );
     await expect(page.locator(".arr-proof-heading .arr-kicker")).toContainText(
       commitSha.slice(0, 7),
     );
 
     // Selecting a hit target fills the inspector with the stored node.
     const firstHit = page.locator(".brain-map-hit").first();
+    const selectedNodeId = await firstHit.getAttribute("data-node-id");
     await firstHit.click();
     const inspector = page.getByRole("complementary", {
       name: "선택한 노드 상세",
     });
     await expect(inspector.locator("h2")).not.toBeEmpty();
+
+    // Directional focus (todo 2): selection arms the focus mode and surfaces
+    // the direction legend (outgoing 의존한다 / incoming 의존받는다).
+    await expect(stage).toHaveAttribute(
+      "data-focus-node",
+      selectedNodeId ?? "",
+    );
+    await expect(page.getByTestId("focus-legend-out")).toBeVisible();
+    await expect(page.getByTestId("focus-legend-in")).toBeVisible();
   } finally {
     await deleteWorkspaceUser(user.userId);
   }

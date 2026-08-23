@@ -215,13 +215,35 @@ describe("workspace map builder (Phase 3 Wave A todo 1)", () => {
     expect(rationale?.provenance.startLine).toBe(12);
     expect(rationale?.provenance.relation).toBe("references");
     expect(rationale?.grade).toBe("inferred");
+    // Span provenance = deterministic extraction → resolved tier (todo 2).
+    expect(rationale?.tier).toBe("resolved");
 
     const supports = byId.get("edge-supports");
     expect(supports?.grade).toBe("verified");
+    expect(supports?.tier).toBe("inferred");
 
     const contradicts = byId.get("edge-contradicts");
     expect(contradicts?.broken).toBe(true);
     expect(contradicts?.grade).toBe("broken");
+  });
+
+  it("honors an explicit provenance tier over the derived one", () => {
+    const rows = fixtureRows();
+    const asserted: MapEdgeRow = {
+      confidence: 0.8,
+      id: "edge-asserted",
+      provenance: { reason: "agent note", tier: "agent_asserted" },
+      relation: "references",
+      source_node_id: "node-rationale",
+      target_node_id: "node-spec",
+    };
+    const model = buildWorkspaceMapModel(WORKSPACE, {
+      ...rows,
+      edges: [...rows.edges, asserted],
+    });
+    expect(
+      model.graph.edges.find((edge) => edge.id === "edge-asserted")?.tier,
+    ).toBe("agent_asserted");
   });
 
   it("counts what is stored and lists revoked tokens for the glow policy", () => {

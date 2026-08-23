@@ -5,6 +5,7 @@ import { deriveBrainArea, type ArtifactClassification } from "@arr/core";
 import {
   clusterGraph,
   forceDirectedLayout,
+  type EdgeConfidenceTier,
   type EvidenceGrade,
   type GraphData,
   type GraphEdge,
@@ -202,6 +203,34 @@ function parseEdgeProvenance(value: unknown): ParsedProvenance {
   return { endLine: 0, sourcePath: "", startLine: 0 };
 }
 
+const CONFIDENCE_TIERS: readonly EdgeConfidenceTier[] = [
+  "agent_asserted",
+  "inferred",
+  "reference",
+  "resolved",
+];
+
+/**
+ * Derivation tier (todo 2). An explicit `provenance.tier` wins (Waves B–D
+ * write it); otherwise a source span marks deterministic extraction
+ * (`resolved`) and a reason-only provenance stays `inferred`.
+ */
+function edgeConfidenceTier(
+  provenance: unknown,
+  parsed: ParsedProvenance,
+): EdgeConfidenceTier {
+  if (typeof provenance === "object" && provenance !== null) {
+    const tier = (provenance as Record<string, unknown>)["tier"];
+    if (
+      typeof tier === "string" &&
+      (CONFIDENCE_TIERS as readonly string[]).includes(tier)
+    ) {
+      return tier as EdgeConfidenceTier;
+    }
+  }
+  return parsed.sourcePath.length > 0 ? "resolved" : "inferred";
+}
+
 function isDisplayRelation(
   value: string,
 ): value is GraphEdgeProvenance["relation"] {
@@ -354,6 +383,7 @@ export function buildWorkspaceMapModel(
       },
       source: row.source_node_id,
       target: row.target_node_id,
+      tier: edgeConfidenceTier(row.provenance, provenance),
     });
   }
 

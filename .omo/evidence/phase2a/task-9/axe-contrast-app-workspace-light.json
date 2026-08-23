@@ -311,7 +311,7 @@
       "target": ".graph-force-reset"
     },
     {
-      "html": "<small data-testid=\"graph-lod-status\">줌 단계 중경 · 라벨 11개</small>",
+      "html": "<small data-testid=\"graph-lod-status\">줌 단계 중경 · 라벨 10개</small>",
       "message": "Element's background color could not be determined because element contains an image node",
       "target": "small[data-testid=\"graph-lod-status\"]"
     }

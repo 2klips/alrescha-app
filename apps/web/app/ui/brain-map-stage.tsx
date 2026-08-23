@@ -48,6 +48,8 @@ export interface BrainMapStageProps {
   /** Nodes carrying the residual afterglow tint. */
   afterglow?: ReadonlySet<string>;
   data: GraphData;
+  /** Directional focus (todo 2): selection tints edges by dependency direction. */
+  directionalFocus?: boolean;
   /** Camera target — the activity feed's "fly to this node" gesture. */
   focusNodeId?: string | null;
   /** Node id → 0…1 neuron-glow intensity (see `lib/graph/glow.ts`). */
@@ -92,6 +94,7 @@ export function hitTargets(
 export function BrainMapStage({
   afterglow,
   data,
+  directionalFocus,
   focusNodeId,
   glow,
   onEdgeSelect,
@@ -157,6 +160,9 @@ export function BrainMapStage({
       aria-label={DASHBOARD.canvasLabel(data.nodes.length)}
       className="brain-map-stage"
       data-canvas-nodes={data.nodes.length}
+      data-focus-node={
+        directionalFocus && selectedNodeId ? selectedNodeId : undefined
+      }
       data-glow-active={glow ? glow.size : 0}
       data-lod={lod.level}
       data-lod-labels={lod.labels}
@@ -167,6 +173,7 @@ export function BrainMapStage({
         <BrainMap
           {...(afterglow ? { afterglow } : {})}
           data={data}
+          {...(directionalFocus === undefined ? {} : { directionalFocus })}
           {...(focusNodeId === undefined ? {} : { focusNodeId })}
           forceConfig={forceConfig}
           {...(glow ? { glow } : {})}

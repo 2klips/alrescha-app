@@ -127,6 +127,17 @@ single `var(--verified-text)` is correct in both themes.
 | `--on-accent`   | `#0B0E14` | `#FFFFFF` |
 | `--on-verified` | `#0B0E14` | `#FFFFFF` |
 
+### 3.4 Directional-focus strokes (Phase 3 Wave A todo 2)
+
+Graph-only colours: a selected node's **outgoing** edges paint `--focus-out`
+("의존한다") and **incoming** ones `--focus-in` ("의존받는다"). Strokes and
+legend dots only — these never carry text, so they have no `-text` siblings.
+
+| token         | dark      | light     |
+| ------------- | --------- | --------- |
+| `--focus-out` | `#FF9E57` | `#B45309` |
+| `--focus-in`  | `#4FD8C6` | `#0F766E` |
+
 ---
 
 ## 4. Graph node colours

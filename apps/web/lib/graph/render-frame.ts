@@ -11,6 +11,7 @@
 import type {
   EvidenceGrade,
   GraphData,
+  GraphEdge,
   GraphNode,
 } from "../dashboard/graph-model";
 import type { DesignToken } from "../theme/tokens";
@@ -131,6 +132,40 @@ export function edgeColorToken(grade: EvidenceGrade): DesignToken {
   return EDGE_TOKEN_BY_GRADE[grade];
 }
 
+export interface EdgeStroke {
+  alpha: number;
+  /** `null` = paint the evidence-grade colour, as before. */
+  colorToken: DesignToken | null;
+  dashed: boolean;
+  width: number;
+}
+
+/**
+ * Confidence-tier stroke grammar (Phase 3 Wave A todo 2): how a link was
+ * derived is line *style*; what it proves stays line *colour* (grade). Broken
+ * evidence keeps its red dash whatever the tier — drift outranks derivation.
+ * Edges without a tier (the demo fixtures) keep the legacy stroke.
+ */
+export function edgeStroke(
+  edge: Pick<GraphEdge, "broken" | "tier">,
+): EdgeStroke {
+  if (edge.broken) {
+    return { alpha: 0.85, colorToken: null, dashed: true, width: 1.6 };
+  }
+  switch (edge.tier) {
+    case "resolved":
+      return { alpha: 0.5, colorToken: null, dashed: false, width: 1.25 };
+    case "reference":
+      return { alpha: 0.3, colorToken: null, dashed: false, width: 0.7 };
+    case "inferred":
+      return { alpha: 0.42, colorToken: null, dashed: true, width: 1 };
+    case "agent_asserted":
+      return { alpha: 0.6, colorToken: "accent", dashed: true, width: 1.2 };
+    default:
+      return { alpha: 0.42, colorToken: null, dashed: false, width: 1 };
+  }
+}
+
 /** Degree-proportional dot size — the Obsidian "constellation" cue. */
 export function nodeRadius(degree: number, clusterCount?: number): number {
   const base = 3.2 + Math.sqrt(Math.max(0, degree)) * 1.9;
@@ -159,6 +194,12 @@ export interface FrameInput {
   assignment?: ReadonlyMap<string, string>;
   camera?: Camera;
   data: GraphData;
+  /**
+   * Graft-style focus mode (Phase 3 Wave A todo 2): with a node selected, its
+   * outgoing edges paint `focus-out`, incoming ones `focus-in`, and everything
+   * unconnected fades. Off by default — the demo dashboard keeps its look.
+   */
+  directionalFocus?: boolean;
   /** Communities the user clicked open. */
   expanded?: ReadonlySet<string>;
   /** Node id → 0..1 glow intensity. */
@@ -210,6 +251,19 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
   const placed = new Map<string, Position>();
   const candidates: LabelCandidate[] = [];
 
+  const focusedNodeId =
+    input.directionalFocus && input.selectedNodeId
+      ? input.selectedNodeId
+      : null;
+  const focusNeighborhood = new Set<string>();
+  if (focusedNodeId) {
+    focusNeighborhood.add(focusedNodeId);
+    for (const edge of data.edges) {
+      if (edge.source === focusedNodeId) focusNeighborhood.add(edge.target);
+      if (edge.target === focusedNodeId) focusNeighborhood.add(edge.source);
+    }
+  }
+
   const nodes: RenderNode[] = data.nodes.map((node) => {
     const position = collapsed.positions.get(node.id) ?? {
       x: node.x,
@@ -228,7 +282,7 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     });
     return {
       afterglow: input.afterglow?.has(node.id) ?? false,
-      alpha: 1,
+      alpha: focusedNodeId && !focusNeighborhood.has(node.id) ? 0.22 : 1,
       badge: badges ? node.grade : null,
       clusterCount: node.clusterCount ?? null,
       color: resolveColor(input.palette, nodeColorToken(node.type)),
@@ -251,17 +305,34 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
       glow?.get(edge.source) ?? 0,
       glow?.get(edge.target) ?? 0,
     );
+    const stroke = edgeStroke(edge);
+    let alpha = stroke.alpha;
+    let color = resolveColor(
+      input.palette,
+      stroke.colorToken ?? edgeColorToken(edge.grade),
+    );
+    if (focusedNodeId) {
+      if (edge.source === focusedNodeId) {
+        color = resolveColor(input.palette, "focus-out");
+        alpha = 0.9;
+      } else if (edge.target === focusedNodeId) {
+        color = resolveColor(input.palette, "focus-in");
+        alpha = 0.9;
+      } else {
+        alpha = stroke.alpha * 0.15;
+      }
+    }
     edges.push({
-      alpha: edge.broken ? 0.85 : 0.42,
-      color: resolveColor(input.palette, edgeColorToken(edge.grade)),
-      dashed: edge.broken,
+      alpha,
+      color,
+      dashed: stroke.dashed,
       flow: touch,
       id: edge.id,
       sourceX: source.x,
       sourceY: source.y,
       targetX: target.x,
       targetY: target.y,
-      width: edge.broken ? 1.6 : 1,
+      width: stroke.width,
     });
   }
 
@@ -281,6 +352,9 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
   const labels: RenderLabel[] = [];
   for (const node of nodes) {
     if (!selected.has(node.id)) continue;
+    // Focus mode labels only the neighborhood — the fade already de-emphasises
+    // the rest, and a bright label over a dim node would contradict it.
+    if (focusedNodeId && !focusNeighborhood.has(node.id)) continue;
     const candidate = byId.get(node.id);
     if (!candidate) continue;
     labels.push({

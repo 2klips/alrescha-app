@@ -28,6 +28,8 @@ export interface BrainMapProps {
   /** Nodes carrying the residual afterglow tint. */
   afterglow?: ReadonlySet<string>;
   data: GraphData;
+  /** Directional focus mode: selection tints edges by direction (todo 2). */
+  directionalFocus?: boolean;
   /** Camera target — the activity feed's "fly to this node" gesture. */
   focusNodeId?: string | null;
   forceConfig?: Partial<ForceConfig>;
@@ -63,6 +65,7 @@ const MIN_HIT_SIZE = 20;
 export function BrainMap({
   afterglow,
   data,
+  directionalFocus,
   focusNodeId,
   forceConfig,
   glow,
@@ -74,8 +77,20 @@ export function BrainMap({
   viewport: viewportRef,
 }: BrainMapProps) {
   const engineRef = useRef<GraphEngine | null>(null);
-  const latest = useRef({ data, forceConfig, seed, textFadeThreshold });
-  latest.current = { data, forceConfig, seed, textFadeThreshold };
+  const latest = useRef({
+    data,
+    directionalFocus,
+    forceConfig,
+    seed,
+    textFadeThreshold,
+  });
+  latest.current = {
+    data,
+    directionalFocus,
+    forceConfig,
+    seed,
+    textFadeThreshold,
+  };
   const started = useRef(false);
   const hitLayerRef = useRef(hitLayer);
   hitLayerRef.current = hitLayer;
@@ -180,6 +195,7 @@ export function BrainMap({
       engine = created;
       engineRef.current = created;
       started.current = true;
+      created.setDirectionalFocus(latest.current.directionalFocus ?? false);
       let reportedLod = "";
       let reportedLabels = -1;
       let syncedAt = 0;
@@ -299,6 +315,10 @@ export function BrainMap({
   useEffect(() => {
     engineRef.current?.setSelectedNode(selectedNodeId ?? null);
   }, [selectedNodeId]);
+
+  useEffect(() => {
+    engineRef.current?.setDirectionalFocus(directionalFocus ?? false);
+  }, [directionalFocus]);
 
   // Camera moves are not layout moves: focusing re-aims the view and leaves the
   // simulation running exactly as it was.

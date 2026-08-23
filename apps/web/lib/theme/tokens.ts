@@ -59,11 +59,19 @@ export const NODE_TOKENS = [
 /** Typography. */
 export const FONT_TOKENS = ["font-sans", "font-mono"] as const;
 
+/**
+ * Directional focus strokes (Phase 3 Wave A todo 2): a selected node's
+ * outgoing edges paint `focus-out`, incoming ones `focus-in`. Stroke and
+ * legend-dot colours only — never text.
+ */
+export const FOCUS_TOKENS = ["focus-out", "focus-in"] as const;
+
 /** Every semantic token that both themes must resolve. */
 export const DESIGN_TOKENS = [
   ...SURFACE_TOKENS,
   ...STATUS_TOKENS,
   ...NODE_TOKENS,
+  ...FOCUS_TOKENS,
   ...FONT_TOKENS,
 ] as const;
 

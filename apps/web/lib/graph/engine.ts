@@ -143,6 +143,7 @@ export interface GraphEngine {
     intensities: ReadonlyMap<string, number>,
     afterglow?: ReadonlySet<string>,
   ): void;
+  setDirectionalFocus(enabled: boolean): void;
   setPalette(palette: GraphPalette): void;
   setSelectedNode(nodeId: string | null): void;
   setTextFadeThreshold(value: number): void;
@@ -165,6 +166,7 @@ export async function createGraphEngine(
   let camera: Camera = { ...DEFAULT_CAMERA };
   let palette = options.palette;
   let selectedNodeId: string | null = null;
+  let directionalFocus = false;
   let viewport: Viewport = options.viewport ?? DEFAULT_VIEWPORT;
   let textFadeThreshold = options.textFadeThreshold ?? 0;
   let ready = false;
@@ -202,6 +204,7 @@ export async function createGraphEngine(
       assignment,
       camera,
       data,
+      directionalFocus,
       expanded,
       glow,
       palette,
@@ -279,6 +282,9 @@ export async function createGraphEngine(
     setGlow(intensities, nextAfterglow) {
       glow = intensities;
       afterglow = nextAfterglow ?? new Set();
+    },
+    setDirectionalFocus(enabled) {
+      directionalFocus = enabled;
     },
     setPalette(next) {
       palette = next;

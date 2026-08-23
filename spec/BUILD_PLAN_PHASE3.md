@@ -56,7 +56,7 @@ MVP의 "확인" 단계부터 막는다: 파일럿이 만든 실데이터 370노�
       수용 기준: 로더 단위 테스트(실DB 헬퍼, RLS 교차 테넌트 차단), 파일럿 워크스페이스에서 370노드 렌더 스냅샷, 빈 상태 테스트, 두 테마 axe AA 순회 편입, 착지 경로 단언(2C todo 5의 함정 재발 방지).
       Commit: `feat(map): render the live workspace graph`
 
-- [ ] **2. 신뢰도·출처 시각 문법**
+- [x] **2. 신뢰도·출처 시각 문법** _(2026-08-23 완료 — 티어는 grade와 분리된 선 스타일, broken 우선. 방향 포커스는 옵트인이라 데모 대시보드 불변. `--focus-out`/`--focus-in` 토큰 신설. `.omo/evidence/phase3/wave-a-todo-2.md`)_
       엣지 신뢰도(`resolved`/`reference`/`inferred`/`agent_asserted`)를 렌더 문법으로: 실선/가는 실선/점선/점선+색. Graft식 포커스 모드(노드 클릭 → 진출 엣지 앰버 "의존한다"·진입 틸 "의존받는다", 나머지 페이드)를 기존 엔진에 추가. 노드 크기는 차수(추후 todo 7의 PageRank로 교체 가능한 단일 함수로 격리).
       수용 기준: 신뢰도별 렌더 분기 단위 테스트, 포커스 모드 상호작용 Playwright 1건, 색은 `tokens.css` 팔레트만(hardcoded-hex 린트 통과).
       Commit: `feat(map): encode edge confidence and focus mode`

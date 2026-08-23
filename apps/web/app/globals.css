@@ -4438,6 +4438,17 @@ a {
   border-style: dashed;
 }
 
+/* Directional-focus legend (Phase 3 Wave A todo 2): the two edge tints a
+   selected node paints — outgoing "의존한다", incoming "의존받는다". */
+.arr-legend i.focus-out {
+  border-color: var(--focus-out);
+  border-radius: 50%;
+}
+.arr-legend i.focus-in {
+  border-color: var(--focus-in);
+  border-radius: 50%;
+}
+
 .arr-graph-controls {
   align-items: center;
   backdrop-filter: blur(14px);
