@@ -77,6 +77,8 @@ function isRelation(value: unknown): value is McpEdgeRelation {
     "contradicts",
     "supersedes",
     "references",
+    "imports",
+    "calls",
   ].includes(String(value));
 }
 

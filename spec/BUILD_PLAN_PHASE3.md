@@ -75,7 +75,7 @@ Graft 패스 1 상당 — LLM 없이 그래프의 정보 밀도를 올린다. **
       수용 기준: 웹훅 재생 픽스처로 엣지 생성 증명, 임계 미달 비생성, 그래프 뷰에서 토글 가능한 엣지 패밀리로 렌더.
       Commit: `feat(ingest): accumulate co-change edges from push history`
 
-- [ ] **5. PPR repo map + 시드 서브그래프 검색**
+- [x] **5. PPR repo map + 시드 서브그래프 검색** _(2026-08-23 완료 — MCP 17툴(repo_map·get_graph_schema 신설), 연결성 보너스 50 < 티어 간격 100이라 렉시컬 승자 불변, imports/calls가 MCP 계층에 편입. `.omo/evidence/phase3/wave-b-todo-5.md`)_
       `packages/core/src/brain/`에 개인화 PageRank(멱반복, 무방향, α·반복수는 Graft 초깃값 α=0.25·25회에서 시작해 상수로 격리). 신규 MCP 툴 ⑴ `repo_map(focus_symbols?, token_budget)` — 시그니처 스켈레톤을 예산까지 그리디 패킹(Aider 패턴) ⑵ 기존 `search_index`/`query_brain` 랭킹에 PPR 리랭크 결합(렉시컬 승자를 뒤집지 않는 가중 0.5·rescue floor). `get_graph_schema` 툴 신설(노드/엣지 타입·카운트 — "먼저 호출" 문서화). 툴 출력은 compact 텍스트 기본(CBM 패턴).
       수용 기준: PPR 단위 테스트(수렴·시드 편향), repo_map 토큰 예산 준수 테스트, 리랭크 전후 정답셋 순위 비교 픽스처, 툴 계약 테스트(스키마·readOnlyHint), 툴 수 증가에 따른 hosted.ts 계약 테스트 갱신.
       Commit: `feat(mcp): add pagerank repo map and graph schema tools`

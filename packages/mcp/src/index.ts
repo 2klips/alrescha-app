@@ -9,6 +9,19 @@ export {
   selectWorkspaceContextPack,
 } from "./data-brain";
 export {
+  REPO_MAP_DEFAULT_BUDGET,
+  REPO_MAP_MAX_BUDGET,
+  REPO_MAP_MIN_BUDGET,
+  buildGraphSchema,
+  buildRepoMap,
+  estimateTokens,
+} from "./repo-map";
+export type {
+  GraphSchemaResult,
+  RepoMapEntry,
+  RepoMapResult,
+} from "./repo-map";
+export {
   InMemoryMcpStore,
   MCP_SCOPES,
   createAccessTokenSecret,

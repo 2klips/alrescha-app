@@ -43,6 +43,13 @@ export type {
 } from "./ai/judgment";
 
 export {
+  PAGERANK_ALPHA,
+  PAGERANK_ITERATIONS,
+  personalizedPageRank,
+} from "./brain/pagerank";
+export type { PageRankEdge, PageRankInput } from "./brain/pagerank";
+
+export {
   parsePythonLinks,
   parseTypeScriptLinks,
   resolveCodeLinks,

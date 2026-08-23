@@ -1,8 +1,10 @@
 import {
   composeContextPack,
+  personalizedPageRank,
   type ContextDocument,
   type ContextDocumentKind,
   type ContextTargetAgent,
+  type PageRankEdge,
 } from "@arr/core";
 
 import type {
@@ -175,6 +177,49 @@ function scoreFor(rank: SearchRank): number {
   return 100;
 }
 
+/**
+ * PPR rerank (Phase 3 Wave B todo 5): connectivity reorders near-ties inside
+ * a tier, never across tiers — the bonus (≤50) stays under the 100-point tier
+ * gap, so a lexical winner cannot be overturned (the Graft weighting rule).
+ * The walk is seeded by the direct lexical hits; with no direct hit there is
+ * nothing to personalize and the bonus is zero everywhere.
+ */
+const PPR_TIER_BONUS = 50;
+
+function connectivityBonus(
+  workspace: McpWorkspaceData,
+  seeds: ReadonlySet<string>,
+): ReadonlyMap<string, number> {
+  if (seeds.size === 0) return new Map();
+  const nodeIds = new Set<string>();
+  const edges: PageRankEdge[] = [];
+  for (const repository of workspace.repositories) {
+    for (const artifact of repository.artifacts) nodeIds.add(artifact.id);
+    for (const requirement of repository.requirements) {
+      nodeIds.add(requirement.id);
+      edges.push({
+        source: requirement.sourceArtifactId,
+        target: requirement.id,
+      });
+    }
+    for (const evidence of repository.evidence) nodeIds.add(evidence.id);
+    for (const finding of repository.findings) nodeIds.add(finding.id);
+    for (const edge of repository.edges) {
+      edges.push({ source: edge.sourceNodeId, target: edge.targetNodeId });
+    }
+  }
+  const rank = personalizedPageRank({
+    edges,
+    nodes: [...nodeIds],
+    seeds: [...seeds],
+  });
+  const bonus = new Map<string, number>();
+  for (const [nodeId, score] of rank) {
+    bonus.set(nodeId, score * PPR_TIER_BONUS);
+  }
+  return bonus;
+}
+
 export function searchWorkspaceIndex(
   workspace: McpWorkspaceData,
   input: { query: string; typeFilter?: McpNodeType },
@@ -208,6 +253,8 @@ export function searchWorkspaceIndex(
     }
   }
 
+  const bonus = connectivityBonus(workspace, directNodeIds);
+
   return entries
     .flatMap(({ entry, repositoryId }) => {
       const rank = ranks.get(entry.id);
@@ -222,7 +269,7 @@ export function searchWorkspaceIndex(
           path: entry.path,
           rank,
           repositoryId,
-          score: scoreFor(rank),
+          score: scoreFor(rank) + (bonus.get(entry.nodeId) ?? 0),
           title: entry.title,
           type: entry.type,
         },

@@ -1,10 +1,10 @@
 {
   "arrowStepsMeasured": 14,
-  "arrowTraversalMs": 74,
+  "arrowTraversalMs": 49,
   "hitTargetLimit": 600,
   "nodeCount": 15,
   "note": "roving tabindex: tab stops in the layer = 1 (was up to 600); arrow keys traverse nodes",
-  "perStepMs": 5.29,
+  "perStepMs": 3.5,
   "returnedHomeTo": "req-auth",
   "tabStopsInLayer": 1
 }

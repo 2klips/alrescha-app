@@ -361,6 +361,7 @@ describe("hosted MCP contract", () => {
     expect(listed.tools.map(({ name }) => name)).toEqual([
       "get_artifact",
       "get_findings",
+      "get_graph_schema",
       "get_neighbors",
       "get_node_content",
       "impact_of",
@@ -369,6 +370,7 @@ describe("hosted MCP contract", () => {
       "record_note",
       "record_prompt",
       "record_ruled_out",
+      "repo_map",
       "request_context_pack",
       "route_query",
       "search_index",
@@ -419,18 +421,30 @@ describe("hosted MCP contract", () => {
           nodeId: "01K287J3D18V7A1MZG9E8D1Y11",
           path: "spec/WORK_SPEC.md",
           rank: "exact",
-          score: 400,
           type: "artifact",
         },
         {
           nodeId: "01K287J3D18V7A1MZG9E8D1Y21",
           rank: "graph-neighbor",
-          score: 100,
           type: "requirement",
         },
       ],
       workspaceId: WORKSPACE_ID,
     });
+    // Scores = tier base plus the connectivity bonus (Phase 3 Wave B todo 5).
+    // The bonus is capped under the 100-point tier gap, so an exact hit can
+    // never be outranked by a neighbor whatever the graph looks like.
+    const scored = (
+      result.structuredContent as {
+        results: { rank: string; score: number }[];
+      }
+    ).results;
+    const exact = scored.find((entry) => entry.rank === "exact");
+    const neighbor = scored.find((entry) => entry.rank === "graph-neighbor");
+    expect(exact?.score).toBeGreaterThanOrEqual(400);
+    expect(exact?.score).toBeLessThan(450);
+    expect(neighbor?.score).toBeGreaterThanOrEqual(100);
+    expect(neighbor?.score).toBeLessThan(200);
 
     const filtered = await client.callTool({
       arguments: { query: "CI evidence policy", type_filter: "requirement" },

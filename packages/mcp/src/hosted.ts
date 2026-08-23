@@ -23,6 +23,13 @@ import {
   tracePath,
 } from "./graph-tools";
 import {
+  REPO_MAP_DEFAULT_BUDGET,
+  REPO_MAP_MAX_BUDGET,
+  REPO_MAP_MIN_BUDGET,
+  buildGraphSchema,
+  buildRepoMap,
+} from "./repo-map";
+import {
   createUlid,
   type McpPackMeasurement,
   type McpPrincipal,
@@ -52,6 +59,8 @@ const RELATION_SCHEMA = z.enum([
   "contradicts",
   "supersedes",
   "references",
+  "imports",
+  "calls",
 ]);
 
 function toolResult(payload: Record<string, unknown>) {
@@ -417,6 +426,38 @@ function createServer(
     },
   );
 
+  server.registerTool(
+    "get_graph_schema",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "Call first: this workspace's graph vocabulary — node kinds, edge relations and counts — so queries speak the stored graph instead of guessing one.",
+      inputSchema: z.object({}),
+      outputSchema: z.object({
+        nodeCounts: z.record(z.string(), z.number().int().nonnegative()),
+        relationCounts: z.record(z.string(), z.number().int().nonnegative()),
+        repositories: z.array(
+          z.object({
+            artifactCount: z.number().int().nonnegative(),
+            fullName: z.string(),
+            id: z.string(),
+          }),
+        ),
+        text: z.string(),
+        workspaceId: z.string(),
+      }),
+    },
+    async () => {
+      const workspace = await readWorkspace();
+      const schema = buildGraphSchema(workspace);
+      emitAccessEvent(store, principal, "get_graph_schema", []);
+      return toolResult({
+        ...schema,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
   const GRAPH_NODE_SCHEMA = z.object({
     id: z.string(),
     path: z.string().nullable(),
@@ -748,6 +789,57 @@ function createServer(
   );
 
   server.registerTool(
+    "repo_map",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "Token-budgeted orientation map: files ranked by personalized PageRank (seeded by focus terms), each line a path plus its exported symbols. Compact text, no bodies.",
+      inputSchema: z.object({
+        focus: z
+          .array(z.string().trim().min(1).max(400))
+          .max(16)
+          .optional()
+          .describe("Paths or symbol names to bias the walk toward"),
+        token_budget: z
+          .number()
+          .int()
+          .min(REPO_MAP_MIN_BUDGET)
+          .max(REPO_MAP_MAX_BUDGET)
+          .optional(),
+      }),
+      outputSchema: z.object({
+        focusMatched: z.array(z.string()),
+        omittedCount: z.number().int().nonnegative(),
+        text: z.string(),
+        tokenBudget: z.number().int().positive(),
+        tokenEstimate: z.number().int().nonnegative(),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ focus, token_budget }) => {
+      const workspace = await readWorkspace();
+      const map = buildRepoMap(workspace, {
+        ...(focus ? { focus } : {}),
+        tokenBudget: token_budget ?? REPO_MAP_DEFAULT_BUDGET,
+      });
+      emitAccessEvent(
+        store,
+        principal,
+        "repo_map",
+        map.entries.map(({ nodeId }) => nodeId),
+      );
+      return toolResult({
+        focusMatched: map.focusMatched,
+        omittedCount: map.omittedCount,
+        text: map.text,
+        tokenBudget: map.tokenBudget,
+        tokenEstimate: map.tokenEstimate,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
     "request_context_pack",
     {
       annotations: READ_ONLY_TOOL,
@@ -883,7 +975,8 @@ function createServer(
               "graph-neighbor",
             ]),
             repositoryId: z.string(),
-            score: z.number().int(),
+            // Tier score plus the fractional connectivity bonus (todo 5).
+            score: z.number(),
             title: z.string(),
             type: NODE_TYPE_SCHEMA,
           }),

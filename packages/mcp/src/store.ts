@@ -19,7 +19,9 @@ export type McpEdgeRelation =
   | "supports"
   | "contradicts"
   | "supersedes"
-  | "references";
+  | "references"
+  | "imports"
+  | "calls";
 
 export interface McpArtifactData {
   content: string;
