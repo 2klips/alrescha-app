@@ -9,11 +9,12 @@ import {
 import { githubAppEnvironment } from "../../../../lib/github/env";
 import { createGitHubOnboardingStore } from "../../../../lib/github/onboarding-store";
 import { verifyGitHubInstallState } from "../../../../lib/github/state";
+import { addressedOrigin } from "../../../../lib/security/same-origin";
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  const errorUrl = new URL("/auth/auth-code-error", requestUrl.origin);
+  const errorUrl = new URL("/auth/auth-code-error", addressedOrigin(request));
 
   try {
     const code = requestUrl.searchParams.get("code");
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
 
     const selectionUrl = new URL(
       "/app/connect/github/repositories",
-      requestUrl.origin,
+      addressedOrigin(request),
     );
     selectionUrl.searchParams.set("installation", prepared.installationId);
     if (state.repositoryFullName) {

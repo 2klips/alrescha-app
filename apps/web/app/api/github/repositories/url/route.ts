@@ -5,6 +5,10 @@ import { lookupPublicGitHubRepository } from "../../../../../lib/github/api";
 import { connectSelectedRepository } from "../../../../../lib/github/connect-repository";
 import { decideUrlConnect } from "../../../../../lib/github/url-connect";
 import { consumeWorkspaceSecurityLimit } from "../../../../../lib/security/audit";
+import {
+  addressedOrigin,
+  isSameOriginRequest,
+} from "../../../../../lib/security/same-origin";
 import { createAdminClient } from "../../../../../lib/supabase/admin";
 import { createClient } from "../../../../../lib/supabase/server";
 
@@ -20,8 +24,8 @@ function backToConnect(
 }
 
 export async function POST(request: Request) {
-  const requestUrl = new URL(request.url);
-  if (request.headers.get("origin") !== requestUrl.origin) {
+  const origin = addressedOrigin(request);
+  if (!isSameOriginRequest(request)) {
     return Response.json({ error: "invalid_origin" }, { status: 403 });
   }
 
@@ -113,24 +117,21 @@ export async function POST(request: Request) {
 
   switch (outcome.kind) {
     case "connected":
-      return NextResponse.redirect(
-        new URL("/app?github=pending", requestUrl.origin),
-        303,
-      );
+      return NextResponse.redirect(new URL("/app?github=pending", origin), 303);
     case "invalid_url":
-      return backToConnect(requestUrl.origin, {
+      return backToConnect(origin, {
         url_reason: outcome.reason,
         url_status: "invalid_url",
       });
     case "already_connected":
     case "no_access":
     case "private_or_missing":
-      return backToConnect(requestUrl.origin, {
+      return backToConnect(origin, {
         repository: outcome.fullName,
         url_status: outcome.kind,
       });
     case "install":
-      return backToConnect(requestUrl.origin, {
+      return backToConnect(origin, {
         repository: outcome.fullName,
         url_status: "install",
         ...(outcome.githubRepositoryId === null

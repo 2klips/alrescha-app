@@ -3,11 +3,14 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { connectSelectedRepository } from "../../../../lib/github/connect-repository";
 import { consumeWorkspaceSecurityLimit } from "../../../../lib/security/audit";
+import {
+  addressedOrigin,
+  isSameOriginRequest,
+} from "../../../../lib/security/same-origin";
 import { createClient } from "../../../../lib/supabase/server";
 
 export async function POST(request: Request) {
-  const requestUrl = new URL(request.url);
-  if (request.headers.get("origin") !== requestUrl.origin) {
+  if (!isSameOriginRequest(request)) {
     return Response.json({ error: "invalid_origin" }, { status: 403 });
   }
 
@@ -66,7 +69,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.redirect(
-    new URL("/app?github=pending", requestUrl.origin),
+    new URL("/app?github=pending", addressedOrigin(request)),
     303,
   );
 }

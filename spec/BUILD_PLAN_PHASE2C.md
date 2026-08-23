@@ -88,7 +88,7 @@ arr-app 레포에서 Phase 2C를 이어간다.
       **완료**: 이관된 잔여 전부(로더 3종 `/app/*` 배선, 11화면 두 테마 순회 + axe, `arr push` graph-only e2e) + **실기 완주 — install → 콜백 → 레포 선택 → push → webhook(서명 검증) → scan 잡 → 실데이터 아티팩트 370개 · 커밋 카드 `assurance=full`**.
       **발견(이 페이즈의 산출물)**: ⑴ **GitHub 스캔 경로는 한 번도 저장에 성공한 적이 없었다** — postgres.js가 `${JSON.stringify(plan)}::jsonb`를 문자열 스칼라로 보내 `apply_repository_scan`이 조용히 0을 반환. PGlite 하네스는 드라이버가 달라 원리적으로 못 잡는다. `sql.json`으로 수정 + 이음매 회귀 테스트(위반 심기 재증명). ⑵ **워커에 실행 진입점이 없었고 `analyze` 핸들러와 receipt writer는 아예 없다** — `run-local.ts` 추가로 진입점은 해소. ⑶ 같은 출처 가드가 호스트 별칭(`127.0.0.1` vs `localhost`)에서 깨진다. ⑷ OQ-017(로그인 vs 최소 권한 App). 상세: `.omo/evidence/phase2c/wave-2-todo-5-pilot.md`.
       **후속 완료(2026-08-21)**: **analyze 핸들러 + receipt 발급 구현** — `createAnalysisJobHandler` + `PostgresAnalysisStore` + `findings.fingerprint` 마이그레이션. 실기에서 analyze 잡 3/3 성공, receipt 3건 발급·**verified**(변조 시 tampered). findings 0건은 이 레포에 `spec`/`adr` 문서가 없어서이고, 동작 증명은 테스트가 맡는다(드리프트 spec에서 finding 생성·resolved 정합·digest 검증·아티팩트 0건이면 발급 거부). 상세: `.omo/evidence/phase2c/wave-2-analyze-receipt.md`.
-      **잔여**: `judge`·`coach` 러너 등록(judge는 G3) · `pack` 핸들러 · ~~OQ-018~~(2026-08-22 해소 — 현행 구현을 운영 v1 정본으로 §13 개정, 실질 필드 4종은 Wave 4 predicateType 교체와 한 번에) · 같은 출처 가드 수정(Wave 4) · OQ-017 판정.
+      **잔여**: `judge`·`coach` 러너 등록(judge는 G3) · `pack` 핸들러 · ~~OQ-018~~(2026-08-22 해소 — 현행 구현을 운영 v1 정본으로 §13 개정, 실질 필드 4종은 Wave 4 predicateType 교체와 한 번에) · ~~같은 출처 가드~~(2026-08-22 수정 — Origin을 `request.url`이 아니라 Host 헤더와 비교, 리다이렉트도 `addressedOrigin`으로; 도메인 지식 불요라 Wave 4 대기 불필요였다. `.omo/evidence/phase2c/wave-2-same-origin-guard.md`) · OQ-017 판정.
       Commit: `feat(worker): drain jobs locally and fix the scan plan encoding`
 
 ## Wave 3 — 동결 실험 실행 _(G3)_ — **사전등록 수정 금지**
