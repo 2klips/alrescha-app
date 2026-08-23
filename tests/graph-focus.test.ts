@@ -180,6 +180,22 @@ describe("directional focus (todo 2)", () => {
     expect(labeled.has("other-b")).toBe(false);
   });
 
+  it("does not engage on an isolated node — the map must not vanish", () => {
+    const withIsolated: GraphData = {
+      edges: data.edges,
+      nodes: [...data.nodes, node("island", 240)],
+    };
+    const frame = buildRenderFrame({
+      data: withIsolated,
+      directionalFocus: true,
+      palette: PALETTE,
+      positions: new Map(),
+      selectedNodeId: "island",
+    });
+    expect(frame.nodes.every((entry) => entry.alpha === 1)).toBe(true);
+    expect(frame.edges.every((entry) => entry.alpha === 0.5)).toBe(true);
+  });
+
   it("does nothing without the flag or without a selection", () => {
     const plain = buildRenderFrame({
       data,

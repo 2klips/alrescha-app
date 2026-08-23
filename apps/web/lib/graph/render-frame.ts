@@ -251,7 +251,7 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
   const placed = new Map<string, Position>();
   const candidates: LabelCandidate[] = [];
 
-  const focusedNodeId =
+  let focusedNodeId =
     input.directionalFocus && input.selectedNodeId
       ? input.selectedNodeId
       : null;
@@ -262,6 +262,10 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
       if (edge.source === focusedNodeId) focusNeighborhood.add(edge.target);
       if (edge.target === focusedNodeId) focusNeighborhood.add(edge.source);
     }
+    // An isolated node has no direction to show — fading the whole map to
+    // highlight nothing would just make the graph vanish (common while scan
+    // data has few edges), so focus only engages with at least one neighbor.
+    if (focusNeighborhood.size <= 1) focusedNodeId = null;
   }
 
   const nodes: RenderNode[] = data.nodes.map((node) => {
