@@ -53,6 +53,7 @@ export interface GraphEdgeProvenance {
    */
   relation:
     | "calls"
+    | "co_changed"
     | "contradicts"
     | "declares"
     | "implements"

@@ -75,6 +75,8 @@ export const RATIONALE_READ_GRANTS_MIGRATION =
   "supabase/migrations/202608230001_rationale_read_grants.sql";
 export const CODE_LINK_EDGES_MIGRATION =
   "supabase/migrations/202608230002_code_link_edges.sql";
+export const FILE_CO_CHANGES_MIGRATION =
+  "supabase/migrations/202608230003_file_co_changes.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -103,6 +105,7 @@ export const ALL_MIGRATIONS = [
   FINDING_FINGERPRINT_MIGRATION,
   RATIONALE_READ_GRANTS_MIGRATION,
   CODE_LINK_EDGES_MIGRATION,
+  FILE_CO_CHANGES_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

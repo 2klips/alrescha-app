@@ -38,6 +38,12 @@ export const WORKSPACE_MAP = {
     in: "의존받는다",
   },
 
+  /** 공변경 엣지 토글 — 같은 commit에서 자주 함께 바뀐 파일 쌍. */
+  coChange: {
+    toggle: "공변경 엣지",
+    toggleAria: "같은 commit에서 함께 바뀐 파일 연결 표시",
+  },
+
   inspector: {
     kicker: "선택한 노드",
     aria: "선택한 노드 상세",

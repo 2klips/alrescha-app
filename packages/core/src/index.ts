@@ -274,6 +274,7 @@ export type {
 } from "./github/onboarding";
 
 export {
+  MAX_CO_CHANGE_PATHS,
   MAX_GITHUB_WEBHOOK_BODY_BYTES,
   handleGitHubWebhook,
   normalizeGitHubWebhook,
@@ -283,6 +284,7 @@ export type {
   GitHubWebhookStore,
   NormalizedGitHubWebhookEvent,
   PersistedGitHubWebhookEvent,
+  PushCommitFiles,
   SupportedGitHubWebhook,
 } from "./github/webhook";
 

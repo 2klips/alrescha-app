@@ -122,6 +122,7 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
   });
   const [localFocus, setLocalFocus] = useState(false);
   const [groupByArea, setGroupByArea] = useState(false);
+  const [showCoChanges, setShowCoChanges] = useState(true);
   const [cameraFocusNodeId, setCameraFocusNodeId] = useState<string | null>(
     null,
   );
@@ -152,12 +153,24 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
     () => filterGraph(model.graph, filters),
     [filters, model.graph],
   );
+  const familyGraph = useMemo(
+    () =>
+      showCoChanges
+        ? baseGraph
+        : {
+            edges: baseGraph.edges.filter(
+              (edge) => edge.provenance.relation !== "co_changed",
+            ),
+            nodes: baseGraph.nodes,
+          },
+    [baseGraph, showCoChanges],
+  );
   const visibleGraph = useMemo(
     () =>
       localFocus && selectedNode
-        ? focusLocalGraph(baseGraph, selectedNode.id)
-        : baseGraph,
-    [baseGraph, localFocus, selectedNode],
+        ? focusLocalGraph(familyGraph, selectedNode.id)
+        : familyGraph,
+    [familyGraph, localFocus, selectedNode],
   );
   const hubs = useMemo(() => topHubNodes(model.graph), [model.graph]);
   const glow = useMemo(
@@ -460,6 +473,17 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
             >
               <LayoutGrid size={14} />
               {DASHBOARD.filters.groupMode}
+            </button>
+            <button
+              aria-label={WORKSPACE_MAP.coChange.toggleAria}
+              aria-pressed={showCoChanges}
+              className="arr-focus"
+              data-testid="graph-co-change-toggle"
+              onClick={() => setShowCoChanges((value) => !value)}
+              type="button"
+            >
+              <GitCommitHorizontal size={14} />
+              {WORKSPACE_MAP.coChange.toggle}
             </button>
           </div>
           <div className="arr-graph-stage">

@@ -70,7 +70,7 @@ Graft 패스 1 상당 — LLM 없이 그래프의 정보 밀도를 올린다. **
       수용 기준: 픽스처 레포에서 기대 엣지 스냅샷(티어별), 증분 재스캔 시 변경 파일의 엣지만 교체됨을 증명, `symbolEngine` provenance 유지, 스캔 시간 회귀 가드(파일럿 레포 기준 상한 기록).
       Commit: `feat(ingest): extract import and call edges with confidence tiers`
 
-- [ ] **4. 공변경 엣지 (`co_changed`)**
+- [x] **4. 공변경 엣지 (`co_changed`)** _(2026-08-23 완료 — 카운트 테이블 + 읽기 시점 유도(edges 행 없음), inserted 배달만 기록이라 재생 안전, 임계 3회·벌크 50컷. `.omo/evidence/phase3/wave-b-todo-4.md`)_
       웹훅 push가 이미 실어오는 커밋 파일 목록에서 파일 쌍 공변경 카운트를 누적, 임계 이상을 `co_changed` 엣지로(가중치 = 횟수, provenance = 커밋 sha 목록). CBM `FILE_CHANGES_WITH` 상당 — Arr는 서버라 거의 공짜.
       수용 기준: 웹훅 재생 픽스처로 엣지 생성 증명, 임계 미달 비생성, 그래프 뷰에서 토글 가능한 엣지 패밀리로 렌더.
       Commit: `feat(ingest): accumulate co-change edges from push history`

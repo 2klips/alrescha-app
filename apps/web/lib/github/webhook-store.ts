@@ -24,7 +24,25 @@ export function createGitHubWebhookStore(): GitHubWebhookStore {
       if (error) {
         throw new Error(`Failed to persist GitHub webhook: ${error.code}`);
       }
-      return data === false ? "duplicate" : "inserted";
+      if (data === false) {
+        return "duplicate";
+      }
+
+      // Co-change counts (Wave B todo 4) — only for freshly inserted push
+      // deliveries, so a replayed delivery cannot double-count a pair.
+      if (event.event === "push" && event.commitFiles.length > 0) {
+        const coChanges = await admin.rpc("record_push_co_changes", {
+          commits: event.commitFiles,
+          target_repository_id: event.repositoryId,
+          target_workspace_id: event.workspaceId,
+        });
+        if (coChanges.error) {
+          throw new Error(
+            `Failed to record co-changes: ${coChanges.error.code}`,
+          );
+        }
+      }
+      return "inserted";
     },
 
     async resolveRepository({

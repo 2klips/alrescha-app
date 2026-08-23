@@ -97,9 +97,16 @@ export interface MapTokenRow {
   readonly revoked_at: string | null;
 }
 
+export interface MapCoChangeRow {
+  readonly change_count: number;
+  readonly path_a: string;
+  readonly path_b: string;
+}
+
 export interface WorkspaceMapRows {
   readonly accessEvents: readonly MapAccessEventRow[];
   readonly artifacts: readonly MapArtifactRow[];
+  readonly coChanges: readonly MapCoChangeRow[];
   readonly edges: readonly MapEdgeRow[];
   readonly findings: readonly MapFindingRow[];
   readonly graphNodes: readonly MapGraphNodeRow[];
@@ -133,6 +140,9 @@ export interface WorkspaceMapModel {
  * pilot-scale graph (370 nodes) renders as individual nodes, not clusters.
  */
 export const MAP_CLUSTER_THRESHOLD = 600;
+
+/** A pair must co-change this often before it earns a coupling edge. */
+export const CO_CHANGE_MIN_COUNT = 3;
 
 /** Relations that carry execution-evidence support onto their target. */
 const SUPPORTING_RELATIONS = new Set(["implements", "supports", "tests"]);
@@ -389,6 +399,42 @@ export function buildWorkspaceMapModel(
     });
   }
 
+  // Co-change coupling (todo 4): derived display edges between artifact
+  // nodes, keyed by path. `reference` tier (statistical, not resolved) and a
+  // reason-only provenance — the evidence is the count, not a span.
+  const nodeIdByPath = new Map<string, string>();
+  for (const row of rows.artifacts) {
+    nodeIdByPath.set(row.path, row.id);
+  }
+  for (const coChange of rows.coChanges) {
+    if (coChange.change_count < CO_CHANGE_MIN_COUNT) continue;
+    const sourceId = nodeIdByPath.get(coChange.path_a);
+    const targetId = nodeIdByPath.get(coChange.path_b);
+    if (
+      !sourceId ||
+      !targetId ||
+      !nodeIds.has(sourceId) ||
+      !nodeIds.has(targetId)
+    )
+      continue;
+    edges.push({
+      broken: false,
+      grade: "inferred",
+      id: `co:${sourceId}:${targetId}`,
+      provenance: {
+        confidence: Math.min(1, coChange.change_count / 10),
+        endLine: 0,
+        grade: "inferred",
+        relation: "co_changed",
+        sourcePath: "",
+        startLine: 0,
+      },
+      source: sourceId,
+      target: targetId,
+      tier: "reference",
+    });
+  }
+
   const isClustered = nodes.length > MAP_CLUSTER_THRESHOLD;
   const graph = isClustered
     ? clusterGraph({ edges, nodes }, MAP_CLUSTER_THRESHOLD)
@@ -453,6 +499,7 @@ export async function loadWorkspaceMap(
   const [
     accessEvents,
     artifacts,
+    coChanges,
     edges,
     findings,
     graphNodes,
@@ -473,6 +520,13 @@ export async function loadWorkspaceMap(
       .select("id,classification,path")
       .eq("workspace_id", workspaceId)
       .limit(NODE_LIMIT),
+    client
+      .from("file_co_changes")
+      .select("path_a,path_b,change_count")
+      .eq("workspace_id", workspaceId)
+      .gte("change_count", CO_CHANGE_MIN_COUNT)
+      .order("change_count", { ascending: false })
+      .limit(EDGE_LIMIT),
     client
       .from("edges")
       .select("id,source_node_id,target_node_id,relation,confidence,provenance")
@@ -518,6 +572,7 @@ export async function loadWorkspaceMap(
   for (const result of [
     accessEvents,
     artifacts,
+    coChanges,
     edges,
     findings,
     graphNodes,
@@ -535,6 +590,7 @@ export async function loadWorkspaceMap(
   return buildWorkspaceMapModel(workspaceId, {
     accessEvents: (accessEvents.data ?? []) as MapAccessEventRow[],
     artifacts: (artifacts.data ?? []) as MapArtifactRow[],
+    coChanges: (coChanges.data ?? []) as MapCoChangeRow[],
     edges: (edges.data ?? []) as MapEdgeRow[],
     evidence: (evidence.data ?? []) as MapEvidenceRow[],
     findings: (findings.data ?? []) as MapFindingRow[],

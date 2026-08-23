@@ -4,9 +4,24 @@ export type SupportedGitHubWebhook = "check_run" | "push" | "workflow_run";
 
 export const MAX_GITHUB_WEBHOOK_BODY_BYTES = 1_048_576;
 
+/**
+ * One push commit's touched paths (Phase 3 Wave B todo 4). Only file paths
+ * travel — never diffs or contents. Commits touching fewer than 2 or more
+ * than {@link MAX_CO_CHANGE_PATHS} files are dropped at normalization: a
+ * single-file commit has no pair and a bulk commit is churn, not coupling.
+ */
+export interface PushCommitFiles {
+  readonly paths: readonly string[];
+  readonly sha: string;
+}
+
+export const MAX_CO_CHANGE_PATHS = 50;
+
 export interface NormalizedGitHubWebhookEvent {
   readonly action: string | null;
   readonly commitSha: string;
+  /** Non-empty only for push events. */
+  readonly commitFiles: readonly PushCommitFiles[];
   readonly conclusion: string | null;
   readonly deliveryId: string;
   readonly event: SupportedGitHubWebhook;
@@ -62,6 +77,34 @@ function numberField(value: JsonRecord, field: string, label: string): number {
   return result;
 }
 
+function stringArray(value: unknown): readonly string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === "string")
+    : [];
+}
+
+/** `body.commits[]` → per-commit touched paths, pair-worthy commits only. */
+function normalizePushCommitFiles(value: unknown): PushCommitFiles[] {
+  if (!Array.isArray(value)) return [];
+  const commits: PushCommitFiles[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const commit = entry as JsonRecord;
+    const sha = commit.id;
+    if (typeof sha !== "string" || !/^[0-9a-f]{40}$/.test(sha)) continue;
+    const paths = [
+      ...new Set([
+        ...stringArray(commit.added),
+        ...stringArray(commit.modified),
+        ...stringArray(commit.removed),
+      ]),
+    ].sort();
+    if (paths.length < 2 || paths.length > MAX_CO_CHANGE_PATHS) continue;
+    commits.push({ paths, sha });
+  }
+  return commits;
+}
+
 export function verifyGitHubWebhookSignature(
   secret: string,
   rawBody: string,
@@ -103,8 +146,10 @@ export function normalizeGitHubWebhook(
 
   let commitSha: string;
   let conclusion: string | null = null;
+  let commitFiles: PushCommitFiles[] = [];
   if (eventHeader === "push") {
     commitSha = stringField(body, "after", "webhook body");
+    commitFiles = normalizePushCommitFiles(body.commits);
   } else {
     const run = record(body[eventHeader], `webhook body.${eventHeader}`);
     commitSha = stringField(run, "head_sha", `webhook body.${eventHeader}`);
@@ -120,6 +165,7 @@ export function normalizeGitHubWebhook(
 
   return {
     action,
+    commitFiles,
     commitSha,
     conclusion,
     deliveryId,

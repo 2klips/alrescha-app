@@ -113,6 +113,36 @@ test("a scanned workspace renders its own nodes on the map", async ({
     );
     await expect(page.getByTestId("focus-legend-out")).toBeVisible();
     await expect(page.getByTestId("focus-legend-in")).toBeVisible();
+
+    // Structure edges (Wave B todo 3): the fixture's test file imports and
+    // calls into src/session.ts, and the sr-only edge list names both.
+    const edgeList = stage.locator(".sr-only button");
+    await expect(
+      edgeList.filter({ hasText: "imports:" }).first(),
+    ).toBeAttached();
+    await expect(edgeList.filter({ hasText: "calls:" }).first()).toBeAttached();
+
+    // Co-change edges (Wave B todo 4): three pushes touching the same pair
+    // cross the threshold; the family is toggleable.
+    for (const sha of ["4".repeat(40), "5".repeat(40), "6".repeat(40)]) {
+      const recorded = await service.rpc("record_push_co_changes", {
+        commits: [{ paths: ["src/audit.ts", "src/session.ts"], sha }],
+        target_repository_id: String(repository.data),
+        target_workspace_id: user.workspaceId,
+      });
+      expect(recorded.error).toBeNull();
+    }
+    await page.reload();
+    await expect(
+      stage
+        .locator(".sr-only button")
+        .filter({ hasText: "co_changed:" })
+        .first(),
+    ).toBeAttached();
+    await page.getByTestId("graph-co-change-toggle").click();
+    await expect(
+      stage.locator(".sr-only button").filter({ hasText: "co_changed:" }),
+    ).toHaveCount(0);
   } finally {
     await deleteWorkspaceUser(user.userId);
   }
