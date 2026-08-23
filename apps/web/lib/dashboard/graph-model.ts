@@ -37,7 +37,19 @@ export interface GraphEdgeProvenance {
   confidence: number;
   endLine: number;
   grade: EvidenceGrade;
-  relation: "declares" | "implements" | "references" | "tests";
+  /**
+   * The demo vocabulary (`declares`) plus the persisted `edges.relation`
+   * vocabulary — `/app/map` renders stored rows verbatim (Phase 3 Wave A).
+   */
+  relation:
+    | "contradicts"
+    | "declares"
+    | "implements"
+    | "references"
+    | "requires"
+    | "supersedes"
+    | "supports"
+    | "tests";
   sourcePath: string;
   startLine: number;
 }

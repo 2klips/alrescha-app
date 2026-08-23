@@ -1,0 +1,170 @@
+{
+  "incomplete": [
+    {
+      "html": "<span class=\"arr-kicker\">연결된 레포</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-repo-block > .arr-kicker"
+    },
+    {
+      "html": "<strong>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-repo-block > strong"
+    },
+    {
+      "html": "<small>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-repo-block > small"
+    },
+    {
+      "html": "<strong>0</strong>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(1) > strong"
+    },
+    {
+      "html": "<span>아티팩트</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(1) > span"
+    },
+    {
+      "html": "<strong>0</strong>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(2) > strong"
+    },
+    {
+      "html": "<span>근거 노트</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(2) > span"
+    },
+    {
+      "html": "<strong>0</strong>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(3) > strong"
+    },
+    {
+      "html": "<span>요구사항</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(3) > span"
+    },
+    {
+      "html": "<strong>0</strong>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(4) > strong"
+    },
+    {
+      "html": "<span>엣지</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(4) > span"
+    },
+    {
+      "html": "<strong>0</strong>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(5) > strong"
+    },
+    {
+      "html": "<span>미해소 Findings</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(5) > span"
+    },
+    {
+      "html": "<button aria-pressed=\"true\" class=\"arr-area-chip\" data-area=\"all\" type=\"button\">전체 영역</button>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "button[data-area=\"all\"]"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"frontend\" type=\"button\">프론트엔드<small>0</small></button>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "button[data-area=\"frontend\"]"
+    },
+    {
+      "html": "<small>0</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"frontend\"] > small"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"backend\" type=\"button\">백엔드<small>0</small></button>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "button[data-area=\"backend\"]"
+    },
+    {
+      "html": "<small>0</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"backend\"] > small"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"docs\" type=\"button\">문서<small>0</small></button>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "button[data-area=\"docs\"]"
+    },
+    {
+      "html": "<small>0</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"docs\"] > small"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"tests\" type=\"button\">테스트<small>0</small></button>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "button[data-area=\"tests\"]"
+    },
+    {
+      "html": "<small>0</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"tests\"] > small"
+    },
+    {
+      "html": "<span class=\"arr-kicker\">허브 노드</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-hubs > .arr-kicker"
+    },
+    {
+      "html": "<span class=\"arr-kicker\">마지막 스캔 commit<!-- --> ·<!-- --> <!-- -->스캔 전</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-proof-heading > div:nth-child(1) > .arr-kicker"
+    },
+    {
+      "html": "<h1 id=\"workspace-map-title\">지식 Graph<span class=\"arr-proof-repo\">연결된 레포 없음</span></h1>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "#workspace-map-title"
+    },
+    {
+      "html": "<span class=\"arr-proof-repo\">연결된 레포 없음</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-proof-repo"
+    },
+    {
+      "html": "<span><i class=\"requirement\"></i>요구사항</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-legend > span:nth-child(1)"
+    },
+    {
+      "html": "<span><i class=\"code\"></i>코드</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-legend > span:nth-child(2)"
+    },
+    {
+      "html": "<span><i class=\"test\"></i>verified 테스트</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-legend > span:nth-child(3)"
+    },
+    {
+      "html": "<span class=\"arr-kicker\">선택한 노드</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "header > .arr-kicker"
+    },
+    {
+      "html": "<span class=\"arr-grade inferred\">대기</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-grade"
+    },
+    {
+      "html": "<p>노드를 선택하면 연결과 출처를 볼 수 있습니다.</p>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "p"
+    }
+  ],
+  "incompleteCount": 32,
+  "passes": 14,
+  "route": "/app/map",
+  "theme": "dark",
+  "violationCount": 0,
+  "violations": []
+}

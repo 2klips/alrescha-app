@@ -56,6 +56,51 @@
       "target": "div[aria-label=\"보증 지표\"] > .arr-metric[data-active=\"false\"][type=\"button\"]:nth-child(4) > span"
     },
     {
+      "html": "<button aria-pressed=\"true\" class=\"arr-area-chip\" data-area=\"all\" type=\"button\">전체 영역</button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"all\"]"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"frontend\" type=\"button\">프론트엔드<small>1</small></button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"frontend\"]"
+    },
+    {
+      "html": "<small>1</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"frontend\"] > small"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"backend\" type=\"button\">백엔드<small>3</small></button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"backend\"]"
+    },
+    {
+      "html": "<small>3</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"backend\"] > small"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"docs\" type=\"button\">문서<small>7</small></button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"docs\"]"
+    },
+    {
+      "html": "<small>7</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"docs\"] > small"
+    },
+    {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"tests\" type=\"button\">테스트<small>4</small></button>",
+      "message": "Element's background color could not be determined because element contains an image node",
+      "target": "button[data-area=\"tests\"]"
+    },
+    {
+      "html": "<small>4</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"tests\"] > small"
+    },
+    {
       "html": "<span class=\"arr-kicker\">허브 노드</span>",
       "message": "Element's background color could not be determined because element contains an image node",
       "target": ".arr-hubs > .arr-kicker"
@@ -89,31 +134,6 @@
       "html": "<small>연결 2개</small>",
       "message": "Element's background color could not be determined because element contains an image node",
       "target": "button[data-hub-node=\"code-pack\"] > small"
-    },
-    {
-      "html": "<span>webhook.ts</span>",
-      "message": "Element's background color could not be determined because element contains an image node",
-      "target": "button[data-hub-node=\"code-webhook\"] > span"
-    },
-    {
-      "html": "<small>연결 2개</small>",
-      "message": "Element's background color could not be determined because element contains an image node",
-      "target": "button[data-hub-node=\"code-webhook\"] > small"
-    },
-    {
-      "html": "<span>Build plan</span>",
-      "message": "Element's background color could not be determined because element contains an image node",
-      "target": "button[data-hub-node=\"doc-plan\"] > span"
-    },
-    {
-      "html": "<small>연결 2개</small>",
-      "message": "Element's background color could not be determined because element contains an image node",
-      "target": "button[data-hub-node=\"doc-plan\"] > small"
-    },
-    {
-      "html": "<a href=\"/app/harness\">",
-      "message": "Element's background color could not be determined because element contains an image node",
-      "target": "a[href$=\"harness\"]"
     },
     {
       "html": "<span class=\"arr-kicker\">현재 commit<!-- --> · bad0551</span>",
@@ -163,7 +183,12 @@
     {
       "html": "<button aria-pressed=\"false\" class=\"arr-focus\" type=\"button\">",
       "message": "Element's background color could not be determined because it is overlapped by another element",
-      "target": ".arr-focus"
+      "target": ".arr-focus[type=\"button\"]:nth-child(4)"
+    },
+    {
+      "html": "<button aria-label=\"노드를 영역별 띠로 배치\" aria-pressed=\"false\" class=\"arr-focus\" data-testid=\"graph-group-mode\" type=\"button\">",
+      "message": "Element's background color could not be determined because it is overlapped by another element",
+      "target": "button[aria-label=\"노드를 영역별 띠로 배치\"]"
     },
     {
       "html": "<footer class=\"arr-ci-note \" role=\"status\">",
@@ -286,14 +311,14 @@
       "target": ".graph-force-reset"
     },
     {
-      "html": "<small data-testid=\"graph-lod-status\">줌 단계 중경 · 라벨 13개</small>",
+      "html": "<small data-testid=\"graph-lod-status\">줌 단계 중경 · 라벨 10개</small>",
       "message": "Element's background color could not be determined because element contains an image node",
       "target": "small[data-testid=\"graph-lod-status\"]"
     }
   ],
-  "incompleteCount": 58,
-  "passes": 24,
-  "route": "/",
+  "incompleteCount": 63,
+  "passes": 25,
+  "route": "/map",
   "theme": "light",
   "violationCount": 0,
   "violations": []

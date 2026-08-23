@@ -13,6 +13,7 @@ import * as GRAPH_MODULE from "../apps/web/lib/strings/graph";
 import * as HARNESS_MODULE from "../apps/web/lib/strings/harness";
 import * as INSPECTION_MODULE from "../apps/web/lib/strings/inspection";
 import * as LIBRARY_MODULE from "../apps/web/lib/strings/library";
+import * as MAP_MODULE from "../apps/web/lib/strings/map";
 import * as ONBOARDING_MODULE from "../apps/web/lib/strings/onboarding";
 import * as OVERVIEW_MODULE from "../apps/web/lib/strings/overview";
 import * as PROGRESS_MODULE from "../apps/web/lib/strings/progress";
@@ -69,6 +70,8 @@ const CONVERTED_SCREENS = [
   "apps/web/app/auth/login/sign-in-button.tsx",
   // Phase 2D Wave 1
   "apps/web/app/overview/overview-screen.tsx",
+  // Phase 3 Wave A
+  "apps/web/app/app/map/map-screen.tsx",
 ];
 
 /**
@@ -255,6 +258,7 @@ describe("korean-first copy policy", () => {
     HARNESS: HARNESS_MODULE.HARNESS,
     INSPECTION: INSPECTION_MODULE.INSPECTION,
     LIBRARY: LIBRARY_MODULE.LIBRARY,
+    WORKSPACE_MAP: MAP_MODULE.WORKSPACE_MAP,
     ONBOARDING: ONBOARDING_MODULE.ONBOARDING,
     OVERVIEW: OVERVIEW_MODULE.OVERVIEW,
     PROGRESS: PROGRESS_MODULE.PROGRESS,

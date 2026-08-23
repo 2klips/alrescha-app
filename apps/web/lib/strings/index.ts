@@ -15,6 +15,7 @@ export { GRAPH } from "./graph";
 export { HARNESS } from "./harness";
 export { INSPECTION } from "./inspection";
 export { LIBRARY } from "./library";
+export { WORKSPACE_MAP } from "./map";
 export { ONBOARDING } from "./onboarding";
 export { PROGRESS } from "./progress";
 export { SETTINGS } from "./settings";

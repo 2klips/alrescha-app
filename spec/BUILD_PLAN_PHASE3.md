@@ -51,7 +51,7 @@ arr-app 레포에서 Phase 3을 이어간다.
 
 MVP의 "확인" 단계부터 막는다: 파일럿이 만든 실데이터 370노드를 사용자가 실제로 **본 적이 없다**.
 
-- [ ] **1. `/app/map` — 실데이터 그래프 뷰**
+- [x] **1. `/app/map` — 실데이터 그래프 뷰** _(2026-08-23 완료 — 발견 2건: rationales authenticated grant 누락 → `202608230001`, 로더 order 컬럼 오류는 PGlite가 원리적으로 못 잡아 로컬 Supabase 프로브+e2e로 커버. `.omo/evidence/phase3/wave-a-todo-1.md`)_
       `apps/web/lib/map/`에 Supabase 로더 신설(`graph_nodes`+`edges` → 렌더 엔진 입력 모델). 기존 `/map`(데모)과 분리된 인증 라우트 `/app/map`. 빈 워크스페이스는 데모 폴백이 아니라 "그래프 없음 — 레포를 연결하세요" 빈 상태. glow(`access_events`)는 실워크스페이스 이벤트로 배선.
       수용 기준: 로더 단위 테스트(실DB 헬퍼, RLS 교차 테넌트 차단), 파일럿 워크스페이스에서 370노드 렌더 스냅샷, 빈 상태 테스트, 두 테마 axe AA 순회 편입, 착지 경로 단언(2C todo 5의 함정 재발 방지).
       Commit: `feat(map): render the live workspace graph`
