@@ -1,0 +1,26 @@
+[
+  {
+    "theme": "dark",
+    "stamped": null,
+    "bodyBackground": "rgb(11, 14, 20)",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 106
+      }
+    ]
+  },
+  {
+    "theme": "light",
+    "stamped": "light",
+    "bodyBackground": "rgb(250, 247, 241)",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": 106
+      }
+    ]
+  }
+]
