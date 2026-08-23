@@ -2446,6 +2446,42 @@ a {
   cursor: wait;
   opacity: 0.65;
 }
+/* Instruction-block installer (Phase 3 Wave D todo 11). */
+.instruction-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.85rem 0;
+}
+.instruction-targets button {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  cursor: pointer;
+  font: 0.78rem var(--font-mono);
+  min-height: 2.25rem;
+  padding: 0.35rem 0.8rem;
+}
+.instruction-targets button[aria-pressed="true"] {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.instruction-file {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.instruction-snippet {
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  font: 0.74rem/1.55 var(--font-mono);
+  margin: 0.6rem 0 0.8rem;
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .mcp-secret {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);

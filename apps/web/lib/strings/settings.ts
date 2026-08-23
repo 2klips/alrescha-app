@@ -57,6 +57,27 @@ export const SETTINGS = {
     introSuffix:
       "에 연결합니다. 작업별 컨텍스트를 필요할 때 구성합니다. 레포 변경은 검토를 거친 권고용 PR로만 제한되며, 세션, 샘플링, 루트, 로깅 기능은 제공하지 않습니다.",
 
+    /** 에이전트별 지시 블록 설치기 (Phase 3 Wave D todo 11). */
+    instructions: {
+      eyebrow: "에이전트 설정 · 붙여넣기 한 번",
+      title: "지시 블록 설치",
+      lead: "에이전트의 지시 파일에 이 블록을 붙여넣으면 파일 전체 검색보다 Graph 툴을 먼저 씁니다. 아래 MCP 연결 설정과 함께 사용하세요.",
+      targets: {
+        claude: "Claude Code",
+        codex: "Codex",
+        cursor: "Cursor",
+        generic: "범용 에이전트",
+      },
+      /** `대상 파일: <path>` */
+      filePrefix: "대상 파일: ",
+      copy: "블록 복사",
+      copied: "복사됨",
+      configTitle: "MCP 연결 설정",
+      configLead:
+        "발급한 token으로 설정 안의 자리 표시자를 바꾸고 에이전트의 MCP 설정에 추가하세요.",
+      copyConfig: "설정 복사",
+    },
+
     contextPack: {
       eyebrow: "Graph 선택 · 필요할 때 로드",
       title: "컨텍스트 팩 구성",

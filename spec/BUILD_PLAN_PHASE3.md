@@ -86,7 +86,7 @@ Graft 패스 2 상당 — "AI로 지식그래프를 구축"의 AI 부분. LazyGr
 
 - [ ] **6. `enrich` 잡 ① — 파일 산문 요약**
       여섯 번째 잡 종류 `enrich`(coach 선례대로 `enqueue_job` 복제 스크립트로 신설, 크레딧 라이프사이클 상속·BYOK 0크레딧). 파일당 3–8문장 산문 요약(temp 0, 입력 클립), **blob 해시 캐시** — 재실행 시 변경 파일만 과금. 요약은 `inferred` 표기로 아티팩트 메타데이터에 저장. 본문은 잡 내 transient(기존 `readSource` 주입 패턴 재사용). 실패 파일은 게이트로 스킵 추적(Graft LlmFailureGate 패턴).
-      수용 기준: 해시 캐시 적중 시 0크레딧 증명, 실패 무과금·멱등 과금(기존 judge 테스트 패턴), 요약에 원본 코드 라인이 포함되지 않음을 스코프 스캐너 관점에서 확인(산문만).
+      수용 기준: 해시 캐시 적중 시 0크레딧 증명, 실패 무과금·멱등 과금(기존 judge 테스트 패턴), 요약에 원본 코드 라인이 포함되지 않음을 스코프 스캐너 관점에서 확인(산문만). **추가(Wave D 발견): 스캔·enrich가 `index_entries`를 생성해 실스캔 워크스페이스에서 `search_index`/`search_nodes`가 서야 한다** — 현재 데모·벤치만 사전 구축 인덱스를 쓰고 실경로는 빈 결과다.
       Commit: `feat(worker): summarize changed files through the enrich job`
 
 - [ ] **7. `enrich` 잡 ② — 개념 그래프 합성**
@@ -103,17 +103,17 @@ Graft 패스 2 상당 — "AI로 지식그래프를 구축"의 AI 부분. LazyGr
 
 "유저의 AI 에이전트가 솔루션에 기록"을 1급 기능으로. 참고 프로젝트 둘 다 없는 Arr의 차별점.
 
-- [ ] **9. bi-temporal 스키마 + `agent_asserted` 티어**
+- [x] **9. bi-temporal 스키마 + `agent_asserted` 티어** _(2026-08-23 완료 — 삭제·개서 물리 거부 트리거, 결정론 supersede 재조정(0크레딧), 시간여행 질의 증명. `.omo/evidence/phase3/wave-d-todo-9-10.md`)_
       에이전트 기록(노트·엣지 단언)에 `valid_from`/`invalidated_at`/`ingested_at` — 삭제 대신 무효화(Graphiti). 기존 `record_note` 계열을 노드 앵커 기반으로 확장: `assert_link(from, to, relation)`은 `agent_asserted` 엣지 생성(폐쇄 동사만). append-only 성향은 `ruled_out_attempts` 선례(트리거 3중 고정) 재사용.
       수용 기준: 무효화 후 시점 질의(시간여행) 테스트, UPDATE/DELETE 차단 트리거, 신규 테이블 `grant all ... to service_role`(2C Wave 1 함정), 그래프 뷰 점선 렌더.
       Commit: `feat(mcp): record agent assertions with bi-temporal provenance`
 
-- [ ] **10. 메모리 블록 + 쓰기 재조정**
+- [x] **10. 메모리 블록 + 쓰기 재조정** _(2026-08-23 완료 — ADD/UPDATE/NOOP/무효화 + 캡 12 거부, `search_index`에 type memory로 노출, MCP 20툴. 9와 한 커밋(한 스키마), evidence는 분리)_
       노드에 붙는 크기 제한 명명 블록(`gotchas`/`conventions`/`decisions` — repo/모듈/파일 수준). MCP `memory_read`/`memory_write`. 쓰기 시 Mem0식 **ADD/UPDATE/DELETE(무효화)/NOOP 재조정** — 신규 기록이 상충하는 기존 블록 항목을 upsert하되, 재조정 판단이 AI 호출이면 enrich 크레딧 규칙, 결정론 규칙(동일 키)이면 0크레딧. 크기 캡 초과는 명시 거부(에이전트에게 증류 요구).
       수용 기준: 재조정 4분기 테스트, 캡 거부 계약 테스트, 검색(`search_index`)에 블록 내용 노출, access_event 발행.
       Commit: `feat(mcp): reconcile bounded memory blocks on write`
 
-- [ ] **11. 지시 블록 설치기 + 기록 e2e**
+- [x] **11. 지시 블록 설치기 + 기록 e2e** _(2026-08-23 완료 — MVP 인수 시나리오를 실 HTTP로 완주(토큰 폼→schema→repo_map→memory_write→assert_link→맵 점선+피드). **발견: `index_entries`를 스캔이 채우지 않아 실스캔 워크스페이스에서 search가 빈다** → todo 6 수용 기준에 반영. `.omo/evidence/phase3/wave-d-todo-11.md`)_
       `/app/settings/mcp`에 에이전트별 설정 스니펫 생성기(CLAUDE.md·.cursorrules·codex 등 — "grep 전에 Arr 그래프 툴을 먼저" 지시 블록, CBM 패턴). MVP 인수 시나리오 e2e: 실 MCP 토큰 → `get_graph_schema` → `repo_map` → `memory_write` → 그래프 뷰에서 glow + 점선 노트 확인.
       수용 기준: 스니펫 스냅샷 테스트(에이전트별), e2e 1건이 위 시나리오 완주, 문서화(`docs/`).
       Commit: `feat(settings): generate agent instruction blocks`

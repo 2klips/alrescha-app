@@ -4,7 +4,10 @@ import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { SupabaseMcpStore } from "../../../../lib/mcp/supabase-store";
 import { SETTINGS } from "../../../../lib/strings";
 import { createClient } from "../../../../lib/supabase/server";
+import { headers } from "next/headers";
+
 import { ContextTools } from "./context-tools";
+import { InstructionBlocks } from "./instruction-blocks";
 import {
   INITIAL_CONTEXT_PACK_STATE,
   INITIAL_INDEX_PROPOSAL_STATE,
@@ -12,6 +15,14 @@ import {
 import { McpTokenManager } from "./token-manager";
 
 export const dynamic = "force-dynamic";
+
+/** The deployment's own origin, from the request the browser addressed. */
+async function requestBaseUrl(): Promise<string> {
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("host") ?? "localhost:3000";
+  const protocol = requestHeaders.get("x-forwarded-proto") ?? "http";
+  return `${protocol}://${host}`;
+}
 
 export default async function McpSettingsPage() {
   const userId = await getCurrentUserId();
@@ -43,6 +54,7 @@ export default async function McpSettingsPage() {
         </p>
       </header>
       <McpTokenManager tokens={tokens} />
+      <InstructionBlocks baseUrl={await requestBaseUrl()} />
       <ContextTools
         initialContextState={INITIAL_CONTEXT_PACK_STATE}
         initialProposalState={INITIAL_INDEX_PROPOSAL_STATE}
