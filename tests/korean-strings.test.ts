@@ -11,6 +11,7 @@ import * as COMMON_MODULE from "../apps/web/lib/strings/common";
 import * as DASHBOARD_MODULE from "../apps/web/lib/strings/dashboard";
 import * as GRAPH_MODULE from "../apps/web/lib/strings/graph";
 import * as HARNESS_MODULE from "../apps/web/lib/strings/harness";
+import * as HOME_MODULE from "../apps/web/lib/strings/home";
 import * as INSPECTION_MODULE from "../apps/web/lib/strings/inspection";
 import * as LIBRARY_MODULE from "../apps/web/lib/strings/library";
 import * as MAP_MODULE from "../apps/web/lib/strings/map";
@@ -74,6 +75,8 @@ const CONVERTED_SCREENS = [
   "apps/web/app/app/map/map-screen.tsx",
   // Phase 3 Wave D
   "apps/web/app/app/settings/mcp/instruction-blocks.tsx",
+  // Phase 3 Wave E
+  "apps/web/app/app/home-screen.tsx",
 ];
 
 /**
@@ -258,6 +261,7 @@ describe("korean-first copy policy", () => {
     DASHBOARD: DASHBOARD_MODULE.DASHBOARD,
     GRAPH: GRAPH_MODULE.GRAPH,
     HARNESS: HARNESS_MODULE.HARNESS,
+    HOME: HOME_MODULE.HOME,
     INSPECTION: INSPECTION_MODULE.INSPECTION,
     LIBRARY: LIBRARY_MODULE.LIBRARY,
     WORKSPACE_MAP: MAP_MODULE.WORKSPACE_MAP,

@@ -125,7 +125,7 @@ Graft 패스 2 상당 — "AI로 지식그래프를 구축"의 AI 부분. LazyGr
       수용 기준: 두 테마 렌더·AA 명암비, 주장 문구가 ADR-012 허용 목록과 일치(수동 체크리스트를 evidence에), 스크린샷 4종 갱신.
       Commit: `feat(site): renew the landing around the knowledge graph`
 
-- [ ] **13. 앱 홈·온보딩 재편**
+- [x] **13. 앱 홈·온보딩 재편** _(2026-08-23 완료 — `/app` = 저장 행 파생 온보딩 한 줄기(연결→그래프 생성→그래프 뷰+MCP 토큰), `/` 개요는 그래프 존 히어로 승격. 패치는 폐기·의도만 이식(lang=ko+한국어 타이틀). 여정 e2e 2건 + 두 테마 axe 스위프 편입. `.omo/evidence/phase3/wave-e-todo-13.md`)_
       `/`(공개 데모)와 `/app`(실데이터) 개요를 그래프 중심으로: 첫 화면 미니맵 → `/app/map` 승격, 온보딩 플로우 "레포 연결 → 그래프 생성 진행 표시 → 첫 그래프 뷰 + MCP 토큰 발급"을 한 줄기로. `planning/rescued-from-specproof/korean-homepage-uncommitted.patch`(lang=ko·타이틀) 적용 여부를 이 시점에 판정.
       수용 기준: 온보딩 경로 Playwright(연결→그래프→토큰), 어휘는 Phase 2D 개편안 유지, 두 테마 axe.
       Commit: `feat(overview): center onboarding on the graph`

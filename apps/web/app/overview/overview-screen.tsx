@@ -74,7 +74,10 @@ function GraphZone({ model }: { model: OverviewViewModel }) {
   const spanY = Math.max(Math.max(...ys) - minY, 1);
 
   return (
-    <section className="overview-zone" aria-labelledby="overview-graph-title">
+    <section
+      className="overview-zone overview-zone--graph"
+      aria-labelledby="overview-graph-title"
+    >
       <ZoneHeader
         href="/map"
         icon={Network}

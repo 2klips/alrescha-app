@@ -92,6 +92,8 @@ export const CONVENTIONAL_ENGLISH_TERMS = [
   // settings, stats, auth, onboarding, evidence detail).
   "OAuth",
   "BYOK",
+  // Phase 3 Wave E — structure-edge vocabulary shown verbatim on the home.
+  "import",
   "API",
   "JSON",
   "PR",

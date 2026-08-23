@@ -7,7 +7,7 @@
 export const OVERVIEW = {
   kicker: "한눈에 보기",
   title: "프로젝트 대시보드",
-  lead: "그래프·할 일·에이전트 기록·Data Brain을 한 화면에서 봅니다.",
+  lead: "레포의 지식그래프를 중심으로 할 일·에이전트 기록·Data Brain을 한 화면에서 봅니다.",
 
   kpi: {
     ariaLabel: "핵심 지표",
@@ -19,8 +19,8 @@ export const OVERVIEW = {
   },
 
   graph: {
-    title: "그래프 뷰",
-    lead: "요구사항→코드→테스트 연결이 어떻게 증명되는지 보여줍니다.",
+    title: "지식그래프",
+    lead: "문서·요구사항·코드·테스트가 하나의 살아있는 그래프로 연결됩니다.",
     open: "전체 그래프 열기",
     /** `노드 <n>개 · 연결 <m>개` */
     summary: (nodes: number, edges: number) =>

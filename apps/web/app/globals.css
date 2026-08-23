@@ -6157,6 +6157,16 @@ a {
   padding: 1rem 1.1rem 1.1rem;
 }
 
+/* Phase 3 Wave E todo 13 — the knowledge graph is the hero zone: it spans
+   the full row and gets a taller miniature, the other zones stay a grid. */
+.overview-zone--graph {
+  grid-column: 1 / -1;
+}
+
+.overview-zone--graph .overview-minimap {
+  min-height: 13rem;
+}
+
 .overview-zone-head {
   align-items: flex-start;
   border-bottom: 1px solid var(--line);
@@ -6687,4 +6697,241 @@ li[data-todo-status="blocked"] .overview-todo-status {
 .facet-band-node[aria-pressed="true"] {
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--tint-accent);
+}
+
+/* ---------------------------------------------------------------------------
+ * /app workspace home (Phase 3 Wave E todo 13) — the graph-centric
+ * onboarding spine: 레포 연결 → 지식그래프 생성 → 그래프 뷰 + MCP 토큰.
+ * ------------------------------------------------------------------------- */
+
+.home-shell {
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.home-main {
+  display: grid;
+  gap: 2.5rem;
+  margin: 0 auto;
+  max-width: 64rem;
+  padding: 3.5rem 1.75rem 4rem;
+  width: 100%;
+}
+
+.home-hero h1 {
+  font-size: clamp(1.6rem, 3.4vw, 2.3rem);
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  margin-top: 0.5rem;
+}
+
+.home-lead {
+  color: var(--muted);
+  margin-top: 0.75rem;
+  max-width: 40em;
+}
+
+.home-revoked {
+  align-items: center;
+  border: 1px solid var(--danger);
+  border-radius: 0.6rem;
+  background: var(--tint-danger);
+  color: var(--danger-text);
+  display: flex;
+  font-size: 0.85rem;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  padding: 0.65rem 0.9rem;
+  width: fit-content;
+}
+
+.home-graph-card {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  padding: 1.1rem 1.4rem;
+}
+
+.home-graph-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.4rem;
+}
+
+.home-graph-counts span {
+  color: var(--muted);
+  display: grid;
+  font-size: 0.78rem;
+  gap: 0.1rem;
+}
+
+.home-graph-counts strong {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
+.home-graph-commit {
+  align-items: center;
+  color: var(--faint);
+  display: flex;
+  font-size: 0.78rem;
+  gap: 0.4rem;
+}
+
+.home-graph-commit code {
+  font-family: var(--font-mono);
+}
+
+.home-graph-open {
+  align-items: center;
+  background: var(--accent);
+  border-radius: 0.6rem;
+  color: var(--on-accent);
+  display: inline-flex;
+  font-size: 0.9rem;
+  font-weight: 600;
+  gap: 0.45rem;
+  padding: 0.65rem 1.1rem;
+  text-decoration: none;
+}
+
+.home-graph-open:hover {
+  filter: brightness(1.08);
+}
+
+.home-journey {
+  display: grid;
+  gap: 0.9rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-journey > li {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: auto 1fr;
+  padding: 1.15rem 1.3rem;
+}
+
+.home-journey > li[data-step-state="active"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--tint-accent);
+}
+
+/* Pending steps recede via a dashed border, never via opacity — dimming
+   text below --muted breaks the AA floor (design-tokens.md §2). */
+.home-journey > li[data-step-state="pending"] {
+  background: transparent;
+  border-style: dashed;
+}
+
+.home-step-badge {
+  align-items: center;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--muted);
+  display: inline-flex;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  height: 1.7rem;
+  justify-content: center;
+  margin-top: 0.1rem;
+  width: 1.7rem;
+}
+
+.home-step-badge[data-step-state="done"] {
+  background: var(--tint-verified);
+  border-color: var(--verified);
+  color: var(--verified-text);
+}
+
+.home-step-badge[data-step-state="active"] {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.home-journey h2 {
+  align-items: center;
+  display: flex;
+  font-size: 0.98rem;
+  gap: 0.45rem;
+}
+
+.home-step-state {
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  margin-left: 0.35rem;
+  padding: 0.12rem 0.5rem;
+}
+
+.home-step-state[data-step-state="done"] {
+  border-color: var(--verified);
+  color: var(--verified-text);
+}
+
+.home-step-state[data-step-state="active"] {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.home-journey p {
+  color: var(--muted);
+  font-size: 0.86rem;
+  margin-top: 0.45rem;
+  max-width: 46em;
+}
+
+.home-journey p.home-step-done {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+.home-journey small {
+  color: var(--faint);
+  display: block;
+  font-size: 0.76rem;
+  margin-top: 0.2rem;
+}
+
+.home-step-cta {
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.55rem;
+  color: var(--accent-text);
+  display: inline-flex;
+  font-size: 0.83rem;
+  font-weight: 600;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+  padding: 0.45rem 0.85rem;
+  text-decoration: none;
+}
+
+.home-step-cta:hover {
+  border-color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .home-graph-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

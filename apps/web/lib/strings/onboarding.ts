@@ -5,7 +5,7 @@
 
 export const ONBOARDING = {
   ariaProgress: "온보딩 진행",
-  brandTagline: "프로젝트 보증 워크스페이스",
+  brandTagline: "살아있는 지식그래프 워크스페이스",
 
   steps: {
     signIn: "로그인",
@@ -51,7 +51,7 @@ export const ONBOARDING = {
   repository: {
     kicker: "03 · 레포지토리",
     titleDemo: "알려진 드리프트 사례를 살펴보세요.",
-    titleDefault: "첫 증명 Graph를 선택하세요.",
+    titleDefault: "첫 지식그래프가 될 레포를 선택하세요.",
     bodyDemo:
       "이 번들 공개 픽스처는 GitHub token, 비공개 레포지토리 권한, credit이 필요 없습니다.",
     bodyDefault: "설치 token은 일시적으로만 유지되며 저장되지 않습니다.",
@@ -74,8 +74,8 @@ export const ONBOARDING = {
 
   scan: {
     kicker: "04 · 첫 스캔",
-    title: "증명 축 구성 중",
-    body: "아티팩트 15개 색인 · 요구사항 13개 · 메타데이터 전용 증거 Graph",
-    cta: "증거 Graph 열기",
+    title: "지식그래프 구성 중",
+    body: "아티팩트 15개 색인 · 요구사항 13개 · 메타데이터 전용 지식그래프",
+    cta: "지식그래프 열기",
   },
 } as const;
