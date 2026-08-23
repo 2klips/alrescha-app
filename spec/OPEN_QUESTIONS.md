@@ -172,3 +172,11 @@
 - 임시 결정: analyze 핸들러는 **구현된 스키마 그대로** 발급한다. 포맷을 지금 바꾸면 ⑴ 기존 receipt 테스트·다이제스트가 전부 깨지고 ⑵ OQ-010이 Wave 4로 예약해둔 `predicateType` 변경과 충돌한다. §13이 요구하는 `findings{opened,resolved,open_total}`는 predicate가 아니라 **`receipts.summary`에 저장**했다 — 커밋 카드가 읽는 곳이 거기이고(`receiptFindings`), 그래서 화면 기능은 스펙대로 동작한다. `coverage`는 아직 어디에도 없다.
 - 필요한 결정: ⑴ **스펙에 맞춰 구현 개정**(subject에 sha1 커밋 항목 허용, predicate 확장, `signatures: []` 추가) — Sigstore 서명을 마이그레이션 없이 붙일 수 있어야 한다는 §13 요구를 지키려면 이쪽이다. ⑵ **구현을 정본으로 삼고 §13 개정** — 단, `coverage`·`analyzedAt` 같은 정보가 사라지는 손실을 감수할지 판단 필요. ⑶ 현행 유지(스펙-구현 불일치를 남김) — 비권장.
 - 상태: **resolved (2026-08-22 사용자 판정 — 하이브리드)**. 판정 근거 셋: ⓐ §13의 predicateType(`specproof.app`)은 구 제품명 초안으로 OQ-010 리네임이 이미 대체했다 — 이 항목은 구현이 정본이었다. ⓑ §13이 statement 안에 그린 `signatures: []`는 자기 요구("마이그레이션 없이 Sigstore")와 충돌한다 — in-toto v1의 서명은 statement 밖 DSSE envelope이며, 현행 구현(서명 없는 canonical statement + digest)이 그 요구를 지키는 유일한 형태다. ⓒ 실질 손실 4종(git:commit sha1 subject·tool·analyzedAt·coverage)은 digest가 어차피 깨지는 Wave 4 predicateType 확정 시점에 한 번에 추가하면 이중 파괴가 없다. 처리: **현행 구현을 운영 v1 정본으로 §13 개정**(사용자 지시로 직접 수정 — DSSE 서명 모델·summary의 findings 델타·Wave 4 예약 필드 명시), 개정 전 발급된 로컬 dev receipt는 Wave 4 개정 시 폐기. Wave 4 작업 목록에 predicateType 교체 + 예약 필드 4종 추가가 함께 묶였다(§13 "Wave 4 예약" 절이 체크리스트).
+
+## OQ-019 — tree-sitter 재판정 (다언어 구조 엣지의 전제)
+
+- 발견: Phase 3 방향 수정 리서치(2026-08-23) / `spec/RESEARCH_KG_FUSION_2026-08-23.md`, `spec/DECISIONS-ADR.md` ADR-014
+- 내용: ADR-014는 tree-sitter를 미채택했다 — 선택적 네이티브 의존성이 ADR-013의 "로컬·GitHub 경로 동등성"을 깨기 때문. 그러나 이번에 조사한 참고 프로젝트(codebase-memory-mcp 158문법, Graft 21언어)와 논문 계열(RepoGraph·Aider repo-map 등) 전원이 tree-sitter 기반이고, Phase 3 Wave B의 import/call 엣지는 기존 엔진 체인(TS 컴파일러 API + 구조 파서)으로는 TS/JS 외 언어에서 한계가 있다. 쟁점: **WASM 배포(`web-tree-sitter` — Graft가 광역 티어 폴백으로 실사용)라면 네이티브 의존성 문제가 사라져 ADR-014의 기각 논거가 소멸하는가.**
+- 임시 결정: Wave B는 tree-sitter 없이 기존 엔진 체인으로 TS/JS(해석 `resolved` + 이름 매칭 `reference`)와 Python/Go import까지만 추출한다. `symbolEngine` provenance는 유지.
+- 필요한 결정: ⑴ `web-tree-sitter`(WASM)를 엔진 체인의 새 단계로 추가 — 네이티브 빌드 없이 다언어 확장, ADR-014는 "네이티브 tree-sitter 미채택"으로 좁혀 개정. ⑵ 현행 유지 — TS/JS 중심 시장이면 다언어 call 엣지는 수요 확인 전 불요. ⑶ 서버 측(워커) 한정 네이티브 tree-sitter — 로컬 CLI 경로와의 동등성 재검토 필요.
+- 상태: open. Wave B 완료 후 TS/JS 외 언어 수요가 확인되는 시점에 판정. ⑴이 기본 후보 — Graft의 실사용 선례가 있고 가드레일·동등성을 건드리지 않는다.

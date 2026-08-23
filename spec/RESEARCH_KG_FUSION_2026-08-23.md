@@ -1,0 +1,92 @@
+# 연구 보고: 참고 프로젝트 융합 — codebase-memory-mcp · Graft · 코드 지식그래프 논문 (2026-08-23)
+
+> 사용자 지시(2026-08-23)에 따른 방향 수정 리서치. MIT 라이선스 프로젝트 2종을 코드 수준까지 분석하고, 2024–2026 논문·산업 기법을 조사해 **Arr의 목표(바이브코딩 에이전트의 토큰 절감·작업 속도/정확도 향상)를 강화할 채택 기술**을 판정했다. 실행 계획은 `BUILD_PLAN_PHASE3.md`.
+>
+> 요약 결론:
+>
+> 1. **핵심 논지는 외부에서 검증됐다**: Graft가 SWE-bench Verified +12pp(66% vs 54%)·토큰 −42%, codebase-memory-mcp(arXiv:2603.27277)가 토큰 10배 절감·툴콜 2.1배 감소, LocAgent(ACL 2025)가 비용 −86%를 보고. 그래프 컨텍스트는 에이전트 비용을 실제로 깎는다.
+> 2. **단, 그래프 단독은 품질을 잃는다**: CBM 자체 논문에서 일반 질문 품질 83% vs 파일 탐색 92%. → 그래프는 "탐색 대체"가 아니라 "탐색 라운드 절감 + 파일로 폴스루"로 설계해야 한다(Arr의 기존 `route_query` 라우팅 방침과 일치).
+> 3. **두 참고 프로젝트의 구조적 공백 = Arr의 흰 공간**: 둘 다 로컬 전용·사실상 읽기 전용·시각화는 부속. Arr의 호스티드 GitHub 실시간 인제스트 + 팀 공유 그래프 + 출처 있는 에이전트 쓰기 + 제품급 그래프 뷰는 이들이 구조적으로 못 하는 것이다.
+> 4. **최우선 채택 5종**: ⑴ Graft식 2-패스 빌드(결정론 구조 → 해시 캐시된 AI 개념 패스) ⑵ import/call 엣지 + 신뢰도 티어 ⑶ 개인화 PageRank 기반 repo map·시드 서브그래프 검색 ⑷ Mem0/Graphiti식 쓰기 재조정 + bi-temporal 에이전트 메모리 ⑸ CBM식 툴 인체공학(get_graph_schema·compact 출력·blast radius).
+
+---
+
+## 1. DeusData/codebase-memory-mcp (MIT)
+
+순수 C 단일 바이너리 MCP 서버. tree-sitter 158문법 + 자체 "Hybrid LSP" 타입 해석으로 SQLite 프로퍼티 그래프를 구축(리눅스 커널 28M LOC를 3분에 4.81M 노드), openCypher 서브셋 질의, 15개 MCP 툴, 43개 에이전트 자동 설정.
+
+### 데이터 모델 (채택 가치 높음)
+
+- 노드: `id·label(13종: Function/Class/Method/Module/File/Route/Resource…)·name·qualified_name·file_path·span·properties_json`. 엣지: `source·target·type·properties_json`. **SQLite 2테이블 + JSON 속성 가방** — 그래프 DB 없이 sub-ms 질의를 실증. Arr의 `graph_nodes`/`edges` Postgres 스키마와 동형이라 이식 비용이 낮다.
+- 엣지 분류학(약 25종) 중 특히: `CALLS` vs `CALL_REFERENCE`(**타입 해석된 엣지와 이름 매칭 엣지의 2단계 신뢰도**), `FILE_CHANGES_WITH`(git 공변경 — Arr는 웹훅으로 커밋 이력을 이미 받으므로 거의 공짜), `TESTS`, `SIMILAR_TO`(MinHash+LSH), `SEMANTICALLY_RELATED`(임베딩 ≥0.80), `HTTP_CALLS`/`EMITS`/`LISTENS_ON`(크로스 서비스).
+
+### 툴 인체공학 (채택 가치 높음)
+
+- `get_graph_schema` = "먼저 호출하라" 툴 — 에이전트가 그래프 어휘를 알고 시작하게 한다.
+- 출력 기본값이 JSON이 아니라 **compact tree 텍스트** + `fields[]` 프로젝션 + depth/limit 캡 — 출력 포맷 자체가 토큰 최적화.
+- `detect_changes`: git diff → 영향 심볼 → **블라스트 반경 + 리스크 분류**. Arr는 서버에서 PR diff를 받으므로 "PR 임팩트" 툴로 확장 가능(로컬 전용인 CBM은 불가능한 제품 기능).
+- 에이전트 설정에 **지시 블록 설치**(CLAUDE.md 등) — 에이전트가 grep 대신 그래프를 실제로 쓰게 만드는 결정적 장치라는 리뷰 다수.
+
+### 정직한 수치와 한계
+
+- 자체 논문(arXiv:2603.27277, 31개 레포): 토큰 10배↓·툴콜 2.1배↓, **품질 83% vs 파일 탐색 92%** — 그래프 단독의 상한을 스스로 보고. 그래프 네이티브 질문(허브 탐지·호출자 순위)에서는 동등 이상.
+- 공백: 에이전트 쓰기는 `manage_adr` 하나뿐, 팀 공유는 레포에 커밋하는 zstd 스냅샷(커밋 사이 낡음), 시각화는 디버그 부속, C 모놀리스라 기여 장벽.
+
+## 2. NanoNets/Graft (MIT)
+
+TypeScript "코딩 에이전트용 컨텍스트 레이어". 데몬·DB·임베딩 없이 파일 기반. 주장: 툴콜 −46%·토큰 −42%·시간 −60%, SWE-bench Verified 66% vs 54%(50문항, 동일 모델 양팔).
+
+### 2-패스 빌드 (최우선 채택)
+
+- **패스 1 구조(결정론, LLM 없음)**: tree-sitter 21언어 → 심볼·시그니처·스코프 인지 호출 엣지·임포트(`wiring.json`). 콘텐츠 해시 캐시, 질의 시 ~3ms 신선도 검사.
+- **패스 2 개념(선택, `--deep`)**: ⑴ 파일당 산문 요약(3–8문장, temp 0, 해시 캐시 — 변경 파일만 재과금) ⑵ 요약 배치(≤48k자)를 **강제 tool-use + 엄격 스키마**로 개념 그래프 합성 — 노드는 `system|api|file|concept`, 관계 동사는 **폐쇄 7종**(`part_of·uses·depends_on·produces·configures·validates·implements`, 모호하면 링크 폐기) ⑶ 심볼당 "crux" 발췌.
+- **트리플 추출 없이 산문 요약이 중간 표현** — GraphRAG식 엔티티 추출보다 싸고 견고하며 사람이 읽을 수 있다.
+
+### 그 외 채택 후보
+
+- **신뢰도 타입 엣지** `lsp_resolved > lsp_dispatch > extracted > inferred` — 시각화에서 LLM 추론 엣지는 점선. Arr 쓰기 경로에 `agent_asserted` 티어를 추가하면 출처 신뢰 모델이 완성된다.
+- **검색 스택(임베딩 제로)**: 이름 3× + 경로 2× + body BM25 렉시컬 → **개인화 PageRank 리랭크**(α=0.25, 25회 반복, 가중 0.5, rescue floor 0.15). ~200줄, 질의 비용 0.
+- **generated/human 섹션 마커**(`<!-- context:generated:start/end -->`): 기계 재생성 영역과 사람 노트 영역 분리 — 에이전트 쓰기를 안전하게 만드는 정확한 메커니즘.
+- 훅 기반 푸시 주입(프롬프트 제출 시 상위 3 포인터, 세션 내 중복 제거), 신선도 계약(`check_freshness`), d3-force SVG 뷰어의 포커스 모드 UX(진출 엣지 앰버·진입 틸).
+
+### 한계 (Arr의 기회)
+
+로컬 전용(팀원마다 재빌드·재과금), MCP 쓰기 툴 없음, 임베딩 없어 식별자 불일치 질의에 취약, git 이력·문서(ADR/README) 미포함, 48k 배치 경계에서 개념 파편화, SVG 뷰어는 수천 노드 한계.
+
+### ⚠ 채택 불가 판정 1건
+
+Graft의 `body_text`(≤5000자 검색용 발췌)와 `crux`(코드 스니펫 텍스트 저장)는 **Arr 하드룰 "원본 코드 본문 비저장"과 정면 충돌**한다. → **산문 요약만 저장, 코드 발췌는 비저장**(본문은 기존처럼 transient fetch로만 서빙). 이 판정으로 ADR 개정 없이 2-패스를 도입할 수 있다.
+
+## 3. 논문·산업 기법 (2024–2026)
+
+| 기법 | 핵심 | 수치 | Arr 적용 |
+| --- | --- | --- | --- |
+| **Aider repo-map** | tree-sitter def/ref 그래프 + 개인화 PageRank + **토큰 예산 시그니처 스켈레톤** | 업계 사실상 표준(재구현 다수) | **High** — `repo_map(focus, token_budget)` 툴. PageRank 점수는 그래프 뷰 노드 크기와 겸용 |
+| **HippoRAG 2** (ICML 2025) | 질의 매칭 시드 → **PPR 1회**로 멀티홉 검색(반복 LLM 홉 대체) | 반복 검색 대비 10–20배 저렴, 최강 임베딩 대비 +7 F1 | **High** — 시드(과제 텍스트·스택트레이스 심볼) → PPR 서브그래프 1콜. Aider·RepoHyper와 독립 수렴한 알고리즘 |
+| **LocAgent** (ACL 2025) | 이슈→수정 위치 특정을 3툴(검색·순회·본문)로 | 파일 위치 정확도 92.7%, **비용 −86%**, 평균 4.2 라운드 | **High** — 툴 스프롤 억제: 순회 응답에 본문 배제, 본문은 별도 툴로만 과금 |
+| **RepoGraph** (ICLR 2025) | 라인 수준 def-ref 그래프 + ego-graph 툴 | SWE-bench Lite 상대 **+32.8%** | High — "그래프는 에이전트에 *추가*될 때 이긴다"의 대표 근거 |
+| **CodexGraph** (NAACL 2025) | 그래프 DB + 에이전트가 Cypher 직접 작성(번역 에이전트 경유) | CrossCodeEval EM 27.9% vs 임베딩 21.2% | Medium — 캔드 툴 + 원시 질의 이스케이프 해치 병행 근거. 질의 수리 루프 필요 |
+| **LazyGraphRAG** (MS) | 구조 인덱스는 즉시·저비용, **요약은 질의 시 생성 + 캐시** | 인덱싱 비용 GraphRAG의 0.1% | **High** — 레포당 SaaS 인덱싱의 올바른 비용 모델 |
+| **GraphRAG 커뮤니티 요약** | Leiden/Louvain 군집 → 모듈 요약 → 전역 질문 응답 | 전역 질문에서 벡터 RAG 우위 | High — Arr는 Louvain을 이미 렌더에 사용 중, 데이터 레이어로 승격만 하면 됨 |
+| **Mem0** | 쓰기 시 **ADD/UPDATE/DELETE/NOOP 재조정**(충돌 해소) | 토큰 −90%, 정확도 +26% (LOCOMO) | **High** — 에이전트 노트가 매립지가 되지 않게 하는 핵심 |
+| **Zep/Graphiti** | **bi-temporal** 지식그래프 — 새 사실이 옛 엣지를 삭제가 아니라 **무효화**(valid_from/invalid_at) | LongMemEval +18.5%p | **High** — 커밋=에피소드. 시간여행 질의·감사 가능성. Arr의 append-only 성향과 정합 |
+| **MemGPT/Letta** | 노드에 붙는 **크기 제한 명명 메모리 블록** + 명시적 편집 툴 | — | High — `gotchas`/`conventions`/`decisions` 블록, 크기 캡이 증류를 강제 |
+| **A-MEM** (NeurIPS 2025) | 쓰기 시 자동 링크 + 기존 노트 진화 | 멀티홉 효율 2–6배 | Medium-High |
+| **Cursor Merkle 동기화 / SCIP / Stack Graphs** | 파일 단위 부분 그래프 + 변경분만 재추출 | 업로드 −90% | Medium — Arr는 웹훅 diff가 이미 변경 목록을 제공, blob 해시 캐시로 충분 |
+| **grep 반증 연구** (GrepRAG, Augment) | 단순 조회는 렉시컬이 승리 | CrossCodeEval 상대 +7–15% | **경계 조건** — 그래프를 유일 경로로 만들지 말 것. `route_query` 라우팅 유지·강화 |
+| 비채택: 훈련 GNN 리랭커(RepoHyper)·그래프-어텐션 모델(CGM)·문장 수준 CCG(GraphCoder)·LLM 엔티티 추출(GraphRAG 파이프라인) | | | 파서 유도 그래프 + PPR + lazy 요약 스택에 제품 관점에서 지배됨 |
+
+### 판매 논리 (벤치마킹 단계에서 검증할 주장)
+
+"단발 검색 개선"이 아니라 **"에이전트 턴 수 절감"**을 판다 — 각 탐색 라운드는 컨텍스트 전체를 실은 모델 호출이다(LocAgent 4.2라운드 vs 통상 10–20라운드가 −86%의 출처). 외부 인용 가능 수치: 10×(CBM)·−86%(LocAgent)·−42%(Graft)·−90%(Mem0). **자체 수치는 동결 실험(벤치 v3) 통과 전까지 게시 금지(ADR-012 유지).**
+
+## 4. 가드레일·ADR 충돌 판정
+
+| 항목 | 판정 |
+| --- | --- |
+| 원본 코드 비저장 vs Graft body_text/crux | **충돌 — 발췌 비저장으로 우회**(§2). 산문 요약·시그니처·스팬은 메타데이터로 저장 가능 |
+| ADR-014(tree-sitter 미채택) vs 참고 프로젝트 전원 tree-sitter | **당장 충돌 없음** — call/import 엣지는 기존 엔진 체인(TS 컴파일러 API)으로 TS/JS부터 추출 가능. 다언어 확장 시점에 재판정 → **OQ-019 신규 등록** |
+| ADR-015(로컬 인제스트는 그래프 전용) | 무충돌 — 본 방향은 그래프를 강화하므로 오히려 정합 |
+| AI 요약 저장 | `inferred` 등급 규칙 적용(ADR-001) — 개념 노드·요약은 전부 `inferred` 표기, 실행 증거 기반 엣지만 `verified` 계열 |
+| MCP 2026-07-28 stateless | 무충돌 — Graft의 훅 주입은 클라이언트 측 장치라 서버 스펙과 무관. 지시 블록 설치기로 대체 |
+| 크레딧 규칙 | AI 개념 패스는 다섯 번째 잡 종류 `coach` 선례대로 **여섯 번째 잡 `enrich`**로 편입 — 기존 라이프사이클(예약→정산/환불·실패 무과금·BYOK 0크레딧) 상속, 새 과금 경로 금지 |
