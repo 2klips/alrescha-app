@@ -84,17 +84,17 @@ Graft 패스 1 상당 — LLM 없이 그래프의 정보 밀도를 올린다. **
 
 Graft 패스 2 상당 — "AI로 지식그래프를 구축"의 AI 부분. LazyGraphRAG 원칙: 구조는 이미 즉시·무료, AI는 요청 시·캐시.
 
-- [ ] **6. `enrich` 잡 ① — 파일 산문 요약**
+- [x] **6. `enrich` 잡 ① — 파일 산문 요약** _(2026-08-24 완료 — 캐시 인지 인큐(pending 0 = 잡 없음), 산문 검증기(축자 인용 거부), 10파일 청크 영속화, index_entries 결정론 생성+백필(실DB 422행). 실기 370파일 요약 완주 중 발견 2건: 검증기 잡 전체 reject는 배치 블로킹 → 파일 게이트+전량 무효 시 환불로 재설계, Anthropic 산문 JSON 미준수 → 강제 tool-use 전환. `.omo/evidence/phase3/wave-c-todo-6.md`)_
       여섯 번째 잡 종류 `enrich`(coach 선례대로 `enqueue_job` 복제 스크립트로 신설, 크레딧 라이프사이클 상속·BYOK 0크레딧). 파일당 3–8문장 산문 요약(temp 0, 입력 클립), **blob 해시 캐시** — 재실행 시 변경 파일만 과금. 요약은 `inferred` 표기로 아티팩트 메타데이터에 저장. 본문은 잡 내 transient(기존 `readSource` 주입 패턴 재사용). 실패 파일은 게이트로 스킵 추적(Graft LlmFailureGate 패턴).
       수용 기준: 해시 캐시 적중 시 0크레딧 증명, 실패 무과금·멱등 과금(기존 judge 테스트 패턴), 요약에 원본 코드 라인이 포함되지 않음을 스코프 스캐너 관점에서 확인(산문만). **추가(Wave D 발견): 스캔·enrich가 `index_entries`를 생성해 실스캔 워크스페이스에서 `search_index`/`search_nodes`가 서야 한다** — 현재 데모·벤치만 사전 구축 인덱스를 쓰고 실경로는 빈 결과다.
       Commit: `feat(worker): summarize changed files through the enrich job`
 
-- [ ] **7. `enrich` 잡 ② — 개념 그래프 합성**
+- [x] **7. `enrich` 잡 ② — 개념 그래프 합성** _(2026-08-24 완료 — 폐쇄 7동사 clean 패스(모호 폐기), 슬러그 upsert 수렴, 배치 병합, SQL/TS 동일 다이제스트 공식(collate "C"), 개념 레이어 토글 Playwright, 노드 크기 PPR 교체(WeakMap 캐시). `.omo/evidence/phase3/wave-c-todo-7.md`)_
       요약 배치(상한 상수) → **강제 tool-use + 엄격 zod 스키마**로 개념 노드(`system|api|concept`)와 폐쇄 7동사 링크 합성. 무효 관계는 폐기(clean 패스). 개념 노드는 `graph_nodes`에 `inferred`로, 파일 출처 상속으로 신선도 추적. 그래프 뷰에 개념 레이어(구조/개념 토글). 노드 크기 함수를 PPR 점수로 교체.
       수용 기준: 스키마 위반 출력 무과금·재시도, 배치 경계에서 개념 파편화 방지(슬러그 병합 테스트), 재실행 수렴(같은 입력 → 같은 슬러그 upsert), 뷰 토글 Playwright.
       Commit: `feat(worker): synthesize the concept graph from summaries`
 
-- [ ] **8. Lazy 모듈 요약 + `explain_module`**
+- [x] **8. Lazy 모듈 요약 + `explain_module`** _(2026-08-24 완료 — 재량: Louvain 대신 결정론 라벨 전파(무작위 군집은 캐시 키 불가), lazy 3상태(ready/stale/pending — 생성은 동기 호출이 아니라 크레딧 잡 인큐), MCP 22툴(repo_overview 포함). `.omo/evidence/phase3/wave-c-todo-8.md`)_
       렌더 전용이던 Louvain을 데이터 레이어로 승격: import/call 그래프 군집 → 모듈 클러스터. 요약은 **첫 질의 시 생성·캐시, 구성원 해시 변경 시 무효화**(LazyGraphRAG). MCP `explain_module(node)`·`repo_overview()` — grep이 답할 수 없는 "이 레포 아키텍처" 질문 담당.
       수용 기준: lazy 생성·캐시 적중·무효화 3상태 테스트, 크레딧 규칙 상속, 툴 계약 테스트.
       Commit: `feat(brain): serve lazy community summaries`

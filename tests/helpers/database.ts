@@ -79,6 +79,12 @@ export const FILE_CO_CHANGES_MIGRATION =
   "supabase/migrations/202608230003_file_co_changes.sql";
 export const AGENT_MEMORY_MIGRATION =
   "supabase/migrations/202608230004_agent_memory.sql";
+export const ENRICH_PASS_MIGRATION =
+  "supabase/migrations/202608240001_enrich_pass.sql";
+export const CONCEPT_GRAPH_MIGRATION =
+  "supabase/migrations/202608240002_concept_graph.sql";
+export const MODULE_SUMMARIES_MIGRATION =
+  "supabase/migrations/202608240003_module_summaries.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -109,6 +115,9 @@ export const ALL_MIGRATIONS = [
   CODE_LINK_EDGES_MIGRATION,
   FILE_CO_CHANGES_MIGRATION,
   AGENT_MEMORY_MIGRATION,
+  ENRICH_PASS_MIGRATION,
+  CONCEPT_GRAPH_MIGRATION,
+  MODULE_SUMMARIES_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

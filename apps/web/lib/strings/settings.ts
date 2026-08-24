@@ -29,6 +29,19 @@ export const SETTINGS = {
       pausedNote: "결정론적 스캔과 드리프트 분석은 계속 동작합니다.",
     },
 
+    /** AI 개념 패스 실행 카드 (Phase 3 Wave C). */
+    enrich: {
+      heading: "AI 개념 패스",
+      intro:
+        "스캔된 파일을 산문으로 요약하고 개념 그래프를 합성합니다. 변경된 파일만 다시 계산되며(해시 캐시), BYOK가 등록돼 있으면 credits 대신 내 키로 실행됩니다. 요약과 개념은 전부 inferred로 표시됩니다.",
+      run: "개념 패스 실행",
+      queued:
+        "개념 패스 작업이 대기열에 들어갔습니다. 워커가 처리하면 지식그래프에 개념 레이어가 나타납니다.",
+      fresh:
+        "이미 최신입니다 — 요약과 개념 레이어가 현재 스캔과 일치합니다. credits는 사용되지 않았습니다.",
+      noRepository: "연결된 레포가 없습니다. 먼저 레포를 연결하세요.",
+    },
+
     byok: {
       heading: "BYOK 등록",
       intro:

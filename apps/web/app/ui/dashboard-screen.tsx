@@ -351,6 +351,7 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
       code: 1,
       test: 2,
       document: 3,
+      concept: 4,
     };
     return model.graph.nodes
       .filter((node) => connected.has(node.id))

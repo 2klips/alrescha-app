@@ -2,8 +2,11 @@ import { decryptByokKey, type ByokKeyEnvelope } from "@arr/core/byok";
 import type { JudgmentProvider } from "@arr/core";
 
 import {
+  AnthropicEnrichProvider,
   AnthropicJudgmentProvider,
+  OpenAiEnrichProvider,
   OpenAiJudgmentProvider,
+  type EnrichProvider,
 } from "./ai-providers";
 
 type Fetch = (
@@ -65,6 +68,64 @@ export class JudgmentProviderLoader {
           model: "gpt-5.6",
         })
       : new AnthropicJudgmentProvider({
+          apiKey,
+          fetch: this.fetch,
+          model: "claude-sonnet-5",
+        });
+  }
+}
+
+/**
+ * Enrich pass loader (Phase 3 Wave C todo 6) — same key resolution as
+ * judgment: BYOK decrypts the member's envelope, credits use the platform
+ * key. Only the constructed provider class differs.
+ */
+export class EnrichProviderLoader {
+  private readonly byokKeys: ByokKeyStore;
+  private readonly fetch: Fetch;
+  private readonly masterKey: string;
+  private readonly platformKeys: Readonly<
+    Partial<Record<ProviderName, string>>
+  >;
+
+  constructor(input: {
+    readonly byokKeys: ByokKeyStore;
+    readonly fetch?: Fetch;
+    readonly masterKey: string;
+    readonly platformKeys: Readonly<Partial<Record<ProviderName, string>>>;
+  }) {
+    this.byokKeys = input.byokKeys;
+    this.fetch = input.fetch ?? globalThis.fetch;
+    this.masterKey = input.masterKey;
+    this.platformKeys = input.platformKeys;
+  }
+
+  async load(input: {
+    readonly billingMode: "byok" | "credits";
+    readonly provider: ProviderName;
+    readonly workspaceId: string;
+  }): Promise<EnrichProvider> {
+    let apiKey: string | undefined;
+    if (input.billingMode === "byok") {
+      const envelope = await this.byokKeys.load(input);
+      if (!envelope) {
+        throw new Error(`No ${input.provider} BYOK key is configured.`);
+      }
+      apiKey = decryptByokKey({ envelope, masterKey: this.masterKey });
+    } else {
+      apiKey = this.platformKeys[input.provider];
+    }
+    if (!apiKey) {
+      throw new Error(`${input.provider} enrich provider is unavailable.`);
+    }
+
+    return input.provider === "openai"
+      ? new OpenAiEnrichProvider({
+          apiKey,
+          fetch: this.fetch,
+          model: "gpt-5.6",
+        })
+      : new AnthropicEnrichProvider({
           apiKey,
           fetch: this.fetch,
           model: "claude-sonnet-5",

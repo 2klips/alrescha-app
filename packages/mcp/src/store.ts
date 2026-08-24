@@ -25,6 +25,8 @@ export type McpEdgeRelation =
   | "calls";
 
 export interface McpArtifactData {
+  /** Source blob sha as last scanned — module freshness input (todo 8). */
+  blobSha?: string;
   content: string;
   headings: string[];
   id: string;
@@ -107,8 +109,19 @@ export interface McpIndexEntryData {
   type: McpNodeType;
 }
 
+/** Cached lazy module summary (Wave C todo 8). */
+export interface McpModuleSummaryData {
+  memberDigest: string;
+  memberPaths: string[];
+  moduleKey: string;
+  name: string;
+  summary: string;
+}
+
 export interface McpRepositoryData {
   artifacts: McpArtifactData[];
+  /** Lazy module-summary cache; absent = nothing cached yet. */
+  moduleSummaries?: McpModuleSummaryData[];
   contextPacks: McpContextPackData[];
   defaultBranch: string;
   edges: McpEdgeData[];
@@ -370,6 +383,21 @@ export interface McpStore {
     event: McpAccessEvent,
     measurement?: McpPackMeasurement,
   ): Promise<void>;
+  /**
+   * Lazy module summaries (Wave C todo 8): enqueue one enrich job scoped to
+   * a module cluster. Idempotent per (module, digest) at the queue, so a
+   * storm of identical requests costs one job. Inherits the credit
+   * lifecycle — the store decides BYOK vs credits, never a new billing path.
+   */
+  requestModuleSummary(
+    principal: McpPrincipal,
+    input: {
+      memberDigest: string;
+      memberPaths: string[];
+      moduleKey: string;
+      repositoryId: string;
+    },
+  ): Promise<{ jobId: string | null }>;
   revokeAccessToken(input: {
     actorUserId: string;
     tokenId: string;
@@ -409,6 +437,14 @@ export function createAccessTokenSecret(): string {
 }
 
 export class InMemoryMcpStore implements McpStore {
+  /** Observable log of lazy module-summary enqueues (todo 8 contract tests). */
+  readonly moduleSummaryRequests: Array<{
+    memberDigest: string;
+    memberPaths: string[];
+    moduleKey: string;
+    repositoryId: string;
+    workspaceId: string;
+  }> = [];
   readonly #accessEventFailures: boolean;
   readonly #accessEvents: McpAccessEvent[] = [];
   readonly #packMeasurements: McpPackMeasurement[] = [];
@@ -936,6 +972,25 @@ export class InMemoryMcpStore implements McpStore {
       targetNodeIds: [...event.targetNodeIds],
     });
     if (measurement) this.#packMeasurements.push({ ...measurement });
+  }
+
+  async requestModuleSummary(
+    principal: McpPrincipal,
+    input: {
+      memberDigest: string;
+      memberPaths: string[];
+      moduleKey: string;
+      repositoryId: string;
+    },
+  ): Promise<{ jobId: string | null }> {
+    this.moduleSummaryRequests.push({
+      memberDigest: input.memberDigest,
+      memberPaths: [...input.memberPaths],
+      moduleKey: input.moduleKey,
+      repositoryId: input.repositoryId,
+      workspaceId: principal.workspaceId,
+    });
+    return { jobId: createUlid(this.#now()) };
   }
 
   async revokeAccessToken(input: {

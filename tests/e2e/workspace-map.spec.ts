@@ -147,3 +147,69 @@ test("a scanned workspace renders its own nodes on the map", async ({
     await deleteWorkspaceUser(user.userId);
   }
 });
+
+test("the concept layer renders as inferred nodes and toggles off", async ({
+  context,
+  page,
+}) => {
+  const user = await createWorkspaceUser("map-concepts");
+  try {
+    await signIn(context, user);
+
+    const service = admin();
+    const repository = await service.rpc("ensure_local_repository", {
+      target_workspace_id: user.workspaceId,
+      target_full_name: "local/map-concepts",
+    });
+    const { commitSha, source } =
+      await createLocalRepositorySource(DRIFTED_DEMO);
+    const plan = await scanRepository({ commitSha, source });
+    const applied = await service.rpc("apply_repository_scan", {
+      target_workspace_id: user.workspaceId,
+      target_repository_id: String(repository.data),
+      plan,
+    });
+    expect(applied.error).toBeNull();
+
+    // The concept pass output, persisted through the single write path.
+    const concepts = await service.rpc("apply_concept_graph", {
+      target_workspace_id: user.workspaceId,
+      target_repository_id: String(repository.data),
+      concept_items: [
+        {
+          kind: "concept",
+          links: [{ relation: "uses", target: { path: "src/session.ts" } }],
+          memberPaths: ["src/session.ts"],
+          name: "Session Lifecycle",
+          slug: "session-lifecycle",
+          summary: "How sessions are issued and expired, in prose.",
+        },
+      ],
+      synthesis_digest: "e2e-digest",
+    });
+    expect(concepts.error).toBeNull();
+
+    await page.goto("/app/map");
+    const stage = page.getByTestId("brain-map-stage");
+    await expect(stage).toBeVisible();
+    const withConcepts = Number(await stage.getAttribute("data-canvas-nodes"));
+
+    // The concept edge renders in the inferred (dashed) family and the HUD
+    // counts the concept layer.
+    await expect(
+      stage.locator(".sr-only button").filter({ hasText: "uses:" }).first(),
+    ).toBeAttached();
+
+    // Toggling the layer removes the concept node and its edges — the
+    // structural layer stays.
+    await page.getByTestId("graph-concept-toggle").click();
+    await expect
+      .poll(async () => Number(await stage.getAttribute("data-canvas-nodes")))
+      .toBe(withConcepts - 1);
+    await expect(
+      stage.locator(".sr-only button").filter({ hasText: "uses:" }),
+    ).toHaveCount(0);
+  } finally {
+    await deleteWorkspaceUser(user.userId);
+  }
+});

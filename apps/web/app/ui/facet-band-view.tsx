@@ -29,6 +29,7 @@ interface FacetBandViewProps {
 
 const NODE_TYPE_CLASS = {
   code: "code",
+  concept: "concept",
   document: "doc",
   requirement: "req",
   test: "test",

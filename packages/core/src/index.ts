@@ -418,3 +418,43 @@ export type {
   FacetDomain,
   FacetUnit,
 } from "./ingest/artifact-facets";
+
+export {
+  EnrichValidationError,
+  SUMMARY_INPUT_MAX_CHARS,
+  clipSummaryInput,
+  selectFilesForSummarization,
+  validateProseSummary,
+} from "./enrich/prose-summary";
+export type {
+  ClippedSummaryInput,
+  SummaryCandidate,
+} from "./enrich/prose-summary";
+export {
+  CONCEPT_BATCH_MAX_CHARS,
+  CONCEPT_KINDS,
+  CONCEPT_RELATIONS,
+  CONCEPT_SYNTHESIS_JSON_SCHEMA,
+  SUMMARY_BATCH_MAX_CHARS,
+  batchSummaries,
+  conceptSynthesisDigest,
+  mergeConceptBatches,
+  slugifyConceptName,
+  validateConceptSynthesis,
+} from "./enrich/concept-graph";
+export type {
+  ConceptKind,
+  ConceptLink,
+  ConceptLinkTarget,
+  ConceptRelation,
+  FileSummaryInput,
+  SynthesizedConcept,
+} from "./enrich/concept-graph";
+export {
+  MODULE_MIN_MEMBERS,
+  deriveModuleClusters,
+  moduleClusterOf,
+  moduleNameForMembers,
+  moduleMemberDigest,
+} from "./brain/modules";
+export type { ModuleCluster, ModuleGraphEdge } from "./brain/modules";

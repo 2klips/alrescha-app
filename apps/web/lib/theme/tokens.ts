@@ -48,12 +48,13 @@ export const STATUS_TOKENS = [
   "on-verified",
 ] as const;
 
-/** Graph node type colours (doc/requirement/code/test). */
+/** Graph node type colours (doc/requirement/code/test/concept). */
 export const NODE_TOKENS = [
   "node-doc",
   "node-requirement",
   "node-code",
   "node-test",
+  "node-concept",
 ] as const;
 
 /** Typography. */

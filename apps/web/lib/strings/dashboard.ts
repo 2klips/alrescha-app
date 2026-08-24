@@ -49,6 +49,7 @@ export const DASHBOARD = {
       document: "문서",
       code: "코드",
       test: "테스트",
+      concept: "개념",
     },
     grades: {
       all: "전체 증거",

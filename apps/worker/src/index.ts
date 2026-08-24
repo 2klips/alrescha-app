@@ -34,3 +34,14 @@ export {
   PostgresByokKeyStore,
   PostgresJudgmentJobStore,
 } from "./postgres-judgment-store";
+export { createEnrichJobHandler } from "./enrich-job";
+export type {
+  EnrichJobStore,
+  EnrichPendingFile,
+  EnrichResultItem,
+  EnrichSourceReader,
+} from "./enrich-job";
+export { PostgresEnrichJobStore } from "./postgres-enrich-store";
+export { EnrichProviderLoader } from "./provider-loader";
+export { AnthropicEnrichProvider, OpenAiEnrichProvider } from "./ai-providers";
+export type { EnrichProvider } from "./ai-providers";

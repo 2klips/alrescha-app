@@ -98,8 +98,26 @@ test("an agent orients, records memory, and the map shows it", async ({
       "src/session.ts",
     );
 
-    // Node ids for the write-back: the stored artifact rows are the address
-    // book (index entries are a later pipeline and stay out of this walk).
+    // Search serves the real scan (Wave C todo 6): the scan now derives
+    // index_entries, so `search_nodes` answers on a freshly scanned
+    // workspace — the Wave D gap, closed and pinned here.
+    const search = await mcp.callTool({
+      arguments: { query: "session" },
+      name: "search_nodes",
+    });
+    expect(search.isError).not.toBe(true);
+    const searchResults = (
+      search.structuredContent as {
+        results: { nodeId: string; path: string }[];
+      }
+    ).results;
+    expect(searchResults.length).toBeGreaterThan(0);
+    expect(searchResults.some((row) => row.path === "src/session.ts")).toBe(
+      true,
+    );
+
+    // Node ids for the write-back, read straight from the stored artifact
+    // rows — the canonical address book regardless of search.
     const artifactRows = await service
       .from("artifacts")
       .select("id,path")

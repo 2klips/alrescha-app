@@ -9,6 +9,7 @@ import {
   GitCommitHorizontal,
   KeyRound,
   LayoutGrid,
+  Lightbulb,
   Link2,
   Network,
   Radio,
@@ -66,6 +67,7 @@ const TYPE_OPTIONS = [
   { label: DASHBOARD.filters.types.document, value: "document" },
   { label: DASHBOARD.filters.types.code, value: "code" },
   { label: DASHBOARD.filters.types.test, value: "test" },
+  { label: DASHBOARD.filters.types.concept, value: "concept" },
 ] as const;
 
 const GRADE_OPTIONS = [
@@ -123,6 +125,7 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
   const [localFocus, setLocalFocus] = useState(false);
   const [groupByArea, setGroupByArea] = useState(false);
   const [showCoChanges, setShowCoChanges] = useState(true);
+  const [showConcepts, setShowConcepts] = useState(true);
   const [cameraFocusNodeId, setCameraFocusNodeId] = useState<string | null>(
     null,
   );
@@ -153,18 +156,35 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
     () => filterGraph(model.graph, filters),
     [filters, model.graph],
   );
-  const familyGraph = useMemo(
-    () =>
-      showCoChanges
-        ? baseGraph
-        : {
-            edges: baseGraph.edges.filter(
-              (edge) => edge.provenance.relation !== "co_changed",
-            ),
-            nodes: baseGraph.nodes,
-          },
-    [baseGraph, showCoChanges],
-  );
+  const familyGraph = useMemo(() => {
+    let graph = baseGraph;
+    if (!showCoChanges) {
+      graph = {
+        edges: graph.edges.filter(
+          (edge) => edge.provenance.relation !== "co_changed",
+        ),
+        nodes: graph.nodes,
+      };
+    }
+    // Concept layer toggle (Wave C todo 7): off hides the AI-synthesized
+    // concept nodes and every edge touching them — the structural layer
+    // underneath is untouched.
+    if (!showConcepts) {
+      const conceptIds = new Set(
+        graph.nodes
+          .filter((node) => node.type === "concept")
+          .map((node) => node.id),
+      );
+      graph = {
+        edges: graph.edges.filter(
+          (edge) =>
+            !conceptIds.has(edge.source) && !conceptIds.has(edge.target),
+        ),
+        nodes: graph.nodes.filter((node) => !conceptIds.has(node.id)),
+      };
+    }
+    return graph;
+  }, [baseGraph, showCoChanges, showConcepts]);
   const visibleGraph = useMemo(
     () =>
       localFocus && selectedNode
@@ -276,6 +296,10 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
             <CountChip
               label={WORKSPACE_MAP.counts.edges}
               value={model.counts.edges}
+            />
+            <CountChip
+              label={WORKSPACE_MAP.counts.concepts}
+              value={model.counts.concepts}
             />
             <CountChip
               label={WORKSPACE_MAP.counts.openFindings}
@@ -484,6 +508,17 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
             >
               <GitCommitHorizontal size={14} />
               {WORKSPACE_MAP.coChange.toggle}
+            </button>
+            <button
+              aria-label={WORKSPACE_MAP.conceptLayer.toggleAria}
+              aria-pressed={showConcepts}
+              className="arr-focus"
+              data-testid="graph-concept-toggle"
+              onClick={() => setShowConcepts((value) => !value)}
+              type="button"
+            >
+              <Lightbulb size={14} />
+              {WORKSPACE_MAP.conceptLayer.toggle}
             </button>
           </div>
           <div className="arr-graph-stage">

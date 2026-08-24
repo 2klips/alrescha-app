@@ -360,6 +360,7 @@ describe("hosted MCP contract", () => {
     expect(listed).toMatchObject({ cacheScope: "private", ttlMs: 60_000 });
     expect(listed.tools.map(({ name }) => name)).toEqual([
       "assert_link",
+      "explain_module",
       "get_artifact",
       "get_findings",
       "get_graph_schema",
@@ -374,6 +375,7 @@ describe("hosted MCP contract", () => {
       "record_prompt",
       "record_ruled_out",
       "repo_map",
+      "repo_overview",
       "request_context_pack",
       "route_query",
       "search_index",

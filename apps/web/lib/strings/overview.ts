@@ -30,6 +30,7 @@ export const OVERVIEW = {
       document: "문서",
       code: "코드",
       test: "테스트",
+      concept: "개념",
     },
   },
 

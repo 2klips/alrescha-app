@@ -4,6 +4,7 @@ import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { SETTINGS } from "../../../../lib/strings";
 import { createClient } from "../../../../lib/supabase/server";
+import { runEnrichPass } from "./actions";
 import {
   AiUsageSettings,
   type AiProviderName,
@@ -24,9 +25,14 @@ interface ProviderRow {
   readonly provider: AiProviderName;
 }
 
-export default async function AiSettingsPage() {
+export default async function AiSettingsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ enrich?: string }>;
+}) {
   const userId = await getCurrentUserId();
   if (!userId) redirect("/auth/login");
+  const { enrich } = (await searchParams) ?? {};
 
   const client = await createClient();
   const workspace = await client
@@ -78,6 +84,20 @@ export default async function AiSettingsPage() {
           {SETTINGS.ai.introSuffix}
         </p>
       </header>
+      <section className="mcp-token-card" data-testid="enrich-card">
+        <h2>{SETTINGS.ai.enrich.heading}</h2>
+        <p>{SETTINGS.ai.enrich.intro}</p>
+        {enrich === "queued" ? (
+          <p role="status">{SETTINGS.ai.enrich.queued}</p>
+        ) : enrich === "fresh" ? (
+          <p role="status">{SETTINGS.ai.enrich.fresh}</p>
+        ) : enrich === "no-repository" ? (
+          <p role="alert">{SETTINGS.ai.enrich.noRepository}</p>
+        ) : null}
+        <form action={runEnrichPass}>
+          <button type="submit">{SETTINGS.ai.enrich.run}</button>
+        </form>
+      </section>
       <AiUsageSettings
         configuredProviders={configuredProviders}
         ledger={ledger}

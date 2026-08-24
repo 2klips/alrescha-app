@@ -6935,3 +6935,18 @@ li[data-todo-status="blocked"] .overview-todo-status {
     flex-direction: column;
   }
 }
+
+/* Concept layer (Phase 3 Wave C todo 7) — AI-synthesized nodes share the
+   accent family; identity is carried by the 개념 label and dashed inferred
+   edges, never colour alone. */
+.overview-mini-node.concept {
+  fill: var(--node-concept);
+}
+
+.overview-legend li[data-node-type="concept"] i {
+  background: var(--node-concept);
+}
+
+.facet-band-node.concept::before {
+  background: var(--node-concept);
+}

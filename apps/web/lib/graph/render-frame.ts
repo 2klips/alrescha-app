@@ -8,6 +8,8 @@
  * module never names a colour.
  */
 
+import { personalizedPageRank } from "@arr/core";
+
 import type {
   EvidenceGrade,
   GraphData,
@@ -113,6 +115,7 @@ export function resolveColor(
 
 const NODE_TOKEN_BY_TYPE = {
   code: "node-code",
+  concept: "node-concept",
   document: "node-doc",
   requirement: "node-requirement",
   test: "node-test",
@@ -178,7 +181,37 @@ export function edgeStroke(
   }
 }
 
-/** Degree-proportional dot size — the Obsidian "constellation" cue. */
+/**
+ * Node importance (Wave C todo 7): PageRank over the whole graph replaces raw
+ * degree as the size signal — a hub that many paths flow *through* now reads
+ * bigger than a leaf with many shallow links. Scores are scaled onto the old
+ * degree scale so `nodeRadius` keeps its calibrated shape, and cached per
+ * GraphData because frames redraw far more often than graphs change.
+ */
+const importanceCache = new WeakMap<GraphData, Map<string, number>>();
+
+export function importanceMap(data: GraphData): Map<string, number> {
+  const cached = importanceCache.get(data);
+  if (cached) return cached;
+  const scores = personalizedPageRank({
+    edges: data.edges.map((edge) => ({
+      source: edge.source,
+      target: edge.target,
+    })),
+    nodes: data.nodes.map((node) => node.id),
+  });
+  const scaled = new Map<string, number>();
+  const count = data.nodes.length;
+  for (const [id, score] of scores) {
+    // Uniform PageRank averages 1/n; ×n×3 lands the mean near the old mean
+    // degree of a sparse repo graph, keeping radii in the calibrated band.
+    scaled.set(id, score * count * 3);
+  }
+  importanceCache.set(data, scaled);
+  return scaled;
+}
+
+/** Importance-proportional dot size — the Obsidian "constellation" cue. */
 export function nodeRadius(degree: number, clusterCount?: number): number {
   const base = 3.2 + Math.sqrt(Math.max(0, degree)) * 1.9;
   const size = clusterCount
@@ -259,6 +292,10 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
 
   const data = collapsed.data;
   const degrees = data === input.data ? rawDegrees : degreeMap(data);
+  // Sized by PageRank over the *uncollapsed* graph (stable identity → the
+  // WeakMap cache holds across frames); collapsed supernodes fall back to
+  // degree, where clusterCount already dominates the radius.
+  const importance = importanceMap(input.data);
   const badges = showsStatusBadges(lod);
   const placed = new Map<string, Position>();
   const candidates: LabelCandidate[] = [];
@@ -287,7 +324,10 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     };
     placed.set(node.id, position);
     const degree = degrees.get(node.id) ?? 0;
-    const radius = nodeRadius(degree, node.clusterCount);
+    const radius = nodeRadius(
+      importance.get(node.id) ?? degree,
+      node.clusterCount,
+    );
     candidates.push({
       degree,
       id: node.id,

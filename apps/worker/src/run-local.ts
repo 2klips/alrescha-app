@@ -20,8 +20,10 @@ import { requestInstallationToken } from "@arr/core";
 import postgres from "postgres";
 
 import { createAnalysisJobHandler } from "./analysis-job";
+import { createEnrichJobHandler } from "./enrich-job";
 import { GitHubRepositorySource } from "./github-repository-source";
 import { PostgresAnalysisStore } from "./postgres-analysis-store";
+import { PostgresEnrichJobStore } from "./postgres-enrich-store";
 import { RepositoryScanStore } from "./repository-scan-store";
 import { runRepositoryScan } from "./repository-scan";
 import { runWorkerOnce, type JobHandler, type JobHandlers } from "./worker";
@@ -148,6 +150,13 @@ function createScanHandler(
 
 async function main(): Promise<void> {
   process.loadEnvFile("apps/web/.env.local");
+  try {
+    // Platform AI keys (ANTHROPIC_API_KEY / OPENAI_API_KEY) live at the repo
+    // root; the web env file carries only the app's own settings.
+    process.loadEnvFile(".env.local");
+  } catch {
+    // No root env file — BYOK-only workspaces still work.
+  }
   const sql = postgres(required("DATABASE_URL"));
   const queue = new PostgresWorkerQueue(sql);
   const workerId = `local-${process.pid}`;
@@ -172,6 +181,29 @@ async function main(): Promise<void> {
       store: new PostgresAnalysisStore(sql),
     }),
     coach: notImplemented("coach"),
+    enrich: createEnrichJobHandler({
+      // Transient, like analysis: fetched, clipped, summarized, dropped.
+      readSource: async ({ commitSha, path, repositoryId, workspaceId }) => {
+        const source = await sourceFor(workspaceId, repositoryId);
+        try {
+          const bytes = await source.fetchContent(path, commitSha);
+          return Buffer.from(bytes).toString("utf8");
+        } catch {
+          return null;
+        }
+      },
+      store: new PostgresEnrichJobStore(sql, {
+        masterKey: process.env.BYOK_ENCRYPTION_KEY ?? "",
+        platformKeys: {
+          ...(process.env.ANTHROPIC_API_KEY
+            ? { anthropic: process.env.ANTHROPIC_API_KEY }
+            : {}),
+          ...(process.env.OPENAI_API_KEY
+            ? { openai: process.env.OPENAI_API_KEY }
+            : {}),
+        },
+      }),
+    }),
     judge: notImplemented("judge"),
     pack: notImplemented("pack"),
     scan: createScanHandler(sql, sourceFor),

@@ -424,6 +424,7 @@ export class SupabaseMcpStore implements McpStore {
       receipts,
       indexEntries,
       memoryEntries,
+      moduleSummaries,
     ] = await Promise.all([
       this.client
         .from("repositories")
@@ -435,7 +436,7 @@ export class SupabaseMcpStore implements McpStore {
         .eq("workspace_id", workspaceId),
       this.client
         .from("artifacts")
-        .select("id, repository_id, kind, path, metadata")
+        .select("id, repository_id, kind, path, metadata, source_blob_sha")
         .eq("workspace_id", workspaceId),
       this.client
         .from("requirements")
@@ -472,6 +473,12 @@ export class SupabaseMcpStore implements McpStore {
         .select("id, anchor_node_id, name, entry_key, text, valid_from")
         .eq("workspace_id", workspaceId)
         .is("invalidated_at", null),
+      this.client
+        .from("module_summaries")
+        .select(
+          "repository_id, module_key, name, member_paths, member_digest, summary",
+        )
+        .eq("workspace_id", workspaceId),
     ]);
     for (const [label, result] of [
       ["repositories", repositories],
@@ -484,6 +491,7 @@ export class SupabaseMcpStore implements McpStore {
       ["receipts", receipts],
       ["index entries", indexEntries],
       ["memory entries", memoryEntries],
+      ["module summaries", moduleSummaries],
     ] as const)
       queryError(`MCP ${label} query failed`, result.error);
 
@@ -500,6 +508,7 @@ export class SupabaseMcpStore implements McpStore {
     const findingRows = rows(findings.data);
     const receiptRows = rows(receipts.data);
     const indexRows = rows(indexEntries.data);
+    const moduleSummaryRows = rows(moduleSummaries.data);
 
     const artifactPathById = new Map(
       artifactRows.map((row) => [
@@ -543,11 +552,21 @@ export class SupabaseMcpStore implements McpStore {
           (row) => row.repository_id === repositoryId,
         );
         return {
+          moduleSummaries: moduleSummaryRows
+            .filter((row) => row.repository_id === repositoryId)
+            .map((row) => ({
+              memberDigest: requiredString(row, "member_digest"),
+              memberPaths: strings(row.member_paths),
+              moduleKey: requiredString(row, "module_key"),
+              name: requiredString(row, "name"),
+              summary: requiredString(row, "summary"),
+            })),
           artifacts: repoArtifacts.map((row) => {
             const metadata = record(row.metadata);
             const id = requiredString(row, "id");
             const path = requiredString(row, "path");
             return {
+              blobSha: nullableString(row.source_blob_sha) ?? "",
               content:
                 typeof metadata.summary === "string" ? metadata.summary : "",
               headings: strings(metadata.headings),
@@ -697,6 +716,38 @@ export class SupabaseMcpStore implements McpStore {
     } finally {
       await this.client.removeChannel(realtime);
     }
+  }
+
+  async requestModuleSummary(
+    principal: McpPrincipal,
+    input: {
+      memberDigest: string;
+      memberPaths: string[];
+      moduleKey: string;
+      repositoryId: string;
+    },
+  ): Promise<{ jobId: string | null }> {
+    // BYOK on the default provider wins over credits — the same decision the
+    // settings trigger makes; no new billing path.
+    const keyed = await this.client
+      .from("workspace_ai_keys")
+      .select("provider")
+      .eq("workspace_id", principal.workspaceId)
+      .eq("provider", "anthropic")
+      .maybeSingle();
+    const result = await this.client.rpc("enqueue_module_summary_job", {
+      requested_billing_mode: keyed.data ? "byok" : "credits",
+      requested_provider: "anthropic",
+      target_member_digest: input.memberDigest,
+      target_member_paths: input.memberPaths,
+      target_module_key: input.moduleKey,
+      target_repository_id: input.repositoryId,
+      target_workspace_id: principal.workspaceId,
+    });
+    if (result.error) {
+      throw new Error(`Module summary enqueue failed: ${result.error.message}`);
+    }
+    return { jobId: result.data ? String(result.data) : null };
   }
 
   async recordAccessEvent(

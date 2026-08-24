@@ -64,3 +64,60 @@ export async function saveByokKey(formData: FormData): Promise<void> {
 
   revalidatePath("/app/settings/ai");
 }
+
+/**
+ * Run the AI concept pass (Phase 3 Wave C): cache-aware enqueue of the
+ * `enrich` job. BYOK on the chosen provider wins over credits; a fully
+ * cached repository enqueues nothing and costs nothing. The redirect carries
+ * the outcome so the page can say which of the two happened.
+ */
+export async function runEnrichPass(): Promise<void> {
+  const userId = await getCurrentUserId();
+  if (!userId) redirect("/auth/login");
+
+  const client = await createClient();
+  const workspace = await client
+    .from("workspaces")
+    .select("id")
+    .eq("owner_user_id", userId)
+    .limit(1)
+    .single();
+  if (workspace.error || !workspace.data) {
+    throw new Error("Personal workspace is unavailable.");
+  }
+
+  const repository = await client
+    .from("repositories")
+    .select("id")
+    .eq("workspace_id", workspace.data.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (repository.error) {
+    throw new Error("Connected repositories are unavailable.");
+  }
+  if (!repository.data) {
+    redirect("/app/settings/ai?enrich=no-repository");
+  }
+
+  const admin = createAdminClient();
+  const keyed = await admin
+    .from("workspace_ai_keys")
+    .select("provider")
+    .eq("workspace_id", workspace.data.id)
+    .eq("provider", "anthropic")
+    .maybeSingle();
+
+  const queued = await admin.rpc("enqueue_enrich_job", {
+    requested_billing_mode: keyed.data ? "byok" : "credits",
+    requested_provider: "anthropic",
+    target_repository_id: repository.data.id,
+    target_workspace_id: workspace.data.id,
+  });
+  if (queued.error) {
+    throw new Error("Unable to enqueue the enrich job.");
+  }
+
+  revalidatePath("/app/settings/ai");
+  redirect(`/app/settings/ai?enrich=${queued.data ? "queued" : "fresh"}`);
+}

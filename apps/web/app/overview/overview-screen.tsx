@@ -24,6 +24,7 @@ import { OVERVIEW } from "../../lib/strings/overview";
 
 const NODE_TYPE_CLASS = {
   code: "code",
+  concept: "concept",
   document: "doc",
   requirement: "req",
   test: "test",

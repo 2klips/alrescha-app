@@ -100,6 +100,10 @@
   --node-requirement: var(--brand);
   --node-code: var(--verified);
   --node-test: var(--inferred);
+  /* AI-synthesized concept layer (Wave C todo 7): same accent family as
+     documents — always paired with dashed inferred edges and the 개념 label,
+     never colour alone (OQ-004 discipline). */
+  --node-concept: var(--accent);
 
   /* Focus-mode direction strokes (Phase 3 Wave A todo 2, Graft focus UX):
      선택한 노드의 진출 엣지 = "의존한다"(앰버), 진입 엣지 = "의존받는다"(틸).

@@ -30,6 +30,7 @@ function emptyRows(): WorkspaceMapRows {
     artifacts: [],
     assertions: [],
     coChanges: [],
+    concepts: [],
     edges: [],
     evidence: [],
     findings: [],
@@ -165,6 +166,7 @@ describe("workspace map builder (Phase 3 Wave A todo 1)", () => {
     expect(model.graph.edges).toEqual([]);
     expect(model.counts).toEqual({
       artifacts: 0,
+      concepts: 0,
       edges: 0,
       openFindings: 0,
       rationales: 0,
@@ -252,6 +254,7 @@ describe("workspace map builder (Phase 3 Wave A todo 1)", () => {
     const model = buildWorkspaceMapModel(WORKSPACE, fixtureRows());
     expect(model.counts).toEqual({
       artifacts: 3,
+      concepts: 0,
       edges: 3,
       openFindings: 2,
       rationales: 1,
@@ -420,6 +423,7 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
       accessEvents: [],
       assertions: [],
       coChanges: [],
+      concepts: [],
       evidence: [],
       findings: [],
       requirements: [],

@@ -8,6 +8,8 @@ import { z } from "zod";
 
 import { deriveArtifactFacets, routeQuery } from "@arr/core";
 
+import { buildRepoOverview, findModuleForNode } from "./module-tools";
+
 import {
   getWorkspaceArtifact,
   getWorkspaceFindings,
@@ -360,6 +362,67 @@ function createServer(
       ]);
       return toolResult({
         assertion,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
+    "explain_module",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "Explain the module (deterministic structure cluster) containing a node. Prose is lazy: 'ready' serves the cached inferred summary, 'pending'/'stale' enqueue one credit-lifecycle enrich job and return the member list now — ask again after the worker runs.",
+      inputSchema: z.object({
+        node_id: z.string().trim().min(1),
+      }),
+      outputSchema: z.object({
+        memberPaths: z.array(z.string()),
+        moduleKey: z.string(),
+        name: z.string(),
+        refreshJobId: z.string().nullable(),
+        state: z.enum(["pending", "ready", "stale"]),
+        summary: z.string().nullable(),
+        summaryGrade: z.literal("inferred"),
+        workspaceId: z.string(),
+      }),
+    },
+    async ({ node_id }) => {
+      const workspace = await readWorkspace();
+      const explanation = findModuleForNode(workspace, node_id);
+      if (!explanation) {
+        throw new Error(
+          "Node is not part of a structure module (no import/call cluster).",
+        );
+      }
+      let refreshJobId: string | null = null;
+      if (explanation.state !== "ready") {
+        // Lazy generation: the enqueue is idempotent per (module, digest),
+        // and billing inherits the enrich lifecycle wholesale.
+        refreshJobId = (
+          await store.requestModuleSummary(principal, {
+            memberDigest: explanation.memberDigest,
+            memberPaths: [...explanation.cluster.members],
+            moduleKey: explanation.cluster.key,
+            repositoryId: explanation.repositoryId,
+          })
+        ).jobId;
+      }
+      const memberIds = workspace.repositories
+        .flatMap((repository) => repository.artifacts)
+        .filter((artifact) =>
+          explanation.cluster.members.includes(artifact.path),
+        )
+        .map(({ id }) => id);
+      emitAccessEvent(store, principal, "explain_module", memberIds);
+      return toolResult({
+        memberPaths: [...explanation.cluster.members],
+        moduleKey: explanation.cluster.key,
+        name: explanation.cluster.name,
+        refreshJobId,
+        state: explanation.state,
+        summary: explanation.summary?.summary ?? null,
+        summaryGrade: "inferred" as const,
         workspaceId: principal.workspaceId,
       });
     },
@@ -981,6 +1044,50 @@ function createServer(
         text: map.text,
         tokenBudget: map.tokenBudget,
         tokenEstimate: map.tokenEstimate,
+        workspaceId: principal.workspaceId,
+      });
+    },
+  );
+
+  server.registerTool(
+    "repo_overview",
+    {
+      annotations: READ_ONLY_TOOL,
+      description:
+        "Architecture overview: deterministic module clusters with sizes, plus cached module prose where fresh. Zero model calls — the grep-can't-answer 'what is this repo' entry point.",
+      inputSchema: z.object({}),
+      outputSchema: z.object({
+        repositories: z.array(
+          z.object({
+            artifactCount: z.number().int().nonnegative(),
+            fullName: z.string(),
+            modules: z.array(
+              z.object({
+                key: z.string(),
+                memberCount: z.number().int().positive(),
+                name: z.string(),
+                summary: z.string().nullable(),
+              }),
+            ),
+            repositoryId: z.string(),
+          }),
+        ),
+        text: z.string(),
+        workspaceId: z.string(),
+      }),
+    },
+    async () => {
+      const workspace = await readWorkspace();
+      const overview = buildRepoOverview(workspace);
+      emitAccessEvent(store, principal, "repo_overview", []);
+      return toolResult({
+        repositories: overview.repositories.map((repository) => ({
+          artifactCount: repository.artifactCount,
+          fullName: repository.fullName,
+          modules: repository.modules.map((module) => ({ ...module })),
+          repositoryId: repository.repositoryId,
+        })),
+        text: overview.text,
         workspaceId: principal.workspaceId,
       });
     },

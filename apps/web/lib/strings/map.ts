@@ -22,6 +22,7 @@ export const WORKSPACE_MAP = {
     rationales: "근거 노트",
     requirements: "요구사항",
     edges: "엣지",
+    concepts: "개념",
     openFindings: "미해소 Findings",
   },
 
@@ -42,6 +43,12 @@ export const WORKSPACE_MAP = {
   coChange: {
     toggle: "공변경 엣지",
     toggleAria: "같은 commit에서 함께 바뀐 파일 연결 표시",
+  },
+
+  /** 개념 레이어 토글 (Wave C todo 7) — AI가 합성한 inferred 개념 노드. */
+  conceptLayer: {
+    toggle: "개념 레이어",
+    toggleAria: "AI가 합성한 개념 노드와 연결 표시",
   },
 
   inspector: {

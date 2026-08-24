@@ -36,6 +36,7 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        enrich: handler,
         judge: handler,
         pack: handler,
         scan: handler,
@@ -59,6 +60,7 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        enrich: handler,
         judge: handler,
         pack: handler,
         scan: handler,
@@ -92,6 +94,7 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        enrich: handler,
         judge: handler,
         pack: handler,
         scan: handler,
@@ -121,6 +124,7 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        enrich: handler,
         judge: handler,
         pack: handler,
         scan: handler,

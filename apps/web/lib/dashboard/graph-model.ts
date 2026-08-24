@@ -19,7 +19,8 @@ export type DashboardState =
   | "large";
 
 export type EvidenceGrade = "verified" | "inferred" | "broken";
-export type GraphNodeType = "requirement" | "document" | "code" | "test";
+export type GraphNodeType =
+  "requirement" | "document" | "code" | "test" | "concept";
 
 /**
  * How a link was derived (Phase 3 Wave A todo 2) — separate from the evidence
@@ -106,6 +107,7 @@ const NODE_TYPE_CLASSIFICATION: Readonly<
   Record<GraphNodeType, ArtifactClassification>
 > = {
   code: "code_metadata",
+  concept: "spec",
   document: "spec",
   requirement: "spec",
   test: "code_metadata",

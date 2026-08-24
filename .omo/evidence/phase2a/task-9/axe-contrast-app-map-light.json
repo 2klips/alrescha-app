@@ -61,9 +61,19 @@
       "target": ".arr-metric[data-active=\"false\"]:nth-child(5) > strong"
     },
     {
-      "html": "<span>미해소 Findings</span>",
+      "html": "<span>개념</span>",
       "message": "Element's background color could not be determined due to a background gradient",
       "target": ".arr-metric[data-active=\"false\"]:nth-child(5) > span"
+    },
+    {
+      "html": "<strong>0</strong>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(6) > strong"
+    },
+    {
+      "html": "<span>미해소 Findings</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".arr-metric[data-active=\"false\"]:nth-child(6) > span"
     },
     {
       "html": "<button aria-pressed=\"true\" class=\"arr-area-chip\" data-area=\"all\" type=\"button\">전체 영역</button>",
@@ -99,21 +109,6 @@
       "html": "<small>0</small>",
       "message": "Element content is too short to determine if it is actual text content",
       "target": "button[data-area=\"docs\"] > small"
-    },
-    {
-      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"tests\" type=\"button\">테스트<small>0</small></button>",
-      "message": "Element's background color could not be determined due to a background gradient",
-      "target": "button[data-area=\"tests\"]"
-    },
-    {
-      "html": "<small>0</small>",
-      "message": "Element content is too short to determine if it is actual text content",
-      "target": "button[data-area=\"tests\"] > small"
-    },
-    {
-      "html": "<span class=\"arr-kicker\">허브 노드</span>",
-      "message": "Element's background color could not be determined due to a background gradient",
-      "target": ".arr-hubs > .arr-kicker"
     },
     {
       "html": "<span class=\"arr-kicker\">마지막 스캔 commit<!-- --> ·<!-- --> <!-- -->스캔 전</span>",
@@ -161,8 +156,8 @@
       "target": "p"
     }
   ],
-  "incompleteCount": 32,
-  "passes": 15,
+  "incompleteCount": 31,
+  "passes": 16,
   "route": "/app/map",
   "theme": "light",
   "violationCount": 0,

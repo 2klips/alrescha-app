@@ -111,11 +111,20 @@ export interface MapAssertionRow {
   readonly target_node_id: string;
 }
 
+export interface MapConceptRow {
+  readonly id: string;
+  readonly kind: string;
+  readonly member_paths: readonly string[];
+  readonly name: string;
+  readonly slug: string;
+}
+
 export interface WorkspaceMapRows {
   readonly accessEvents: readonly MapAccessEventRow[];
   readonly artifacts: readonly MapArtifactRow[];
   readonly assertions: readonly MapAssertionRow[];
   readonly coChanges: readonly MapCoChangeRow[];
+  readonly concepts: readonly MapConceptRow[];
   readonly edges: readonly MapEdgeRow[];
   readonly findings: readonly MapFindingRow[];
   readonly graphNodes: readonly MapGraphNodeRow[];
@@ -129,6 +138,7 @@ export interface WorkspaceMapRows {
 export interface WorkspaceMapModel {
   readonly counts: {
     readonly artifacts: number;
+    readonly concepts: number;
     readonly edges: number;
     readonly openFindings: number;
     readonly rationales: number;
@@ -296,6 +306,7 @@ export function buildWorkspaceMapModel(
     rows.artifacts.map((row) => [row.id, row.path]),
   );
   const rationaleById = new Map(rows.rationales.map((row) => [row.id, row]));
+  const conceptById = new Map(rows.concepts.map((row) => [row.id, row]));
   const requirementById = new Map(
     rows.requirements.map((row) => [row.id, row]),
   );
@@ -359,6 +370,13 @@ export function buildWorkspaceMapModel(
       path = rationale
         ? `${rationale.source_path}:${rationale.source_line}`
         : "";
+    } else if (row.kind === "concept") {
+      // AI-synthesized concept layer (Wave C todo 7) — always inferred;
+      // the path anchors facets to the first member file.
+      const concept = conceptById.get(row.id);
+      type = "concept";
+      label = truncate(concept?.name ?? row.label, 96);
+      path = concept?.member_paths[0] ?? concept?.slug ?? "";
     } else if (row.kind === "evidence") {
       const evidence = evidenceById.get(row.id);
       type = evidenceNodeType(evidence?.kind ?? "");
@@ -502,6 +520,7 @@ export function buildWorkspaceMapModel(
   return {
     counts: {
       artifacts: rows.artifacts.length,
+      concepts: rows.concepts.length,
       edges: edges.length,
       openFindings,
       rationales: rows.rationales.length,
@@ -544,6 +563,7 @@ export async function loadWorkspaceMap(
     artifacts,
     assertions,
     coChanges,
+    concepts,
     edges,
     findings,
     graphNodes,
@@ -577,6 +597,11 @@ export async function loadWorkspaceMap(
       .gte("change_count", CO_CHANGE_MIN_COUNT)
       .order("change_count", { ascending: false })
       .limit(EDGE_LIMIT),
+    client
+      .from("concepts")
+      .select("id,slug,name,kind,member_paths")
+      .eq("workspace_id", workspaceId)
+      .limit(NODE_LIMIT),
     client
       .from("edges")
       .select("id,source_node_id,target_node_id,relation,confidence,provenance")
@@ -624,6 +649,7 @@ export async function loadWorkspaceMap(
     artifacts,
     assertions,
     coChanges,
+    concepts,
     edges,
     findings,
     graphNodes,
@@ -643,6 +669,7 @@ export async function loadWorkspaceMap(
     artifacts: (artifacts.data ?? []) as MapArtifactRow[],
     assertions: (assertions.data ?? []) as MapAssertionRow[],
     coChanges: (coChanges.data ?? []) as MapCoChangeRow[],
+    concepts: (concepts.data ?? []) as MapConceptRow[],
     edges: (edges.data ?? []) as MapEdgeRow[],
     evidence: (evidence.data ?? []) as MapEvidenceRow[],
     findings: (findings.data ?? []) as MapFindingRow[],
