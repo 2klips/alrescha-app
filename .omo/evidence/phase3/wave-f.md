@@ -40,3 +40,27 @@
 ## 다음 세션 (게이트 열리면 — 사용자: Anthropic 콘솔 월 한도 상향 또는 9/1 리셋)
 
 한 창에서 순차 실행: ⑴ `pnpm bench:databrain --concurrency=2` (sonnet ~4.5M 토큰 예상) ⑵ `pnpm bench:vibe --real` ⑶ `pnpm bench:techniques --real` ⑷ `pnpm bench:graph-surface` → 게이트 판정 → 통과 시 사이트 정확도 주장 복원(site/index.html:512-514, ADR-012 절차) → gate 미러(fixtures.ts)·vibe-index 테스트 갱신 → 체크박스·evidence·커밋.
+
+---
+
+# 추기 (2026-08-25 같은 날, 한도 상향 후) — Wave F 실행 완주
+
+사용자가 Anthropic 월 한도를 상향 → 프리플라이트 6/6 → **벤치 4종 순차 실행 전부 완료**. Wave F 종결.
+
+## todo 14 — 완료
+
+- **v3 시도 4 = 유효 릴리스**: 600/600, 실패 32 전량 스키마 위반(인프라 0). **게이트 pooled/luna/sonnet 3스코프 전면 MET** — pooled Δ정확도 +8.69pp [3.86, 13.43]·토큰 −67.39% [63.67, 70.19]. 세 스코프 모두 정확도 CI 하한 > 0. F5 감사가 v3를 1급 릴리스로 검증. 상세: `.omo/evidence/benchmark-v3.md` §16.
+- **ADR-012 복원 이행**: site/index.html 정확도 주장 복원(구간 병기, "+5pp 목표 구간 통과는 아직 아님" 명기, v2 리포트 공개 유지) — site 레포 별도 커밋.
+- **VIBE 112시행**: 112/112(실패 10 — 쌍 제외·게시). 판정: **V1 채택**(인용 Δ+0.625 AND 정확도 Δ+0.042), **V5·V6 폐기**(주입이 숨긴 정답 정확도를 낮춤 — Goodhart 게이트가 설계대로 작동한 첫 실측), V2·V3·V4·V7 pending(OQ-020 — 관측 불가라 채택 불가). `vibe-injection.real.{json,md}` + `gate-results.json` 게시. 노출 배선 자동 반영: `/team` VIBE 위젯이 V1만 렌더 — `fixtures.ts` 미러·`vibe-index`·`team-view` 테스트를 게시 파일 기준으로 갱신.
+- **기법 4종 실측**(`techniques.real.{json,md}`): id-first Δtokens −12.1%(등록 −14.2%와 정합)이나 **Δrecall −12.5pp(등록 0과 불일치)**, static-prefix Δrecall −8.3pp. → **defaultOn 재검토 대상 기록**(소표본 16시행/기법이라 자동 뒤집기 없음 — 리포트 명기대로 기본값 변경은 별도 판단, 후속 과제로 남김). compaction-safe는 recall +16.0pp로 등록(+16.7pp)과 정합.
+
+## todo 15 — 완료
+
+- 96/96, 실패 0. **판정: NOT MET** — 1차(턴): graph 6.5 vs 파일 탐색 4.48(Δ+2.02, 미충족), 품질: PASS율 0.771 vs 0.854(Δ−8.3pp, 비열등 미충족). **판정과 무관하게 게시**(`results.v1.{json,md}`).
+- 모델별 결: sonnet은 graph 군이 품질 우위(0.833 vs 0.792)·입력 토큰 24% 절감(490k vs 645k)·턴 동급, luna는 graph 군이 크게 열세(7.83턴·0.708). CBM 논문의 "그래프 단독은 일반 질문에서 파일 탐색에 진다" 경계 조건이 우리 표면에서도 재현 — 그래프를 유일 경로가 아니라 라우팅 폴스루로 설계한 기존 방침(route_query)을 강화하는 실측. 표면 개선(예: repo_map 시드 개선, search_nodes 랭킹) 후 재실행은 후속 페이즈 판단.
+
+## 남긴 후속
+
+1. 기법 defaultOn 재검토(id-first·static-prefix recall 하락 실측) — 표본 확대 재측정 후 판단.
+2. graph-surface 표면 개선 → 벤치 재실행(사전등록 v2로 — v1 결과는 불변 게시).
+3. V2~V7 세션형 하네스(OQ-020) — 팀 표면 착수 전제.
