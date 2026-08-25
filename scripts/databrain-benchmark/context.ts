@@ -193,7 +193,7 @@ function artifactKind(path: string): string {
   return "code_metadata";
 }
 
-function workspaceFromCorpus(corpus: RepositoryCorpus): McpWorkspaceData {
+export function workspaceFromCorpus(corpus: RepositoryCorpus): McpWorkspaceData {
   const artifacts = corpus.entries.map((entry, index) => ({
     content: entry.content,
     headings: [...entry.content.matchAll(/^#{1,6}\s+(.+)$/gm)].map(

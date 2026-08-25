@@ -1,0 +1,117 @@
+{
+  "schemaVersion": "graph-surface-v1",
+  "name": "graph-surface-turn-benchmark",
+  "registeredAt": "2026-08-25",
+  "purpose": "Phase 3 Wave F todo 15 — repo_map · PPR 검색 · 메모리 블록이 파일 탐색 베이스라인 대비 에이전트 턴 수를 줄이는지 측정한다 (CBM 논문식: 표준 질문 세트, PASS/PARTIAL/FAIL, 품질·토큰·툴콜 병기). 1차 지표는 에이전트 턴 수(모델 호출 횟수).",
+  "questionSource": {
+    "manifest": "benchmarks/databrain/tasks.v3.json",
+    "manifestDigest": "7a317232cfb4f7c13db3e4c8c4f9bfd3f8eb26dd6f02dccc519b04ad77a9c2a7",
+    "filter": "grader.kind === 'answer-manifest'",
+    "taskIds": [
+      "fixture-answer-session-policy",
+      "fixture-answer-audit-schema",
+      "fixture-answer-api-rule-conflict",
+      "fixture-answer-legacy-billing",
+      "real-answer-github-permissions",
+      "real-answer-mcp-contract",
+      "real-answer-job-queue-claim",
+      "real-answer-graph-renderer",
+      "real-answer-receipt-statement",
+      "real-answer-credit-honesty",
+      "real-answer-index-pr-limits",
+      "real-answer-evidence-grade-rule"
+    ]
+  },
+  "models": [
+    { "id": "gpt-5.6-luna", "provider": "openai" },
+    { "id": "claude-sonnet-5", "provider": "anthropic" }
+  ],
+  "arms": {
+    "file-exploration": {
+      "description": "파일 탐색 베이스라인 — 실사용 grep 에이전트의 최소 어포던스",
+      "tools": ["list_files", "grep_files", "read_file", "submit_answer"]
+    },
+    "graph-surface": {
+      "description": "Phase 3 신규 표면 — 스키마 → repo_map/PPR 검색 → 내용 폴스루 + 메모리 블록",
+      "tools": [
+        "get_graph_schema",
+        "repo_map",
+        "search_nodes",
+        "get_neighbors",
+        "get_node_content",
+        "memory_read",
+        "submit_answer"
+      ]
+    }
+  },
+  "protocol": {
+    "repeatsPerCell": 2,
+    "trialCount": 96,
+    "turnCap": 10,
+    "concurrency": 2,
+    "toolOutputCaps": {
+      "fileContentChars": 6000,
+      "listFilesMaxPaths": 200,
+      "grepFilesMaxHits": 30,
+      "grepExcerptChars": 120,
+      "searchNodesMaxResults": 10,
+      "repoMapDefaultBudget": 1200
+    },
+    "workspaceEdges": "결정론 유도 — 마크다운 상대 링크(references) + TS/JS 상대 import(imports)를 코퍼스 경로로 해석. 해석 실패 링크는 폐기.",
+    "tokenAccounting": "provider 보고 usage 합계(시행 내 전 호출). 로컬 추정 없음.",
+    "failedTrialRule": "턴 캡 도달·provider 실패 시행은 FAIL(score 0)로 분모에 남고 턴 수·토큰은 기록값 그대로."
+  },
+  "memoryFixtures": {
+    "note": "메모리 블록은 에이전트가 증류해 두는 표면이므로 사전등록 픽스처로 주입한다. 모든 항목은 코퍼스 파일에서 유도 가능한 사실만 담아 두 군의 도달 가능 정보를 동일하게 유지한다(출처 병기).",
+    "entries": [
+      {
+        "corpus": "fixtures/drifted-demo",
+        "name": "conventions",
+        "entryKey": "api-json-keys",
+        "text": "이 픽스처의 API 응답 JSON 키는 snake_case를 강제한다. 테스트 이름에는 요구사항 ID를 포함해야 한다.",
+        "sourcePaths": ["AGENTS.md"]
+      },
+      {
+        "corpus": "fixtures/drifted-demo",
+        "name": "decisions",
+        "entryKey": "session-timeout",
+        "text": "세션 타임아웃은 30분(SESSION_TIMEOUT_MS = 30 * 60 * 1000)으로 결정됐다 — ADR-001.",
+        "sourcePaths": ["docs/adr/ADR-001-session-timeout.md", "src/session.ts"]
+      },
+      {
+        "corpus": ".",
+        "name": "conventions",
+        "entryKey": "evidence-grades",
+        "text": "verified는 실행 증거가 있을 때만 부여한다. AI 추론은 언제나 inferred이며, inferred만으로 이루어진 판정 체인의 심각도 상한은 medium이다.",
+        "sourcePaths": ["AGENTS.md", "packages/core/src/assurance/rules.ts"]
+      },
+      {
+        "corpus": ".",
+        "name": "decisions",
+        "entryKey": "job-queue-claim",
+        "text": "잡 큐는 Postgres 자체 구현 — SELECT ... FOR UPDATE SKIP LOCKED 클레임(claim_next_job)과 heartbeat_at/lease_expires_at 컬럼을 쓴다.",
+        "sourcePaths": ["apps/worker/src/queue.ts"]
+      },
+      {
+        "corpus": ".",
+        "name": "gotchas",
+        "entryKey": "repo-write-path",
+        "text": "레포 쓰기 경로는 advisory 최소 인덱스 PR 제안 하나뿐이다 — ARR:BEGIN/END 마커로 감싼 30줄 이하 관리 섹션, byte-idempotent 재생성.",
+        "sourcePaths": ["packages/core/src/context/minimal-index.ts"]
+      }
+    ]
+  },
+  "grading": {
+    "method": "동결 v3 answer-manifest 그대로 — required-fact 그룹 매칭",
+    "PASS": "모든 fact 그룹 매칭",
+    "PARTIAL": "1개 이상, 전부는 아님",
+    "FAIL": "0개 또는 미제출·실패",
+    "score": "matched / total (연속값, 병기)"
+  },
+  "hypothesis": {
+    "primary": "graph-surface 군의 시행당 평균 모델 호출 수(턴)가 file-exploration 군보다 낮다 (pooled 점추정).",
+    "qualityNonInferiority": "graph-surface 군 pooled PASS율이 file-exploration 군 대비 5pp 이상 낮지 않다.",
+    "secondary": "provider 보고 총 토큰·툴콜 수 병기 (목표치 없음 — 기록).",
+    "publication": "판정과 무관하게 수치 그대로 게시. 소표본(군·모델당 24시행) — 점추정 단독 해석 금지, ADR-012 문구 규칙(구간·가정 병기, 리포트 인용으로만 주장)."
+  }
+}
