@@ -132,12 +132,12 @@ Graft 패스 2 상당 — "AI로 지식그래프를 구축"의 AI 부분. LazyGr
 
 ## Wave F — 벤치마킹 _(G3, 마지막 — 사전등록 수정 금지)_
 
-- [ ] **14. 동결 실험 실행(구 2C Wave 3 흡수)**
+- [ ] **14. 동결 실험 실행(구 2C Wave 3 흡수)** _(2026-08-25 시도 3 — **재차 무효·게이트 차단**: v3 600/600 완주했으나 Anthropic 월 사용 한도(시도 1과 동일)로 sonnet 115건 인프라 실패 → `results.v3.attempt3.*` 보존, 릴리스 불가. 프리플라이트 스모크 6/6 후 착수했는데 한도가 도중 소진 — **사용자 조치 필요: 콘솔 월 한도 상향 또는 9/1 00:00 UTC 리셋 대기**. VIBE 112시행 실모델 경로·기법 실측 경로는 구현 완료(실행 전 측정 정의 보충 `benchmarks/vibe/measurement-preregistration.md` SHA 잠금, OQ-020 등록) — 같은 한도 게이트 뒤라 실행 대기. `.omo/evidence/benchmark-v3.md` §15)_
       벤치 v3 600시행 + VIBE 112시행 + 기법 A/B — 사전등록 그대로. 구간 게이트 판정 → 통과 시에만 정확도 주장 복원(ADR-012 절차).
       수용 기준: 2C Wave 3 todo 6·7과 동일.
       Commit: `feat(bench): run the frozen experiments`
 
-- [ ] **15. Phase 3 신규 표면 벤치(사전등록 후 실행)**
+- [ ] **15. Phase 3 신규 표면 벤치(사전등록 후 실행)** _(2026-08-25 사전등록·하네스 완료, **실행만 대기**(todo 14와 같은 Anthropic 한도 게이트): `benchmarks/graph-surface/preregistration.v1.json` 다이제스트 잠금(동결 v3 answer-manifest 12과제 재사용·다이제스트 핀), 2군(파일 탐색 vs repo_map·PPR·메모리) × 2모델 × 2반복 = 96시행, 1차 지표 = 턴 수. 멀티턴 툴 루프 하네스 신설(`scripts/graph-surface-benchmark/`), 드라이런 96/96·테스트 10건. `.omo/evidence/phase3/wave-f.md`)_
       repo_map·PPR 검색·메모리 블록의 델타를 CBM 논문식 방법론(표준 질문 세트, PASS/PARTIAL/FAIL, 파일 탐색 베이스라인 대비 품질/토큰/툴콜)으로 **먼저 사전등록하고**(`benchmarks/` 신규, 동결 규약 동일) 실행. "에이전트 턴 수 절감"을 1차 지표로.
       수용 기준: 사전등록 파일 다이제스트 잠금 후 실행, 결과 판정과 무관하게 게시, 게시 문구는 ADR-012 규칙.
       Commit: `feat(bench): preregister and run the graph-surface benchmark`
