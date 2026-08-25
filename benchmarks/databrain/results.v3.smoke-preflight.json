@@ -1,0 +1,440 @@
+{
+  "aggregates": [
+    {
+      "arm": "checkout",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": null,
+      "passRate": 1,
+      "passedTrials": 2,
+      "totalInputTokens": 4118,
+      "totalOutputTokens": 805,
+      "totalTokens": 4923,
+      "totalToolCalls": 18,
+      "totalWallTimeMs": 14471,
+      "trialCount": 2
+    },
+    {
+      "arm": "full-dump",
+      "failedTrials": 0,
+      "meanScore": 0.5,
+      "meanScoreCiLower": 0,
+      "meanScoreCiUpper": 1,
+      "model": null,
+      "passRate": 0.5,
+      "passedTrials": 1,
+      "totalInputTokens": 2531,
+      "totalOutputTokens": 2010,
+      "totalTokens": 4541,
+      "totalToolCalls": 0,
+      "totalWallTimeMs": 22273,
+      "trialCount": 2
+    },
+    {
+      "arm": "data-brain",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": null,
+      "passRate": 1,
+      "passedTrials": 2,
+      "totalInputTokens": 4848,
+      "totalOutputTokens": 1060,
+      "totalTokens": 5908,
+      "totalToolCalls": 20,
+      "totalWallTimeMs": 13533,
+      "trialCount": 2
+    },
+    {
+      "arm": "checkout",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": "gpt-5.6-luna",
+      "passRate": 1,
+      "passedTrials": 1,
+      "totalInputTokens": 1337,
+      "totalOutputTokens": 207,
+      "totalTokens": 1544,
+      "totalToolCalls": 9,
+      "totalWallTimeMs": 7249,
+      "trialCount": 1
+    },
+    {
+      "arm": "full-dump",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": "gpt-5.6-luna",
+      "passRate": 1,
+      "passedTrials": 1,
+      "totalInputTokens": 720,
+      "totalOutputTokens": 653,
+      "totalTokens": 1373,
+      "totalToolCalls": 0,
+      "totalWallTimeMs": 7688,
+      "trialCount": 1
+    },
+    {
+      "arm": "data-brain",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": "gpt-5.6-luna",
+      "passRate": 1,
+      "passedTrials": 1,
+      "totalInputTokens": 1562,
+      "totalOutputTokens": 219,
+      "totalTokens": 1781,
+      "totalToolCalls": 10,
+      "totalWallTimeMs": 3908,
+      "trialCount": 1
+    },
+    {
+      "arm": "checkout",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": "claude-sonnet-5",
+      "passRate": 1,
+      "passedTrials": 1,
+      "totalInputTokens": 2781,
+      "totalOutputTokens": 598,
+      "totalTokens": 3379,
+      "totalToolCalls": 9,
+      "totalWallTimeMs": 7222,
+      "trialCount": 1
+    },
+    {
+      "arm": "full-dump",
+      "failedTrials": 0,
+      "meanScore": 0,
+      "meanScoreCiLower": 0,
+      "meanScoreCiUpper": 0,
+      "model": "claude-sonnet-5",
+      "passRate": 0,
+      "passedTrials": 0,
+      "totalInputTokens": 1811,
+      "totalOutputTokens": 1357,
+      "totalTokens": 3168,
+      "totalToolCalls": 0,
+      "totalWallTimeMs": 14585,
+      "trialCount": 1
+    },
+    {
+      "arm": "data-brain",
+      "failedTrials": 0,
+      "meanScore": 1,
+      "meanScoreCiLower": 1,
+      "meanScoreCiUpper": 1,
+      "model": "claude-sonnet-5",
+      "passRate": 1,
+      "passedTrials": 1,
+      "totalInputTokens": 3286,
+      "totalOutputTokens": 841,
+      "totalTokens": 4127,
+      "totalToolCalls": 10,
+      "totalWallTimeMs": 9625,
+      "trialCount": 1
+    }
+  ],
+  "hypotheses": [
+    {
+      "accuracyDeltaCiLowerPercentagePoints": 0,
+      "accuracyDeltaCiUpperPercentagePoints": 0,
+      "accuracyDeltaPercentagePoints": 0,
+      "accuracyImprovementGoalMet": false,
+      "accuracyNonInferior": true,
+      "baselineArm": "checkout",
+      "dataBrainArm": "data-brain",
+      "model": null,
+      "pairedUnitCount": 2,
+      "targetTokenReductionPercent": 30,
+      "tokenReductionCiLowerPercent": -22.136727,
+      "tokenReductionCiUpperPercent": -15.349741,
+      "tokenReductionPercent": -20.008125,
+      "tokenTargetMet": false
+    },
+    {
+      "accuracyDeltaCiLowerPercentagePoints": 0,
+      "accuracyDeltaCiUpperPercentagePoints": 0,
+      "accuracyDeltaPercentagePoints": 0,
+      "accuracyImprovementGoalMet": false,
+      "accuracyNonInferior": true,
+      "baselineArm": "checkout",
+      "dataBrainArm": "data-brain",
+      "model": "gpt-5.6-luna",
+      "pairedUnitCount": 1,
+      "targetTokenReductionPercent": 30,
+      "tokenReductionCiLowerPercent": -15.349741,
+      "tokenReductionCiUpperPercent": -15.349741,
+      "tokenReductionPercent": -15.349741,
+      "tokenTargetMet": false
+    },
+    {
+      "accuracyDeltaCiLowerPercentagePoints": 0,
+      "accuracyDeltaCiUpperPercentagePoints": 0,
+      "accuracyDeltaPercentagePoints": 0,
+      "accuracyImprovementGoalMet": false,
+      "accuracyNonInferior": true,
+      "baselineArm": "checkout",
+      "dataBrainArm": "data-brain",
+      "model": "claude-sonnet-5",
+      "pairedUnitCount": 1,
+      "targetTokenReductionPercent": 30,
+      "tokenReductionCiLowerPercent": -22.136727,
+      "tokenReductionCiUpperPercent": -22.136727,
+      "tokenReductionPercent": -22.136727,
+      "tokenTargetMet": false
+    }
+  ],
+  "protocol": {
+    "arms": [
+      "checkout",
+      "full-dump",
+      "data-brain"
+    ],
+    "expectedTrialCount": 6,
+    "fixtureTaskCount": 10,
+    "realisticTaskCount": 10,
+    "registeredTrialCount": 600,
+    "taskCount": 20,
+    "trialsPerArm": 5
+  },
+  "run": {
+    "confidenceMethod": "Seeded nonparametric bootstrap, percentile method: 2000 resamples with replacement over the per-trial units, 95% interval, mulberry32 PRNG seeded by FNV-1a of the aggregate key. Failed trials stay in the resampling pool with score 0.",
+    "corpusCommit": "0a47a05c1513838cba3de5250af8e8cd8406b0f0",
+    "generatedAt": "2026-08-25T12:54:00.445Z",
+    "manifestDigest": "7a317232cfb4f7c13db3e4c8c4f9bfd3f8eb26dd6f02dccc519b04ad77a9c2a7",
+    "mode": "real",
+    "models": [
+      {
+        "id": "gpt-5.6-luna",
+        "provider": "openai",
+        "reason": null,
+        "status": "executed"
+      },
+      {
+        "id": "claude-sonnet-5",
+        "provider": "anthropic",
+        "reason": null,
+        "status": "executed"
+      }
+    ],
+    "overrides": [
+      "tasks=fixture-implement-remaining-session-ms",
+      "repeats=1"
+    ],
+    "resultsBasename": "results.v3.smoke-preflight",
+    "tokenizerAssumption": "Each provider's own reported usage.input_tokens and usage.output_tokens are authoritative (OpenAI Responses API, Anthropic Messages API); no local tokenizer estimate is substituted."
+  },
+  "schemaVersion": 2,
+  "trials": [
+    {
+      "arm": "checkout",
+      "model": "gpt-5.6-luna",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "provider": "openai",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1337,
+      "output": {
+        "answer": "Implemented `remainingSessionMs(session, now)` to return the milliseconds remaining until the existing session timeout, clamped to zero, while preserving all existing exports.",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 207,
+      "responseId": "resp_00678eed500cf318016a8d904d667887d186b9cc7255c6aead",
+      "status": "completed",
+      "wallTimeMs": 7249
+    },
+    {
+      "arm": "checkout",
+      "model": "claude-sonnet-5",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "provider": "anthropic",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 9,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 2781,
+      "output": {
+        "answer": "Added `remainingSessionMs(session, now)` to `src/session.ts`, computing `SESSION_TIMEOUT_MS - (now - session.lastActivityAt)` and clamping the result to a minimum of 0. All existing exports (`Session`, `SESSION_TIMEOUT_MS`, `isSessionExpired`) are preserved unchanged.\n\nNote: `src/audit.ts` defines `AuditEvent` fields using snake_case (`event_name`, `user_id`), which conflicts with the `src/api/AGENTS.md` rule requiring camelCase JSON keys for API responses — flagged as a drift finding, though it is outside the scope of this session.ts change.",
+        "files": [
+          {
+            "path": "src/session.ts",
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  const remaining = SESSION_TIMEOUT_MS - (now - session.lastActivityAt);\n  return remaining > 0 ? remaining : 0;\n}\n"
+          }
+        ],
+        "findings": [
+          "src/audit.ts uses snake_case keys (event_name, user_id) which conflicts with src/api/AGENTS.md's camelCase JSON key requirement for API responses"
+        ]
+      },
+      "outputTokens": 598,
+      "responseId": "msg_011CePVwW218fE361wtCmn4W",
+      "status": "completed",
+      "wallTimeMs": 7222
+    },
+    {
+      "arm": "full-dump",
+      "model": "gpt-5.6-luna",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "provider": "openai",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 720,
+      "output": {
+        "answer": "Implemented `remainingSessionMs` to calculate the milliseconds remaining until the 30-minute session timeout and clamp expired sessions to zero. The existing `isSessionExpired` export is preserved.",
+        "files": [
+          {
+            "content": "export type Session = {\n  lastActivityAt: number;\n};\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1000;\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, session.lastActivityAt + SESSION_TIMEOUT_MS - now);\n}\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return remainingSessionMs(session, now) === 0;\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 653,
+      "responseId": "resp_0a63d8ac983c56c6016a8d9053435487d1ba1396aa17159634",
+      "status": "completed",
+      "wallTimeMs": 7688
+    },
+    {
+      "arm": "full-dump",
+      "model": "claude-sonnet-5",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "provider": "anthropic",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 0,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": false,
+        "score": 0,
+        "summary": "failed"
+      },
+      "inputTokens": 1811,
+      "output": {
+        "answer": "I implemented `remainingSessionMs(session, now)` in `src/session.ts`, preserving the existing exports (including `isSessionExpired`, which per ADR-001 treats exactly 30 minutes elapsed as expired).\n\nSince the actual current contents of `src/session.ts` were not included in the provided repository context (only its existence and the `isSessionExpired` export are referenced in ADR-001), I reconstructed the file based on the documented contract: sessions expire 30 minutes (1,800,000 ms) after `lastActivityAt`, with the boundary counting as expired. `remainingSessionMs` computes `SESSION_TIMEOUT_MS - (now - session.lastActivityAt)` and clamps the result to a minimum of 0.\n\nImportant caveats surfaced during review (do not treat as verified without checking the real file/tests):\n- I could not inspect the true current source of `src/session.ts`, so the exact existing exports/types (e.g., the shape of `session` — field name `lastActivityAt`, its type as `number` timestamp vs `Date`) are inferred from ADR-001 text only. If the real file uses different naming or types, this implementation must be reconciled with it rather than overwriting silently.\n- No test file was provided; per `.cursor/rules/testing.mdc`, any new test must start with a requirement ID (this function relates to REQ-AUTH-002) and must not use network or system clock — `now` should always be passed explicitly to keep the function deterministic and testable, which I preserved by requiring `now` as an argument rather than defaulting to `Date.now()` internally.\n- The task did not ask me to update `spec.md` or `TODO.md`, so I left those untouched. REQ-AUTH-002 is already marked done in both files, consistent with ADR-001's requirement for an executable test at the 30-minute boundary — but I did not add that test since it wasn't requested.",
+        "files": [
+          {
+            "path": "src/session.ts",
+            "content": "const SESSION_TIMEOUT_MS = 30 * 60 * 1000;\n\nexport interface Session {\n  lastActivityAt: number;\n}\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  const elapsed = now - session.lastActivityAt;\n  const remaining = SESSION_TIMEOUT_MS - elapsed;\n  return remaining > 0 ? remaining : 0;\n}\n"
+          }
+        ],
+        "findings": [
+          "Actual current contents of src/session.ts were not present in the supplied repository context; the file was reconstructed from ADR-001's textual description of isSessionExpired, which is an inference, not confirmed source.",
+          "ADR-001 states the exact 30-minute boundary counts as expired but notes it 'requires an executable test' — no evidence such a test currently exists or passes; do not assume REQ-AUTH-002 boundary behavior is verified by CI.",
+          "spec.md and TODO.md both mark REQ-AUTH-002 as complete, but AGENTS.md/testing rules require requirement-ID-prefixed tests with no network/clock use — no test for remainingSessionMs was found or added, so this new function has no verified executable coverage.",
+          "There is a snake_case vs camelCase JSON key conflict between top-level AGENTS.md (snake_case for all API responses in this fixture) and src/api/AGENTS.md (camelCase within that subtree) — unrelated to this task but a pre-existing inconsistency worth flagging.",
+          "REQ-AUTH-001 (GitHub OAuth) and REQ-AUTH-003 (audit event) remain unimplemented/unlinked per TODO.md; not addressed by this task and should not be assumed done."
+        ]
+      },
+      "outputTokens": 1357,
+      "responseId": "msg_011CePVx21JGTYeW77M8Za3B",
+      "status": "completed",
+      "wallTimeMs": 14585
+    },
+    {
+      "arm": "data-brain",
+      "model": "gpt-5.6-luna",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "provider": "openai",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 10,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 1562,
+      "output": {
+        "answer": "Implemented remainingSessionMs to return the milliseconds remaining until session expiry, clamped to zero, while preserving all existing exports.",
+        "files": [
+          {
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  return Math.max(0, SESSION_TIMEOUT_MS - (now - session.lastActivityAt));\n}\n",
+            "path": "src/session.ts"
+          }
+        ],
+        "findings": []
+      },
+      "outputTokens": 219,
+      "responseId": "resp_026e8574c67b8d92016a8d905aec8487d1801e3187ba66b374",
+      "status": "completed",
+      "wallTimeMs": 3908
+    },
+    {
+      "arm": "data-brain",
+      "model": "claude-sonnet-5",
+      "promptDigest": "03108bd2ba462a067268a35a3adc5f65009f7b214c3d1b24845cc7b6635c84a7",
+      "provider": "anthropic",
+      "taskId": "fixture-implement-remaining-session-ms",
+      "toolCalls": 10,
+      "trial": 1,
+      "error": null,
+      "errorMessage": null,
+      "grade": {
+        "passed": true,
+        "score": 1,
+        "summary": "passed"
+      },
+      "inputTokens": 3286,
+      "output": {
+        "answer": "Implemented `remainingSessionMs(session, now)` in `src/session.ts`, preserving existing exports (`Session`, `SESSION_TIMEOUT_MS`, `isSessionExpired`). The function computes `SESSION_TIMEOUT_MS - (now - session.lastActivityAt)` and clamps the result to a minimum of 0 using `Math.max(0, ...)`, so it never returns a negative value once the session has expired.\n\nNote on repository rules considered but not applicable here: the fixture-wide AGENTS.md requires snake_case JSON keys for API responses and requirement IDs in test names, and the testing.mdc cursor rule requires test names to start with a requirement ID and avoid network/system-clock calls — but this task only touches `src/session.ts` (no test file, no API response), so no new test was added/modified and no JSON-key or naming convention applies to the change itself.",
+        "files": [
+          {
+            "path": "src/session.ts",
+            "content": "export interface Session {\n  readonly lastActivityAt: number;\n}\n\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n\nexport function isSessionExpired(session: Session, now: number): boolean {\n  return now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n}\n\nexport function remainingSessionMs(session: Session, now: number): number {\n  const remaining = SESSION_TIMEOUT_MS - (now - session.lastActivityAt);\n  return Math.max(0, remaining);\n}\n"
+          }
+        ],
+        "findings": [
+          "Task scope is limited to src/session.ts; no test file was requested or modified, so the AGENTS.md/testing.mdc requirement-ID test naming rule does not apply to this change.",
+          "No API response objects are involved in this change, so the snake_case (fixture-wide AGENTS.md) vs camelCase (src/api/AGENTS.md) JSON key drift is not relevant here.",
+          "Existing exports (Session, SESSION_TIMEOUT_MS, isSessionExpired) were preserved unchanged as required.",
+          "spec.md/TODO.md/ADR-002 content about OAuth login, audit events, password reset, legacy billing, and CSV export snapshots is unrelated to this task and was not incorporated."
+        ]
+      },
+      "outputTokens": 841,
+      "responseId": "msg_011CePVxtKE2b8davHaiRkck",
+      "status": "completed",
+      "wallTimeMs": 9625
+    }
+  ]
+}
