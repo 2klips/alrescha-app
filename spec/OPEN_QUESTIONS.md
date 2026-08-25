@@ -180,3 +180,11 @@
 - 임시 결정: Wave B는 tree-sitter 없이 기존 엔진 체인으로 TS/JS(해석 `resolved` + 이름 매칭 `reference`)와 Python/Go import까지만 추출한다. `symbolEngine` provenance는 유지.
 - 필요한 결정: ⑴ `web-tree-sitter`(WASM)를 엔진 체인의 새 단계로 추가 — 네이티브 빌드 없이 다언어 확장, ADR-014는 "네이티브 tree-sitter 미채택"으로 좁혀 개정. ⑵ 현행 유지 — TS/JS 중심 시장이면 다언어 call 엣지는 수요 확인 전 불요. ⑶ 서버 측(워커) 한정 네이티브 tree-sitter — 로컬 CLI 경로와의 동등성 재검토 필요.
 - 상태: open. Wave B 완료 후 TS/JS 외 언어 수요가 확인되는 시점에 판정. ⑴이 기본 후보 — Graft의 실사용 선례가 있고 가드레일·동등성을 건드리지 않는다.
+
+## OQ-020 — VIBE 지표 이동은 QA형 벤치 하네스에서 관측 불가 (V2~V7)
+
+- 발견: Phase 3 Wave F todo 14 — VIBE 주입 A/B 실모델 실행 준비(2026-08-25) / `scripts/vibe-injection-experiment.ts`, `benchmarks/vibe/measurement-preregistration.md`
+- 내용: ADR-011-7의 채택 규칙("지표↑ AND 정확도↑")은 시행 안에서 지표값을 관측할 수 있음을 전제하지만, todo 13이 사전등록한 하네스는 QA형(숨긴 정답 4과제)이라 커밋·영수증·프롬프트 로그가 생기지 않는다. V1은 주입 지시가 유도하는 행동(증거 인용)을 답변에서 직접 관측할 수 있으나, V2(발견 해소)·V3(요구사항 증명)·V4(프롬프트 루브릭)·V5(receipt 연속성)·V6(verified commit)·V7(프롬프트 검증 가능성)은 세션형 하네스(에이전트가 실제로 커밋·기록을 남기는) 없이는 지표 이동을 관측할 수 없다.
+- 임시 결정: 실행 전 측정 정의 보충(`measurement-preregistration.md`, SHA 잠금)으로 고정 — V1은 코퍼스 실존 경로 인용률로 관측, V2~V7은 정확도 악화 시 폐기(rejected)할 수 있으나 이 하네스에서는 채택(adopted)될 수 없고 측정값과 함께 pending 유지. 그리드·지시문·채택 규칙 자체는 불변.
+- 필요한 결정: V2~V7의 Goodhart 게이트를 통과시키려면 세션형 하네스(작업 단위: 코드 변경 → 커밋 → 영수증 생성까지 시뮬레이트)를 새로 사전등록해야 한다. 팀 표면 노출(ADR-013 `unguarded-team-surface`)의 전제이기도 하므로, 팀 기능 착수 시점에 설계 판정.
+- 상태: open.

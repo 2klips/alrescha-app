@@ -10,6 +10,9 @@
   "scripts": {
     "build": "pnpm -r --if-present build",
     "bench:databrain": "node --env-file-if-exists=.env.local --import tsx scripts/bench-databrain.ts",
+    "bench:graph-surface": "node --env-file-if-exists=.env.local --import tsx scripts/bench-graph-surface.ts",
+    "bench:techniques": "node --env-file-if-exists=.env.local --import tsx scripts/bench-techniques.ts",
+    "bench:vibe": "node --env-file-if-exists=.env.local --import tsx scripts/vibe-injection-experiment.ts",
     "dev": "pnpm --filter @arr/web dev",
     "db:migrate": "tsx scripts/migrate.ts",
     "format": "prettier --write .",
