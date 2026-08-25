@@ -44,10 +44,12 @@ describe("TeamView", () => {
     }
   });
 
-  it("renders no VIBE score while every verdict is pending", () => {
+  it("renders exactly the adopted metric — rejected and pending stay dark", () => {
     const html = render("team");
-    expect(html).toContain(TEAM.vibe.gatePending);
-    expect(html).toContain(TEAM.vibe.gateSummary(0, 7));
+    // The 2026-08-25 real run adopted V1 and rejected V5/V6 (Goodhart).
+    expect(html).toContain(TEAM.vibe.gateSummary(1, 7));
+    expect(html).toContain("V1-verified-evidence-ratio");
+    expect(html).not.toContain(TEAM.vibe.gatePending);
     // The comparison table stays locked without the workspace policy.
     expect(html).toContain(TEAM.vibe.comparisonLocked);
   });

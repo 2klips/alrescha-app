@@ -425,14 +425,14 @@ describe("F5 efficacy benchmark audit", () => {
     );
   });
 
-  it("accepts the committed complete real benchmark", async () => {
+  it("accepts the committed real releases — v2 frozen and the 2026-08-25 v3 run", async () => {
     const audit = await verifyBenchmarkRelease(REPOSITORY_ROOT);
 
     expect(audit).toMatchObject({
       accuracyDeltaPercentagePoints: expect.any(Number),
-      actualTrialCount: 108,
-      expectedTrialCount: 108,
-      model: "gpt-5-nano-2025-08-07",
+      actualTrialCount: 600,
+      expectedTrialCount: 600,
+      model: "gpt-5.6-luna+claude-sonnet-5",
       status: "pass",
       tokenReductionPercent: expect.any(Number),
     });
@@ -440,11 +440,18 @@ describe("F5 efficacy benchmark audit", () => {
     expect(audit.findings).toEqual([]);
   });
 
-  it("reports the v3 pre-registration as pending until its real run exists", async () => {
+  it("audits both releases as first-class once the v3 real run exists", async () => {
     const audit = await verifyBenchmarkRelease(REPOSITORY_ROOT);
 
-    expect(audit.pendingReleases).toEqual(["v3"]);
-    expect(audit.releases.map(({ id }) => id)).toEqual(["v2"]);
+    expect(audit.pendingReleases).toEqual([]);
+    expect(audit.releases.map(({ id }) => id)).toEqual(["v2", "v3"]);
+    // The frozen v2 release stays audited byte-for-byte alongside v3.
+    const v2 = audit.releases.find(({ id }) => id === "v2");
+    expect(v2).toMatchObject({
+      actualTrialCount: 108,
+      expectedTrialCount: 108,
+      model: "gpt-5-nano-2025-08-07",
+    });
   });
 });
 

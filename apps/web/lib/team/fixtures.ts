@@ -43,15 +43,57 @@ const SAMPLE_PROMPT =
  * asset; `tests/team-view.test.tsx` asserts the two stay identical, so a
  * future adopted verdict cannot silently diverge from what the screen shows.
  */
+const PUBLISHED_VERDICTS: Readonly<
+  Record<
+    (typeof VIBE_METRICS)[number],
+    { detail: string; status: "adopted" | "pending" | "rejected" }
+  >
+> = {
+  "V1-verified-evidence-ratio": {
+    detail:
+      "지표↑ AND 정확도↑ 충족. 인용률 Δ 0.625 (대조 1.875 → 주입 2.5), 쌍 8/8, 정확도 Δ 0.042 (대조 0.875 → 주입 0.917). 소표본(쌍 8) — 점추정 단독 해석 금지.",
+    status: "adopted",
+  },
+  "V2-finding-resolution-rate": {
+    detail:
+      "정확도 비악화(쌍 7/8, 정확도 Δ 0.048 (대조 0.905 → 주입 0.952))이나 지표 이동이 이 하네스에서 관측 불가(OQ-020) — 세션형 하네스에서 재실험 전까지 채택 불가.",
+    status: "pending",
+  },
+  "V3-requirement-proof-throughput": {
+    detail:
+      "정확도 비악화(쌍 7/8, 정확도 Δ 0.095 (대조 0.81 → 주입 0.905))이나 지표 이동이 이 하네스에서 관측 불가(OQ-020) — 세션형 하네스에서 재실험 전까지 채택 불가.",
+    status: "pending",
+  },
+  "V4-prompt-rubric-mean": {
+    detail:
+      "정확도 비악화(쌍 6/8, 정확도 Δ 0.111 (대조 0.833 → 주입 0.944))이나 지표 이동이 이 하네스에서 관측 불가(OQ-020) — 세션형 하네스에서 재실험 전까지 채택 불가.",
+    status: "pending",
+  },
+  "V5-receipt-chain-continuity": {
+    detail:
+      "지표 최적화 지시가 숨긴 정답 정확도를 낮춤 — 노출 부적격(폐기·재설계). 지표 이동은 이 하네스에서 관측 불가(OQ-020). 쌍 7/8, 정확도 Δ -0.095 (대조 0.952 → 주입 0.857).",
+    status: "rejected",
+  },
+  "V6-verified-commit-ratio": {
+    detail:
+      "지표 최적화 지시가 숨긴 정답 정확도를 낮춤 — 노출 부적격(폐기·재설계). 지표 이동은 이 하네스에서 관측 불가(OQ-020). 쌍 5/8, 정확도 Δ -0.067 (대조 0.933 → 주입 0.867).",
+    status: "rejected",
+  },
+  "V7-prompt-verifiability-share": {
+    detail:
+      "정확도 비악화(쌍 6/8, 정확도 Δ 0.111 (대조 0.833 → 주입 0.944))이나 지표 이동이 이 하네스에서 관측 불가(OQ-020) — 세션형 하네스에서 재실험 전까지 채택 불가.",
+    status: "pending",
+  },
+};
+
 function publishedGate(): VibeGateResults {
   return vibeGateResultsSchema.parse({
     experiment: "vibe-harness-injection-v0",
     generatedBy: "scripts/vibe-injection-experiment.ts",
     verdicts: VIBE_METRICS.map((metric) => ({
-      detail:
-        "실모델 실행 대기(크레딧). 채택 조건: 주입 하네스에서 지표↑ AND 숨긴 정답 정확도↑ — 지표만 오르면 폐기.",
+      detail: PUBLISHED_VERDICTS[metric].detail,
       metric,
-      status: "pending" as const,
+      status: PUBLISHED_VERDICTS[metric].status,
     })),
   });
 }

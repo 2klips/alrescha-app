@@ -135,19 +135,29 @@ describe("VIBE index v0 (todo 12)", () => {
     ).toBe(true);
   });
 
-  it("wires exposure to the PUBLISHED gate file — currently all pending, so nothing shows", () => {
+  it("wires exposure to the PUBLISHED gate file — only adopted verdicts render", () => {
     const published = vibeGateResultsSchema.parse(
       JSON.parse(
         readFileSync(`${repoRoot}/benchmarks/vibe/gate-results.json`, "utf8"),
       ),
     );
-    expect(published.verdicts.every(({ status }) => status === "pending")).toBe(
-      true,
-    );
+    // The 2026-08-25 real 112-trial run: V1 adopted, V5/V6 rejected
+    // (Goodhart — accuracy dropped under injection), the rest pending
+    // pending a session-shaped harness (OQ-020).
+    const byStatus = (status: string): string[] =>
+      published.verdicts
+        .filter((verdict) => verdict.status === status)
+        .map(({ metric }) => metric);
+    expect(byStatus("adopted")).toEqual(["V1-verified-evidence-ratio"]);
+    expect(byStatus("rejected")).toEqual([
+      "V5-receipt-chain-continuity",
+      "V6-verified-commit-ratio",
+    ]);
     const index = buildVibeIndex(INPUT, published, {
       comparisonTableEnabled: true,
     });
-    expect(index.teamView).toEqual({});
+    // Exactly the adopted set renders — rejected/pending stay dark.
+    expect(Object.keys(index.teamView)).toEqual(["V1-verified-evidence-ratio"]);
   });
 
   it("derives contribution rows from evidence: who carried which requirement to proof", () => {
