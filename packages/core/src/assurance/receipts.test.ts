@@ -19,7 +19,7 @@ const statement: InTotoStatement = {
     runId: "run-fixture-12",
     tool: { name: "arr", version: "0.1.0" },
   },
-  predicateType: "https://arr.tools/receipt/v1",
+  predicateType: "https://arr-app-web.vercel.app/receipt/v1",
   subject: [
     { digest: { sha1: "b".repeat(40) }, name: "git:commit" },
     { digest: { sha256: "a".repeat(64) }, name: "2klips/arr-app" },
@@ -32,12 +32,18 @@ describe("in-toto-shaped assurance receipts", () => {
     expect(() =>
       inTotoStatementSchema.parse({ ...statement, _type: "custom" }),
     ).toThrow();
-    // The placeholder predicate type died with the domain purchase — old
+    // Earlier predicate types died before the first production receipt — old
     // dev statements must no longer validate.
     expect(() =>
       inTotoStatementSchema.parse({
         ...statement,
         predicateType: "https://arr.dev/receipt/v1",
+      }),
+    ).toThrow();
+    expect(() =>
+      inTotoStatementSchema.parse({
+        ...statement,
+        predicateType: "https://arr.tools/receipt/v1",
       }),
     ).toThrow();
     // The git:commit subject carries a sha1; a sha256 there is not the

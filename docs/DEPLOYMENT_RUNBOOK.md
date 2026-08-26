@@ -35,42 +35,42 @@
 | #   | 준비물                                                    | 비고                                  |
 | --- | --------------------------------------------------------- | ------------------------------------- |
 | P1  | **Supabase 클라우드 프로젝트**                            | 리전 `ap-northeast-2` 권장            |
-| P2  | **새 도메인 구매** + Vercel 계정(GitHub 연동된 원래 계정) | §2가 이 도메인 값에 의존              |
+| P2  | **Vercel 프로젝트 기본 도메인** + GitHub 연동된 원래 계정 | 확정값: `arr-app-web.vercel.app`      |
 | P3  | **Fly.io 계정** + `fly auth login`                        | 워커용                                |
 | P4  | **로그인용 GitHub OAuth App** (OQ-017)                    | GitHub App과 **별개**. 아래 경고 참조 |
 | P5  | 기존 **GitHub App** 설정 변경 권한                        | webhook·callback URL 전환             |
 
-**이력(반복 방지):** 처음에 `arr.tools`를 팀 `ao2`에 구매했으나, 그 Vercel 계정에 GitHub(`2klips`)을 연결할 수 없었다 — GitHub 계정 하나는 Vercel 계정 하나에만 연결되고, `2klips`는 이미 다른 Vercel 계정(운영 중, 자동배포 사용)에 묶여 있다. Vercel 팀 간 Move는 양쪽 팀 멤버여야 하고(멤버 2명 = Pro), 레지스트라 Transfer out은 ICANN 60일 잠금(2026-10-25 해제). **결론: `arr.tools`는 방치(자동갱신 끄면 1년 후 만료), 원래 계정에서 새 도메인으로 배포한다.**
+**이력(반복 방지):** 처음에 `arr.tools`를 팀 `ao2`에 구매했으나, 그 Vercel 계정에 GitHub(`2klips`)을 연결할 수 없었다 — GitHub 계정 하나는 Vercel 계정 하나에만 연결되고, `2klips`는 이미 다른 Vercel 계정(운영 중, 자동배포 사용)에 묶여 있다. Vercel 팀 간 Move는 양쪽 팀 멤버여야 하고(멤버 2명 = Pro), 레지스트라 Transfer out은 ICANN 60일 잠금(2026-10-25 해제). **2026-08-26 사용자 결정: 추가 도메인 구매를 연기하고, 원래 계정의 Vercel 기본 프로덕션 주소 `https://arr-app-web.vercel.app`로 배포한다.** 커스텀 도메인은 이후 이 프로젝트에 alias로 연결할 수 있지만 receipt `predicateType`은 마이그레이션 없이는 바꾸지 않는다.
 
 ---
 
 ## 2. 도메인 값 교체 (코드 작업 — 배포 전에 이것부터)
 
-새 도메인을 `<NEW>`라 하자 (예: `arrproof.com`).
+프로덕션 기준 주소는 첫 Vercel 배포로 확정된 `arr-app-web.vercel.app`이다.
 
 > **왜 다시 바꿔도 되는가:** WORK_SPEC §13은 "predicateType은 전체 receipt 마이그레이션 결정 없이 다시 바꾸지 않는다"고 못박았다. 그 조건은 **프로덕션 receipt가 존재할 때**의 이야기다. 지금은 프로덕션 receipt가 0건이고 로컬 dev receipt는 폐기 마이그레이션이 이미 처리하므로, **프로덕션 첫 발급 전인 지금이 마지막으로 바꿀 수 있는 시점**이다. 프로덕션에 receipt가 한 건이라도 쌓인 뒤에는 이 항목을 건드리지 말 것.
 
 바꿀 파일 (전부 실측 목록):
 
-1. `packages/core/src/assurance/receipts.ts` — `RECEIPT_PREDICATE_TYPE = "https://<NEW>/receipt/v1"` + 위 주석의 도메인·날짜
+1. `packages/core/src/assurance/receipts.ts` — `RECEIPT_PREDICATE_TYPE = "https://arr-app-web.vercel.app/receipt/v1"` + 위 주석의 도메인·날짜
 2. `packages/core/src/assurance/receipts.test.ts` — 픽스처 `predicateType` **및 음성 테스트**(구 값 거부 단언)를 새 값 기준으로
 3. `apps/worker/src/analysis-job.test.ts:169` — `expect(statement.predicateType).toBe(...)`
 4. `apps/web/lib/assurance/fixtures.ts:315` — 데모 receipt `predicateType`. **다이제스트 2개를 재계산해야 한다**(아래 스니펫)
-5. `apps/web/app/app/settings/mcp/actions.ts:117,122` — 폴백 호스트 `app.<NEW>` / `mcp.<NEW>`
-6. `supabase/migrations/` — **새 마이그레이션 파일 추가**(기존 `202608260001_discard_dev_receipts.sql`은 수정 금지 — 이미 적용된 이력). 내용은 같은 패턴으로 `arr.tools` 값을 지우는 delete. 새 파일은 반드시 `tests/helpers/database.ts`의 `ALL_MIGRATIONS`에 등록(빠뜨리면 DB 테스트 63건이 무더기로 깨진다 — 실제로 겪었음)
+5. `apps/web/app/app/settings/mcp/actions.ts:117,122` — 폴백 주소 `https://arr-app-web.vercel.app` / `https://arr-app-web.vercel.app/api/mcp`
+6. `supabase/migrations/202608260002_discard_arr_tools_receipts.sql` — **새 마이그레이션 파일 추가**(기존 `202608260001_discard_dev_receipts.sql`은 수정 금지 — 이미 적용된 이력). `arr.tools` 값을 지우는 delete이며 `tests/helpers/database.ts`의 `ALL_MIGRATIONS`에 등록
 7. `spec/WORK_SPEC.md` §13 — 예시 JSON + "Wave 4 예약 이행 완료" 문단의 도메인
 8. `spec/BUILD_PLAN_PHASE2C.md` todo 10 주석 · 이 문서
 
-**픽스처 다이제스트 재계산** (레포 루트에서, `<NEW>` 치환 후 실행):
+**픽스처 다이제스트 재계산** (레포 루트에서 실행):
 
 ```bash
-npx tsx -e "import('./packages/core/src/assurance/receipts.ts').then(async (m)=>{const s={_type:'https://in-toto.io/Statement/v1',predicate:{analyzedAt:'2026-08-10T13:42:00.000Z',commitSha:'b'.repeat(40),coverage:{implVerified:3,requirements:5,testVerified:2},evidence:{inferred:1,verified:3},previousReceiptDigest:'9'.repeat(64),repository:'2klips/arr-app',runId:'run-bad0551',tool:{name:'arr',version:'0.1.0'}},predicateType:'https://<NEW>/receipt/v1',subject:[{digest:{sha1:'b'.repeat(40)},name:'git:commit'},{digest:{sha256:'a'.repeat(64)},name:'2klips/arr-app'}]};console.log('current:',await m.digestInTotoStatement(s));const p={...s,predicate:{...s.predicate,commitSha:'e'.repeat(40),evidence:{inferred:2,verified:2},previousReceiptDigest:null,runId:'run-e9101b5'}};console.log('previous:',await m.digestInTotoStatement(p));})"
+npx tsx -e "import('./packages/core/src/assurance/receipts.ts').then(async (m)=>{const s={_type:'https://in-toto.io/Statement/v1',predicate:{analyzedAt:'2026-08-10T13:42:00.000Z',commitSha:'b'.repeat(40),coverage:{implVerified:3,requirements:5,testVerified:2},evidence:{inferred:1,verified:3},previousReceiptDigest:'9'.repeat(64),repository:'2klips/arr-app',runId:'run-bad0551',tool:{name:'arr',version:'0.1.0'}},predicateType:'https://arr-app-web.vercel.app/receipt/v1',subject:[{digest:{sha1:'b'.repeat(40)},name:'git:commit'},{digest:{sha256:'a'.repeat(64)},name:'2klips/arr-app'}]};console.log('current:',await m.digestInTotoStatement(s));const p={...s,predicate:{...s.predicate,commitSha:'e'.repeat(40),evidence:{inferred:2,verified:2},previousReceiptDigest:null,runId:'run-e9101b5'}};console.log('previous:',await m.digestInTotoStatement(p));})"
 ```
 
-출력된 두 값을 `apps/web/lib/assurance/fixtures.ts`의 `expectedDigest` 자리(현재 `1a89f8ed…` / `d08b95a0…`)에 넣는다.
+출력된 두 값을 `apps/web/lib/assurance/fixtures.ts`의 `expectedDigest` 자리(현재 `52341865…` / `176b9f63…`)에 넣는다.
 
 **검증:** `pnpm lint && pnpm typecheck && pnpm test` 전부 green + `npx tsx scripts/verify-scope-boundaries.ts` PASS.
-**커밋:** `chore(domain): adopt the purchased <NEW> domain`
+**커밋:** `chore(domain): adopt the Vercel production domain`
 
 ---
 
@@ -90,7 +90,7 @@ npx tsx -e "import('./packages/core/src/assurance/receipts.ts').then(async (m)=>
 
 GitHub → Settings → Developer settings → **OAuth Apps** → New:
 
-- Homepage: `https://<NEW>`
+- Homepage: `https://arr-app-web.vercel.app`
 - Authorization callback URL: `https://<REF>.supabase.co/auth/v1/callback`
 - 발급된 Client ID/Secret → **Supabase Auth의 GitHub provider에 입력**(§3-3)
 
@@ -101,22 +101,22 @@ GitHub이 연결된 원래 계정에서:
 1. Import `2klips/arr-app` → **Root Directory = `apps/web`**, Framework = Next.js.
 2. 환경 변수 (Production) — **실측 전량 목록**:
 
-| 변수                                                | 값                            | 필수 |
-| --------------------------------------------------- | ----------------------------- | ---- |
-| `NEXT_PUBLIC_APP_URL`                               | `https://<NEW>`               | ✅   |
-| `NEXT_PUBLIC_SUPABASE_URL`                          | §3-4                          | ✅   |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`              | §3-4                          | ✅   |
-| `SUPABASE_SERVICE_ROLE_KEY`                         | §3-4                          | ✅   |
-| `GITHUB_APP_ID` / `GITHUB_APP_SLUG`                 | 기존 App                      | ✅   |
-| `GITHUB_APP_CLIENT_ID` / `GITHUB_APP_CLIENT_SECRET` | 기존 App                      | ✅   |
-| `GITHUB_APP_PRIVATE_KEY`                            | PEM 전문, 줄바꿈은 `\n`       | ✅   |
-| `GITHUB_INSTALL_STATE_SECRET`                       | 임의 랜덤 문자열              | ✅   |
-| `GITHUB_WEBHOOK_SECRET`                             | GitHub App 설정과 동일 값     | ✅   |
-| `ARR_MCP_URL`                                       | `https://<NEW>/api/mcp`       | 권장 |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`              | 플랫폼 AI 판단·enrich 제공 시 | 선택 |
-| `BYOK_ENCRYPTION_KEY`                               | BYOK 사용 시                  | 선택 |
+| 변수                                                | 값                                       | 필수 |
+| --------------------------------------------------- | ---------------------------------------- | ---- |
+| `NEXT_PUBLIC_APP_URL`                               | `https://arr-app-web.vercel.app`         | ✅   |
+| `NEXT_PUBLIC_SUPABASE_URL`                          | §3-4                                     | ✅   |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`              | §3-4                                     | ✅   |
+| `SUPABASE_SERVICE_ROLE_KEY`                         | §3-4                                     | ✅   |
+| `GITHUB_APP_ID` / `GITHUB_APP_SLUG`                 | 기존 App                                 | ✅   |
+| `GITHUB_APP_CLIENT_ID` / `GITHUB_APP_CLIENT_SECRET` | 기존 App                                 | ✅   |
+| `GITHUB_APP_PRIVATE_KEY`                            | PEM 전문, 줄바꿈은 `\n`                  | ✅   |
+| `GITHUB_INSTALL_STATE_SECRET`                       | 임의 랜덤 문자열                         | ✅   |
+| `GITHUB_WEBHOOK_SECRET`                             | GitHub App 설정과 동일 값                | ✅   |
+| `ARR_MCP_URL`                                       | `https://arr-app-web.vercel.app/api/mcp` | 권장 |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`              | 플랫폼 AI 판단·enrich 제공 시            | 선택 |
+| `BYOK_ENCRYPTION_KEY`                               | BYOK 사용 시                             | 선택 |
 
-3. Domains: `<NEW>` 연결(+ 원하면 `app.<NEW>`). `mcp.<NEW>`는 선택 — 안 붙여도 `https://<NEW>/api/mcp`로 동작한다.
+3. Domains: 기본 프로덕션 주소 `arr-app-web.vercel.app` 유지. 커스텀 도메인은 추후 alias로 연결한다.
 4. Deploy → 빌드 green 확인.
 
 ## 6. Fly.io — 워커 (P3)
@@ -142,14 +142,14 @@ fly deploy
 ## 7. GitHub App 전환 (P5) + 스모크
 
 1. 기존 GitHub App 설정:
-   - Webhook URL → `https://<NEW>/api/github/webhooks`, Secret = `GITHUB_WEBHOOK_SECRET`
-   - Callback URL → `https://<NEW>/api/github/callback`
+   - Webhook URL → `https://arr-app-web.vercel.app/api/github/webhooks`, Secret = `GITHUB_WEBHOOK_SECRET`
+   - Callback URL → `https://arr-app-web.vercel.app/api/github/callback`
    - **권한·이벤트는 그대로**(Email addresses 추가 금지 — 가드레일 위반)
 2. **프로덕션 파일럿 재완주 = todo 9 수용 기준:**
-   1. `https://<NEW>` 로그인(GitHub OAuth) → 레포 연결 → 테스트 레포에 푸시
+   1. `https://arr-app-web.vercel.app` 로그인(GitHub OAuth) → 레포 연결 → 테스트 레포에 푸시
    2. webhook 수신 → Fly 워커가 scan·analyze 드레인 → 커밋 카드 `assurance=full`
-   3. **receipt 1건 발급 확인 — `predicateType`이 `https://<NEW>/receipt/v1`이고 subject 선두가 `git:commit`인지** 눈으로 확인(§2가 제대로 반영됐다는 최종 증거)
-   4. 설정 화면에서 MCP 토큰 발급 → `https://<NEW>/api/mcp`로 `get_graph_schema` 1콜
+   3. **receipt 1건 발급 확인 — `predicateType`이 `https://arr-app-web.vercel.app/receipt/v1`이고 subject 선두가 `git:commit`인지** 눈으로 확인(§2가 제대로 반영됐다는 최종 증거)
+   4. 설정 화면에서 MCP 토큰 발급 → `https://arr-app-web.vercel.app/api/mcp`로 `get_graph_schema` 1콜
 3. **롤백:** Vercel은 이전 배포로 Instant Rollback. 워커는 `fly releases` → `fly deploy --image <이전 이미지>`.
 4. 완료 시: `spec/BUILD_PLAN_PHASE2C.md` todo 9 체크박스 + `.omo/evidence/phase2c/wave-4-todo-9.md` 기록 + 커밋.
 

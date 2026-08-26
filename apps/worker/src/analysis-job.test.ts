@@ -166,7 +166,9 @@ describe("analyze job", () => {
     expect(statement.predicate.runId).toBe("run-1");
     expect(statement.predicate.previousReceiptDigest).toBeNull();
     // The production predicate carries the WORK_SPEC §13 reserved fields.
-    expect(statement.predicateType).toBe("https://arr.tools/receipt/v1");
+    expect(statement.predicateType).toBe(
+      "https://arr-app-web.vercel.app/receipt/v1",
+    );
     expect(statement.predicate.tool).toEqual({ name: "arr", version: "0.1.0" });
     expect(Date.parse(statement.predicate.analyzedAt)).not.toBeNaN();
     expect(statement.predicate.coverage).toMatchObject({

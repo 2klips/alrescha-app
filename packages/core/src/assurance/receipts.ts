@@ -4,14 +4,16 @@ const sha256Schema = z.string().regex(/^[0-9a-f]{64}$/);
 const sha1Schema = z.string().regex(/^[0-9a-f]{40}$/);
 
 /**
- * The production predicate type, adopted 2026-08-26 when the arr.tools
- * domain was purchased (OQ-010 / WORK_SPEC §13 "Wave 4"). Changing this
+ * The production predicate type, adopted 2026-08-26 when the first Vercel
+ * production deployment assigned arr-app-web.vercel.app (OQ-010 /
+ * WORK_SPEC §13 "Wave 4"). Changing this
  * breaks every stored receipt digest — dev receipts issued under the
- * placeholder were discarded in the same change (see the
- * discard_dev_receipts migration); production must never change it again
- * without a full receipt migration decision.
+ * earlier predicate types were discarded in the same change (see the
+ * discard receipt migrations); production must never change it again without
+ * a full receipt migration decision.
  */
-export const RECEIPT_PREDICATE_TYPE = "https://arr.tools/receipt/v1" as const;
+export const RECEIPT_PREDICATE_TYPE =
+  "https://arr-app-web.vercel.app/receipt/v1" as const;
 
 /** The issuing tool identity recorded in every receipt. */
 export const RECEIPT_TOOL = { name: "arr", version: "0.1.0" } as const;

@@ -24,3 +24,12 @@
 ## 남김
 
 - todo 9(프로덕션 기동 — Supabase 클라우드·Vercel 배포·Fly.io 워커·webhook URL 전환)가 G4의 남은 절반. DNS(`app`/`mcp` 서브도메인)는 배포 시점에 Vercel 프로젝트에 붙인다.
+
+## 후속 운영 정정 — Vercel 기본 도메인 채택 (2026-08-26)
+
+- `arr.tools`를 보유한 Vercel 팀에는 GitHub `2klips` 계정을 연결할 수 없었다. 사용자 결정으로 추가 도메인 구매를 연기하고, GitHub이 연결된 원래 팀에 `2klips/arr-app`을 Import했다.
+- Vercel 프로젝트 `arr-app-web`, Root Directory `apps/web`, Framework `Next.js`. 첫 배포 `dpl_JAHcLWBBhpUnu7Fmz1kYAZRmdV5A` 성공. 기본 프로덕션 주소 `https://arr-app-web.vercel.app`에서 `/` 응답 `200` 확인.
+- 프로덕션 첫 receipt 발급 전 마지막 교체로 `predicateType`을 `https://arr-app-web.vercel.app/receipt/v1`에 고정했다. 커스텀 도메인은 추후 alias로 연결하되 이 값은 유지한다.
+- MCP 폴백은 `https://arr-app-web.vercel.app/api/mcp`. 구 `arr.tools` 로컬 receipt는 신규 `202608260002_discard_arr_tools_receipts.sql`에서 폐기한다.
+- 재계산 digest: current `52341865…476d`, previous `176b9f63…b4fe`.
+- 게이트: vitest **872 passed / 1 skipped**, lint·typecheck·build·scope fidelity(12경계) PASS. Playwright 최초 병렬 실행의 WebGL 타이밍 실패는 동일 테스트 반복 2회로 비재현 확인 후, 전체 스위트를 4 workers로 재실행해 **120 passed**.

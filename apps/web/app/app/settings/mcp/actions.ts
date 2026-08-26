@@ -114,12 +114,12 @@ function hostedContextUrls(workspaceId: string) {
   const appUrl = (
     configuredAppUrl?.startsWith("https://")
       ? configuredAppUrl
-      : "https://app.arr.tools"
+      : "https://arr-app-web.vercel.app"
   ).replace(/\/$/, "");
   const mcpEndpoint = (
     configuredMcpEndpoint?.startsWith("https://")
       ? configuredMcpEndpoint
-      : "https://mcp.arr.tools"
+      : "https://arr-app-web.vercel.app/api/mcp"
   ).replace(/\/$/, "");
   return {
     dashboardUrl: `${appUrl}/app?workspace=${workspaceId}`,

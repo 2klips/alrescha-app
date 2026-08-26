@@ -312,7 +312,7 @@ const CURRENT_STATEMENT: InTotoStatement = {
     runId: "run-bad0551",
     tool: { name: "arr", version: "0.1.0" },
   },
-  predicateType: "https://arr.tools/receipt/v1",
+  predicateType: "https://arr-app-web.vercel.app/receipt/v1",
   subject: [
     { digest: { sha1: "b".repeat(40) }, name: "git:commit" },
     { digest: { sha256: "a".repeat(64) }, name: "2klips/arr-app" },
@@ -332,7 +332,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-10T13:42:00.000Z",
     expectedDigest:
-      "1a89f8eddc2cd34a863b7bfc91459dacae59c0665bb3e1cd29b7bdf9535eab18",
+      "523418655e9609743cb75e592cf28a512c667e1b49253854f175cf93c3ac476d",
     id: "receipt-current",
     label: "bad0551 · deterministic analysis",
     stale: false,
@@ -341,7 +341,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-09T17:08:00.000Z",
     expectedDigest:
-      "1a89f8eddc2cd34a863b7bfc91459dacae59c0665bb3e1cd29b7bdf9535eab18",
+      "523418655e9609743cb75e592cf28a512c667e1b49253854f175cf93c3ac476d",
     id: "receipt-tampered",
     label: "bad0551 · tampered fixture",
     stale: false,
@@ -356,7 +356,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-08T09:12:00.000Z",
     expectedDigest:
-      "d08b95a079e77a4ec2ccce9e57a5b18d7a2a80658f8187120fec2848bd760a8e",
+      "176b9f63b6c185d2a29e33c921147c320a6135d921e165e922229d18c79ab4fe",
     id: "receipt-previous",
     label: "e9101b5 · previous analysis",
     stale: true,
