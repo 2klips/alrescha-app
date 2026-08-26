@@ -69,17 +69,28 @@ async function main(): Promise<void> {
         spec,
       };
     });
-    const { measurements, trials } = await measureTechniquesReal({
-      corpus,
-      models,
-      tasks,
-    });
+    const repeatsOption = process.argv
+      .find((argument) => argument.startsWith("--repeats="))
+      ?.slice("--repeats=".length);
+    const repeats = repeatsOption === undefined ? 1 : Number(repeatsOption);
     const dryRun = JSON.parse(
       await readFile(
         resolve(repositoryRoot, "benchmarks/databrain/techniques.dry-run.json"),
         "utf8",
       ),
     ) as { measurements: TechniqueMeasurement[] };
+    const { measurements, trials } = await measureTechniquesReal({
+      corpus,
+      dryRunCacheStablePrefixTokens: Object.fromEntries(
+        dryRun.measurements.map((measurement) => [
+          measurement.technique,
+          measurement.cacheStablePrefixTokens,
+        ]),
+      ),
+      models,
+      repeats,
+      tasks,
+    });
     const markdown = renderTechniqueRealReport({
       dryRun: dryRun.measurements,
       measurements,
@@ -97,6 +108,7 @@ async function main(): Promise<void> {
       `${JSON.stringify(
         {
           generatedAt: new Date().toISOString(),
+          repeats,
           measurements,
           registeredDryRun: dryRun.measurements,
           tokenAccounting:
