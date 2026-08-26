@@ -10,6 +10,7 @@
  */
 
 import type { RepositoryCorpus } from "../databrain-benchmark/context";
+import { searchWorkspaceIndex } from "../../packages/mcp/src/data-brain";
 import {
   buildGraphSchema,
   buildRepoMap,
@@ -151,12 +152,15 @@ const GRAPH_SURFACE_TOOLS: ToolDefinition[] = [
   },
   {
     description:
-      "Stored content for one node id — the explicit second step after ID-first traversal.",
+      "Stored content by node id — the explicit second step after ID-first traversal. Pass ids as a space-separated list to batch up to 4 nodes in one call instead of one round-trip each.",
     name: "get_node_content",
     parameters: {
       additionalProperties: false,
       properties: {
-        node_id: { description: "Node id.", type: "string" },
+        node_id: {
+          description: "One node id, or up to 4 ids separated by spaces.",
+          type: "string",
+        },
       },
       required: ["node_id"],
       type: "object",
@@ -176,10 +180,47 @@ const GRAPH_SURFACE_TOOLS: ToolDefinition[] = [
   SUBMIT_ANSWER_TOOL,
 ];
 
+/**
+ * v2 surface addition (preregistration.v2.json): the excerpt search entry
+ * point the shipped product routes simple lookups to (route_query). The v1
+ * arm deliberately excluded it and reproduced the graph-only quality ceiling;
+ * v2 measures the surface as actually shipped.
+ */
+const SEARCH_INDEX_TOOL: ToolDefinition = {
+  description:
+    "Deterministic index search WITH excerpts (PPR-reranked) — the fastest path for single-fact questions. Use graph traversal for multi-hop or structural questions.",
+  name: "search_index",
+  parameters: {
+    additionalProperties: false,
+    properties: {
+      query: { description: "Search terms.", type: "string" },
+    },
+    required: ["query"],
+    type: "object",
+  },
+};
+
+const TOOLS_BY_NAME: ReadonlyMap<string, ToolDefinition> = new Map(
+  [...FILE_EXPLORATION_TOOLS, ...GRAPH_SURFACE_TOOLS, SEARCH_INDEX_TOOL].map(
+    (tool) => [tool.name, tool],
+  ),
+);
+
 export function toolDefinitionsForArm(arm: GraphSurfaceArm): ToolDefinition[] {
   return arm === "file-exploration"
     ? FILE_EXPLORATION_TOOLS
     : GRAPH_SURFACE_TOOLS;
+}
+
+/** Resolve the arm's tool surface from the pre-registered tool-name list. */
+export function toolDefinitionsForNames(
+  names: readonly string[],
+): ToolDefinition[] {
+  return names.map((name) => {
+    const tool = TOOLS_BY_NAME.get(name);
+    if (!tool) throw new TypeError(`Unknown pre-registered tool: ${name}`);
+    return tool;
+  });
 }
 
 function clip(text: string, maxChars: number): string {
@@ -196,10 +237,14 @@ export function createToolExecutor(input: {
   arm: GraphSurfaceArm;
   caps: GraphSurfaceProtocol["toolOutputCaps"];
   corpus: RepositoryCorpus;
+  /** Pre-registered tool-name list; defaults to the v1 arm surface. */
+  toolNames?: readonly string[];
   workspace: McpWorkspaceData;
 }): ToolExecutor {
   const { arm, caps, corpus, workspace } = input;
-  const allowed = new Set(toolDefinitionsForArm(arm).map(({ name }) => name));
+  const allowed = new Set(
+    input.toolNames ?? toolDefinitionsForArm(arm).map(({ name }) => name),
+  );
 
   function run(name: string, args: Record<string, unknown>): string {
     switch (name) {
@@ -295,11 +340,35 @@ export function createToolExecutor(input: {
         ].join("\n");
       }
       case "get_node_content": {
-        const nodeId = typeof args.node_id === "string" ? args.node_id : "";
-        const content = getNodeContent(workspace, nodeId);
-        return content
-          ? `# ${content.path ?? content.id} [${content.kind}]\n\n${clip(content.content, caps.fileContentChars)}`
-          : `Unknown node: ${nodeId}`;
+        const raw = typeof args.node_id === "string" ? args.node_id : "";
+        const nodeIds = raw.trim().split(/\s+/).filter(Boolean).slice(0, 4);
+        if (nodeIds.length === 0) return "get_node_content requires node_id.";
+        // Mirrors the shipped batch form: up to 4 nodes per call, each
+        // clipped independently; unknown ids report inline.
+        return nodeIds
+          .map((nodeId) => {
+            const content = getNodeContent(workspace, nodeId);
+            return content
+              ? `# ${content.path ?? content.id} [${content.kind}]\n\n${clip(content.content, caps.fileContentChars)}`
+              : `Unknown node: ${nodeId}`;
+          })
+          .join("\n\n");
+      }
+      case "search_index": {
+        const query = typeof args.query === "string" ? args.query : "";
+        if (query.length === 0) return "search_index requires a query.";
+        const results = searchWorkspaceIndex(workspace, { query }).slice(
+          0,
+          caps.searchNodesMaxResults,
+        );
+        return results.length === 0
+          ? "No index entries matched."
+          : results
+              .map(
+                (result) =>
+                  `${result.nodeId} [${result.type}] ${result.path} (rank ${result.rank})\n  ${clip(result.excerpt, 280).replaceAll("\n", " ")}`,
+              )
+              .join("\n");
       }
       case "memory_read": {
         const entries = workspace.memoryEntries ?? [];

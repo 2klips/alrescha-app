@@ -65,6 +65,8 @@ export interface GraphSurfacePreregistration {
     readonly manifestDigest: string;
     readonly taskIds: readonly string[];
   };
+  /** Report basename for the real run (default "results.v1"). */
+  readonly resultsBasename: string;
 }
 
 function invalid(field: string): never {
@@ -230,6 +232,10 @@ function parsePreregistration(raw: unknown): GraphSurfacePreregistration {
         "questionSource.taskIds",
       ),
     },
+    resultsBasename:
+      root.resultsBasename === undefined
+        ? "results.v1"
+        : asString(root.resultsBasename, "resultsBasename"),
   };
 }
 

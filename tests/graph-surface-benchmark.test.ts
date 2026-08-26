@@ -19,6 +19,7 @@ import {
 import {
   createToolExecutor,
   toolDefinitionsForArm,
+  toolDefinitionsForNames,
 } from "../scripts/graph-surface-benchmark/tools";
 import {
   benchmarkWorkspace,
@@ -288,5 +289,98 @@ describe("graph-surface benchmark aggregation", () => {
       (graph ?? []).includes(name),
     );
     expect(shared).toEqual(["submit_answer"]);
+  });
+});
+
+describe("graph-surface v2 surface (preregistration.v2.json)", () => {
+  const v2Path = join(
+    repoRoot,
+    "benchmarks/graph-surface/preregistration.v2.json",
+  );
+
+  it("locks the v2 pre-registration: same grid and questions, search_index added, digest pinned", async () => {
+    const loaded = await loadGraphSurfaceBenchmark({
+      preregistrationPath: v2Path,
+      v3ManifestPath,
+    });
+    expect(loaded.preregistration.resultsBasename).toBe("results.v2");
+    expect(loaded.preregistration.protocol.trialCount).toBe(96);
+    expect(loaded.preregistration.armTools["graph-surface"]).toContain(
+      "search_index",
+    );
+    // The question set is byte-identical to v1's.
+    const v1 = await loadGraphSurfaceBenchmark({
+      preregistrationPath,
+      v3ManifestPath,
+    });
+    expect(loaded.preregistration.questionSource.taskIds).toEqual(
+      v1.preregistration.questionSource.taskIds,
+    );
+    const fileSha = createHash("sha256")
+      .update(readFileSync(v2Path, "utf8"), "utf8")
+      .digest("hex");
+    expect(loaded.preregistrationSha256).toBe(fileSha);
+  });
+
+  it("resolves pre-registered tool names and rejects unknown ones", () => {
+    const names = ["search_index", "get_node_content", "submit_answer"];
+    expect(toolDefinitionsForNames(names).map(({ name }) => name)).toEqual(
+      names,
+    );
+    expect(() => toolDefinitionsForNames(["not_a_tool"])).toThrow(
+      /Unknown pre-registered tool/,
+    );
+  });
+
+  it("search_index returns excerpts and get_node_content batches up to four ids", () => {
+    const corpus = {
+      entries: [
+        {
+          content: "# Auth\n\nSession timeout is thirty minutes.",
+          path: "auth.md",
+        },
+        { content: "# Billing\n\nCharges settle nightly.", path: "billing.md" },
+      ],
+      root: "/x",
+    };
+    const workspace = benchmarkWorkspace({
+      corpus,
+      corpusKey: ".",
+      memoryFixtures: [],
+    });
+    const caps = {
+      fileContentChars: 200,
+      grepExcerptChars: 80,
+      grepFilesMaxHits: 5,
+      listFilesMaxPaths: 5,
+      repoMapDefaultBudget: 200,
+      searchNodesMaxResults: 5,
+    };
+    const executor = createToolExecutor({
+      arm: "graph-surface",
+      caps,
+      corpus,
+      toolNames: [
+        "search_index",
+        "get_node_content",
+        "search_nodes",
+        "submit_answer",
+      ],
+      workspace,
+    });
+    const indexed = executor.execute("search_index", {
+      query: "session timeout",
+    });
+    expect(indexed).toContain("artifact-00000");
+    expect(indexed).toContain("thirty minutes");
+    // Batch: two ids in one call, unknown id reported inline; capped at 4.
+    const batch = executor.execute("get_node_content", {
+      node_id: "artifact-00000 artifact-00001 nope",
+    });
+    expect(batch).toContain("# auth.md");
+    expect(batch).toContain("# billing.md");
+    expect(batch).toContain("Unknown node: nope");
+    // The v2 tool-name gate still blocks tools outside the pre-registered list.
+    expect(executor.execute("memory_read", {})).toContain("not available");
   });
 });

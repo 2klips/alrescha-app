@@ -1044,6 +1044,29 @@ describe("hosted MCP contract", () => {
         type: "requirement",
       },
     });
+
+    // The batch form fetches up to four nodes in one round-trip; unknown ids
+    // are dropped rather than erroring the whole batch.
+    const batch = await client.callTool({
+      arguments: { node_ids: [requirement, "01K287J3D18V7A1MZG9E8D1Y11"] },
+      name: "get_node_content",
+    });
+    const batchContent = batch.structuredContent as {
+      node: unknown;
+      nodes: { id: string }[];
+    };
+    expect(batchContent.node).toBeNull();
+    expect(batchContent.nodes.map(({ id }) => id)).toEqual([
+      requirement,
+      "01K287J3D18V7A1MZG9E8D1Y11",
+    ]);
+    const missing = await client.callTool({
+      arguments: { node_ids: [requirement, "unknown-node-id"] },
+      name: "get_node_content",
+    });
+    expect(
+      (missing.structuredContent as { nodes: unknown[] }).nodes,
+    ).toHaveLength(1);
   });
 
   it("emits access events for every graph tool without storing the question", async () => {

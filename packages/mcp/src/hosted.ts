@@ -623,8 +623,16 @@ function createServer(
     {
       annotations: READ_ONLY_TOOL,
       description:
-        "The explicit second step after ID-first traversal: stored content for one node id (artifacts return their stored summary — raw source bodies are never persisted).",
-      inputSchema: z.object({ node_id: z.string().trim().min(1) }),
+        "The explicit second step after ID-first traversal: stored content for one node id, or up to four at once via node_ids — batch related nodes into one call instead of one round-trip each (artifacts return their stored summary — raw source bodies are never persisted).",
+      inputSchema: z.object({
+        node_id: z.string().trim().min(1).optional(),
+        node_ids: z
+          .array(z.string().trim().min(1))
+          .min(1)
+          .max(4)
+          .optional()
+          .describe("Batch form: up to 4 node ids fetched in one call"),
+      }),
       outputSchema: z.object({
         node: z
           .object({
@@ -636,19 +644,41 @@ function createServer(
             type: NODE_TYPE_SCHEMA,
           })
           .nullable(),
+        nodes: z.array(
+          z.object({
+            content: z.string(),
+            id: z.string(),
+            kind: z.string(),
+            path: z.string().nullable(),
+            repositoryId: z.string(),
+            requestedId: z.string(),
+            type: NODE_TYPE_SCHEMA,
+          }),
+        ),
         workspaceId: z.string(),
       }),
     },
-    async ({ node_id }) => {
+    async ({ node_id, node_ids }) => {
+      if (!node_id && (!node_ids || node_ids.length === 0)) {
+        throw new Error("get_node_content requires node_id or node_ids");
+      }
       const workspace = await readWorkspace();
-      const node = getNodeContent(workspace, node_id);
+      const requested = node_ids ?? (node_id ? [node_id] : []);
+      const nodes = requested.flatMap((requestedId) => {
+        const found = getNodeContent(workspace, requestedId);
+        return found ? [{ ...found, requestedId }] : [];
+      });
+      // `node` keeps the original single-node contract; `nodes` is the batch.
+      const node = node_id
+        ? (getNodeContent(workspace, node_id) ?? null)
+        : null;
       emitAccessEvent(
         store,
         principal,
         "get_node_content",
-        node ? [node.id] : [],
+        nodes.map(({ id }) => id),
       );
-      return toolResult({ node, workspaceId: principal.workspaceId });
+      return toolResult({ node, nodes, workspaceId: principal.workspaceId });
     },
   );
 

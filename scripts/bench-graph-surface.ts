@@ -36,7 +36,7 @@ import {
 } from "./graph-surface-benchmark/report";
 import {
   createToolExecutor,
-  toolDefinitionsForArm,
+  toolDefinitionsForNames,
   type ToolExecutor,
 } from "./graph-surface-benchmark/tools";
 import { benchmarkWorkspace } from "./graph-surface-benchmark/workspace";
@@ -91,11 +91,15 @@ function scriptedAnswer(task: BenchmarkTask): string {
 async function main(): Promise<void> {
   const repositoryRoot = resolve(import.meta.dirname, "..");
   const dryRun = process.argv.includes("--dry-run");
+  const preregistrationOption = process.argv
+    .find((argument) => argument.startsWith("--preregistration="))
+    ?.slice("--preregistration=".length);
   const { preregistration, preregistrationSha256, tasks } =
     await loadGraphSurfaceBenchmark({
       preregistrationPath: resolve(
         repositoryRoot,
-        "benchmarks/graph-surface/preregistration.v1.json",
+        preregistrationOption ??
+          "benchmarks/graph-surface/preregistration.v1.json",
       ),
       v3ManifestPath: resolve(
         repositoryRoot,
@@ -121,6 +125,7 @@ async function main(): Promise<void> {
           arm,
           caps: preregistration.protocol.toolOutputCaps,
           corpus,
+          toolNames: preregistration.armTools[arm],
           workspace,
         }),
       );
@@ -192,7 +197,7 @@ async function main(): Promise<void> {
           prompt: planned.task.prompt,
           scriptedAnswer: scriptedAnswer(planned.task),
           system: SYSTEM_PROMPT,
-          tools: toolDefinitionsForArm(planned.arm),
+          tools: toolDefinitionsForNames(preregistration.armTools[planned.arm]),
           turnCap: preregistration.protocol.turnCap,
         });
         const grade =
@@ -254,7 +259,9 @@ async function main(): Promise<void> {
   const commitSha = await corpusCommit(repositoryRoot);
   const outputDir = resolve(repositoryRoot, "benchmarks/graph-surface");
   await mkdir(outputDir, { recursive: true });
-  const basename = dryRun ? "results.dry-run" : "results.v1";
+  const basename = dryRun
+    ? preregistration.resultsBasename.replace(/^results/, "results.dry-run")
+    : preregistration.resultsBasename;
   const markdown = renderGraphSurfaceMarkdown({
     corpusCommit: commitSha,
     generatedAt,
