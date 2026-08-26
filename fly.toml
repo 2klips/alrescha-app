@@ -1,0 +1,23 @@
+# Arr worker on Fly.io — queue drain loop only (web + MCP live on Vercel).
+# Deploy from the repo root: `fly deploy` (uses apps/worker/Dockerfile).
+#
+# One-time setup:
+#   fly launch --no-deploy --copy-config --name arr-worker
+#   fly secrets set DATABASE_URL=... GITHUB_APP_ID=... GITHUB_APP_PRIVATE_KEY=... \
+#     ANTHROPIC_API_KEY=... OPENAI_API_KEY=... BYOK_ENCRYPTION_KEY=...
+#   fly deploy
+
+app = "arr-worker"
+primary_region = "nrt"
+
+[build]
+  dockerfile = "apps/worker/Dockerfile"
+
+# No [[services]]: the worker serves no HTTP. Fly keeps the machine running
+# as a plain process; auto-stop must stay off or the queue stops draining.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[processes]
+  worker = "node --import tsx apps/worker/src/run-local.ts"
