@@ -403,16 +403,20 @@ in-toto Statement v1. 서명은 statement에 포함하지 않는다 — Sigstore
 {
   "_type": "https://in-toto.io/Statement/v1",
   "subject": [
+    { "name": "git:commit", "digest": { "sha1": "<40-hex commit sha>" } },
     {
       "name": "spec/prd.md",
       "digest": { "sha256": "<스캔이 기록한 파일 digest>" }
     }
   ],
-  "predicateType": "https://arr.dev/receipt/v1",
+  "predicateType": "https://arr.tools/receipt/v1",
   "predicate": {
     "commitSha": "<40-hex commit sha>",
     "repository": "owner/name",
     "runId": "<run ULID>",
+    "tool": { "name": "arr", "version": "<발급 도구 버전>" },
+    "analyzedAt": "<ISO datetime>",
+    "coverage": { "requirements": 12, "implVerified": 9, "testVerified": 6 },
     "evidence": { "verified": 17, "inferred": 14 },
     "previousReceiptDigest": "<직전 receipt digest | null>"
   }
@@ -425,12 +429,12 @@ in-toto Statement v1. 서명은 statement에 포함하지 않는다 — Sigstore
 - **findings 델타**(`opened`/`resolved`/`open_total`)는 predicate가 아니라 `receipts.summary`에 저장한다 — 커밋 카드가 읽는 자리이며, statement의 불변성과 분리된다.
 - `verify` 동작: statement를 canonical 재계산 → 저장된 digest와 불일치 시 tampered, 스키마 불일치 시 invalid. 대상 파일이 이후 커밋에서 변경됐으면 stale 표시(2단계).
 
-**Wave 4 예약 (도메인 확정 시 한 번에, digest 호환이 깨지는 유일한 시점 — OQ-010·OQ-018):**
+**Wave 4 예약 — 이행 완료 (2026-08-26, arr.tools 도메인 구매와 함께 — OQ-010·OQ-018):**
 
-- `predicateType`을 확정 도메인 값으로 교체 (현행 `arr.dev`는 소유 미확인 자리표시자).
-- subject에 `{ "name": "git:commit", "digest": { "sha1": "<commit sha>" } }` 항목 추가.
-- predicate에 `tool { name, version }` · `analyzedAt` · `coverage { requirements, implVerified, testVerified }` 추가.
-- 이 개정 전에 발급된 receipt(로컬 개발 데이터)는 폐기한다. 프로덕션 첫 receipt부터 최종 포맷이어야 한다.
+- `predicateType`은 확정 도메인 값 `https://arr.tools/receipt/v1`이다 (자리표시자 `arr.dev`는 폐기 — 해당 TLD는 제3자 소유로 확인됨).
+- subject 선두에 `{ "name": "git:commit", "digest": { "sha1": "<commit sha>" } }` — 분석된 커밋 자체가 정본 subject다.
+- predicate에 `tool { name, version }` · `analyzedAt` · `coverage { requirements, implVerified, testVerified }`(결정론 — task 기원 요구사항 수 / 구현 메타데이터 보유 수 / 요구사항 ID 매핑 테스트 보유 수).
+- 이 개정 전에 발급된 receipt(로컬 개발 데이터)는 `202608260001_discard_dev_receipts` 마이그레이션이 폐기한다. 프로덕션 첫 receipt부터 이 최종 포맷이다. **predicateType은 이후 전체 receipt 마이그레이션 결정 없이는 다시 바꾸지 않는다.**
 
 ## 14. AI 판단 레이어와 크레딧 규칙
 

@@ -303,14 +303,20 @@ export const CONTRADICTIONS = [
 const CURRENT_STATEMENT: InTotoStatement = {
   _type: "https://in-toto.io/Statement/v1",
   predicate: {
+    analyzedAt: "2026-08-10T13:42:00.000Z",
     commitSha: "b".repeat(40),
+    coverage: { implVerified: 3, requirements: 5, testVerified: 2 },
     evidence: { inferred: 1, verified: 3 },
     previousReceiptDigest: "9".repeat(64),
     repository: "2klips/arr-app",
     runId: "run-bad0551",
+    tool: { name: "arr", version: "0.1.0" },
   },
-  predicateType: "https://arr.dev/receipt/v1",
-  subject: [{ digest: { sha256: "a".repeat(64) }, name: "2klips/arr-app" }],
+  predicateType: "https://arr.tools/receipt/v1",
+  subject: [
+    { digest: { sha1: "b".repeat(40) }, name: "git:commit" },
+    { digest: { sha256: "a".repeat(64) }, name: "2klips/arr-app" },
+  ],
 };
 
 export interface ReceiptFixture {
@@ -326,7 +332,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-10T13:42:00.000Z",
     expectedDigest:
-      "e039d2e653fce7e4891eed208875fedd07daec8c203419e1ce2617f85ab3d784",
+      "1a89f8eddc2cd34a863b7bfc91459dacae59c0665bb3e1cd29b7bdf9535eab18",
     id: "receipt-current",
     label: "bad0551 · deterministic analysis",
     stale: false,
@@ -335,7 +341,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-09T17:08:00.000Z",
     expectedDigest:
-      "e039d2e653fce7e4891eed208875fedd07daec8c203419e1ce2617f85ab3d784",
+      "1a89f8eddc2cd34a863b7bfc91459dacae59c0665bb3e1cd29b7bdf9535eab18",
     id: "receipt-tampered",
     label: "bad0551 · tampered fixture",
     stale: false,
@@ -350,7 +356,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-08T09:12:00.000Z",
     expectedDigest:
-      "40bc6190015cf895dff4094d119426516aa72fa6e426c40d825d0a438587db57",
+      "d08b95a079e77a4ec2ccce9e57a5b18d7a2a80658f8187120fec2848bd760a8e",
     id: "receipt-previous",
     label: "e9101b5 · previous analysis",
     stale: true,

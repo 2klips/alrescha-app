@@ -115,7 +115,7 @@ arr-app 레포에서 Phase 2C를 이어간다.
       수용 기준: 프로덕션에서 Wave 2 파일럿 재완주, 헬스체크·롤백 절차 문서화.
       Commit: `chore(deploy): stand up production`
 
-- [ ] **10. 도메인 확정 + OQ-010 잔여 수정**
+- [x] **10. 도메인 확정 + OQ-010 잔여 수정** _(2026-08-26 완료 — **arr.tools 구매**(Vercel 팀 ao2, $17.99/년, 자동갱신 ON). predicateType `https://arr.tools/receipt/v1` + §13 예약 필드 4종(git:commit sha1 subject·tool·analyzedAt·coverage — coverage는 신규 `assuranceCoverage` 결정론 산출) 한 커밋에 반영, dev receipt는 `202608260001_discard_dev_receipts` 마이그레이션으로 폐기, MCP 설정 화면 호스트 `mcp.arr.tools`/`app.arr.tools`. 전체 receipt 테스트 green(872). 참고: 도메인 검토 중 리브랜딩(~로/우주/약어 3계열, 6라운드 조사)을 거쳐 **Arr 유지 확정**. `.omo/evidence/phase2c/wave-4-todo-10.md`)_
       도메인 구매(사용자) 후 두 곳 수정: MCP 설정 화면 호스트명, receipt `predicateType`(`packages/core/src/assurance/receipts.ts`) — **이때 WORK_SPEC §13 "Wave 4 예약" 필드 4종(git:commit subject·tool·analyzedAt·coverage)을 같은 커밋에서 추가하고 기존 dev receipt를 폐기한다(OQ-018 판정).** **predicateType 변경은 기존 receipt 다이제스트 호환을 깨므로 실데이터 receipt가 쌓이기 전에 처리** — Wave 4에서 9번과 같은 세션에 한다.
       수용 기준: predicateType 변경 후 전체 receipt 테스트 green, OQ-010 잔여 resolved.
       Commit: `chore(domain): adopt the purchased domain`

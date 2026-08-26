@@ -156,10 +156,13 @@ export {
   AI_ASSIST_STATUS,
   DISABLED_ASSURANCE_AI_ASSIST,
   analyzeRepositoryAssurance,
+  assuranceCoverage,
   assuranceSourceRequired,
 } from "./assurance/rules";
 
 export {
+  RECEIPT_PREDICATE_TYPE,
+  RECEIPT_TOOL,
   digestInTotoStatement,
   inTotoStatementSchema,
   inTotoSubjectSchema,
@@ -170,6 +173,7 @@ export type {
   InTotoStatement,
   ReceiptVerification,
 } from "./assurance/receipts";
+export type { AssuranceCoverage } from "./assurance/rules";
 export type {
   AnalyzeRepositoryAssuranceInput,
   AssuranceFinding,

@@ -85,6 +85,8 @@ export const CONCEPT_GRAPH_MIGRATION =
   "supabase/migrations/202608240002_concept_graph.sql";
 export const MODULE_SUMMARIES_MIGRATION =
   "supabase/migrations/202608240003_module_summaries.sql";
+export const DISCARD_DEV_RECEIPTS_MIGRATION =
+  "supabase/migrations/202608260001_discard_dev_receipts.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -118,6 +120,7 @@ export const ALL_MIGRATIONS = [
   ENRICH_PASS_MIGRATION,
   CONCEPT_GRAPH_MIGRATION,
   MODULE_SUMMARIES_MIGRATION,
+  DISCARD_DEV_RECEIPTS_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

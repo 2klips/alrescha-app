@@ -114,12 +114,12 @@ function hostedContextUrls(workspaceId: string) {
   const appUrl = (
     configuredAppUrl?.startsWith("https://")
       ? configuredAppUrl
-      : "https://app.arr.app"
+      : "https://app.arr.tools"
   ).replace(/\/$/, "");
   const mcpEndpoint = (
     configuredMcpEndpoint?.startsWith("https://")
       ? configuredMcpEndpoint
-      : "https://mcp.arr.app"
+      : "https://mcp.arr.tools"
   ).replace(/\/$/, "");
   return {
     dashboardUrl: `${appUrl}/app?workspace=${workspaceId}`,

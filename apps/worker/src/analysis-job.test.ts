@@ -165,8 +165,22 @@ describe("analyze job", () => {
     expect(statement.predicate.repository).toBe("2klips/arr-app");
     expect(statement.predicate.runId).toBe("run-1");
     expect(statement.predicate.previousReceiptDigest).toBeNull();
-    // Every scanned artifact is a subject, carrying the digest the scan stored.
-    expect(statement.subject.map(({ name }) => name)).toEqual(
+    // The production predicate carries the WORK_SPEC §13 reserved fields.
+    expect(statement.predicateType).toBe("https://arr.tools/receipt/v1");
+    expect(statement.predicate.tool).toEqual({ name: "arr", version: "0.1.0" });
+    expect(Date.parse(statement.predicate.analyzedAt)).not.toBeNaN();
+    expect(statement.predicate.coverage).toMatchObject({
+      implVerified: expect.any(Number),
+      requirements: expect.any(Number),
+      testVerified: expect.any(Number),
+    });
+    // The analyzed commit leads the subjects under its canonical name, then
+    // every scanned artifact with the digest the scan stored.
+    expect(statement.subject[0]).toEqual({
+      digest: { sha1: COMMIT },
+      name: "git:commit",
+    });
+    expect(statement.subject.slice(1).map(({ name }) => name)).toEqual(
       ARTIFACTS.map(({ path }) => path),
     );
 

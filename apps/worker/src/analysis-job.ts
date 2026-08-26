@@ -21,8 +21,11 @@
 
 import {
   analyzeRepositoryAssurance,
+  assuranceCoverage,
   assuranceSourceRequired,
   digestInTotoStatement,
+  RECEIPT_PREDICATE_TYPE,
+  RECEIPT_TOOL,
   type AssuranceFinding,
   type AssuranceSourceFile,
   type InTotoStatement,
@@ -107,6 +110,8 @@ export interface AnalysisJobDependencies {
     workspaceId: string;
   }): Promise<string | null>;
   readonly store: AnalysisJobStore;
+  /** Clock for the receipt's analyzedAt; injectable for deterministic tests. */
+  readonly now?: () => Date;
 }
 
 function commitShaOf(job: ClaimedJob): string {
@@ -193,7 +198,9 @@ export function createAnalysisJobHandler(
     const statement: InTotoStatement = {
       _type: "https://in-toto.io/Statement/v1",
       predicate: {
+        analyzedAt: (dependencies.now?.() ?? new Date()).toISOString(),
         commitSha,
+        coverage: assuranceCoverage({ files }),
         evidence: {
           inferred: findings.filter(({ grade }) => grade === "inferred").length,
           verified: findings.filter(({ grade }) => grade === "verified").length,
@@ -204,12 +211,16 @@ export function createAnalysisJobHandler(
         }),
         repository: repositoryFullName,
         runId: job.runId ?? job.id,
+        tool: RECEIPT_TOOL,
       },
-      predicateType: "https://arr.dev/receipt/v1",
-      subject: artifacts.map(({ digest, path }) => ({
-        digest: { sha256: digest },
-        name: path,
-      })),
+      predicateType: RECEIPT_PREDICATE_TYPE,
+      subject: [
+        { digest: { sha1: commitSha }, name: "git:commit" as const },
+        ...artifacts.map(({ digest, path }) => ({
+          digest: { sha256: digest },
+          name: path,
+        })),
+      ],
     };
 
     await store.recordReceipt({

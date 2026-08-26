@@ -1,14 +1,45 @@
 import { z } from "zod";
 
 const sha256Schema = z.string().regex(/^[0-9a-f]{64}$/);
+const sha1Schema = z.string().regex(/^[0-9a-f]{40}$/);
 
-export const inTotoSubjectSchema = z.strictObject({
-  digest: z.strictObject({ sha256: sha256Schema }),
-  name: z.string().min(1),
-});
+/**
+ * The production predicate type, adopted 2026-08-26 when the arr.tools
+ * domain was purchased (OQ-010 / WORK_SPEC §13 "Wave 4"). Changing this
+ * breaks every stored receipt digest — dev receipts issued under the
+ * placeholder were discarded in the same change (see the
+ * discard_dev_receipts migration); production must never change it again
+ * without a full receipt migration decision.
+ */
+export const RECEIPT_PREDICATE_TYPE = "https://arr.tools/receipt/v1" as const;
+
+/** The issuing tool identity recorded in every receipt. */
+export const RECEIPT_TOOL = { name: "arr", version: "0.1.0" } as const;
+
+/**
+ * File subjects carry the scan's sha256 blob digests; the analyzed commit
+ * itself is a subject under the canonical `git:commit` name with its sha1 —
+ * the WORK_SPEC §13 reserved entry.
+ */
+export const inTotoSubjectSchema = z.union([
+  z.strictObject({
+    digest: z.strictObject({ sha256: sha256Schema }),
+    name: z.string().min(1),
+  }),
+  z.strictObject({
+    digest: z.strictObject({ sha1: sha1Schema }),
+    name: z.literal("git:commit"),
+  }),
+]);
 
 export const arrReceiptPredicateSchema = z.strictObject({
+  analyzedAt: z.iso.datetime(),
   commitSha: z.string().regex(/^[0-9a-f]{40}$/),
+  coverage: z.strictObject({
+    implVerified: z.number().int().nonnegative(),
+    requirements: z.number().int().nonnegative(),
+    testVerified: z.number().int().nonnegative(),
+  }),
   evidence: z.strictObject({
     inferred: z.number().int().nonnegative(),
     verified: z.number().int().nonnegative(),
@@ -16,12 +47,16 @@ export const arrReceiptPredicateSchema = z.strictObject({
   previousReceiptDigest: sha256Schema.nullable(),
   repository: z.string().regex(/^[^/]+\/[^/]+$/),
   runId: z.string().min(1),
+  tool: z.strictObject({
+    name: z.literal(RECEIPT_TOOL.name),
+    version: z.string().min(1),
+  }),
 });
 
 export const inTotoStatementSchema = z.strictObject({
   _type: z.literal("https://in-toto.io/Statement/v1"),
   predicate: arrReceiptPredicateSchema,
-  predicateType: z.literal("https://arr.dev/receipt/v1"),
+  predicateType: z.literal(RECEIPT_PREDICATE_TYPE),
   subject: z.array(inTotoSubjectSchema).min(1),
 });
 

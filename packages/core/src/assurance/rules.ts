@@ -557,3 +557,54 @@ export function analyzeRepositoryAssurance({
 
   return findings;
 }
+
+export interface AssuranceCoverage {
+  readonly implVerified: number;
+  readonly requirements: number;
+  readonly testVerified: number;
+}
+
+/**
+ * The receipt's coverage summary (WORK_SPEC §13): task-origin requirements
+ * across spec documents, of which implVerified have implementation metadata
+ * (a checked task, or every explicitly named symbol present) and
+ * testVerified have a requirement-id-mapped test. Deterministic — the same
+ * inputs the findings rules read, reduced to counts.
+ */
+export function assuranceCoverage({
+  files,
+}: AnalyzeRepositoryAssuranceInput): AssuranceCoverage {
+  const contexts = documentContexts(files);
+  const allSymbols = new Set(
+    files.flatMap(({ exportedSymbols }) =>
+      (exportedSymbols ?? []).map(({ name }) => name),
+    ),
+  );
+  const testedRequirementIds = requirementIdsInTests(files);
+  let requirements = 0;
+  let implVerified = 0;
+  let testVerified = 0;
+  for (const context of contexts.filter(
+    ({ file }) => file.classification === "spec",
+  )) {
+    for (const requirement of context.requirements.filter(
+      ({ origin }) => origin === "task",
+    )) {
+      requirements += 1;
+      const explicitSymbols = explicitImplementationSymbols(
+        requirement.statement,
+      );
+      if (
+        requirement.fulfilled === true ||
+        (explicitSymbols.length > 0 &&
+          explicitSymbols.every((symbol) => allSymbols.has(symbol)))
+      ) {
+        implVerified += 1;
+      }
+      if (requirement.id && testedRequirementIds.has(requirement.id)) {
+        testVerified += 1;
+      }
+    }
+  }
+  return { implVerified, requirements, testVerified };
+}
