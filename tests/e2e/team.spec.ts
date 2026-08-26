@@ -41,17 +41,20 @@ test("shows roles, capture boundaries, and coaching under the inferred label", a
   });
 });
 
-test("renders no VIBE score while the Goodhart gate is pending", async ({
+test("renders only the VIBE metric adopted by the Goodhart gate", async ({
   page,
 }) => {
   await page.goto("/team");
   const vibe = page.getByTestId("team-vibe");
-  await expect(vibe).toContainText(TEAM.vibe.gatePending);
-  await expect(vibe).toContainText(TEAM.vibe.gateSummary(0, 7));
+  await expect(vibe).not.toContainText(TEAM.vibe.gatePending);
+  await expect(vibe).toContainText(TEAM.vibe.gateSummary(1, 7));
+  await expect(vibe).toContainText("V1-verified-evidence-ratio");
   await expect(vibe).toContainText(TEAM.vibe.comparisonLocked);
-  // Every verdict renders as pending — no metric value appears anywhere.
-  await expect(vibe.locator(".team-verdict.pending")).toHaveCount(7);
-  await expect(vibe.locator(".team-verdict.adopted")).toHaveCount(0);
+  // Published 2026-08-25 gate: V1 adopted, V2/V3/V4/V7 pending,
+  // V5/V6 rejected. Only the adopted metric may expose a score.
+  await expect(vibe.locator(".team-verdict.adopted")).toHaveCount(1);
+  await expect(vibe.locator(".team-verdict.pending")).toHaveCount(4);
+  await expect(vibe.locator(".team-verdict.rejected")).toHaveCount(2);
 });
 
 test("contribution rows come from evidence, and solo mode stays solo", async ({
