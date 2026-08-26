@@ -321,15 +321,16 @@ max_frequency = "5s"
 # `twitter`, `x`, `slack`, `spotify`, `workos`, `zoom`.
 [auth.external.github]
 enabled = true
-client_id = "env(GITHUB_APP_CLIENT_ID)"
-secret = "env(GITHUB_APP_CLIENT_SECRET)"
+# OQ-017 resolution: sign-in uses a DEDICATED GitHub OAuth App, never the
+# GitHub App's credentials. Supabase's GitHub provider must call
+# GET /user/emails, which a minimal-permission GitHub App cannot serve (403) —
+# and widening the App would trip scripts/adr-guardrails +
+# assertMinimalGitHubPermissions. Two apps, two permission models: the OAuth
+# App carries account identity only; the GitHub App keeps its read-only
+# repository profile for repo access.
+client_id = "env(GITHUB_OAUTH_CLIENT_ID)"
+secret = "env(GITHUB_OAUTH_CLIENT_SECRET)"
 redirect_uri = "http://127.0.0.1:54321/auth/v1/callback"
-# The GitHub App is held to a read-only repository profile that carries no
-# account permissions (scripts/adr-guardrails + assertMinimalGitHubPermissions
-# reject anything more), so GitHub hands back no email address. Accepting a
-# user without one keeps the App minimal instead of widening its grant just to
-# satisfy sign-in.
-email_optional = true
 
 [auth.external.apple]
 enabled = false

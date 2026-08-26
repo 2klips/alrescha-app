@@ -6,6 +6,7 @@
 - [ ] Back up the database and test restoration in a non-production project.
 - [ ] Apply migrations through `202608100009_release_hardening.sql`; verify `security_audit_events`, `workspace_security_rate_limits`, and GitHub revocation functions.
 - [ ] Configure server-only secrets: `SUPABASE_SERVICE_ROLE_KEY`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_CLIENT_SECRET`, `GITHUB_INSTALL_STATE_SECRET`, `GITHUB_WEBHOOK_SECRET`, and `BYOK_ENCRYPTION_KEY`.
+- [ ] Register a **dedicated GitHub OAuth App for sign-in** (OQ-017: Settings → Developer settings → OAuth Apps; authorization callback = `<SUPABASE_URL>/auth/v1/callback`) and configure `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET`. Never reuse the GitHub App's client credentials for the Supabase provider — the minimal-permission App cannot serve `/user/emails`, and widening it violates the permission guardrail.
 - [ ] Configure public values: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SUPABASE_URL`, and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 - [ ] If platform AI judgment is offered, configure `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY`; otherwise keep the provider option disabled.
 - [ ] Confirm the GitHub App callback and webhook URLs use HTTPS and subscribe to `push`, `check_run`, `workflow_run`, and `installation`.
