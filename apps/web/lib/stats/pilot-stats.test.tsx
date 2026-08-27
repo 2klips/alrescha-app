@@ -3,7 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
 
-import { PilotStatsDashboard } from "../../app/app/stats/pilot-stats-dashboard";
+import { PilotStatsDashboard } from "../../app/app/(shell)/stats/pilot-stats-dashboard";
 import { STATS } from "../strings";
 import { createPilotStatsExportResponse } from "./export";
 import { buildPilotStatsReport } from "./pilot-report";

@@ -138,7 +138,11 @@
   --alpha-tint: 12%;
   --alpha-emphasis: 24%;
   --alpha-scrim: 48%;
-  --tint-accent: color-mix(in srgb, var(--accent) var(--alpha-tint), transparent);
+  --tint-accent: color-mix(
+    in srgb,
+    var(--accent) var(--alpha-tint),
+    transparent
+  );
   --tint-verified: color-mix(
     in srgb,
     var(--verified) var(--alpha-tint),
@@ -149,7 +153,11 @@
     var(--inferred) var(--alpha-tint),
     transparent
   );
-  --tint-danger: color-mix(in srgb, var(--danger) var(--alpha-tint), transparent);
+  --tint-danger: color-mix(
+    in srgb,
+    var(--danger) var(--alpha-tint),
+    transparent
+  );
 
   /* Legacy aliases kept so existing rules stay themed while the screen-level
      restyle lands in Phase 2A todos 7–8. */

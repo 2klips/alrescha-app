@@ -12,6 +12,7 @@ import "@fontsource/ibm-plex-mono/latin-500.css";
 import "@fontsource/ibm-plex-mono/latin-600.css";
 import "./globals.css";
 
+import { SIDEBAR_INIT_SCRIPT } from "../lib/shell/sidebar-preference";
 import { THEME_INIT_SCRIPT } from "../lib/theme/theme-preference";
 
 // Korean-first shell (Phase 3 Wave E todo 13) — the intent of the rescued
@@ -34,6 +35,12 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
           id="arr-theme-init"
+        />
+        {/* Same pre-paint mechanism for the sidebar collapse state — keeps the
+            demo tree static where a cookie read in the layout would not. */}
+        <script
+          dangerouslySetInnerHTML={{ __html: SIDEBAR_INIT_SCRIPT }}
+          id="arr-sidebar-init"
         />
       </head>
       <body>{children}</body>

@@ -12,12 +12,13 @@ export const BRAND = {
 
 export const NAV = {
   ariaPrimary: "주요 내비게이션",
-  /** Phase 2D todo 2 — 사이드바 4그룹. */
+  /** 사이드바 그룹 — Phase 2D의 4그룹에 design roadmap step 2가 설정을 더한 5그룹. */
   groups: {
     glance: "한눈에",
     analysis: "분석",
     brain: "Data Brain",
     records: "기록·자산",
+    settings: "설정",
   },
   ariaSurfaces: "보증 화면",
   toggle: "내비게이션 열기",
@@ -34,6 +35,11 @@ export const NAV = {
   harness: "에이전트 지시문",
   library: "저장된 증거",
   connectRepo: "레포 연결",
+  stats: "통계",
+  settingsMcp: "MCP 접근",
+  settingsAi: "AI 사용량",
+  settingsPrivacy: "프라이버시",
+  settingsIndex: "설정",
 } as const;
 
 export const THEME = {

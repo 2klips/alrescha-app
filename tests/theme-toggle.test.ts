@@ -215,14 +215,13 @@ describe("theme toggle control", () => {
     expect(toggle).toContain("aria-label");
   });
 
-  test("is mounted on every themed app header", () => {
-    for (const header of [
-      "apps/web/app/ui/dashboard-screen.tsx",
-      "apps/web/app/ui/assurance-workspace.tsx",
-      "apps/web/app/progress/page.tsx",
-    ]) {
-      expect(readSource(header), header).toContain("<ThemeToggle />");
-    }
+  test("is mounted in the shared shell chrome", () => {
+    // Design roadmap step 2: the per-screen headers retired; every shell
+    // screen now gets the toggle from the sidebar foot.
+    expect(
+      readSource("apps/web/app/ui/side-nav.tsx"),
+      "apps/web/app/ui/side-nav.tsx",
+    ).toContain("<ThemeToggle />");
   });
 
   test("its styling is tokenized, so it themes with everything else", () => {

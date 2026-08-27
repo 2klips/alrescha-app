@@ -53,12 +53,6 @@ a {
   width: 1px;
 }
 
-.dashboard-shell {
-  height: 100dvh;
-  min-height: 42rem;
-  overflow: hidden;
-}
-
 .graph-stage {
   background: var(--bg);
   height: 100%;
@@ -1168,76 +1162,9 @@ a {
   margin: 1rem 0 1.25rem;
 }
 
-.app-surface {
-  background: var(--bg);
-  min-height: 100dvh;
-}
-
-.app-header {
-  align-items: center;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(15rem, 0.7fr) auto minmax(10rem, 0.5fr);
-  min-height: 4rem;
-  padding: 0.55rem 1.25rem;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.app-identity {
-  align-items: center;
-  color: var(--ink);
-  display: flex;
-  gap: 0.65rem;
-  text-decoration: none;
-}
-
-.app-identity > span:last-child {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.app-identity strong {
-  font-family: var(--font-sans);
-  font-size: 0.86rem;
-}
-
-.app-identity small {
-  color: var(--muted);
-  font: 0.61rem var(--font-mono);
-}
-
-.app-header nav {
-  align-items: center;
-  display: flex;
-  gap: 0.2rem;
-  justify-content: center;
-}
-
-.app-header nav a {
-  align-items: center;
-  border: 1px solid transparent;
-  color: var(--muted);
-  display: flex;
-  font-size: 0.7rem;
-  gap: 0.4rem;
-  min-height: 2.2rem;
-  padding: 0.45rem 0.65rem;
-  text-decoration: none;
-}
-
-.app-header nav a:hover {
-  color: var(--ink);
-}
-
-.app-header nav a[aria-current="page"] {
-  background: var(--surface-2);
-  border-color: var(--line-strong);
-  color: var(--accent-text);
-}
+/* The per-screen `.app-header` / `.app-surface` chrome retired with the
+   AppShell rollout (design roadmap step 2) — the shell owns surface + nav.
+   `.commit-chip` survives: /graph still renders one in its content header. */
 
 .commit-chip {
   align-items: center;
@@ -1249,12 +1176,6 @@ a {
 }
 
 /* Theme control — Ink & Seal dark/light ("paper"), Phase 2A todo 2. */
-.header-actions {
-  align-items: center;
-  display: flex;
-  gap: 0.6rem;
-  justify-self: end;
-}
 
 .theme-toggle {
   align-items: center;
@@ -1277,19 +1198,8 @@ a {
   color: var(--text);
 }
 
-.arr-topbar .theme-toggle {
-  background: var(--surface);
-  border-color: var(--line);
-  color: var(--muted);
-}
-
-.arr-topbar .theme-toggle:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-
 .assurance-main {
-  min-height: calc(100dvh - 4rem);
+  min-height: calc(100dvh - var(--contextstrip-h));
 }
 
 .findings-layout,
@@ -1302,7 +1212,7 @@ a {
 .receipt-rail {
   background: var(--surface);
   border-right: 1px solid var(--line);
-  min-height: calc(100dvh - 4rem);
+  min-height: calc(100dvh - var(--contextstrip-h));
   padding: 1.3rem;
 }
 
@@ -2835,9 +2745,6 @@ a {
   .privacy-boundary-grid {
     grid-template-columns: 1fr;
   }
-  .dashboard-shell {
-    min-height: 46rem;
-  }
   .repo-hud {
     left: 0.8rem;
     top: 0.8rem;
@@ -2881,22 +2788,6 @@ a {
   }
   .activity-feed {
     display: none;
-  }
-  .app-header {
-    grid-template-columns: 1fr auto;
-  }
-  .app-header nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-content: start;
-    overflow-x: auto;
-  }
-  .app-header nav a {
-    min-width: max-content;
-  }
-  .commit-chip {
-    grid-column: 2;
-    grid-row: 1;
   }
   .findings-layout,
   .receipts-layout {
@@ -2998,19 +2889,6 @@ a {
     border-bottom: 1px solid var(--line);
     border-right: 0;
     min-height: 11rem;
-  }
-  .app-header {
-    padding: 0.55rem 0.8rem;
-  }
-  .commit-chip {
-    display: none;
-  }
-  .app-header nav {
-    grid-column: 1 / -1;
-  }
-  .app-header nav a {
-    font-size: 0.62rem;
-    padding: 0.4rem;
   }
   .finding-list {
     grid-template-columns: 1fr;
@@ -3482,35 +3360,8 @@ a {
   .todo-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .app-header {
-    grid-template-columns: 1fr auto;
-  }
-  .app-header nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    overflow-x: auto;
-  }
 }
 @media (max-width: 42rem) {
-  .app-header {
-    padding: 0.55rem 0.65rem;
-  }
-  .app-header nav {
-    justify-content: flex-start;
-    scrollbar-width: none;
-    width: 100%;
-  }
-  .app-header nav::-webkit-scrollbar {
-    display: none;
-  }
-  .app-header nav a {
-    flex: 0 0 auto;
-    font-size: 0.62rem;
-    padding: 0.4rem 0.45rem;
-  }
-  .app-header nav svg {
-    display: none;
-  }
   .progress-main {
     padding: 0.75rem;
   }
@@ -4069,110 +3920,11 @@ a {
   color: inherit;
 }
 
-.arr-topbar {
-  align-items: stretch;
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
-  border-bottom: 1px solid var(--line);
-  display: grid;
-  grid-template-columns: minmax(18rem, 1fr) auto minmax(12rem, 1fr);
-  height: 4.75rem;
-  padding: 0 1.75rem;
-  position: relative;
-  z-index: 20;
-}
-
-.arr-brand {
-  align-items: center;
-  display: flex;
-  gap: 0.75rem;
-  justify-self: start;
-  min-width: 0;
-  text-decoration: none;
-}
-
-.arr-logo {
-  height: 2.65rem;
-  object-fit: contain;
-  width: 2.65rem;
-}
-
-.arr-brand strong {
-  font-family: var(--font-sans);
-  font-size: 2rem;
-  letter-spacing: -0.07em;
-  line-height: 1;
-}
-
-.arr-brand > span {
-  border-left: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.78rem;
-  margin-left: 0.2rem;
-  padding-left: 1rem;
-  white-space: nowrap;
-}
-
-.arr-nav {
-  align-items: stretch;
-  display: flex;
-  gap: 0.2rem;
-}
-
-.arr-nav a {
-  align-items: center;
-  border-bottom: 2px solid transparent;
-  color: var(--muted);
-  display: flex;
-  font-size: 0.76rem;
-  font-weight: 650;
-  gap: 0.42rem;
-  padding: 0 0.8rem;
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.arr-nav a:hover,
-.arr-nav a[aria-current="page"] {
-  border-bottom-color: var(--accent);
-  color: var(--accent);
-}
-
-.arr-connect {
-  align-items: center;
-  align-self: center;
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  color: var(--on-accent) !important;
-  display: inline-flex;
-  font-size: 0.76rem;
-  font-weight: 750;
-  gap: 0.48rem;
-  justify-self: end;
-  min-height: 2.75rem;
-  padding: 0 1.05rem;
-  text-decoration: none;
-}
-
-.arr-connect:hover {
-  background: color-mix(in srgb, var(--accent) 80%, var(--text));
-}
-
-.arr-menu-button {
-  align-items: center;
-  align-self: center;
-  background: transparent;
-  border: 1px solid var(--line);
-  display: none;
-  height: 2.6rem;
-  justify-content: center;
-  width: 2.6rem;
-}
-
 .arr-workspace {
   display: grid;
   grid-template-columns: 16rem minmax(24rem, 1fr) 21rem;
   grid-template-rows: minmax(0, 1fr) auto;
-  height: calc(100svh - 4.75rem);
+  height: calc(100svh - var(--contextstrip-h));
   overflow: hidden;
   position: relative;
 }
@@ -5106,44 +4858,11 @@ a {
 }
 
 @media (max-width: 72rem) {
-  .arr-topbar {
-    grid-template-columns: 1fr auto auto;
-  }
-  .arr-menu-button {
-    display: flex;
-    margin-right: 0.65rem;
-  }
-  .arr-nav {
-    background: var(--surface);
-    border: 1px solid var(--line);
-    box-shadow: 0 18px 42px color-mix(in srgb, var(--text) 12%, transparent);
-    display: none;
-    flex-direction: column;
-    min-width: 13rem;
-    padding: 0.4rem;
-    position: absolute;
-    right: 1.75rem;
-    top: 4.1rem;
-  }
-  .arr-nav[data-open="true"] {
-    display: flex;
-  }
-  .arr-nav a {
-    border-bottom: 0;
-    border-left: 2px solid transparent;
-    min-height: 2.5rem;
-    padding: 0 0.8rem;
-  }
-  .arr-nav a:hover,
-  .arr-nav a[aria-current="page"] {
-    border-bottom-color: transparent;
-    border-left-color: var(--accent);
-  }
   .arr-workspace {
     grid-template-columns: 13rem minmax(30rem, 1fr);
     grid-template-rows: minmax(32rem, 1fr) auto auto;
     height: auto;
-    min-height: calc(100svh - 4.75rem);
+    min-height: calc(100svh - var(--contextstrip-h));
     overflow: visible;
   }
   .arr-proof-heading {
@@ -5193,43 +4912,6 @@ a {
 }
 
 @media (max-width: 45rem) {
-  .arr-topbar {
-    height: 4.1rem;
-    padding: 0 1rem;
-  }
-  .arr-brand {
-    gap: 0.45rem;
-  }
-  .arr-logo {
-    height: 2.2rem;
-    width: 2.2rem;
-  }
-  .arr-brand strong {
-    font-size: 1.6rem;
-  }
-  .arr-brand > span {
-    display: none;
-  }
-  .arr-connect {
-    display: flex;
-    font-size: 0;
-    grid-column: 2;
-    grid-row: 1;
-    height: 2.6rem;
-    margin-right: 0.45rem;
-    padding: 0;
-    width: 2.6rem;
-  }
-  .arr-menu-button {
-    grid-column: 3;
-    grid-row: 1;
-    justify-self: end;
-    margin: 0;
-  }
-  .arr-nav {
-    right: 1rem;
-    top: 3.7rem;
-  }
   /* Narrow screens drop the overlay composition: there is no room to float a
      HUD over the graph, so the panels go back to stacked cards. */
   .arr-workspace {
@@ -6454,12 +6136,6 @@ li[data-todo-status="blocked"] .overview-todo-status {
    Phase 2D — grouped sidebar + overview shell + light texture.
    ============================================================ */
 
-.overview-shell {
-  display: grid;
-  grid-template-columns: 15rem minmax(0, 1fr);
-  min-height: 100vh;
-}
-
 .side-nav {
   border-right: 1px solid var(--line);
   display: flex;
@@ -6501,21 +6177,8 @@ li[data-todo-status="blocked"] .overview-todo-status {
 
 .side-nav a[aria-current="page"] {
   background: var(--tint-accent);
-  color: var(--accent-text);
+  color: var(--text);
   font-weight: 600;
-}
-
-@media (max-width: 900px) {
-  .overview-shell {
-    grid-template-columns: 1fr;
-  }
-  .side-nav {
-    border-bottom: 1px solid var(--line);
-    border-right: none;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.8rem;
-  }
 }
 
 /* Light texture tokens (--radius-card 등) live in tokens.css — the single palette source. */
@@ -6538,7 +6201,10 @@ li[data-todo-status="blocked"] .overview-todo-status {
 }
 
 .side-nav-foot {
+  align-items: center;
   border-top: 1px solid var(--line);
+  display: flex;
+  gap: 0.5rem;
   margin-top: auto;
   padding-top: 0.8rem;
 }
@@ -6949,4 +6615,340 @@ li[data-todo-status="blocked"] .overview-todo-status {
 
 .facet-band-node.concept::before {
   background: var(--node-concept);
+}
+
+/* ============================================================
+   Design roadmap step 2 — AppShell: sidebar-default layout,
+   ContextStrip, icon rail, command palette. Dimensions come from
+   tokens.css (--sidebar-w / --sidebar-w-rail / --contextstrip-h);
+   this file declares no custom properties (theme-toggle.test.ts).
+   ============================================================ */
+
+.app-shell {
+  background: var(--bg);
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.app-shell-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-shell .side-nav {
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sidebar);
+}
+
+.side-nav-brand {
+  align-items: center;
+  color: var(--text);
+  display: flex;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0 0.6rem;
+  text-decoration: none;
+}
+
+.side-nav-brand strong {
+  font-size: 1rem;
+  letter-spacing: -0.04em;
+}
+
+.side-nav-mark {
+  flex: none;
+  object-fit: contain;
+}
+
+.side-nav-tagline {
+  color: var(--faint);
+  font-size: var(--text-2xs);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-nav-search {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: var(--text-sm);
+  gap: 0.5rem;
+  margin: 0 0.1rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.side-nav-search:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.side-nav-search kbd {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  margin-left: auto;
+}
+
+.side-nav-collapse {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
+.side-nav-collapse:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+html[data-sidebar="rail"] .app-shell {
+  grid-template-columns: var(--sidebar-w-rail) minmax(0, 1fr);
+}
+
+html[data-sidebar="rail"] .app-shell .side-nav {
+  align-items: center;
+  padding: 1.4rem 0.35rem;
+}
+
+html[data-sidebar="rail"] .app-shell .side-nav-item-label,
+html[data-sidebar="rail"] .app-shell .side-nav-label,
+html[data-sidebar="rail"] .app-shell .side-nav-tagline,
+html[data-sidebar="rail"] .app-shell .side-nav-brand strong,
+html[data-sidebar="rail"] .app-shell .side-nav-search kbd,
+html[data-sidebar="rail"] .app-shell .side-nav-foot .theme-toggle {
+  display: none;
+}
+
+html[data-sidebar="rail"] .app-shell .side-nav a {
+  justify-content: center;
+  padding: 0.38rem;
+}
+
+html[data-sidebar="rail"] .app-shell .side-nav-search {
+  justify-content: center;
+  padding: 0.35rem;
+}
+
+html[data-sidebar="rail"] .app-shell .side-nav-brand {
+  justify-content: center;
+  padding: 0;
+}
+
+html[data-sidebar="rail"] .app-shell .side-nav-foot {
+  justify-content: center;
+}
+
+.context-strip {
+  align-items: center;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  gap: 0.9rem;
+  height: var(--contextstrip-h);
+  overflow-x: auto;
+  padding: 0 1.25rem;
+  position: sticky;
+  top: 0;
+  white-space: nowrap;
+  z-index: var(--z-sidebar);
+}
+
+.context-strip-repo {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.context-strip-empty {
+  color: var(--faint);
+  font-weight: 400;
+}
+
+.context-strip-chip {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.context-strip-sha {
+  color: var(--accent-text);
+}
+
+.context-strip-spacer {
+  flex: 1;
+}
+
+.context-strip-link {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  gap: 0.35rem;
+  text-decoration: none;
+}
+
+.context-strip-link:hover {
+  color: var(--text);
+}
+
+.command-palette-overlay {
+  align-items: flex-start;
+  background: color-mix(
+    in srgb,
+    var(--shadow-color) var(--alpha-scrim),
+    transparent
+  );
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding-top: 14vh;
+  position: fixed;
+  z-index: var(--z-modal);
+}
+
+.command-palette {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-3);
+  width: min(34rem, calc(100vw - 2rem));
+}
+
+.command-palette-input {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+}
+
+.command-palette-input input {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  width: 100%;
+}
+
+.command-palette-list {
+  list-style: none;
+  margin: 0;
+  max-height: 19rem;
+  overflow-y: auto;
+  padding: 0.35rem;
+}
+
+.command-palette-item {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: var(--text-sm);
+  gap: 0.55rem;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  width: 100%;
+}
+
+.command-palette-item[data-active] {
+  background: var(--tint-accent);
+  color: var(--text);
+}
+
+.command-palette-item small {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  margin-left: auto;
+  text-transform: uppercase;
+}
+
+.command-palette-empty {
+  color: var(--faint);
+  font-size: var(--text-sm);
+  padding: 0.9rem;
+}
+
+.settings-index-list {
+  display: grid;
+  gap: 0.7rem;
+  list-style: none;
+  margin: 2rem 0 0;
+  padding: 0;
+}
+
+.settings-index-list a {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  display: grid;
+  gap: 0.25rem;
+  padding: 1rem 1.1rem;
+  text-decoration: none;
+}
+
+.settings-index-list a:hover {
+  border-color: var(--line-strong);
+}
+
+.settings-index-list strong {
+  color: var(--text);
+}
+
+.settings-index-list span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+  .app-shell .side-nav {
+    border-bottom: 1px solid var(--line);
+    border-right: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    height: auto;
+    position: static;
+  }
+  .app-shell .side-nav-foot {
+    border-top: 0;
+    margin-left: auto;
+    margin-top: 0;
+    padding-top: 0;
+  }
+  .app-shell .side-nav-tagline {
+    display: none;
+  }
 }

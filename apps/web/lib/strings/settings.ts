@@ -287,4 +287,17 @@ export const SETTINGS = {
     creditUsageUnavailable: "credits 사용 내역을 불러올 수 없습니다.",
     byokConfigUnavailable: "BYOK 설정을 불러올 수 없습니다.",
   },
+
+  /** `/app/settings` 인덱스 (design roadmap step 2 — 접힌 레일의 착지점). */
+  index: {
+    eyebrow: "workspace 설정",
+    title: "설정",
+    body: "MCP 접근, AI 사용량, 프라이버시 경계, 파일럿 통계를 관리합니다.",
+    cards: {
+      mcp: "토큰 발급과 컨텍스트 도구 노출 범위",
+      ai: "credits 사용 현황과 BYOK",
+      privacy: "저장하는 것과 저장하지 않는 것",
+      stats: "파일럿 지표와 영수증 내보내기",
+    },
+  },
 } as const;

@@ -17,10 +17,11 @@ test.each(DASHBOARD_STATES)(
     );
 
     expect(html).toContain(DASHBOARD.ariaMain);
-    expect(html).toContain(BRAND.tagline);
-    expect(html).toContain("%2Farr-mark.png");
-    expect(html).toContain('href="/app/harness"');
-    expect(html).toContain('href="/app/library"');
+    // Design roadmap step 2: brand, nav and theme toggle moved to the
+    // AppShell sidebar — the screen must no longer assemble its own topbar
+    // or duplicate the sidebar's harness/library destinations.
+    expect(html).not.toContain("arr-topbar");
+    expect(html).not.toContain(BRAND.tagline);
     if (state === "loading")
       expect(html).toContain(DASHBOARD.states.loading.title);
     if (state === "empty") expect(html).toContain(DASHBOARD.states.empty.title);
@@ -55,6 +56,5 @@ test("dashboard copy is Korean-first with conventional terms kept in English", (
   expect(html).toContain(DASHBOARD.inspector.lead);
   // …while the conventional terms stay English, verbatim.
   expect(DASHBOARD.metrics.unresolved).toContain("Findings");
-  expect(html).toContain(">Graph<");
   expect(html).toContain(DASHBOARD.activity.live);
 });

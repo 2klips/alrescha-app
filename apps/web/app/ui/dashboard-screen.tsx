@@ -2,8 +2,6 @@
 
 import {
   AlertTriangle,
-  Archive,
-  BookmarkPlus,
   Braces,
   CheckCircle2,
   CircleDotDashed,
@@ -11,22 +9,16 @@ import {
   FileText,
   Filter,
   GitBranch,
-  LayoutDashboard,
   LayoutGrid,
-  Link2,
   LoaderCircle,
-  Menu,
   Network,
   Play,
   Radio,
-  ReceiptText,
   RotateCcw,
   Search,
   TestTube2,
-  TrendingUp,
   X,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -55,11 +47,10 @@ import {
   subscribeWorkspaceRealtime,
 } from "../../lib/realtime/access-events";
 import type { LodLevel } from "../../lib/graph/lod";
-import { BRAND, DASHBOARD, GRADE, NAV } from "../../lib/strings";
+import { DASHBOARD, GRADE } from "../../lib/strings";
 import { BrainMapStage } from "./brain-map-stage";
 import { FacetBandView } from "./facet-band-view";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
-import { ThemeToggle } from "./theme-toggle";
 
 interface DashboardScreenProps {
   model: DashboardViewModel;
@@ -93,15 +84,6 @@ const AREA_OPTIONS: readonly { label: string; value: BrainArea | "all" }[] = [
     value: area,
   })),
 ];
-
-const NAV_ITEMS = [
-  { href: "/", icon: LayoutDashboard, label: NAV.overview },
-  { href: "/map", icon: Network, label: NAV.graph },
-  { href: "/findings", icon: AlertTriangle, label: NAV.findings },
-  { href: "/lint", icon: Braces, label: NAV.lint },
-  { href: "/progress", icon: TrendingUp, label: NAV.progress },
-  { href: "/receipts", icon: ReceiptText, label: NAV.receipts },
-] as const;
 
 const STATIC_ACTIVITY = DASHBOARD.activity.samples;
 
@@ -320,7 +302,6 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
     labels: 0,
     level: "near",
   });
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [recovered, setRecovered] = useState(false);
   const [clock, setClock] = useState(0);
   const [realtime, setRealtime] = useState(() =>
@@ -416,54 +397,6 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
 
   return (
     <main className="arr-home" aria-label={DASHBOARD.ariaMain}>
-      <header className="arr-topbar">
-        <Link className="arr-brand" href="/" aria-label={BRAND.homeLabel}>
-          <Image
-            alt=""
-            aria-hidden="true"
-            className="arr-logo"
-            height={46}
-            priority
-            src="/arr-mark.png"
-            width={46}
-          />
-          <strong>{BRAND.name}</strong>
-          <span>{BRAND.tagline}</span>
-        </Link>
-        <button
-          aria-expanded={mobileNavOpen}
-          aria-label={NAV.toggle}
-          className="arr-menu-button"
-          onClick={() => setMobileNavOpen((open) => !open)}
-          type="button"
-        >
-          <Menu size={20} />
-        </button>
-        <nav
-          aria-label={NAV.ariaPrimary}
-          className="arr-nav"
-          data-open={mobileNavOpen}
-        >
-          {NAV_ITEMS.map(({ href, icon: Icon, label }) => (
-            <Link
-              aria-current={href === "/map" ? "page" : undefined}
-              href={href}
-              key={href}
-            >
-              <Icon size={17} />
-              {label}
-            </Link>
-          ))}
-        </nav>
-        <span className="header-actions">
-          <ThemeToggle />
-          <Link className="arr-connect" href="/app/connect/github">
-            <Link2 size={17} />
-            {NAV.connectRepo}
-          </Link>
-        </span>
-      </header>
-
       <div className="arr-workspace">
         <aside className="arr-repo-rail" aria-label={DASHBOARD.ariaRepoRail}>
           <div className="arr-repo-block">
@@ -543,16 +476,6 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             }}
             selectedNodeId={selectedNode?.id ?? null}
           />
-          <div className="arr-rail-links">
-            <Link href="/app/harness">
-              <BookmarkPlus size={15} />
-              {NAV.harness}
-            </Link>
-            <Link href="/app/library">
-              <Archive size={15} />
-              {NAV.library}
-            </Link>
-          </div>
         </aside>
 
         <section className="arr-proof-panel" aria-labelledby="proof-map-title">

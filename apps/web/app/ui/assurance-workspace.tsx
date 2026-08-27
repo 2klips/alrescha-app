@@ -5,22 +5,16 @@ import {
   type ReceiptVerification,
 } from "@arr/core/receipts";
 import {
-  Activity,
   AlertTriangle,
   ArrowRight,
   BadgeCheck,
-  Braces,
   CheckCircle2,
   ChevronRight,
   Clock3,
-  FileWarning,
   Fingerprint,
-  GitBranch,
-  LayoutDashboard,
   Link2,
   ListFilter,
   LoaderCircle,
-  Network,
   ReceiptText,
   ShieldAlert,
   ShieldCheck,
@@ -43,72 +37,13 @@ import {
   type ReceiptFixture,
   type SourceFixture,
 } from "../../lib/assurance/fixtures";
-import { ASSURANCE, BRAND, GRADE, NAV } from "../../lib/strings";
-import { ThemeToggle } from "./theme-toggle";
+import { ASSURANCE, GRADE } from "../../lib/strings";
 
 type AssuranceSurface = "findings" | "lint" | "receipts";
 
 interface AssuranceWorkspaceProps {
   initialReceiptId?: string | undefined;
   surface: AssuranceSurface;
-}
-
-function AppHeader({ surface }: { surface: AssuranceSurface }) {
-  return (
-    <header className="app-header">
-      <Link className="app-identity" href="/">
-        <span className="repo-mark">
-          <Network size={18} />
-        </span>
-        <span>
-          <strong>{BRAND.name}</strong>
-          <small>{ASSURANCE.header.repoLine}</small>
-        </span>
-      </Link>
-      <nav aria-label={NAV.ariaSurfaces}>
-        <Link href="/">
-          <LayoutDashboard size={15} />
-          {NAV.overview}
-        </Link>
-        <Link href="/map">
-          <Network size={15} />
-          {NAV.graph}
-        </Link>
-        <Link
-          aria-current={surface === "findings" ? "page" : undefined}
-          href="/findings"
-        >
-          <FileWarning size={15} />
-          {NAV.findings}
-        </Link>
-        <Link
-          aria-current={surface === "lint" ? "page" : undefined}
-          href="/lint"
-        >
-          <Braces size={15} />
-          {NAV.lint}
-        </Link>
-        <Link href="/progress">
-          <Activity size={15} />
-          {NAV.progress}
-        </Link>
-        <Link
-          aria-current={surface === "receipts" ? "page" : undefined}
-          href="/receipts"
-        >
-          <ReceiptText size={15} />
-          {NAV.receipts}
-        </Link>
-      </nav>
-      <span className="header-actions">
-        <span className="commit-chip">
-          <GitBranch size={13} />
-          {ASSURANCE.header.commitChip}
-        </span>
-        <ThemeToggle />
-      </span>
-    </header>
-  );
 }
 
 function GradeBadge({ grade }: { grade: "broken" | "inferred" | "verified" }) {
@@ -674,13 +609,12 @@ export function AssuranceWorkspace({
   surface,
 }: AssuranceWorkspaceProps) {
   return (
-    <div className="app-surface">
-      <AppHeader surface={surface} />
+    <>
       {surface === "findings" ? <FindingsSurface /> : null}
       {surface === "lint" ? <LintSurface /> : null}
       {surface === "receipts" ? (
         <ReceiptsSurface initialReceiptId={initialReceiptId} />
       ) : null}
-    </div>
+    </>
   );
 }

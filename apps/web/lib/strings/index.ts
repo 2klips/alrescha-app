@@ -20,6 +20,7 @@ export { WORKSPACE_MAP } from "./map";
 export { ONBOARDING } from "./onboarding";
 export { PROGRESS } from "./progress";
 export { SETTINGS } from "./settings";
+export { SHELL } from "./shell";
 export { STATS } from "./stats";
 export { TEAM } from "./team";
 export {

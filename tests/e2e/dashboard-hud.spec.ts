@@ -61,17 +61,19 @@ test("every HUD metric opens its own provenance", async ({ page }) => {
   }
 });
 
-test("the rail links reach the harness and library surfaces", async ({
+test("the sidebar reaches the harness and library surfaces", async ({
   page,
 }) => {
   await page.goto("/map");
 
+  // Design roadmap step 2: the rail's ad-hoc links moved into the shared
+  // sidebar, which keeps the demo tree inside the demo tree.
   await expect(
     page.getByRole("link", { name: "에이전트 지시문" }),
-  ).toHaveAttribute("href", "/app/harness");
+  ).toHaveAttribute("href", "/harness");
   await expect(page.getByRole("link", { name: "저장된 증거" })).toHaveAttribute(
     "href",
-    "/app/library",
+    "/library",
   );
 });
 
