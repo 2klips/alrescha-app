@@ -53,5 +53,5 @@
 - 웹: Vercel Instant Rollback으로 직전 Ready 배포 복원.
 - 워커: 직전 이미지 `deployment-01M11PC53N08EYQ647NQ4ZKGVF` (`sha256:f1803fac…`)로 재배포.
 - 알려진 UI 문제: 커밋 카드의 `Receipt 보기`가 공개 데모 `/receipts`로 이동해 실제 receipt 대신 fixture를 표시한다. 이번 수용 검증은 프로덕션 DB 원문을 직접 확인했다. 실제 receipt 상세 라우팅은 후속 수정 대상이다.
-- 스모크용 read-only MCP 토큰과 교체 전 노출된 GitHub App 자격증명은 운영 검증 후 폐기 대상이다. 폐기는 별도 명시 승인 후 수행한다.
+- 보안 후처리 완료: 스모크용 read-only MCP 토큰을 폐기하고 `401 Unauthorized`를 재확인했다. 구 GitHub App client secret 2개와 노출된 구 private key 1개를 삭제했으며, 운영 client secret과 정상 private key만 유지했다. 로컬 `apps/web/.env.local`에서도 폐기된 GitHub client secret/private key 항목을 제거했다.
 - 커스텀 도메인은 추후 Vercel alias로 붙인다. 기존 receipt 호환을 위해 `predicateType`은 유지한다.
