@@ -15,6 +15,7 @@
  */
 
 import { createSign } from "node:crypto";
+import { existsSync } from "node:fs";
 
 import { requestInstallationToken } from "@arr/core";
 import postgres from "postgres";
@@ -149,13 +150,10 @@ function createScanHandler(
 }
 
 async function main(): Promise<void> {
-  process.loadEnvFile("apps/web/.env.local");
-  try {
-    // Platform AI keys (ANTHROPIC_API_KEY / OPENAI_API_KEY) live at the repo
-    // root; the web env file carries only the app's own settings.
-    process.loadEnvFile(".env.local");
-  } catch {
-    // No root env file — BYOK-only workspaces still work.
+  // Local runs use these files; hosted workers receive the same values from
+  // their secret store and intentionally ship without either file.
+  for (const path of ["apps/web/.env.local", ".env.local"]) {
+    if (existsSync(path)) process.loadEnvFile(path);
   }
   const sql = postgres(required("DATABASE_URL"));
   const queue = new PostgresWorkerQueue(sql);
@@ -209,15 +207,20 @@ async function main(): Promise<void> {
     scan: createScanHandler(sql, sourceFor),
   };
 
-  const workspaces = await sql<{ id: string }[]>`
-    select id from public.workspaces order by created_at
-  `;
-  console.log(
-    `worker ${workerId} draining ${workspaces.length} workspace(s)${once ? " (once)" : ""}`,
-  );
-
-  let idleRounds = 0;
+  let lastWorkspaceCount: number | undefined;
   for (;;) {
+    // Workspaces can be created after the hosted worker starts, so refresh the
+    // list on every idle polling cycle instead of freezing the startup view.
+    const workspaces = await sql<{ id: string }[]>`
+      select id from public.workspaces order by created_at
+    `;
+    if (workspaces.length !== lastWorkspaceCount) {
+      console.log(
+        `worker ${workerId} draining ${workspaces.length} workspace(s)${once ? " (once)" : ""}`,
+      );
+      lastWorkspaceCount = workspaces.length;
+    }
+
     let worked = false;
     for (const { id } of workspaces) {
       for (;;) {
@@ -233,11 +236,8 @@ async function main(): Promise<void> {
       }
     }
     if (!worked) {
-      idleRounds += 1;
-      if (once || idleRounds >= 3) break;
+      if (once) break;
       await new Promise((resolve) => setTimeout(resolve, IDLE_SLEEP_MS));
-    } else {
-      idleRounds = 0;
     }
   }
 

@@ -1,0 +1,35 @@
+# Fly worker image allowlist. Keep Windows junctions, local secrets, build
+# outputs, and unrelated web assets out of the remote build context.
+*
+
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!tsconfig.json
+
+!apps/
+apps/*
+!apps/worker/
+!apps/worker/**
+!apps/web/
+apps/web/*
+!apps/web/package.json
+
+!packages/
+packages/*
+!packages/core/
+!packages/core/**
+!packages/mcp/
+packages/mcp/*
+!packages/mcp/package.json
+!packages/cli/
+packages/cli/*
+!packages/cli/package.json
+
+**/node_modules
+**/.next
+**/dist
+**/coverage
+**/playwright-report
+**/test-results
+**/.env*
