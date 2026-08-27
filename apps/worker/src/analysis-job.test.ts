@@ -144,6 +144,9 @@ describe("analyze job", () => {
       expect(finding.fingerprint).toMatch(/^[a-z-]+:.+:\d+:\d+$/);
       expect(finding.title.length).toBeGreaterThan(0);
       expect(finding.sourceNodeId).toBe("node-spec");
+      expect(finding.provenance).toMatchObject({
+        reason: expect.stringMatching(/\S/),
+      });
     }
     expect(recorded.delta?.opened).toEqual(
       recorded.findings.map(({ fingerprint }) => fingerprint),

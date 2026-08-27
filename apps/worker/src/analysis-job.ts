@@ -134,6 +134,7 @@ function persisted(
     kind: finding.type,
     provenance: {
       evidenceLinks: finding.evidenceLinks,
+      reason: `deterministic ${finding.type} rule`,
       spans: finding.provenance,
       suggestedAction: finding.suggestedAction,
     },
