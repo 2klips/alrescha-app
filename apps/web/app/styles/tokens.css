@@ -65,10 +65,14 @@
      (4.5:1) against every surface it lands on, including the `.highlighted`
      code row. Its pre-Wave-4 value (#5a6478) measured 2.57:1 there — the
      axe-core audit in tests/e2e/a11y-contrast.spec.ts is what raised it.
-     Ordering `text > muted > faint` still holds (5.00 vs 4.63 worst case). */
+     Design roadmap step 1 re-lowered it from #848ea2, which sat within
+     0.4:1 of --muted and collapsed the three-step ramp, to the AA floor
+     with margin: 4.62:1 on --surface-2 and 4.73:1 on the highlighted code
+     row, measured with the same math as tests/design-tokens.test.ts.
+     Ordering `text > muted > faint` still holds. */
   --text: #e8ecf4;
   --muted: #8a94a8;
-  --faint: #848ea2;
+  --faint: #808b9f;
 
   /* Identity + status — ADR-009-3 values, used for fills, node colours,
      borders, tints and (in dark) text. */
@@ -113,7 +117,12 @@
 
   /* Derived roles used across the app chrome. */
   --accent: var(--info);
-  --danger: var(--brand);
+  /* Design roadmap step 1: failed/refuted is a *status*, not the brand — the
+     seal keeps #ff5a45 for logo/CTA/requirement nodes while danger gets its
+     own literal so the two can be tuned apart (they stay near neighbours by
+     design). AA 5.15:1 worst-case on --surface-2, so the -text sibling can
+     alias it directly. */
+  --danger: #f4645c;
   --panel: color-mix(in srgb, var(--surface) 94%, transparent);
   /* Phase 2D: 다크=각진 Ink & Seal, 라이트=둥근 Toss 질감. */
   --radius-card: 0px;
@@ -122,10 +131,25 @@
   --panel-soft: color-mix(in srgb, var(--surface) 88%, transparent);
   --shadow-color: #000000;
   --panel-shadow: color-mix(in srgb, var(--shadow-color) 32%, transparent);
-  --tint-accent: color-mix(in srgb, var(--accent) 10%, transparent);
-  --tint-verified: color-mix(in srgb, var(--verified) 10%, transparent);
-  --tint-inferred: color-mix(in srgb, var(--inferred) 10%, transparent);
-  --tint-danger: color-mix(in srgb, var(--danger) 12%, transparent);
+  /* Alpha ramp (design roadmap step 1): translucent colour derives from one
+     of four fixed steps — hover 8, tint 12, emphasis 24, scrim 48 — instead
+     of the 18 ad-hoc percentages the screens had accumulated. */
+  --alpha-hover: 8%;
+  --alpha-tint: 12%;
+  --alpha-emphasis: 24%;
+  --alpha-scrim: 48%;
+  --tint-accent: color-mix(in srgb, var(--accent) var(--alpha-tint), transparent);
+  --tint-verified: color-mix(
+    in srgb,
+    var(--verified) var(--alpha-tint),
+    transparent
+  );
+  --tint-inferred: color-mix(
+    in srgb,
+    var(--inferred) var(--alpha-tint),
+    transparent
+  );
+  --tint-danger: color-mix(in srgb, var(--danger) var(--alpha-tint), transparent);
 
   /* Legacy aliases kept so existing rules stay themed while the screen-level
      restyle lands in Phase 2A todos 7–8. */
@@ -137,10 +161,76 @@
 
   /* Text-safe counterparts of the derived roles above. */
   --accent-text: var(--info-text);
-  --danger-text: var(--brand-text);
+  --danger-text: var(--danger);
   --ok-text: var(--verified-text);
   --warn-text: var(--inferred-text);
   --broken-text: var(--danger-text);
+
+  /* ── Scale tokens (design roadmap step 1 — additive; screens migrate from
+     step 3 on). Sizes are the whole vocabulary: font-size, spacing, radius,
+     elevation, icon, z-index and motion must come from here, enforced by
+     lint rules landing with step 3. ── */
+
+  /* Type scale. --text-2xs is the mono-metadata floor: 11px, below which the
+     AA colour work above stops mattering. Hierarchy comes from weight + colour
+     more than size. */
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.75rem;
+  --text-display: clamp(1.75rem, 2.5vw, 2.5rem);
+
+  /* Spacing — the dense 8–32px band is the primary working range. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --page-pad: clamp(1rem, 2.5vw, 2rem);
+  --page-max: 80rem;
+
+  /* Pills are the one sanctioned radius exception to the dark=0 texture. */
+  --radius-pill: 999px;
+
+  /* Elevation — three steps; only floating things (inspector, HUD, popover,
+     modal) may cast. --shadow-color is themed above/below. */
+  --shadow-1: 0 1px 4px color-mix(in srgb, var(--shadow-color) 8%, transparent);
+  --shadow-2: 0 14px 36px
+    color-mix(in srgb, var(--shadow-color) 28%, transparent);
+  --shadow-3: 0 24px 64px
+    color-mix(in srgb, var(--shadow-color) 40%, transparent);
+
+  /* Icon sizes for the <Icon> wrapper (step 3). */
+  --icon-xs: 14px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+
+  /* Fixed z ladder. */
+  --z-canvas: 0;
+  --z-hud: 10;
+  --z-sidebar: 20;
+  --z-popover: 30;
+  --z-modal: 40;
+  --z-toast: 50;
+
+  /* Motion budget: UI feedback ≤200ms, compositor properties only. */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Canvas-HUD backdrop treatment — never animated. */
+  --hud-blur: blur(16px) saturate(120%);
+
+  /* AppShell dimensions (design §2.2) — consumed from roadmap step 2 on. */
+  --sidebar-w: 16rem;
+  --sidebar-w-rail: 3rem;
+  --contextstrip-h: 40px;
 }
 
 [data-theme="light"] {
@@ -176,6 +266,10 @@
   /* Accent text/fill must clear AA on white; the brighter Toss blue stays on
      --info for graphics (nodes, bars) where large-area color is the point. */
   --accent: #1b64da;
+
+  /* Failed/refuted status on paper — split from the brand seal like dark.
+     AA 4.96:1 worst-case (bg / code-bg); --danger-text aliases it via :root. */
+  --danger: #c53030;
 
   /* Focus-mode direction strokes — darkened for the paper ground. */
   --focus-out: #b45309;

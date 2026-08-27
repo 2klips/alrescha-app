@@ -9,6 +9,7 @@ import {
   DESIGN_TOKENS,
   FONT_TOKENS,
   NODE_TOKENS,
+  SCALE_TOKENS,
   THEMES,
   cssVariableName,
   toRendererColor,
@@ -272,6 +273,9 @@ describe("token contrast (WCAG 2.2 AA — Phase 2A todo 9)", () => {
     "--verified-text",
     "--inferred-text",
     "--info-text",
+    // Design roadmap step 1: --danger split from --brand into its own
+    // literal; its -text sibling aliases it, so it must clear AA itself.
+    "--danger-text",
   ] as const;
 
   test.each(THEMES)("%s: every text token clears 4.5:1 everywhere", (theme) => {
@@ -315,6 +319,46 @@ describe("token contrast (WCAG 2.2 AA — Phase 2A todo 9)", () => {
   test("the ratio calculation itself is calibrated", () => {
     expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 5);
     expect(contrastRatio("#ffffff", "#ffffff")).toBeCloseTo(1, 5);
+  });
+});
+
+describe("scale tokens (design direction roadmap step 1)", () => {
+  const css = readFileSync(TOKENS_CSS, "utf8");
+  const rootBlock = extractBlock(css, ":root");
+  const rootTokens = declaredTokens(rootBlock);
+
+  test("every scale token is declared in :root", () => {
+    const missing = SCALE_TOKENS.filter(
+      (token) => !rootTokens.has(cssVariableName(token)),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  test("mono metadata floors at 11px", () => {
+    // 0.6875rem = 11px — below this the AA colour work stops mattering.
+    expect(rootBlock).toMatch(/--text-2xs:\s*0\.6875rem/);
+  });
+
+  test("the z ladder stays ordered", () => {
+    const ladder = [
+      "z-canvas",
+      "z-hud",
+      "z-sidebar",
+      "z-popover",
+      "z-modal",
+      "z-toast",
+    ].map((token) => {
+      const match = new RegExp(`--${token}:\\s*(\\d+)`).exec(rootBlock);
+      expect(match, `--${token} must be a bare number`).not.toBeNull();
+      return Number((match as RegExpExecArray)[1]);
+    });
+    expect([...ladder].sort((first, second) => first - second)).toEqual(ladder);
+  });
+
+  test("danger is its own literal, split from the brand seal", () => {
+    expect(rootBlock).toMatch(/--danger:\s*#[0-9a-fA-F]{6}/);
+    expect(rootBlock).toMatch(/--danger-text:\s*var\(--danger\)/);
+    expect(rootBlock).not.toMatch(/--danger:\s*var\(--brand\)/);
   });
 });
 

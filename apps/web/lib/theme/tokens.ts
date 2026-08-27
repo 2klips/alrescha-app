@@ -43,6 +43,7 @@ export const STATUS_TOKENS = [
   "info-text",
   "accent",
   "danger",
+  "danger-text",
   "on-brand",
   "on-accent",
   "on-verified",
@@ -67,6 +68,60 @@ export const FONT_TOKENS = ["font-sans", "font-mono"] as const;
  */
 export const FOCUS_TOKENS = ["focus-out", "focus-in"] as const;
 
+/**
+ * Non-colour scale tokens (design roadmap step 1): type, spacing, radius,
+ * elevation, icon, z-index, motion and shell dimensions. Declared once in
+ * `:root` and theme-invariant, so they are kept out of DESIGN_TOKENS — the
+ * renderer palette and the contrast machinery keep operating on colours only.
+ * tests/design-tokens.test.ts asserts every entry is declared.
+ */
+export const SCALE_TOKENS = [
+  "text-2xs",
+  "text-xs",
+  "text-sm",
+  "text-base",
+  "text-lg",
+  "text-xl",
+  "text-2xl",
+  "text-display",
+  "space-1",
+  "space-2",
+  "space-3",
+  "space-4",
+  "space-5",
+  "space-6",
+  "space-7",
+  "space-8",
+  "page-pad",
+  "page-max",
+  "radius-pill",
+  "shadow-1",
+  "shadow-2",
+  "shadow-3",
+  "icon-xs",
+  "icon-sm",
+  "icon-md",
+  "z-canvas",
+  "z-hud",
+  "z-sidebar",
+  "z-popover",
+  "z-modal",
+  "z-toast",
+  "dur-fast",
+  "dur-base",
+  "ease-out",
+  "hud-blur",
+  "alpha-hover",
+  "alpha-tint",
+  "alpha-emphasis",
+  "alpha-scrim",
+  "sidebar-w",
+  "sidebar-w-rail",
+  "contextstrip-h",
+] as const;
+
+export type ScaleToken = (typeof SCALE_TOKENS)[number];
+
 /** Every semantic token that both themes must resolve. */
 export const DESIGN_TOKENS = [
   ...SURFACE_TOKENS,
@@ -81,12 +136,12 @@ export type DesignToken = (typeof DESIGN_TOKENS)[number];
 export type TokenValues = Record<DesignToken, string>;
 
 /** `--bg` for the token named `bg`. */
-export function cssVariableName(token: DesignToken): string {
+export function cssVariableName(token: DesignToken | ScaleToken): string {
   return `--${token}`;
 }
 
-/** `var(--bg)` — the only way components may reference a colour. */
-export function tokenVar(token: DesignToken): string {
+/** `var(--bg)` — the only way components may reference a colour or scale. */
+export function tokenVar(token: DesignToken | ScaleToken): string {
   return `var(${cssVariableName(token)})`;
 }
 
