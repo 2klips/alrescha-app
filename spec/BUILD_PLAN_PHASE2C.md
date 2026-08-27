@@ -110,7 +110,7 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 ## Wave 4 — 배포 · 도메인 _(G4)_
 
-- [ ] **9. 프로덕션 기동** _(2026-08-26 스테이징 완료·실행 이관 — **핸드오프 문서 `docs/DEPLOYMENT_RUNBOOK.md`가 이 todo의 실행 절차 정본이다.** 준비된 것: 워커 컨테이너(`apps/worker/Dockerfile` + 루트 `fly.toml`), 환경 변수 실측 전량 목록, 웹 프로덕션 빌드 로컬 통과(빌드 타임 env 불요), 도메인 교체 절차(§2, 다이제스트 재계산 스니펫 검증 완료). 아키텍처 확정: **MCP는 별도 서버가 아니라 `apps/web`의 `/api/mcp` 라우트** — Fly.io는 워커 전용. 남은 것은 전부 외부 계정 작업(P1~P5))_
+- [x] **9. 프로덕션 기동** _(2026-08-27 완료 — Supabase 서울 리전 DB/Auth, Vercel `arr-app-web.vercel.app` 웹·MCP·webhook, Fly.io `arr-worker` 상시 드레인 루프를 기동했다. GitHub OAuth 로그인과 기존 GitHub App 설치 연결 후 `00d8f27` 파일럿에서 scan·analyze·`assurance=full`·receipt 발급을 완주했다. receipt의 최종 predicate/`git:commit` subject를 실데이터로 확인하고 공식 MCP Client `get_graph_schema`도 성공했다. 커스텀 도메인 구매는 연기. 증빙: `.omo/evidence/phase2c/wave-4-todo-9.md`)_
       Supabase 클라우드 마이그레이션 적용, Vercel(web+MCP 라우트)·Fly.io(worker) 배포, 프로덕션 webhook URL 전환. 시크릿은 플랫폼 시크릿 스토어만(레포에 어떤 형태로도 커밋 금지).
       수용 기준: 프로덕션에서 Wave 2 파일럿 재완주, 헬스체크·롤백 절차 문서화.
       Commit: `chore(deploy): stand up production`
