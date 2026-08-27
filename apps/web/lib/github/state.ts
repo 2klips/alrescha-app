@@ -2,6 +2,8 @@ import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
 interface InstallState {
   readonly expiresAt: number;
+  /** Existing installation reused by the GitHub App user OAuth path. */
+  readonly installationId?: number;
   readonly nonce: string;
   /** Repository pasted during URL onboarding; pre-selected after install. */
   readonly repositoryFullName?: string;
@@ -11,7 +13,12 @@ interface InstallState {
 
 export function createGitHubInstallState(
   secret: string,
-  context: { repositoryFullName?: string; userId: string; workspaceId: string },
+  context: {
+    installationId?: number;
+    repositoryFullName?: string;
+    userId: string;
+    workspaceId: string;
+  },
   now = Date.now(),
 ): string {
   const payload = Buffer.from(
@@ -63,6 +70,11 @@ export function verifyGitHubInstallState(
     typeof parsed.nonce !== "string" ||
     typeof parsed.userId !== "string" ||
     typeof parsed.workspaceId !== "string" ||
+    ("installationId" in parsed &&
+      parsed.installationId !== undefined &&
+      (typeof parsed.installationId !== "number" ||
+        !Number.isSafeInteger(parsed.installationId) ||
+        parsed.installationId <= 0)) ||
     ("repositoryFullName" in parsed &&
       parsed.repositoryFullName !== undefined &&
       typeof parsed.repositoryFullName !== "string") ||

@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 
 import { getCurrentUserId } from "../../../../../lib/auth/current-user";
-import { lookupPublicGitHubRepository } from "../../../../../lib/github/api";
+import {
+  createGitHubAppJwt,
+  lookupGitHubRepositoryInstallation,
+  lookupPublicGitHubRepository,
+} from "../../../../../lib/github/api";
 import { connectSelectedRepository } from "../../../../../lib/github/connect-repository";
+import { githubAppEnvironment } from "../../../../../lib/github/env";
 import { decideUrlConnect } from "../../../../../lib/github/url-connect";
 import { consumeWorkspaceSecurityLimit } from "../../../../../lib/security/audit";
 import {
@@ -130,13 +135,26 @@ export async function POST(request: Request) {
         repository: outcome.fullName,
         url_status: outcome.kind,
       });
-    case "install":
+    case "install": {
+      const environment = githubAppEnvironment();
+      const existingInstallation = await lookupGitHubRepositoryInstallation(
+        outcome.fullName,
+        createGitHubAppJwt(environment.appId, environment.privateKey),
+      );
       return backToConnect(origin, {
         repository: outcome.fullName,
         url_status: "install",
+        ...(existingInstallation === null
+          ? {}
+          : {
+              existing_installation_id: String(
+                existingInstallation.githubInstallationId,
+              ),
+            }),
         ...(outcome.githubRepositoryId === null
           ? {}
           : { repository_id: String(outcome.githubRepositoryId) }),
       });
+    }
   }
 }

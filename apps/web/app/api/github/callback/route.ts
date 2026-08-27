@@ -18,20 +18,11 @@ export async function GET(request: Request) {
 
   try {
     const code = requestUrl.searchParams.get("code");
-    const installationId = Number(
-      requestUrl.searchParams.get("installation_id"),
-    );
     const stateValue = requestUrl.searchParams.get("state");
     const userId = await getCurrentUserId();
     const environment = githubAppEnvironment();
 
-    if (
-      !code ||
-      !stateValue ||
-      !userId ||
-      !Number.isSafeInteger(installationId) ||
-      installationId <= 0
-    ) {
+    if (!code || !stateValue || !userId) {
       return NextResponse.redirect(errorUrl);
     }
 
@@ -40,6 +31,21 @@ export async function GET(request: Request) {
       stateValue,
     );
     if (state.userId !== userId) {
+      return NextResponse.redirect(errorUrl);
+    }
+    const queryInstallationId = Number(
+      requestUrl.searchParams.get("installation_id"),
+    );
+    const installationId =
+      state.installationId ??
+      (Number.isSafeInteger(queryInstallationId) && queryInstallationId > 0
+        ? queryInstallationId
+        : undefined);
+    if (
+      installationId === undefined ||
+      !Number.isSafeInteger(installationId) ||
+      installationId <= 0
+    ) {
       return NextResponse.redirect(errorUrl);
     }
 

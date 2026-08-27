@@ -176,3 +176,39 @@ export async function lookupPublicGitHubRepository(
   }
   return { githubRepositoryId: body.id };
 }
+
+/**
+ * Finds an installation already allowed to read a repository. A 404 means
+ * this GitHub App is not installed for the repository.
+ */
+export async function lookupGitHubRepositoryInstallation(
+  fullName: string,
+  appJwt: string,
+  fetchImplementation: typeof fetch = fetch,
+): Promise<{ githubInstallationId: number } | null> {
+  const response = await fetchImplementation(
+    `https://api.github.com/repos/${fullName}/installation`,
+    {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${appJwt}`,
+        "X-GitHub-Api-Version": GITHUB_API_VERSION,
+      },
+    },
+  );
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(
+      `GitHub repository installation lookup failed with status ${response.status}.`,
+    );
+  }
+  const body = (await response.json()) as { id?: unknown };
+  if (
+    typeof body.id !== "number" ||
+    !Number.isSafeInteger(body.id) ||
+    body.id <= 0
+  ) {
+    throw new Error("GitHub repository installation response is malformed.");
+  }
+  return { githubInstallationId: body.id };
+}

@@ -29,10 +29,21 @@ function urlStatusMessage(input: {
   }
 }
 
+function githubAppUserAuthorizationUrl(
+  clientId: string,
+  state: string,
+): string {
+  const url = new URL("https://github.com/login/oauth/authorize");
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("state", state);
+  return url.toString();
+}
+
 export default async function ConnectGitHubPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    existing_installation_id?: string;
     repository?: string;
     repository_id?: string;
     url_status?: string;
@@ -43,6 +54,7 @@ export default async function ConnectGitHubPage({
     redirect("/auth/login");
   }
   const {
+    existing_installation_id: existingInstallationIdValue,
     repository,
     repository_id: repositoryIdHint,
     url_status: urlStatus,
@@ -59,18 +71,27 @@ export default async function ConnectGitHubPage({
   }
 
   const environment = githubAppEnvironment();
+  const existingInstallationId = Number(existingInstallationIdValue);
+  const hasExistingInstallation =
+    Number.isSafeInteger(existingInstallationId) && existingInstallationId > 0;
   const state = createGitHubInstallState(environment.installStateSecret, {
+    ...(hasExistingInstallation
+      ? { installationId: existingInstallationId }
+      : {}),
     ...(repository ? { repositoryFullName: repository } : {}),
     userId,
     workspaceId: workspaceResult.data.id,
   });
   const suggestedRepositoryId = Number(repositoryIdHint);
-  const installationUrl = githubInstallationUrl(environment.appSlug, state, {
-    repositoryIds:
-      Number.isSafeInteger(suggestedRepositoryId) && suggestedRepositoryId > 0
-        ? [suggestedRepositoryId]
-        : [],
-  });
+  const installationUrl = hasExistingInstallation
+    ? githubAppUserAuthorizationUrl(environment.clientId, state)
+    : githubInstallationUrl(environment.appSlug, state, {
+        repositoryIds:
+          Number.isSafeInteger(suggestedRepositoryId) &&
+          suggestedRepositoryId > 0
+            ? [suggestedRepositoryId]
+            : [],
+      });
   const statusMessage = urlStatusMessage({ repository, urlStatus });
 
   return (
