@@ -12,7 +12,7 @@ describe("assurance UI", () => {
     );
 
     expect(html).toContain(ASSURANCE.findings.chain.title);
-    expect(html).toContain("grade-badge inferred");
+    expect(html).toContain("status-badge inferred");
     expect(html).toContain(ASSURANCE.findings.action.label);
   });
 
@@ -24,7 +24,7 @@ describe("assurance UI", () => {
     expect(html).toContain("cl100k_base-compatible tokenizer");
     expect(html).toContain("AGENTS.md:18-20");
     expect(html).toContain("apps/web/AGENTS.md:7-9");
-    expect(html).toContain("grade-badge inferred");
+    expect(html).toContain("status-badge inferred");
   });
 
   test("locks receipt verdict until digest verification", () => {

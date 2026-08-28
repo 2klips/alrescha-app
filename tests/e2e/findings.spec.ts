@@ -19,7 +19,7 @@ test("walks a seeded finding through fetched source, evidence, and verified rece
     page.getByRole("heading", { name: ASSURANCE.findings.chain.title }),
   ).toBeVisible();
   await expect(
-    page.locator(".evidence-chain .grade-badge.inferred"),
+    page.locator(".evidence-chain .status-badge.inferred"),
   ).toBeVisible();
 
   await page
@@ -82,6 +82,6 @@ test("shows labeled lint cost assumptions and contradiction dual spans", async (
   await expect(page.getByText("AGENTS.md:18-20")).toBeVisible();
   await expect(page.getByText("apps/web/AGENTS.md:7-9")).toBeVisible();
   await expect(
-    page.locator(".contradiction-block .grade-badge.inferred"),
+    page.locator(".contradiction-block .status-badge.inferred"),
   ).toBeVisible();
 });

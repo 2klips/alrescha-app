@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
+import { StatusBadge } from "./status-badge";
 import { useMemo, useState } from "react";
 
 import {
@@ -137,9 +138,7 @@ export function GraphDetail({ initialNodeId }: GraphDetailProps) {
                   <div>
                     <dt>{GRAPH.provenance.grade}</dt>
                     <dd>
-                      <span className={`grade-badge ${provenance.grade}`}>
-                        {provenance.grade}
-                      </span>
+                      <StatusBadge grade={provenance.grade} />
                     </dd>
                   </div>
                   <div>

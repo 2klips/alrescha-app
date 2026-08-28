@@ -85,7 +85,7 @@ test("enters a depth-two graph by node double-click and inspects grounded edges"
     page.getByRole("heading", { name: /declares|implements|tests|references/ }),
   ).toBeVisible();
   await expect(page.getByText(GRAPH.provenance.confidence)).toBeVisible();
-  await expect(page.locator(".provenance-card .grade-badge")).toBeVisible();
+  await expect(page.locator(".provenance-card .status-badge")).toBeVisible();
 
   await expect(page.locator("[data-canvas-nodes='4']")).toBeVisible();
   await hydrated(page, "[data-canvas-nodes]");

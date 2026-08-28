@@ -330,7 +330,7 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
     await expect(
       page.getByRole("heading", { name: GRAPH.heading }),
     ).toBeVisible();
-    await expect(page.locator(".provenance-card .grade-badge")).toBeVisible();
+    await expect(page.locator(".provenance-card .status-badge")).toBeVisible();
     await expect(page.locator("[data-canvas-nodes='4']")).toBeVisible();
   });
 

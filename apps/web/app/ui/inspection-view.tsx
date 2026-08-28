@@ -15,7 +15,8 @@ import {
 
 import type { ReactNode } from "react";
 
-import { GRADE, INSPECTION } from "../../lib/strings";
+import { INSPECTION } from "../../lib/strings";
+import { StatusBadge } from "./status-badge";
 
 interface InspectionViewProps {
   readonly dashboard: InspectionDashboard;
@@ -160,9 +161,7 @@ export function InspectionView({ dashboard }: InspectionViewProps) {
                   </small>
                 ) : (
                   <span className="inspection-summary">
-                    <span className="grade-badge inferred">
-                      {GRADE.inferred}
-                    </span>
+                    <StatusBadge grade="inferred" />
                     <small>{entry.summary.text}</small>
                   </span>
                 )}

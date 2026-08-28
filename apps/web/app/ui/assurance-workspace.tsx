@@ -38,16 +38,13 @@ import {
   type SourceFixture,
 } from "../../lib/assurance/fixtures";
 import { ASSURANCE, GRADE } from "../../lib/strings";
+import { StatusBadge } from "./status-badge";
 
 type AssuranceSurface = "findings" | "lint" | "receipts";
 
 interface AssuranceWorkspaceProps {
   initialReceiptId?: string | undefined;
   surface: AssuranceSurface;
-}
-
-function GradeBadge({ grade }: { grade: "broken" | "inferred" | "verified" }) {
-  return <span className={`grade-badge ${grade}`}>{grade}</span>;
 }
 
 function SourceSpan({ finding }: { finding: FindingFixture }) {
@@ -202,7 +199,7 @@ function FindingsSurface() {
                   )}
                 </small>
               </span>
-              <GradeBadge grade={finding.grade} />
+              <StatusBadge grade={finding.grade} />
             </button>
           ))}
           {visible.length === 0 ? (
@@ -219,7 +216,7 @@ function FindingsSurface() {
             </span>
             <h2 id="finding-title">{selected.title}</h2>
           </div>
-          <GradeBadge grade={selected.grade} />
+          <StatusBadge grade={selected.grade} />
         </header>
         <div className="detail-meta">
           <span>
@@ -254,7 +251,7 @@ function FindingsSurface() {
                   <strong>{step.label}</strong>
                   <code>{step.source}</code>
                 </div>
-                <GradeBadge grade={step.grade} />
+                <StatusBadge grade={step.grade} />
                 {index < selected.evidence.length - 1 ? (
                   <ArrowRight className="chain-arrow" size={15} />
                 ) : null}
@@ -319,7 +316,7 @@ function LintSurface() {
         <div>
           <span>{ASSURANCE.lint.summary.contradictions}</span>
           <strong>
-            {CONTRADICTIONS.length} <GradeBadge grade="inferred" />
+            {CONTRADICTIONS.length} <StatusBadge grade="inferred" />
           </strong>
         </div>
       </section>
@@ -387,7 +384,7 @@ function LintSurface() {
             </span>
             <h2>{ASSURANCE.lint.contradiction.title}</h2>
           </div>
-          <GradeBadge grade="inferred" />
+          <StatusBadge grade="inferred" />
         </header>
         {CONTRADICTIONS.map((pair) => (
           <article className="contradiction-pair" key={pair.left.path}>

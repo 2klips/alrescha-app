@@ -45,6 +45,7 @@ import { DASHBOARD, GRADE, WORKSPACE_MAP } from "../../../../lib/strings";
 import type { WorkspaceMapModel } from "../../../../lib/map/workspace-map";
 import { BrainMapStage } from "../../../ui/brain-map-stage";
 import { FacetBandView } from "../../../ui/facet-band-view";
+import { StatusBadge } from "../../../ui/status-badge";
 
 /**
  * The workspace's own knowledge graph (Phase 3 Wave A todo 1).
@@ -533,9 +534,9 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
         >
           <header>
             <span className="arr-kicker">{WORKSPACE_MAP.inspector.kicker}</span>
-            <span className={`arr-grade ${selectedNode?.grade ?? "inferred"}`}>
+            <StatusBadge grade={selectedNode?.grade ?? "inferred"}>
               {selectedNode?.grade ?? GRADE.waiting}
-            </span>
+            </StatusBadge>
           </header>
           {selectedNode ? (
             <>

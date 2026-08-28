@@ -6,7 +6,8 @@ import {
 import { Ban, KeyRound, ShieldCheck, Sparkles, Users } from "lucide-react";
 
 import type { DemoTeam } from "../../lib/team/fixtures";
-import { GRADE, TEAM } from "../../lib/strings";
+import { TEAM } from "../../lib/strings";
+import { StatusBadge } from "./status-badge";
 
 /**
  * What the screen needs, from either source. The demo fixture satisfies it as
@@ -183,7 +184,7 @@ export function TeamView({ team }: TeamViewProps) {
             <h2>{TEAM.coaching.title}</h2>
           </header>
           <span className="team-graded">
-            <span className="grade-badge inferred">{GRADE.inferred}</span>
+            <StatusBadge grade="inferred" />
             <small>{TEAM.coaching.note}</small>
           </span>
           {team.coaching === null ? (

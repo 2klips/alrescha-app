@@ -51,6 +51,7 @@ import { DASHBOARD, GRADE } from "../../lib/strings";
 import { BrainMapStage } from "./brain-map-stage";
 import { FacetBandView } from "./facet-band-view";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
+import { StatusBadge } from "./status-badge";
 
 interface DashboardScreenProps {
   model: DashboardViewModel;
@@ -681,9 +682,9 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
         <aside className="arr-inspector" aria-label={DASHBOARD.ariaInspector}>
           <header>
             <span className="arr-kicker">{DASHBOARD.inspector.kicker}</span>
-            <span className={`arr-grade ${selectedNode?.grade ?? "inferred"}`}>
+            <StatusBadge grade={selectedNode?.grade ?? "inferred"}>
               {selectedNode?.grade ?? GRADE.waiting}
-            </span>
+            </StatusBadge>
           </header>
           {selectedNode ? (
             <>

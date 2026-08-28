@@ -3,9 +3,17 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 import noHardcodedHex from "./tools/eslint-rules/no-hardcoded-hex.js";
+import {
+  noAdhocFontSize,
+  noAdhocRadius,
+} from "./tools/eslint-rules/no-adhoc-scale.js";
 
 const arrPlugin = {
-  rules: { "no-hardcoded-hex": noHardcodedHex },
+  rules: {
+    "no-hardcoded-hex": noHardcodedHex,
+    "no-adhoc-font-size": noAdhocFontSize,
+    "no-adhoc-radius": noAdhocRadius,
+  },
 };
 
 export default tseslint.config(
@@ -41,6 +49,9 @@ export default tseslint.config(
     plugins: { arr: arrPlugin },
     rules: {
       "arr/no-hardcoded-hex": "error",
+      // Design roadmap step 3 (P7): inline styles must use the scale tokens.
+      "arr/no-adhoc-font-size": "error",
+      "arr/no-adhoc-radius": "error",
     },
   },
 );

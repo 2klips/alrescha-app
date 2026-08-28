@@ -18,6 +18,10 @@ import {
 import noHardcodedHex, {
   isHexColorLiteral,
 } from "../tools/eslint-rules/no-hardcoded-hex.js";
+import {
+  noAdhocFontSize,
+  noAdhocRadius,
+} from "../tools/eslint-rules/no-adhoc-scale.js";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const TOKENS_CSS = join(repoRoot, "apps/web/app/styles/tokens.css");
@@ -359,6 +363,103 @@ describe("scale tokens (design direction roadmap step 1)", () => {
     expect(rootBlock).toMatch(/--danger:\s*#[0-9a-fA-F]{6}/);
     expect(rootBlock).toMatch(/--danger-text:\s*var\(--danger\)/);
     expect(rootBlock).not.toMatch(/--danger:\s*var\(--brand\)/);
+  });
+});
+
+describe("scale adoption ratchet (design roadmap step 3)", () => {
+  // Existing ad-hoc sizes migrate screen by screen in step 4 — this ratchet
+  // only forbids NEW debt. When a migration lands, lower the ceiling to the
+  // new count; never raise it.
+  const FONT_SIZE_ADHOC_CEILING = 222;
+  const RADIUS_ADHOC_CEILING = 6;
+
+  const globalsCss = readFileSync(
+    join(repoRoot, "apps/web/app/globals.css"),
+    "utf8",
+  );
+
+  function adhocFontSizes(): string[] {
+    return [...globalsCss.matchAll(/font-size:\s*([^;]+);/g)]
+      .map((match) => (match[1] as string).trim())
+      .filter((value) => !value.startsWith("var(--text-"));
+  }
+
+  function adhocRadii(): string[] {
+    return [...globalsCss.matchAll(/border-radius:\s*([^;]+);/g)]
+      .map((match) => (match[1] as string).trim())
+      .filter(
+        (value) =>
+          !value.startsWith("var(--radius-") &&
+          value !== "0" &&
+          value !== "50%",
+      );
+  }
+
+  test("ad-hoc font-size declarations in globals.css only ever shrink", () => {
+    expect(adhocFontSizes().length).toBeLessThanOrEqual(
+      FONT_SIZE_ADHOC_CEILING,
+    );
+  });
+
+  test("ad-hoc border-radius declarations in globals.css only ever shrink", () => {
+    expect(adhocRadii().length).toBeLessThanOrEqual(RADIUS_ADHOC_CEILING);
+  });
+
+  test("the primitives themselves are fully on the scale", () => {
+    const section = globalsCss.slice(
+      globalsCss.indexOf("Design roadmap step 3 — primitives"),
+    );
+    expect(section).not.toBe("");
+    for (const match of section.matchAll(/font-size:\s*([^;]+);/g)) {
+      expect((match[1] as string).trim()).toMatch(/^var\(--text-/);
+    }
+    for (const match of section.matchAll(/border-radius:\s*([^;]+);/g)) {
+      expect((match[1] as string).trim()).toMatch(/^var\(--radius-/);
+    }
+  });
+});
+
+describe("arr/no-adhoc-font-size + arr/no-adhoc-radius eslint rules", () => {
+  const ruleTester = new RuleTester({
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+  });
+
+  test("inline style scale rules pass tokens and report ad-hoc values", () => {
+    ruleTester.run("no-adhoc-font-size", noAdhocFontSize, {
+      valid: [
+        { code: '<div style={{ fontSize: "var(--text-sm)" }} />' },
+        // Non-JSX objects (e.g. Pixi canvas text styles) are out of scope.
+        { code: "const style = { fontSize: 11 };" },
+        { code: "<div style={{ fontSize: dynamic }} />" },
+      ],
+      invalid: [
+        {
+          code: '<div style={{ fontSize: "0.53rem" }} />',
+          errors: [{ messageId: "adhocFontSize" }],
+        },
+        {
+          code: "<div style={{ fontSize: 12 }} />",
+          errors: [{ messageId: "adhocFontSize" }],
+        },
+      ],
+    });
+
+    ruleTester.run("no-adhoc-radius", noAdhocRadius, {
+      valid: [
+        { code: '<div style={{ borderRadius: "var(--radius-pill)" }} />' },
+        { code: "<div style={{ borderRadius: 0 }} />" },
+      ],
+      invalid: [
+        {
+          code: '<div style={{ borderRadius: "999px" }} />',
+          errors: [{ messageId: "adhocRadius" }],
+        },
+      ],
+    });
   });
 });
 

@@ -1329,27 +1329,6 @@ a {
   background: var(--inferred);
 }
 
-.grade-badge {
-  align-items: center;
-  border: 1px solid currentColor;
-  display: inline-flex;
-  font: 0.57rem var(--font-mono);
-  letter-spacing: 0.06em;
-  padding: 0.2rem 0.32rem;
-  text-transform: uppercase;
-  width: fit-content;
-}
-
-.grade-badge.verified {
-  color: var(--verified-text);
-}
-.grade-badge.inferred {
-  color: var(--inferred-text);
-}
-.grade-badge.broken {
-  color: var(--broken-text);
-}
-
 .empty-list {
   border: 1px dashed var(--line-strong);
   color: var(--muted);
@@ -4630,25 +4609,6 @@ a {
   padding-bottom: 1rem;
 }
 
-.arr-grade {
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  font: 0.55rem var(--font-mono);
-  letter-spacing: 0.05em;
-  padding: 0.2rem 0.42rem;
-  text-transform: uppercase;
-}
-
-.arr-grade.verified {
-  color: var(--verified);
-}
-.arr-grade.inferred {
-  color: var(--inferred);
-}
-.arr-grade.broken {
-  color: var(--danger);
-}
-
 .arr-inspector h2 {
   font-family: var(--font-sans);
   font-size: clamp(1.45rem, 2vw, 2rem);
@@ -6951,4 +6911,130 @@ html[data-sidebar="rail"] .app-shell .side-nav-foot {
   .app-shell .side-nav-tagline {
     display: none;
   }
+}
+
+/* ============================================================
+   Design roadmap step 3 — primitives: <Icon> <StatusBadge> <Button>.
+   Screens migrate onto these in step 4; the scale-adoption ratchet in
+   tests/design-tokens.test.ts keeps new ad-hoc sizes from appearing.
+   ============================================================ */
+
+.icon {
+  flex: none;
+}
+
+.icon-xs {
+  height: var(--icon-xs);
+  width: var(--icon-xs);
+}
+
+.icon-sm {
+  height: var(--icon-sm);
+  width: var(--icon-sm);
+}
+
+.icon-md {
+  height: var(--icon-md);
+  width: var(--icon-md);
+}
+
+.status-badge {
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-control);
+  display: inline-flex;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  gap: 0.3rem;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.45rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.status-badge.verified {
+  color: var(--verified-text);
+}
+
+.status-badge.inferred {
+  border-style: dashed;
+  color: var(--inferred-text);
+}
+
+.status-badge.broken {
+  color: var(--danger-text);
+}
+
+.btn {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: 0.4rem;
+  justify-content: center;
+  padding: 0 0.8rem;
+  transition: transform var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+  .btn:active {
+    transform: none;
+  }
+}
+
+.btn-sm {
+  min-height: var(--space-6);
+}
+
+.btn-md {
+  min-height: 2.5rem;
+}
+
+.btn-primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--on-brand);
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--brand) 88%, var(--text));
+}
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.btn-ghost:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.btn-icon {
+  padding: 0;
+  width: var(--space-6);
 }
