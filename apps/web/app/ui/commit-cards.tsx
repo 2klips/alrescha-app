@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { Icon } from "./icon";
 import { COMMITS } from "../../lib/strings";
 
 interface CommitAnalysisBoardProps {
@@ -41,12 +42,15 @@ const STATUS_COPY = {
   },
 } as const satisfies Record<CommitAnalysisStatus, unknown>;
 
-function StatusBadge({ status }: { status: CommitAnalysisStatus }) {
+function RunStatusBadge({ status }: { status: CommitAnalysisStatus }) {
   const copy = STATUS_COPY[status];
-  const Icon = copy.icon;
   return (
     <span className={`commit-status ${status}`} data-status={status}>
-      <Icon className={copy.spin ? "spin" : undefined} size={12} />
+      <Icon
+        className={copy.spin ? "spin" : undefined}
+        icon={copy.icon}
+        size="xs"
+      />
       {copy.label}
     </span>
   );
@@ -76,7 +80,7 @@ function DurationValue({ card }: { card: CommitAnalysisCard }) {
     </span>
   ) : (
     <span className="commit-duration">
-      <Clock3 size={11} />
+      <Icon icon={Clock3} size="xs" />
       {COMMITS.card.duration(Math.round(card.durationMs / 1000))}
     </span>
   );
@@ -113,11 +117,11 @@ function CommitDetail({ card }: { card: CommitAnalysisCard }) {
       <header>
         <p className="panel-kicker">{COMMITS.detail.kicker}</p>
         <h2>
-          <GitCommitHorizontal size={16} />
+          <Icon icon={GitCommitHorizontal} size="sm" />
           <code>{card.commitSha.slice(0, 7)}</code>
           <span>{card.repository}</span>
         </h2>
-        <StatusBadge status={card.status} />
+        <RunStatusBadge status={card.status} />
       </header>
       <dl className="commit-detail-grid">
         <div>
@@ -150,7 +154,7 @@ function CommitDetail({ card }: { card: CommitAnalysisCard }) {
             {card.assurance === "graph-only" ? (
               <Link className="commit-assurance-upgrade" href="/onboarding">
                 {COMMITS.detail.assuranceUpgradeAction}
-                <ChevronRight size={12} />
+                <Icon icon={ChevronRight} size="xs" />
               </Link>
             ) : null}
           </dd>
@@ -169,9 +173,9 @@ function CommitDetail({ card }: { card: CommitAnalysisCard }) {
                 className="commit-receipt-link"
                 href={`/receipts?receipt=${encodeURIComponent(card.receiptId)}`}
               >
-                <ReceiptText size={12} />
+                <Icon icon={ReceiptText} size="xs" />
                 {COMMITS.detail.receiptAction}
-                <ChevronRight size={12} />
+                <Icon icon={ChevronRight} size="xs" />
               </Link>
             )}
           </dd>
@@ -242,10 +246,10 @@ export function CommitAnalysisBoard({
                   href={cardHref(card, basePath, stateQuery)}
                 >
                   <span className="commit-card-sha">
-                    <GitCommitHorizontal size={13} />
+                    <Icon icon={GitCommitHorizontal} size="xs" />
                     <code>{card.commitSha.slice(0, 7)}</code>
                   </span>
-                  <StatusBadge status={card.status} />
+                  <RunStatusBadge status={card.status} />
                   <span className="commit-card-meta">
                     {card.assurance === "graph-only" ? (
                       <span className="commit-assurance-badge">

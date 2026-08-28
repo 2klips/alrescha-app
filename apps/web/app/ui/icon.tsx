@@ -19,7 +19,7 @@ export function Icon({
   size = "sm",
 }: {
   /** Extra hook classes (e.g. `spin`, `chain-arrow`) — never for sizing. */
-  readonly className?: string;
+  readonly className?: string | undefined;
   readonly icon: LucideIcon;
   readonly label?: string;
   readonly size?: IconSize;
