@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createContext, runInContext } from "node:vm";
 
@@ -225,24 +226,54 @@ describe("theme toggle control", () => {
   });
 
   test("its styling is tokenized, so it themes with everything else", () => {
-    const css = readSource("apps/web/app/globals.css");
+    // Roadmap step 5 moved the rule out of the globals monolith into the
+    // primitives sheet.
+    const css = readSource("apps/web/app/styles/primitives.css");
     const rule = css.slice(css.indexOf(".theme-toggle {"));
     expect(rule).toContain("var(--surface-2)");
     expect(rule).toContain("var(--line-strong)");
   });
 });
 
-describe("no unthemed states remain in the shared primitives", () => {
-  const css = readSource("apps/web/app/globals.css");
+/**
+ * Roadmap step 5: globals.css is only the ordered import hub; the actual
+ * rules live in app/styles/** (tokens.css excluded here — it is the one
+ * sanctioned home for literals and custom properties).
+ */
+function readAppStylesheets(): string {
+  const root = fileURLToPath(
+    new URL("../apps/web/app/styles/", import.meta.url),
+  );
+  const parts: string[] = [readSource("apps/web/app/globals.css")];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      const absolute = join(dir, name);
+      if (statSync(absolute).isDirectory()) {
+        walk(absolute);
+        continue;
+      }
+      if (name.endsWith(".css") && name !== "tokens.css") {
+        parts.push(readFileSync(absolute, "utf8"));
+      }
+    }
+  };
+  walk(root);
+  return parts.join("\n");
+}
 
-  test("the app stylesheet resolves every colour through a token", () => {
+describe("no unthemed states remain in the shared primitives", () => {
+  const css = readAppStylesheets();
+
+  test("the app stylesheets resolve every colour through a token", () => {
     // A raw colour function is a state that cannot follow the theme — including
     // the panel shadows, which now mix `--shadow-color`.
     expect(css.match(/rgba?\(|hsla?\(|oklch\(|lab\(/g)).toBeNull();
   });
 
-  test("it declares no palette of its own — tokens.css is the only source", () => {
-    expect(css).toContain('@import "./styles/tokens.css";');
+  test("they declare no palette of their own — tokens.css is the only source", () => {
+    expect(readSource("apps/web/app/globals.css")).toContain(
+      '@import "./styles/tokens.css";',
+    );
     expect(css.match(/^\s*--[a-z0-9-]+:/gm)).toBeNull();
   });
 

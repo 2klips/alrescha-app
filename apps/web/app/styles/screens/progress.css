@@ -1,0 +1,392 @@
+/*
+ * Screens: /progress /app/progress (progress-dashboard).
+ * Split from globals.css (design roadmap step 5) — cascade order is
+ * preserved by the @import order in globals.css; keep new rules with
+ * their owner.
+ */
+
+.progress-main {
+  margin: 0 auto;
+  max-width: 92rem;
+  padding: clamp(1rem, 2.8vw, 2.4rem);
+}
+
+.progress-state {
+  align-items: center;
+  background:
+    linear-gradient(
+      100deg,
+      color-mix(in srgb, var(--accent) 9%, transparent),
+      transparent 42%
+    ),
+    var(--panel);
+  border: 1px solid var(--line-strong);
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: auto 1fr auto;
+  min-height: 9rem;
+  overflow: hidden;
+  padding: clamp(1.2rem, 3vw, 2rem);
+  position: relative;
+}
+
+.progress-state::after {
+  background: var(--accent);
+  content: "";
+  height: 1px;
+  left: 0;
+  opacity: 0.75;
+  position: absolute;
+  top: 0;
+  width: 38%;
+}
+
+.progress-state.full::after {
+  background: var(--ok);
+  width: 100%;
+}
+
+.progress-state.empty::after {
+  background: var(--faint);
+  width: 14%;
+}
+
+.progress-state-mark {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--accent);
+  display: flex;
+  height: 3.2rem;
+  justify-content: center;
+  transform: rotate(-3deg);
+  width: 3.2rem;
+}
+
+.progress-state.full .progress-state-mark {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  color: var(--ok);
+}
+
+.progress-state.empty .progress-state-mark {
+  color: var(--muted);
+}
+
+.progress-state h1 {
+  font-family: var(--font-sans);
+  font-size: var(--text-display);
+  font-stretch: condensed;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  margin: 0;
+}
+
+.progress-state > div:nth-child(2) > p:last-child {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  margin: 0.65rem 0 0;
+  max-width: 46rem;
+}
+
+.progress-metrics {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.75rem;
+}
+
+.progress-metric {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  padding: 1rem 1.15rem;
+}
+
+.progress-metric > div,
+.progress-metric footer {
+  align-items: baseline;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.progress-metric > div > span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.progress-metric strong {
+  color: var(--ink);
+  font: var(--text-xl) var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-metric progress {
+  accent-color: var(--accent);
+  background: var(--surface-2);
+  border: 0;
+  height: 0.26rem;
+  margin: 0.8rem 0 0.6rem;
+  width: 100%;
+}
+
+.progress-metric progress::-webkit-progress-bar {
+  background: var(--surface-2);
+}
+
+.progress-metric progress::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--accent), var(--accent));
+}
+
+.progress-metric progress::-moz-progress-bar {
+  background: var(--accent);
+}
+
+.progress-metric footer {
+  color: var(--muted);
+  font-size: var(--text-2xs);
+}
+
+.progress-metric footer small {
+  align-items: center;
+  display: flex;
+  gap: 0.3rem;
+}
+
+.progress-section {
+  margin-top: clamp(1.6rem, 4vw, 3rem);
+}
+
+.todo-board {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.todo-column {
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+  border: 1px solid var(--line);
+  min-height: 13rem;
+}
+
+.todo-column > header {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: auto 1fr auto;
+  padding: 0.7rem 0.8rem;
+}
+
+.todo-column > header h3 {
+  color: var(--ink);
+  font-size: var(--text-2xs);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.todo-column > header span {
+  font: var(--text-2xs) var(--font-mono);
+}
+
+.todo-column.in-progress > header {
+  color: var(--accent);
+}
+
+.todo-column.done > header {
+  color: var(--ok);
+}
+
+.todo-column.blocked > header {
+  color: var(--broken);
+}
+
+.todo-stack {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.6rem;
+}
+
+.todo-empty {
+  color: var(--faint);
+  font: var(--text-2xs) var(--font-mono);
+  margin: 0.3rem;
+}
+
+.todo-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--faint);
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.8rem;
+}
+
+.in-progress .todo-card {
+  border-left-color: var(--accent);
+}
+
+.done .todo-card {
+  border-left-color: var(--ok);
+}
+
+.blocked .todo-card {
+  border-left-color: var(--broken);
+}
+
+.todo-card h4 {
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  margin: 0;
+}
+
+.todo-requirement {
+  color: var(--inferred);
+  font: var(--text-2xs) var(--font-mono);
+}
+
+.todo-source {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font: var(--text-2xs) var(--font-mono);
+  gap: 0.3rem;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.todo-source:hover {
+  color: var(--accent);
+}
+
+.timeline-section {
+  padding-bottom: 3rem;
+}
+
+.progress-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.progress-timeline > li {
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: 2rem 1fr;
+  position: relative;
+}
+
+.progress-timeline > li:not(:last-child)::before {
+  background: var(--line);
+  bottom: -0.4rem;
+  content: "";
+  left: 0.96rem;
+  position: absolute;
+  top: 2rem;
+  width: 1px;
+}
+
+.timeline-glyph {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--accent);
+  display: flex;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+  z-index: 1;
+}
+
+.timeline-glyph.finding-resolved {
+  color: var(--ok);
+}
+
+.timeline-glyph.commit {
+  color: var(--inferred);
+}
+
+.progress-timeline article {
+  background: color-mix(in srgb, var(--surface) 68%, transparent);
+  border: 1px solid var(--line);
+  margin-bottom: 0.55rem;
+  padding: 0.8rem 1rem;
+}
+
+.progress-timeline article > header,
+.progress-timeline article > footer {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.progress-timeline article strong {
+  font-size: var(--text-xs);
+}
+
+.progress-timeline time {
+  color: var(--muted);
+  font: var(--text-2xs) var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-timeline p {
+  color: var(--text);
+  font-size: var(--text-2xs);
+  margin: 0.45rem 0 0.65rem;
+}
+
+.progress-timeline footer > span {
+  color: var(--muted);
+  font: var(--text-2xs) var(--font-mono);
+  text-transform: uppercase;
+}
+
+.progress-timeline code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  padding: 0.2rem 0.35rem;
+}
+
+.timeline-empty {
+  align-items: center;
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  display: flex;
+  font-size: var(--text-2xs);
+  gap: 0.6rem;
+  padding: 1.2rem;
+}
+
+@media (max-width: 70rem) {
+  .todo-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 42rem) {
+  .progress-main {
+    padding: 0.75rem;
+  }
+
+  .progress-state {
+    align-items: start;
+    grid-template-columns: auto 1fr;
+  }
+
+  .progress-metrics,
+  .todo-board {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-metric footer {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+}

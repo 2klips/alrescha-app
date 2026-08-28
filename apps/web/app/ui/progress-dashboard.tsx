@@ -1,4 +1,4 @@
-import { Icon } from "./icon";
+import { Icon } from "./ui-icon";
 import type { ProgressDashboard, ProgressTodo } from "@arr/core";
 import {
   Activity,

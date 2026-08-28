@@ -6,7 +6,7 @@ import type {
   OverviewTodo,
 } from "../../lib/overview/view-model";
 import { GRADE } from "../../lib/strings/common";
-import { Icon } from "./icon";
+import { Icon } from "./ui-icon";
 import { OVERVIEW } from "../../lib/strings/overview";
 
 /**

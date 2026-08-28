@@ -16,7 +16,7 @@ import {
 import type { ReactNode } from "react";
 
 import { INSPECTION } from "../../lib/strings";
-import { Icon } from "./icon";
+import { Icon } from "./ui-icon";
 import { StatusBadge } from "./status-badge";
 
 interface InspectionViewProps {

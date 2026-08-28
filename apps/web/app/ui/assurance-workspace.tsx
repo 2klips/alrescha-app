@@ -38,7 +38,7 @@ import {
   type SourceFixture,
 } from "../../lib/assurance/fixtures";
 import { ASSURANCE, GRADE } from "../../lib/strings";
-import { Icon } from "./icon";
+import { Icon } from "./ui-icon";
 import { StatusBadge } from "./status-badge";
 
 type AssuranceSurface = "findings" | "lint" | "receipts";

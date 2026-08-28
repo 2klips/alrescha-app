@@ -1,0 +1,218 @@
+/*
+ * Screens: /inspection /app/inspection (inspection-view).
+ * Split from globals.css (design roadmap step 5) — cascade order is
+ * preserved by the @import order in globals.css; keep new rules with
+ * their owner.
+ */
+
+/* ------------------------------------------------------------------ */
+.inspection-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin: 0 auto;
+  max-width: 78rem;
+  padding: 1.5rem 1.75rem 3rem;
+  width: 100%;
+}
+
+.inspection-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(21rem, 1fr));
+}
+
+.inspection-widget {
+  background: var(--panel-soft);
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.9rem 1rem;
+}
+
+.inspection-widget > header {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  gap: 0.4rem;
+}
+
+.inspection-widget > header h2 {
+  font-size: var(--text-sm);
+  letter-spacing: 0.05em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.inspection-figure {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+}
+
+.inspection-note {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  margin: 0;
+}
+
+.inspection-insufficient {
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  margin: 0;
+  padding: 0.6rem 0.7rem;
+}
+
+.inspection-source {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  color: var(--faint);
+  display: inline-flex;
+  font-size: var(--text-2xs);
+  gap: 0.3rem;
+  margin-top: auto;
+  padding-top: 0.45rem;
+}
+
+.inspection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inspection-finding,
+.inspection-advisory {
+  align-items: baseline;
+  display: grid;
+  font-size: var(--text-xs);
+  gap: 0.2rem 0.6rem;
+  grid-template-columns: auto 1fr auto;
+}
+
+.inspection-finding code,
+.inspection-document code {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.inspection-advisory span strong {
+  margin-right: 0.4rem;
+}
+
+.inspection-advisory span code {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  margin-right: 0.4rem;
+}
+
+.inspection-advisory span small {
+  color: var(--muted);
+  display: block;
+  font-size: var(--text-2xs);
+}
+
+.inspection-advisory em {
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  font-style: normal;
+}
+
+.inspection-document {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.inspection-document-head {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+.inspection-freshness {
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  padding: 0.12rem 0.35rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.inspection-freshness.current {
+  color: var(--verified-text);
+}
+
+.inspection-freshness.outdated {
+  color: var(--warn-text);
+}
+
+.inspection-freshness.drift-suspected {
+  color: var(--broken-text);
+}
+
+.inspection-summary {
+  align-items: baseline;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.inspection-summary small,
+.inspection-summary-missing {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.inspection-ruled-out li {
+  border-left: 2px solid var(--line-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.1rem 0 0.1rem 0.65rem;
+}
+
+.inspection-ruled-out time {
+  font-variant-numeric: tabular-nums;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.inspection-ruled-out strong {
+  font-size: var(--text-xs);
+}
+
+.inspection-ruled-out p {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  margin: 0;
+}
+
+.inspection-ruled-out p span {
+  color: var(--faint);
+  margin-right: 0.35rem;
+}
+
+.inspection-ruled-out code {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.inspection-widget h3 {
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.06em;
+  margin: 0;
+  text-transform: uppercase;
+}

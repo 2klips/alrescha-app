@@ -373,19 +373,37 @@ describe("scale adoption ratchet (design roadmap step 3)", () => {
   const FONT_SIZE_ADHOC_CEILING = 14;
   const RADIUS_ADHOC_CEILING = 0;
 
-  const globalsCss = readFileSync(
-    join(repoRoot, "apps/web/app/globals.css"),
-    "utf8",
-  );
+  // Roadmap step 5: globals.css is only the import hub; the rules live in
+  // app/styles/** (tokens.css excluded — no font-size/border-radius there,
+  // and it is the one sanctioned literals file either way).
+  function readAppStylesheets(): string {
+    const parts: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const absolute = join(dir, name);
+        if (statSync(absolute).isDirectory()) {
+          walk(absolute);
+          continue;
+        }
+        if (name.endsWith(".css") && name !== "tokens.css") {
+          parts.push(readFileSync(absolute, "utf8"));
+        }
+      }
+    };
+    walk(join(repoRoot, "apps/web/app/styles"));
+    return parts.join("\n");
+  }
+
+  const appCss = readAppStylesheets();
 
   function adhocFontSizes(): string[] {
-    return [...globalsCss.matchAll(/font-size:\s*([^;]+);/g)]
+    return [...appCss.matchAll(/font-size:\s*([^;]+);/g)]
       .map((match) => (match[1] as string).trim())
       .filter((value) => !value.startsWith("var(--text-"));
   }
 
   function adhocRadii(): string[] {
-    return [...globalsCss.matchAll(/border-radius:\s*([^;]+);/g)]
+    return [...appCss.matchAll(/border-radius:\s*([^;]+);/g)]
       .map((match) => (match[1] as string).trim())
       .filter(
         (value) =>
@@ -398,25 +416,27 @@ describe("scale adoption ratchet (design roadmap step 3)", () => {
       );
   }
 
-  test("ad-hoc font-size declarations in globals.css only ever shrink", () => {
+  test("ad-hoc font-size declarations in the stylesheets only ever shrink", () => {
     expect(adhocFontSizes().length).toBeLessThanOrEqual(
       FONT_SIZE_ADHOC_CEILING,
     );
   });
 
-  test("ad-hoc border-radius declarations in globals.css only ever shrink", () => {
+  test("ad-hoc border-radius declarations in the stylesheets only ever shrink", () => {
     expect(adhocRadii().length).toBeLessThanOrEqual(RADIUS_ADHOC_CEILING);
   });
 
   test("the primitives themselves are fully on the scale", () => {
-    const section = globalsCss.slice(
-      globalsCss.indexOf("Design roadmap step 3 — primitives"),
+    const primitives = readFileSync(
+      join(repoRoot, "apps/web/app/styles/primitives.css"),
+      "utf8",
     );
-    expect(section).not.toBe("");
-    for (const match of section.matchAll(/font-size:\s*([^;]+);/g)) {
+    expect(primitives).toContain(".status-badge");
+    expect(primitives).toContain(".btn");
+    for (const match of primitives.matchAll(/font-size:\s*([^;]+);/g)) {
       expect((match[1] as string).trim()).toMatch(/^var\(--text-/);
     }
-    for (const match of section.matchAll(/border-radius:\s*([^;]+);/g)) {
+    for (const match of primitives.matchAll(/border-radius:\s*([^;]+);/g)) {
       expect((match[1] as string).trim()).toMatch(/^var\(--radius-/);
     }
   });

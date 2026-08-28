@@ -1,0 +1,159 @@
+/*
+ * Design primitives (roadmap step 3): ThemeToggle, Icon, StatusBadge, Button.
+ * Split from globals.css (design roadmap step 5) — cascade order is
+ * preserved by the @import order in globals.css; keep new rules with
+ * their owner.
+ */
+
+.theme-toggle {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: 0.62rem var(--font-mono);
+  gap: 0.35rem;
+  letter-spacing: 0.08em;
+  min-height: 2rem;
+  padding: 0.35rem 0.55rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.button {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: var(--on-accent);
+  cursor: pointer;
+  display: inline-block;
+  font-weight: 700;
+  padding: 0.7rem 0.9rem;
+  text-decoration: none;
+}
+
+.icon {
+  flex: none;
+}
+
+.icon-xs {
+  height: var(--icon-xs);
+  width: var(--icon-xs);
+}
+
+.icon-sm {
+  height: var(--icon-sm);
+  width: var(--icon-sm);
+}
+
+.icon-md {
+  height: var(--icon-md);
+  width: var(--icon-md);
+}
+
+.status-badge {
+  align-items: center;
+  border: 1px solid currentColor;
+  border-radius: var(--radius-control);
+  display: inline-flex;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 500;
+  gap: 0.3rem;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.45rem;
+  text-transform: uppercase;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+.status-badge.verified {
+  color: var(--verified-text);
+}
+
+.status-badge.inferred {
+  border-style: dashed;
+  color: var(--inferred-text);
+}
+
+.status-badge.broken {
+  color: var(--danger-text);
+}
+
+.btn {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: 0.4rem;
+  justify-content: center;
+  padding: 0 0.8rem;
+  transition: transform var(--dur-fast) var(--ease-out);
+  white-space: nowrap;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-sm {
+  min-height: var(--space-6);
+}
+
+.btn-md {
+  min-height: 2.5rem;
+}
+
+.btn-primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: var(--on-brand);
+}
+
+.btn-primary:hover {
+  background: color-mix(in srgb, var(--brand) 88%, var(--text));
+}
+
+.btn-secondary {
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.btn-secondary:hover {
+  border-color: var(--accent);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+.btn-ghost:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.btn-icon {
+  padding: 0;
+  width: var(--space-6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+  }
+
+  .btn:active {
+    transform: none;
+  }
+}

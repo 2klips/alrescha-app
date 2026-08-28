@@ -1,0 +1,295 @@
+/*
+ * Cross-screen shared chrome: kickers, headings, state panels, demo controls.
+ * Split from globals.css (design roadmap step 5) — cascade order is
+ * preserved by the @import order in globals.css; keep new rules with
+ * their owner.
+ */
+
+.hud-panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: 0 14px 36px
+    color-mix(in srgb, var(--shadow-color) 26%, transparent);
+}
+
+.panel-kicker {
+  color: var(--accent);
+  display: block;
+  font: var(--text-2xs) var(--font-mono);
+  letter-spacing: 0.12em;
+  margin-bottom: 0.55rem;
+  text-transform: uppercase;
+}
+
+.graph-state {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  left: 50%;
+  max-width: calc(100% - 2rem);
+  padding: 1.6rem;
+  position: absolute;
+  text-align: center;
+  top: 53%;
+  transform: translate(-50%, -50%);
+  width: 25rem;
+  z-index: 2;
+}
+
+.graph-state strong {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+}
+
+.graph-state h2 {
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  margin: 0;
+}
+
+.graph-state > span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.graph-state svg {
+  color: var(--accent);
+}
+
+.graph-state.error-state {
+  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
+}
+
+.graph-state.error-state svg {
+  color: var(--broken);
+}
+
+.pre-scan-orbit {
+  align-items: center;
+  animation: breathe 1.8s ease-in-out infinite;
+  border: 1px solid var(--accent);
+  display: flex;
+  height: 3.5rem;
+  justify-content: center;
+  width: 3.5rem;
+}
+
+.revoked-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: center;
+}
+
+.surface-heading h1 {
+  font-family: var(--font-sans);
+  font-size: var(--text-display);
+  letter-spacing: -0.035em;
+  line-height: 1;
+  margin: 0;
+}
+
+.surface-heading p {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  margin: 0.65rem 0 0;
+}
+
+.surface-heading p strong {
+  color: var(--inferred);
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.severity-dot {
+  background: var(--muted);
+  height: 0.48rem;
+  margin-top: 0.2rem;
+  width: 0.48rem;
+}
+
+.severity-dot.critical,
+.severity-dot.high {
+  background: var(--broken);
+}
+
+.severity-dot.medium {
+  background: var(--warn);
+}
+
+.severity-dot.low {
+  background: var(--inferred);
+}
+
+.empty-list {
+  border: 1px dashed var(--line-strong);
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  padding: 1rem;
+  text-align: center;
+}
+
+.severity-label {
+  font: var(--text-2xs) var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.severity-label.high,
+.severity-label.critical {
+  color: var(--broken-text);
+}
+
+.severity-label.medium {
+  color: var(--warn-text);
+}
+
+.severity-label.low {
+  color: var(--inferred-text);
+}
+
+.inline-status {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font: var(--text-2xs) var(--font-mono);
+  gap: 0.4rem;
+  margin: 0;
+  padding: 1rem;
+}
+
+.error-text {
+  color: var(--broken);
+}
+
+.wide-heading {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.5rem;
+  justify-content: space-between;
+}
+
+.wide-heading .panel-kicker {
+  width: 100%;
+}
+
+/* Existing auth/error routes retain compact shell styling. */
+.shell {
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  margin: 8vh auto;
+  max-width: 44rem;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  width: calc(100% - 2rem);
+}
+
+.shell h1 {
+  font-family: var(--font-sans);
+  font-size: var(--text-display);
+  margin: 0.6rem 0;
+}
+
+.shell p {
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.eyebrow {
+  color: var(--accent);
+  font: var(--text-2xs) var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* Progress ledger */
+.progress-state-switcher {
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  gap: 0.25rem;
+  justify-content: flex-end;
+  padding: 0.5rem max(1rem, calc((100vw - 92rem) / 2));
+}
+
+.progress-state-switcher a {
+  border: 1px solid transparent;
+  color: var(--muted);
+  font: var(--text-2xs) var(--font-mono);
+  padding: 0.35rem 0.55rem;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.progress-state-switcher a[aria-current="page"] {
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+  color: var(--ink);
+}
+
+.progress-kicker,
+.progress-section-heading span {
+  color: var(--accent);
+  font: var(--text-2xs) var(--font-mono);
+  letter-spacing: 0.13em;
+  margin: 0 0 0.4rem;
+  text-transform: uppercase;
+}
+
+.progress-section-heading {
+  align-items: end;
+  border-bottom: 1px solid var(--line-strong);
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  padding-bottom: 0.7rem;
+}
+
+.progress-section-heading h2 {
+  font-family: var(--font-sans);
+  font-size: var(--text-xl);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.progress-section-heading small {
+  color: var(--muted);
+  font: var(--text-2xs) var(--font-mono);
+}
+
+.commit-lead {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.severity-label.moderate {
+  color: var(--warn-text);
+}
+
+.severity-label.info {
+  color: var(--info-text);
+}
+
+/* Step 4 wave 1 (assurance): severity is never colour-alone — the dot gets
+   its text label (P2), and the lint cost table's count column reads as a
+   number column (P4). */
+.severity-marker {
+  align-items: center;
+  display: flex;
+  gap: 0.3rem;
+}
+
+@media (max-width: 42rem) {
+  .progress-section-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+}

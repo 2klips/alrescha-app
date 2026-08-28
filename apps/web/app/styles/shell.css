@@ -1,0 +1,324 @@
+/*
+ * AppShell (roadmap step 2): sidebar, ContextStrip, command palette.
+ * Split from globals.css (design roadmap step 5) — cascade order is
+ * preserved by the @import order in globals.css; keep new rules with
+ * their owner.
+ */
+
+.side-nav {
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.4rem 0.9rem;
+}
+
+.side-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.side-nav-label {
+  color: var(--faint);
+  font-size: 0.64rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  margin: 0 0.6rem 0.3rem;
+  text-transform: uppercase;
+}
+
+.side-nav a {
+  align-items: center;
+  border-radius: var(--radius-control, 0);
+  color: var(--muted);
+  display: flex;
+  font-size: 0.8rem;
+  gap: 0.5rem;
+  padding: 0.38rem 0.6rem;
+  text-decoration: none;
+}
+
+.side-nav a:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.side-nav a[aria-current="page"] {
+  background: var(--tint-accent);
+  color: var(--text);
+  font-weight: 600;
+}
+
+.side-nav-foot {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.8rem;
+}
+
+.app-shell {
+  background: var(--bg);
+  display: grid;
+  grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+  min-height: 100dvh;
+}
+
+.app-shell-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-shell .side-nav {
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sidebar);
+}
+
+.side-nav-brand {
+  align-items: center;
+  color: var(--text);
+  display: flex;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0 0.6rem;
+  text-decoration: none;
+}
+
+.side-nav-brand strong {
+  font-size: 1rem;
+  letter-spacing: -0.04em;
+}
+
+.side-nav-mark {
+  flex: none;
+  object-fit: contain;
+}
+
+.side-nav-tagline {
+  color: var(--faint);
+  font-size: var(--text-2xs);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.side-nav-search {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: var(--text-sm);
+  gap: 0.5rem;
+  margin: 0 0.1rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.side-nav-search:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.side-nav-search kbd {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  margin-left: auto;
+}
+
+.side-nav-collapse {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  height: 2rem;
+  justify-content: center;
+  width: 2rem;
+}
+
+.side-nav-collapse:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.context-strip {
+  align-items: center;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  gap: 0.9rem;
+  height: var(--contextstrip-h);
+  overflow-x: auto;
+  padding: 0 1.25rem;
+  position: sticky;
+  top: 0;
+  white-space: nowrap;
+  z-index: var(--z-sidebar);
+}
+
+.context-strip-repo {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.context-strip-empty {
+  color: var(--faint);
+  font-weight: 400;
+}
+
+.context-strip-chip {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.context-strip-sha {
+  color: var(--accent-text);
+}
+
+.context-strip-spacer {
+  flex: 1;
+}
+
+.context-strip-link {
+  align-items: center;
+  color: var(--muted);
+  display: inline-flex;
+  gap: 0.35rem;
+  text-decoration: none;
+}
+
+.context-strip-link:hover {
+  color: var(--text);
+}
+
+.command-palette-overlay {
+  align-items: flex-start;
+  background: color-mix(
+    in srgb,
+    var(--shadow-color) var(--alpha-scrim),
+    transparent
+  );
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding-top: 14vh;
+  position: fixed;
+  z-index: var(--z-modal);
+}
+
+.command-palette {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-3);
+  width: min(34rem, calc(100vw - 2rem));
+}
+
+.command-palette-input {
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+}
+
+.command-palette-input input {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  width: 100%;
+}
+
+.command-palette-list {
+  list-style: none;
+  margin: 0;
+  max-height: 19rem;
+  overflow-y: auto;
+  padding: 0.35rem;
+}
+
+.command-palette-item {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-control);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: var(--text-sm);
+  gap: 0.55rem;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  width: 100%;
+}
+
+.command-palette-item[data-active] {
+  background: var(--tint-accent);
+  color: var(--text);
+}
+
+.command-palette-item small {
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  margin-left: auto;
+  text-transform: uppercase;
+}
+
+.command-palette-empty {
+  color: var(--faint);
+  font-size: var(--text-sm);
+  padding: 0.9rem;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell .side-nav {
+    border-bottom: 1px solid var(--line);
+    border-right: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    height: auto;
+    position: static;
+  }
+
+  .app-shell .side-nav-foot {
+    border-top: 0;
+    margin-left: auto;
+    margin-top: 0;
+    padding-top: 0;
+  }
+
+  .app-shell .side-nav-tagline {
+    display: none;
+  }
+}

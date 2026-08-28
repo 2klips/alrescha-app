@@ -1,0 +1,163 @@
+/*
+ * Screens: /team /app/team (team-view).
+ * Split from globals.css (design roadmap step 5) — cascade order is
+ * preserved by the @import order in globals.css; keep new rules with
+ * their owner.
+ */
+
+/* ------------------------------------------------------------------ */
+.team-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin: 0 auto;
+  max-width: 78rem;
+  padding: 1.5rem 1.75rem 3rem;
+  width: 100%;
+}
+
+.team-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+}
+
+.team-member {
+  align-items: baseline;
+  display: grid;
+  font-size: var(--text-sm);
+  gap: 0.5rem;
+  grid-template-columns: 1fr auto auto;
+}
+
+.team-member code,
+.team-table code,
+.team-gate-list code {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+}
+
+.team-status,
+.team-verdict {
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-style: normal;
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.32rem;
+  text-transform: uppercase;
+}
+
+.team-status.active,
+.team-verdict.adopted {
+  color: var(--verified-text);
+}
+
+.team-status.invited,
+.team-verdict.pending {
+  color: var(--warn-text);
+}
+
+.team-status.revoked,
+.team-verdict.rejected {
+  color: var(--broken-text);
+}
+
+.team-graded {
+  align-items: baseline;
+  display: flex;
+  gap: 0.45rem;
+}
+
+.team-graded small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.team-rubric {
+  display: grid;
+  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+}
+
+.team-rubric span {
+  border: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.5rem;
+}
+
+.team-rubric small {
+  color: var(--muted);
+  font-size: var(--text-2xs);
+}
+
+.team-rubric strong {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.team-prompt summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: var(--text-xs);
+}
+
+.team-prompt p {
+  border-left: 2px solid var(--line-strong);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  margin: 0.4rem 0 0;
+  padding-left: 0.6rem;
+}
+
+.team-table {
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+  width: 100%;
+}
+
+.team-table th {
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.4rem 0.3rem 0;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.team-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.35rem 0.4rem 0.35rem 0;
+}
+
+.team-none {
+  color: var(--faint);
+}
+
+.team-gate-list li {
+  align-items: baseline;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+
+/* Step 4 wave 3: team contribution counts read as number columns (P4). */
+.team-table th:nth-child(2),
+.team-table th:nth-child(3),
+.team-table th:nth-child(4) {
+  text-align: right;
+}
+
+.team-table td:nth-child(2),
+.team-table td:nth-child(3),
+.team-table td:nth-child(4) {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}

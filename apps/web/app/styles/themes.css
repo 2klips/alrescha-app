@@ -1,0 +1,24 @@
+/*
+ * Cross-screen light-texture overrides — imported last on purpose.
+ * Split from globals.css (design roadmap step 5) — cascade order is
+ * preserved by the @import order in globals.css; keep new rules with
+ * their owner.
+ */
+
+/* Light texture tokens (--radius-card 등) live in tokens.css — the single palette source. */
+.overview-zone,
+.overview-kpis article,
+.overview-minimap,
+.commit-card,
+.commit-detail,
+.empty-list {
+  border-radius: var(--radius-card);
+  box-shadow: var(--card-shadow);
+}
+
+[data-theme="light"] .overview-zone,
+[data-theme="light"] .overview-kpis article,
+[data-theme="light"] .commit-card,
+[data-theme="light"] .commit-detail {
+  border-color: transparent;
+}

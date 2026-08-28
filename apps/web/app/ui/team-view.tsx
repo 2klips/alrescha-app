@@ -7,7 +7,7 @@ import { Ban, KeyRound, ShieldCheck, Sparkles, Users } from "lucide-react";
 
 import type { DemoTeam } from "../../lib/team/fixtures";
 import { TEAM } from "../../lib/strings";
-import { Icon } from "./icon";
+import { Icon } from "./ui-icon";
 import { StatusBadge } from "./status-badge";
 
 /**
