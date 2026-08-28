@@ -1,39 +1,39 @@
 {
   "incomplete": [],
   "incompleteCount": 0,
-  "passes": 81,
+  "passes": 85,
   "route": "/findings",
   "theme": "dark",
   "violationCount": 6,
   "violations": [
     {
       "html": "<i>203</i>",
-      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.2pt (10.88px), font weight: normal). Expected contrast ratio of 4.5:1",
+      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
       "target": ".highlighted:nth-child(3) > i"
     },
     {
       "html": "<i>204</i>",
-      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.2pt (10.88px), font weight: normal). Expected contrast ratio of 4.5:1",
+      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
       "target": ".highlighted:nth-child(4) > i"
     },
     {
       "html": "<i>205</i>",
-      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.2pt (10.88px), font weight: normal). Expected contrast ratio of 4.5:1",
+      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
       "target": ".highlighted:nth-child(5) > i"
     },
     {
       "html": "<i>206</i>",
-      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.2pt (10.88px), font weight: normal). Expected contrast ratio of 4.5:1",
+      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
       "target": ".highlighted:nth-child(6) > i"
     },
     {
       "html": "<i>207</i>",
-      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.2pt (10.88px), font weight: normal). Expected contrast ratio of 4.5:1",
+      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
       "target": ".highlighted:nth-child(7) > i"
     },
     {
       "html": "<i>208</i>",
-      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.2pt (10.88px), font weight: normal). Expected contrast ratio of 4.5:1",
+      "message": "Element has insufficient color contrast of 4.44 (foreground color: #808b9f, background color: #1c253a, font size: 8.3pt (11px), font weight: normal). Expected contrast ratio of 4.5:1",
       "target": ".highlighted:nth-child(8) > i"
     }
   ]

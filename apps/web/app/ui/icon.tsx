@@ -13,10 +13,13 @@ import type { LucideIcon } from "lucide-react";
 export type IconSize = "xs" | "sm" | "md";
 
 export function Icon({
+  className,
   icon: Glyph,
   label,
   size = "sm",
 }: {
+  /** Extra hook classes (e.g. `spin`, `chain-arrow`) — never for sizing. */
+  readonly className?: string;
   readonly icon: LucideIcon;
   readonly label?: string;
   readonly size?: IconSize;
@@ -25,7 +28,7 @@ export function Icon({
     <Glyph
       aria-hidden={label ? undefined : true}
       aria-label={label}
-      className={`icon icon-${size}`}
+      className={["icon", `icon-${size}`, className].filter(Boolean).join(" ")}
       focusable={false}
     />
   );

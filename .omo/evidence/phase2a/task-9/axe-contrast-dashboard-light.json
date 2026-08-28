@@ -221,9 +221,9 @@
       "target": "header > .arr-kicker"
     },
     {
-      "html": "<span class=\"arr-grade verified\">verified</span>",
+      "html": "<span class=\"status-badge verified\" data-grade=\"verified\">verified</span>",
       "message": "Element's background color could not be determined because element contains an image node",
-      "target": ".arr-grade"
+      "target": ".status-badge"
     },
     {
       "html": "<h2>REQ-AUTH-001</h2>",
@@ -331,7 +331,7 @@
       "target": ".graph-force-reset"
     },
     {
-      "html": "<small data-testid=\"graph-lod-status\">줌 단계 중경 · 라벨 12개</small>",
+      "html": "<small data-testid=\"graph-lod-status\">줌 단계 중경 · 라벨 13개</small>",
       "message": "Element's background color could not be determined because element contains an image node",
       "target": "small[data-testid=\"graph-lod-status\"]"
     }

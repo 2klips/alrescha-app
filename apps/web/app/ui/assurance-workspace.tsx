@@ -38,6 +38,7 @@ import {
   type SourceFixture,
 } from "../../lib/assurance/fixtures";
 import { ASSURANCE, GRADE } from "../../lib/strings";
+import { Icon } from "./icon";
 import { StatusBadge } from "./status-badge";
 
 type AssuranceSurface = "findings" | "lint" | "receipts";
@@ -84,13 +85,14 @@ function SourceSpan({ finding }: { finding: FindingFixture }) {
       </header>
       {!source && !failed ? (
         <p className="inline-status">
-          <LoaderCircle className="spin" size={14} />{" "}
+          <Icon className="spin" icon={LoaderCircle} size="xs" />{" "}
           {ASSURANCE.findings.sourceSpan.loading}
         </p>
       ) : null}
       {failed ? (
         <p className="inline-status error-text">
-          <AlertTriangle size={14} /> {ASSURANCE.findings.sourceSpan.failed}
+          <Icon icon={AlertTriangle} size="xs" />{" "}
+          {ASSURANCE.findings.sourceSpan.failed}
         </p>
       ) : null}
       {source ? (
@@ -133,7 +135,7 @@ function FindingsSurface() {
         </header>
         <div className="finding-filters">
           <label>
-            <ListFilter size={14} />
+            <Icon icon={ListFilter} size="xs" />
             <span className="sr-only">{ASSURANCE.findings.typeLabel}</span>
             <select
               aria-label={ASSURANCE.findings.typeLabel}
@@ -158,7 +160,7 @@ function FindingsSurface() {
             </select>
           </label>
           <label>
-            <ShieldAlert size={14} />
+            <Icon icon={ShieldAlert} size="xs" />
             <span className="sr-only">{ASSURANCE.findings.severityLabel}</span>
             <select
               aria-label={ASSURANCE.findings.severityLabel}
@@ -189,7 +191,13 @@ function FindingsSurface() {
               role="listitem"
               type="button"
             >
-              <span className={`severity-dot ${finding.severity}`} />
+              {/* P2: colour never carries severity alone — dot + text label. */}
+              <span className="severity-marker">
+                <span className={`severity-dot ${finding.severity}`} />
+                <span className={`severity-label ${finding.severity}`}>
+                  {finding.severity}
+                </span>
+              </span>
               <span>
                 <strong>{finding.title}</strong>
                 <small>
@@ -253,7 +261,7 @@ function FindingsSurface() {
                 </div>
                 <StatusBadge grade={step.grade} />
                 {index < selected.evidence.length - 1 ? (
-                  <ArrowRight className="chain-arrow" size={15} />
+                  <Icon className="chain-arrow" icon={ArrowRight} size="xs" />
                 ) : null}
               </li>
             ))}
@@ -262,13 +270,15 @@ function FindingsSurface() {
 
         <section className="suggested-action">
           <span>
-            <CheckCircle2 size={16} /> {ASSURANCE.findings.action.label}
+            <Icon icon={CheckCircle2} size="sm" />{" "}
+            {ASSURANCE.findings.action.label}
           </span>
           <p>{selected.action}</p>
           <Link
             href={`/receipts?receipt=${encodeURIComponent(selected.receiptId)}`}
           >
-            {ASSURANCE.findings.action.link} <ChevronRight size={14} />
+            {ASSURANCE.findings.action.link}{" "}
+            <Icon icon={ChevronRight} size="xs" />
           </Link>
         </section>
       </article>
@@ -366,7 +376,7 @@ function LintSurface() {
             <article key={row.left}>
               <code>{row.left}</code>
               <span>
-                <Link2 size={14} />
+                <Icon icon={Link2} size="xs" />
                 {row.overlap}
                 <strong>{row.tokens} t</strong>
               </span>
@@ -395,7 +405,7 @@ function LintSurface() {
               <blockquote>{pair.left.quote}</blockquote>
             </div>
             <span>
-              <AlertTriangle size={17} />
+              <Icon icon={AlertTriangle} size="sm" />
               {Math.round(pair.confidence * 100)}%
             </span>
             <div>
@@ -416,37 +426,36 @@ function VerificationBadge({
 }: {
   verification: ReceiptVerification | { state: "pending" | "verifying" };
 }) {
+  // Terminal grades use the shared StatusBadge (design §5.3 — label-only
+  // mono badge); the transient verifying/pending states stay bespoke.
   if (verification.state === "verified")
     return (
-      <span className="verification-badge verified">
-        <ShieldCheck size={14} />
+      <StatusBadge grade="verified">
         {ASSURANCE.receipts.verification.verified}
-      </span>
+      </StatusBadge>
     );
   if (verification.state === "tampered")
     return (
-      <span className="verification-badge tampered">
-        <ShieldAlert size={14} />
+      <StatusBadge grade="broken">
         {ASSURANCE.receipts.verification.tampered}
-      </span>
+      </StatusBadge>
     );
   if (verification.state === "invalid")
     return (
-      <span className="verification-badge tampered">
-        <ShieldAlert size={14} />
+      <StatusBadge grade="broken">
         {ASSURANCE.receipts.verification.invalid}
-      </span>
+      </StatusBadge>
     );
   if (verification.state === "verifying")
     return (
       <span className="verification-badge">
-        <LoaderCircle className="spin" size={14} />
+        <Icon className="spin" icon={LoaderCircle} size="xs" />
         {ASSURANCE.receipts.verification.verifying}
       </span>
     );
   return (
     <span className="verification-badge">
-      <Fingerprint size={14} />
+      <Icon icon={Fingerprint} size="xs" />
       {ASSURANCE.receipts.verification.pending}
     </span>
   );
@@ -477,7 +486,7 @@ function ReceiptDetail({ receipt }: { receipt: ReceiptFixture }) {
       </header>
       {receipt.stale ? (
         <div className="stale-banner">
-          <Clock3 size={15} />
+          <Icon icon={Clock3} size="xs" />
           {ASSURANCE.receipts.staleBanner}
         </div>
       ) : null}
@@ -523,7 +532,7 @@ function ReceiptDetail({ receipt }: { receipt: ReceiptFixture }) {
       </section>
       {verification.state === "verified" ? (
         <section className="receipt-verdict" data-testid="receipt-verdict">
-          <BadgeCheck size={19} />
+          <Icon icon={BadgeCheck} size="md" />
           <div>
             <span>{ASSURANCE.receipts.verdict.label}</span>
             <strong>
@@ -539,7 +548,7 @@ function ReceiptDetail({ receipt }: { receipt: ReceiptFixture }) {
           className="receipt-locked"
           data-testid="receipt-verdict-locked"
         >
-          <Fingerprint size={18} />
+          <Icon icon={Fingerprint} size="md" />
           <span>{ASSURANCE.receipts.verdict.locked}</span>
         </section>
       )}
@@ -549,7 +558,7 @@ function ReceiptDetail({ receipt }: { receipt: ReceiptFixture }) {
         onClick={() => void verify()}
         type="button"
       >
-        <ShieldCheck size={16} /> {ASSURANCE.receipts.verifyAction}
+        <Icon icon={ShieldCheck} size="sm" /> {ASSURANCE.receipts.verifyAction}
       </button>
     </article>
   );
@@ -581,7 +590,7 @@ function ReceiptsSurface({
               onClick={() => setSelectedId(receipt.id)}
               type="button"
             >
-              <ReceiptText size={16} />
+              <Icon icon={ReceiptText} size="sm" />
               <span>
                 <strong>{receipt.label}</strong>
                 <small>
@@ -591,7 +600,7 @@ function ReceiptsSurface({
                     : ASSURANCE.receipts.current}
                 </small>
               </span>
-              <ChevronRight size={14} />
+              <Icon icon={ChevronRight} size="xs" />
             </button>
           ))}
         </div>
