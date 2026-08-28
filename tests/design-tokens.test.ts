@@ -370,8 +370,8 @@ describe("scale adoption ratchet (design roadmap step 3)", () => {
   // Existing ad-hoc sizes migrate screen by screen in step 4 — this ratchet
   // only forbids NEW debt. When a migration lands, lower the ceiling to the
   // new count; never raise it.
-  const FONT_SIZE_ADHOC_CEILING = 113;
-  const RADIUS_ADHOC_CEILING = 6;
+  const FONT_SIZE_ADHOC_CEILING = 51;
+  const RADIUS_ADHOC_CEILING = 4;
 
   const globalsCss = readFileSync(
     join(repoRoot, "apps/web/app/globals.css"),
@@ -391,7 +391,10 @@ describe("scale adoption ratchet (design roadmap step 3)", () => {
         (value) =>
           !value.startsWith("var(--radius-") &&
           value !== "0" &&
-          value !== "50%",
+          // 50% (circles) and 25% (the document node-type swatch) are shape
+          // encodings, not chrome radii — outside the radius-token vocabulary.
+          value !== "50%" &&
+          value !== "25%",
       );
   }
 

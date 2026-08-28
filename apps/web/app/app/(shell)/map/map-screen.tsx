@@ -103,7 +103,7 @@ function EmptyMap() {
       <strong>{WORKSPACE_MAP.empty.title}</strong>
       <span>{WORKSPACE_MAP.empty.body}</span>
       <div className="revoked-actions">
-        <Link className="compact-button" href="/app/connect/github">
+        <Link className="btn btn-secondary btn-sm" href="/app/connect/github">
           <Link2 size={14} /> {WORKSPACE_MAP.empty.connect}
         </Link>
       </div>

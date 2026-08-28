@@ -49,6 +49,7 @@ import {
 import type { LodLevel } from "../../lib/graph/lod";
 import { DASHBOARD, GRADE } from "../../lib/strings";
 import { BrainMapStage } from "./brain-map-stage";
+import { Button } from "./button";
 import { FacetBandView } from "./facet-band-view";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
 import { StatusBadge } from "./status-badge";
@@ -164,12 +165,12 @@ function StatusSurface({
         <h2>{DASHBOARD.states.revoked.title}</h2>
         <span>{DASHBOARD.states.revoked.body}</span>
         <div className="revoked-actions">
-          <Link className="compact-button" href="/app/connect/github">
+          <Link className="btn btn-secondary btn-sm" href="/app/connect/github">
             <RotateCcw size={14} /> {DASHBOARD.states.revoked.reconnect}
           </Link>
-          <button className="compact-button" onClick={onRetry} type="button">
+          <Button onClick={onRetry} size="sm" variant="secondary">
             {DASHBOARD.states.revoked.viewStored}
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -188,12 +189,12 @@ function StatusSurface({
             ? DASHBOARD.states.permissionError.body
             : DASHBOARD.states.failed.body}
         </span>
-        <button className="compact-button" onClick={onRetry} type="button">
+        <Button onClick={onRetry} size="sm" variant="secondary">
           <RotateCcw size={14} />{" "}
           {model.state === "permission-error"
             ? DASHBOARD.states.permissionError.action
             : DASHBOARD.states.failed.action}
-        </button>
+        </Button>
       </div>
     );
   }
