@@ -89,9 +89,9 @@ export function AiUsageSettings({
             required
             type="password"
           />
-          <button className="button" type="submit">
+          <Button size="sm" type="submit" variant="primary">
             {SETTINGS.ai.byok.submit}
-          </button>
+          </Button>
         </form>
         <ul className="byok-provider-list">
           {(["anthropic", "openai"] as const).map((provider) => (
@@ -110,3 +110,4 @@ export function AiUsageSettings({
   );
 }
 import { saveByokKey } from "./actions";
+import { Button } from "../../../../ui/button";

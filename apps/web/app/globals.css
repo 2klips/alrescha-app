@@ -389,7 +389,7 @@ a {
 .onboarding-brand > span:last-child {
   border-left: 1px solid var(--line);
   color: var(--muted);
-  font: 0.66rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   margin-left: 0.25rem;
   padding-left: 0.9rem;
 }
@@ -411,7 +411,7 @@ a {
   color: var(--faint);
   display: flex;
   flex: 1;
-  font: 0.65rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   gap: 0.4rem;
   position: relative;
   /* Korean step labels are single short words where the English ones were two;
@@ -481,7 +481,7 @@ a {
 .onboarding-card h1,
 .first-scan h1 {
   font-family: var(--font-sans);
-  font-size: clamp(1.8rem, 5vw, 3rem);
+  font-size: var(--text-display);
   font-stretch: condensed;
   letter-spacing: -0.035em;
   line-height: 1;
@@ -491,7 +491,7 @@ a {
 .onboarding-card > p,
 .first-scan p {
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   line-height: 1.6;
   margin: 0.9rem 0 1.35rem;
 }
@@ -503,7 +503,7 @@ a {
   color: var(--on-accent);
   cursor: pointer;
   display: flex;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   gap: 0.55rem;
   justify-content: center;
@@ -534,7 +534,7 @@ a {
   align-items: center;
   color: var(--faint);
   display: flex;
-  font: 0.63rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   gap: 0.35rem;
   margin-top: 0.75rem;
 }
@@ -561,11 +561,11 @@ a {
   margin-right: 0.35rem;
 }
 .permission-grid strong {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 .permission-grid span {
   color: var(--muted);
-  font-size: 0.62rem;
+  font-size: var(--text-2xs);
 }
 
 .permission-error {
@@ -587,18 +587,18 @@ a {
   gap: 0.2rem;
 }
 .permission-error strong {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 .permission-error span {
   color: var(--muted);
-  font-size: 0.64rem;
+  font-size: var(--text-2xs);
 }
 .permission-error button {
   background: transparent;
   border: 1px solid var(--broken);
   color: var(--danger);
   cursor: pointer;
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
   padding: 0.45rem 0.55rem;
 }
 
@@ -623,11 +623,11 @@ a {
   gap: 0.25rem;
 }
 .repo-choice strong {
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
 }
 .repo-choice small {
   color: var(--muted);
-  font: 0.62rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
 }
 
 .first-scan {
@@ -1755,7 +1755,7 @@ a {
 
 .shell h1 {
   font-family: var(--font-sans);
-  font-size: clamp(2rem, 7vw, 4rem);
+  font-size: var(--text-display);
   margin: 0.6rem 0;
 }
 .shell p {
@@ -1764,7 +1764,7 @@ a {
 }
 .eyebrow {
   color: var(--accent);
-  font: 0.68rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -1794,7 +1794,7 @@ a {
 }
 .credit-meter strong {
   color: var(--accent);
-  font: 600 2rem var(--font-sans);
+  font: 600 var(--text-2xl) var(--font-sans);
 }
 .credit-warning {
   border-left: 2px solid var(--warn);
@@ -1818,10 +1818,16 @@ a {
   grid-template-columns: 1fr auto auto;
   padding-top: 0.55rem;
 }
-.credit-ledger-list time,
+.credit-ledger-list time {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
 .byok-provider-list span {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
 }
 .byok-key-form {
   display: grid;
@@ -1844,7 +1850,7 @@ a {
   max-width: 50rem;
 }
 .mcp-settings-shell h1 {
-  font: 600 clamp(2.4rem, 7vw, 5rem) var(--font-sans);
+  font: 600 var(--text-display) var(--font-sans);
   margin: 0.55rem 0;
 }
 .mcp-settings-shell > header p {
@@ -1866,7 +1872,7 @@ a {
   padding: 1.25rem;
 }
 .mcp-settings-card h2 {
-  font: 600 1.25rem var(--font-sans);
+  font: 600 var(--text-xl) var(--font-sans);
   margin: 0 0 1.25rem;
 }
 .mcp-settings-card p {
@@ -1879,7 +1885,7 @@ a {
 .mcp-token-form > label,
 .mcp-token-form legend {
   color: var(--muted);
-  font: 0.72rem var(--font-mono);
+  font: var(--text-xs) var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -1905,7 +1911,7 @@ a {
   justify-self: start;
   margin-top: 0.3rem;
 }
-.mcp-token-form .button:disabled {
+.mcp-token-form button:disabled {
   cursor: wait;
   opacity: 0.65;
 }
@@ -1921,7 +1927,7 @@ a {
   border: 1px solid var(--line-strong);
   color: var(--muted);
   cursor: pointer;
-  font: 0.78rem var(--font-mono);
+  font: var(--text-xs) var(--font-mono);
   min-height: 2.25rem;
   padding: 0.35rem 0.8rem;
 }
@@ -1931,12 +1937,12 @@ a {
 }
 .instruction-file {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 .instruction-snippet {
   background: var(--code-bg);
   border: 1px solid var(--line);
-  font: 0.74rem/1.55 var(--font-mono);
+  font: var(--text-xs)/1.55 var(--font-mono);
   margin: 0.6rem 0 0.8rem;
   max-height: 18rem;
   overflow: auto;
@@ -1984,11 +1990,13 @@ a {
 }
 .mcp-token-list code {
   color: var(--accent);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 .mcp-token-list span {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 .mcp-revoke {
   background: transparent;
@@ -1999,7 +2007,7 @@ a {
 }
 .mcp-revoked {
   color: var(--broken) !important;
-  font: 0.7rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -2028,7 +2036,7 @@ a {
 .context-form-row label {
   color: var(--muted);
   display: grid;
-  font: 0.72rem var(--font-mono);
+  font: var(--text-xs) var(--font-mono);
   gap: 0.4rem;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -2051,7 +2059,7 @@ a {
 }
 .context-result-meta span {
   color: var(--muted);
-  font: 0.7rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
 }
 .context-pack-result ol {
   display: grid;
@@ -2064,7 +2072,7 @@ a {
 .context-pack-result li span {
   color: var(--muted);
   display: block;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   margin-top: 0.2rem;
 }
 .context-pack-result summary,
@@ -2078,7 +2086,7 @@ a {
 .proposal-diff pre {
   background: var(--code-bg);
   border: 1px solid var(--line);
-  font: 0.72rem/1.55 var(--font-mono);
+  font: var(--text-xs)/1.55 var(--font-mono);
   max-height: 22rem;
   overflow: auto;
   padding: 0.75rem;
@@ -2119,7 +2127,7 @@ a {
 }
 .diff-columns > div > span {
   color: var(--muted);
-  font: 0.68rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -2139,9 +2147,10 @@ a {
 }
 .pilot-stats-toolbar > span {
   color: var(--muted);
-  font: 0.72rem var(--font-mono);
+  font: var(--text-xs) var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
 }
 .pilot-stats-toolbar > div {
   align-items: center;
@@ -2178,14 +2187,14 @@ a {
 }
 .pilot-stat-card > span {
   color: var(--muted);
-  font: 0.68rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 .pilot-stat-card strong {
   color: var(--accent);
   display: block;
-  font: 600 clamp(1.8rem, 4vw, 3rem) var(--font-sans);
+  font: 600 var(--text-display) var(--font-sans);
   margin: 1rem 0 0.45rem;
 }
 .pilot-stat-card p {
@@ -2217,7 +2226,7 @@ a {
   padding: clamp(1.4rem, 4vw, 2.5rem);
 }
 .pilot-empty-state h2 {
-  font: 600 clamp(1.8rem, 4vw, 2.8rem) var(--font-sans);
+  font: 600 var(--text-display) var(--font-sans);
   margin: 0.55rem 0;
 }
 .pilot-empty-state p {
@@ -2238,7 +2247,7 @@ a {
   margin-top: 2rem;
 }
 .privacy-boundary-grid h2 {
-  font: 600 1.25rem var(--font-sans);
+  font: 600 var(--text-xl) var(--font-sans);
   margin: 0.5rem 0;
 }
 .privacy-boundary-grid p {
@@ -3002,7 +3011,7 @@ a {
 .harness-hero p,
 .library-results > header span {
   color: var(--accent);
-  font: 0.62rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.13em;
   margin: 0 0 0.45rem;
   text-transform: uppercase;
@@ -3011,7 +3020,7 @@ a {
 .library-hero h1,
 .harness-hero h1 {
   font-family: var(--font-sans);
-  font-size: clamp(2rem, 5vw, 4rem);
+  font-size: var(--text-display);
   font-stretch: condensed;
   letter-spacing: -0.045em;
   line-height: 0.95;
@@ -3022,7 +3031,7 @@ a {
 .harness-hero span {
   color: var(--muted);
   display: block;
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   line-height: 1.6;
   margin-top: 0.75rem;
   max-width: 48rem;
@@ -3030,7 +3039,7 @@ a {
 
 .library-hero > strong {
   color: var(--accent);
-  font: 600 1.25rem var(--font-sans);
+  font: 600 var(--text-xl) var(--font-sans);
   white-space: nowrap;
 }
 
@@ -3056,7 +3065,7 @@ a {
   align-items: center;
   color: var(--muted);
   display: flex;
-  font: 0.62rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   gap: 0.4rem;
   letter-spacing: 0.08em;
   margin-bottom: 0.55rem;
@@ -3104,7 +3113,7 @@ a {
   border-left: 2px solid transparent;
   color: var(--muted);
   display: flex;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   justify-content: space-between;
   padding: 0.55rem 0.65rem;
   text-decoration: none;
@@ -3119,7 +3128,7 @@ a {
 
 .library-filters nav small {
   color: var(--faint);
-  font: 0.6rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
 }
 
 .library-results > header {
@@ -3132,13 +3141,13 @@ a {
 }
 
 .library-results h2 {
-  font: 600 1.35rem var(--font-sans);
+  font: 600 var(--text-xl) var(--font-sans);
   margin: 0;
 }
 
 .library-results > header small {
   color: var(--muted);
-  font: 0.62rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
 }
 
 .library-stack {
@@ -3172,13 +3181,14 @@ a {
 }
 
 .library-digest-rail code {
-  font: 0.53rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.05em;
   max-height: 12rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   writing-mode: vertical-rl;
+  font-variant-numeric: tabular-nums;
 }
 
 .library-card-body {
@@ -3194,20 +3204,21 @@ a {
 }
 
 .library-card h3 {
-  font: 600 1.15rem var(--font-sans);
+  font: 600 var(--text-xl) var(--font-sans);
   margin: 0.45rem 0 0;
 }
 
 .library-card time {
   color: var(--muted);
-  font: 0.6rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .library-type {
   border: 1px solid var(--line-strong);
   color: var(--accent);
   display: inline-block;
-  font: 0.55rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.09em;
   padding: 0.24rem 0.36rem;
   text-transform: uppercase;
@@ -3240,14 +3251,15 @@ a {
 .library-provenance strong,
 .harness-source span {
   color: var(--ink);
-  font-size: 0.67rem;
+  font-size: var(--text-2xs);
 }
 .library-provenance code,
 .harness-source code {
-  font: 0.58rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .library-tags {
@@ -3261,7 +3273,7 @@ a {
   background: color-mix(in srgb, var(--accent) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
   color: var(--muted);
-  font: 0.58rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   padding: 0.25rem 0.4rem;
   text-decoration: none;
 }
@@ -3275,14 +3287,14 @@ a {
 .library-snapshot summary {
   color: var(--muted);
   cursor: pointer;
-  font: 0.64rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
 }
 
 .library-snapshot pre {
   background: var(--code-bg);
   border: 1px solid var(--line);
   color: var(--text);
-  font: 0.67rem/1.6 var(--font-mono);
+  font: var(--text-2xs)/1.6 var(--font-mono);
   max-height: 24rem;
   overflow: auto;
   padding: 0.85rem;
@@ -3302,7 +3314,7 @@ a {
   color: var(--muted);
   cursor: pointer;
   display: inline-flex;
-  font-size: 0.62rem;
+  font-size: var(--text-2xs);
   gap: 0.35rem;
   padding: 0.4rem;
 }
@@ -3324,7 +3336,7 @@ a {
   margin: 0.65rem 0 0;
 }
 .library-empty p {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 
 .harness-hero {
@@ -3352,10 +3364,12 @@ a {
 }
 .harness-asset-card > header code {
   color: var(--faint);
-  font-size: 0.6rem;
+  font-size: var(--text-2xs);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 .harness-asset-card h2 {
-  font: 600 1.25rem var(--font-sans);
+  font: 600 var(--text-xl) var(--font-sans);
   margin: 0.8rem 0;
 }
 .harness-source {
@@ -3387,7 +3401,7 @@ a {
   align-items: center;
   color: var(--ok);
   display: flex;
-  font-size: 0.67rem;
+  font-size: var(--text-2xs);
   gap: 0.35rem;
   margin: 0.7rem 0 0;
 }
@@ -3395,7 +3409,7 @@ a {
   color: var(--broken);
 }
 .harness-save-result a {
-  font-size: 0.67rem;
+  font-size: var(--text-2xs);
   margin-top: 0.7rem;
 }
 
@@ -5934,7 +5948,7 @@ li[data-todo-status="blocked"] .overview-todo-status {
 }
 
 .home-hero h1 {
-  font-size: clamp(1.6rem, 3.4vw, 2.3rem);
+  font-size: var(--text-display);
   letter-spacing: -0.03em;
   line-height: 1.25;
   margin-top: 0.5rem;
@@ -5949,11 +5963,11 @@ li[data-todo-status="blocked"] .overview-todo-status {
 .home-revoked {
   align-items: center;
   border: 1px solid var(--danger);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-card);
   background: var(--tint-danger);
   color: var(--danger-text);
   display: flex;
-  font-size: 0.85rem;
+  font-size: var(--text-base);
   gap: 0.5rem;
   margin-top: 1.25rem;
   padding: 0.65rem 0.9rem;
@@ -5982,35 +5996,37 @@ li[data-todo-status="blocked"] .overview-todo-status {
 .home-graph-counts span {
   color: var(--muted);
   display: grid;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   gap: 0.1rem;
 }
 
 .home-graph-counts strong {
   font-family: var(--font-mono);
-  font-size: 1.15rem;
+  font-size: var(--text-xl);
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 .home-graph-commit {
   align-items: center;
   color: var(--faint);
   display: flex;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   gap: 0.4rem;
 }
 
 .home-graph-commit code {
   font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .home-graph-open {
   align-items: center;
   background: var(--accent);
-  border-radius: 0.6rem;
+  border-radius: var(--radius-control);
   color: var(--on-accent);
   display: inline-flex;
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   font-weight: 600;
   gap: 0.45rem;
   padding: 0.65rem 1.1rem;
@@ -6054,11 +6070,11 @@ li[data-todo-status="blocked"] .overview-todo-status {
 .home-step-badge {
   align-items: center;
   border: 1.5px solid var(--line-strong);
-  border-radius: 50%;
+  border-radius: var(--radius-pill);
   color: var(--muted);
   display: inline-flex;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   height: 1.7rem;
   justify-content: center;
   margin-top: 0.1rem;
@@ -6079,16 +6095,16 @@ li[data-todo-status="blocked"] .overview-todo-status {
 .home-journey h2 {
   align-items: center;
   display: flex;
-  font-size: 0.98rem;
+  font-size: var(--text-lg);
   gap: 0.45rem;
 }
 
 .home-step-state {
   border: 1px solid var(--line);
-  border-radius: 0.45rem;
+  border-radius: var(--radius-control);
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   margin-left: 0.35rem;
   padding: 0.12rem 0.5rem;
 }
@@ -6105,7 +6121,7 @@ li[data-todo-status="blocked"] .overview-todo-status {
 
 .home-journey p {
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: var(--text-base);
   margin-top: 0.45rem;
   max-width: 46em;
 }
@@ -6113,23 +6129,23 @@ li[data-todo-status="blocked"] .overview-todo-status {
 .home-journey p.home-step-done {
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
 .home-journey small {
   color: var(--faint);
   display: block;
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   margin-top: 0.2rem;
 }
 
 .home-step-cta {
   align-items: center;
   border: 1px solid var(--line-strong);
-  border-radius: 0.55rem;
+  border-radius: var(--radius-control);
   color: var(--accent-text);
   display: inline-flex;
-  font-size: 0.83rem;
+  font-size: var(--text-sm);
   font-weight: 600;
   gap: 0.35rem;
   margin-top: 0.7rem;

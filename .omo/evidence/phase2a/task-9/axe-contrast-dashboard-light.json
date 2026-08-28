@@ -146,16 +146,6 @@
       "target": "button[data-hub-node=\"code-webhook\"] > small"
     },
     {
-      "html": "<span>Build plan</span>",
-      "message": "Element's background color could not be determined because element contains an image node",
-      "target": "button[data-hub-node=\"doc-plan\"] > span"
-    },
-    {
-      "html": "<small>연결 2개</small>",
-      "message": "Element's background color could not be determined because element contains an image node",
-      "target": "button[data-hub-node=\"doc-plan\"] > small"
-    },
-    {
       "html": "<span class=\"arr-kicker\">현재 commit<!-- --> · bad0551</span>",
       "message": "Element's background color could not be determined because it is overlapped by another element",
       "target": ".arr-proof-heading > div:nth-child(1) > .arr-kicker"
@@ -336,7 +326,7 @@
       "target": "small[data-testid=\"graph-lod-status\"]"
     }
   ],
-  "incompleteCount": 67,
+  "incompleteCount": 65,
   "passes": 40,
   "route": "/map",
   "theme": "light",

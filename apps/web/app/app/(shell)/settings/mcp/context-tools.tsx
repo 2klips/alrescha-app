@@ -8,6 +8,7 @@ import {
   requestContextPackPreview,
 } from "./actions";
 import type { ContextPackActionState, IndexProposalActionState } from "./state";
+import { Button } from "../../../../ui/button";
 
 export function ContextTools({
   initialContextState,
@@ -74,11 +75,16 @@ export function ContextTools({
               />
             </label>
           </div>
-          <button className="button" disabled={contextPending} type="submit">
+          <Button
+            disabled={contextPending}
+            size="sm"
+            type="submit"
+            variant="primary"
+          >
             {contextPending
               ? SETTINGS.mcp.contextPack.composing
               : SETTINGS.mcp.contextPack.compose}
-          </button>
+          </Button>
         </form>
         {contextState.error ? (
           <p className="mcp-error" role="alert">
@@ -143,11 +149,16 @@ export function ContextTools({
           {SETTINGS.mcp.minimalIndex.bodySuffix}
         </p>
         <form action={proposalAction}>
-          <button className="button" disabled={proposalPending} type="submit">
+          <Button
+            disabled={proposalPending}
+            size="sm"
+            type="submit"
+            variant="primary"
+          >
             {proposalPending
               ? SETTINGS.mcp.minimalIndex.preparing
               : SETTINGS.mcp.minimalIndex.create}
-          </button>
+          </Button>
         </form>
         {proposalState.error ? (
           <p className="mcp-error" role="alert">

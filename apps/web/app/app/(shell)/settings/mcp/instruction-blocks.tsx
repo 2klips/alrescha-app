@@ -9,6 +9,7 @@ import {
   type AgentInstructionTarget,
 } from "../../../../../lib/mcp/instruction-blocks";
 import { SETTINGS } from "../../../../../lib/strings";
+import { Button } from "../../../../ui/button";
 
 /**
  * The paste-once installer (Wave D todo 11): per-agent instruction blocks
@@ -55,22 +56,30 @@ export function InstructionBlocks({ baseUrl }: { baseUrl: string }) {
       <pre className="instruction-snippet" data-testid="instruction-snippet">
         <code>{block.snippet}</code>
       </pre>
-      <button onClick={() => void copy("block", block.snippet)} type="button">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => void copy("block", block.snippet)}
+      >
         {copied === "block"
           ? SETTINGS.mcp.instructions.copied
           : SETTINGS.mcp.instructions.copy}
-      </button>
+      </Button>
 
       <h3>{SETTINGS.mcp.instructions.configTitle}</h3>
       <p>{SETTINGS.mcp.instructions.configLead}</p>
       <pre className="instruction-snippet">
         <code>{config}</code>
       </pre>
-      <button onClick={() => void copy("config", config)} type="button">
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => void copy("config", config)}
+      >
         {copied === "config"
           ? SETTINGS.mcp.instructions.copied
           : SETTINGS.mcp.instructions.copyConfig}
-      </button>
+      </Button>
     </section>
   );
 }

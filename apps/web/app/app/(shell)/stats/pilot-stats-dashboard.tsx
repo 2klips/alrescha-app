@@ -2,6 +2,7 @@ import type { PilotStatsReport } from "@arr/core/stats";
 
 import { STATS } from "../../../../lib/strings";
 import { setPilotInstrumentation } from "./actions";
+import { Button } from "../../../ui/button";
 
 export function PilotStatsDashboard({
   report,
@@ -17,9 +18,9 @@ export function PilotStatsDashboard({
         <p>{STATS.consent.noThirdParty}</p>
         <form action={setPilotInstrumentation}>
           <input name="enabled" type="hidden" value="true" />
-          <button className="button" type="submit">
+          <Button size="md" type="submit" variant="primary">
             {STATS.consent.enable}
-          </button>
+          </Button>
         </form>
       </section>
     );

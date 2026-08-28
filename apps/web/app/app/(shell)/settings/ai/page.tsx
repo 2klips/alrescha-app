@@ -5,6 +5,7 @@ import { createAdminClient } from "../../../../../lib/supabase/admin";
 import { SETTINGS } from "../../../../../lib/strings";
 import { createClient } from "../../../../../lib/supabase/server";
 import { runEnrichPass } from "./actions";
+import { Button } from "../../../../ui/button";
 import {
   AiUsageSettings,
   type AiProviderName,
@@ -95,7 +96,9 @@ export default async function AiSettingsPage({
           <p role="alert">{SETTINGS.ai.enrich.noRepository}</p>
         ) : null}
         <form action={runEnrichPass}>
-          <button type="submit">{SETTINGS.ai.enrich.run}</button>
+          <Button size="sm" type="submit" variant="secondary">
+            {SETTINGS.ai.enrich.run}
+          </Button>
         </form>
       </section>
       <AiUsageSettings

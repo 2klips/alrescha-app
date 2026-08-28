@@ -6,6 +6,7 @@ import { useActionState } from "react";
 import { SETTINGS } from "../../../../../lib/strings";
 import { issueMcpToken, revokeMcpToken } from "./actions";
 import { INITIAL_ISSUE_MCP_TOKEN_STATE } from "./state";
+import { Button } from "../../../../ui/button";
 
 function timestamp(value: string | null): string {
   return value
@@ -55,9 +56,9 @@ export function McpTokenManager({
               {SETTINGS.mcp.tokens.scopeWriteLabel}
             </label>
           </fieldset>
-          <button className="button" disabled={pending} type="submit">
+          <Button disabled={pending} size="sm" type="submit" variant="primary">
             {pending ? SETTINGS.mcp.tokens.issuing : SETTINGS.mcp.tokens.issue}
-          </button>
+          </Button>
         </form>
         {state.error ? (
           <p className="mcp-error" role="alert">

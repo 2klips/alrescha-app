@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { Button } from "../../ui/button";
 import { AUTH } from "../../../lib/strings";
 import { createClient } from "../../../lib/supabase/client";
 
@@ -28,14 +29,9 @@ export function SignInButton() {
 
   return (
     <div>
-      <button
-        className="button"
-        disabled={pending}
-        onClick={signIn}
-        type="button"
-      >
+      <Button disabled={pending} onClick={signIn} size="md" variant="primary">
         {pending ? AUTH.signIn.pending : AUTH.signIn.idle}
-      </button>
+      </Button>
       {error ? <p role="alert">{error}</p> : null}
     </div>
   );
