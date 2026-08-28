@@ -370,7 +370,7 @@ describe("scale adoption ratchet (design roadmap step 3)", () => {
   // Existing ad-hoc sizes migrate screen by screen in step 4 — this ratchet
   // only forbids NEW debt. When a migration lands, lower the ceiling to the
   // new count; never raise it.
-  const FONT_SIZE_ADHOC_CEILING = 172;
+  const FONT_SIZE_ADHOC_CEILING = 113;
   const RADIUS_ADHOC_CEILING = 6;
 
   const globalsCss = readFileSync(

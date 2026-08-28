@@ -419,7 +419,7 @@ a {
 .panel-kicker {
   color: var(--accent);
   display: block;
-  font: 0.64rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.12em;
   margin-bottom: 0.55rem;
   text-transform: uppercase;
@@ -3045,7 +3045,7 @@ a {
 .progress-kicker,
 .progress-section-heading span {
   color: var(--accent);
-  font: 0.62rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.13em;
   margin: 0 0 0.4rem;
   text-transform: uppercase;
@@ -3053,7 +3053,7 @@ a {
 
 .progress-state h1 {
   font-family: var(--font-sans);
-  font-size: clamp(1.65rem, 4vw, 3.1rem);
+  font-size: var(--text-display);
   font-stretch: condensed;
   letter-spacing: -0.035em;
   line-height: 0.95;
@@ -3062,7 +3062,7 @@ a {
 
 .progress-state > div:nth-child(2) > p:last-child {
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   margin: 0.65rem 0 0;
   max-width: 46rem;
 }
@@ -3106,12 +3106,13 @@ a {
 
 .progress-metric > div > span {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 
 .progress-metric strong {
+  font-variant-numeric: tabular-nums;
   color: var(--ink);
-  font: 1.35rem var(--font-sans);
+  font: var(--text-xl) var(--font-sans);
 }
 
 .progress-metric progress {
@@ -3135,7 +3136,7 @@ a {
 
 .progress-metric footer {
   color: var(--muted);
-  font-size: 0.61rem;
+  font-size: var(--text-2xs);
 }
 .progress-metric footer small {
   align-items: center;
@@ -3158,14 +3159,14 @@ a {
 
 .progress-section-heading h2 {
   font-family: var(--font-sans);
-  font-size: 1.2rem;
+  font-size: var(--text-xl);
   letter-spacing: -0.02em;
   margin: 0;
 }
 
 .progress-section-heading small {
   color: var(--muted);
-  font: 0.61rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
 }
 
 .todo-board {
@@ -3192,12 +3193,12 @@ a {
 
 .todo-column > header h3 {
   color: var(--ink);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   margin: 0;
   text-transform: uppercase;
 }
 .todo-column > header span {
-  font: 0.65rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
 }
 .todo-column.in-progress > header {
   color: var(--accent);
@@ -3216,7 +3217,7 @@ a {
 }
 .todo-empty {
   color: var(--faint);
-  font: 0.62rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   margin: 0.3rem;
 }
 
@@ -3239,19 +3240,19 @@ a {
   border-left-color: var(--broken);
 }
 .todo-card h4 {
-  font-size: 0.73rem;
+  font-size: var(--text-xs);
   line-height: 1.45;
   margin: 0;
 }
 .todo-requirement {
   color: var(--inferred);
-  font: 0.58rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
 }
 .todo-source {
   align-items: center;
   color: var(--muted);
   display: flex;
-  font: 0.57rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   gap: 0.3rem;
   overflow-wrap: anywhere;
   text-decoration: none;
@@ -3321,26 +3322,29 @@ a {
   justify-content: space-between;
 }
 .progress-timeline article strong {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 .progress-timeline time {
+  font-variant-numeric: tabular-nums;
   color: var(--muted);
-  font: 0.57rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
 }
 .progress-timeline p {
   color: var(--text);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   margin: 0.45rem 0 0.65rem;
 }
 .progress-timeline footer > span {
   color: var(--muted);
-  font: 0.56rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   text-transform: uppercase;
 }
 .progress-timeline code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
   background: var(--surface-2);
   color: var(--muted);
-  font-size: 0.55rem;
+  font-size: var(--text-2xs);
   padding: 0.2rem 0.35rem;
 }
 .timeline-empty {
@@ -3348,7 +3352,7 @@ a {
   border: 1px dashed var(--line-strong);
   color: var(--muted);
   display: flex;
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   gap: 0.6rem;
   padding: 1.2rem;
 }
@@ -5399,27 +5403,28 @@ a {
 }
 
 .inspection-widget > header h2 {
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   letter-spacing: 0.05em;
   margin: 0;
   text-transform: uppercase;
 }
 
 .inspection-figure {
+  font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
-  font-size: 1.15rem;
+  font-size: var(--text-xl);
 }
 
 .inspection-note {
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   margin: 0;
 }
 
 .inspection-insufficient {
   border: 1px dashed var(--line-strong);
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   margin: 0;
   padding: 0.6rem 0.7rem;
 }
@@ -5429,7 +5434,7 @@ a {
   border-top: 1px solid var(--line);
   color: var(--faint);
   display: inline-flex;
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
   gap: 0.3rem;
   margin-top: auto;
   padding-top: 0.45rem;
@@ -5448,7 +5453,7 @@ a {
 .inspection-advisory {
   align-items: baseline;
   display: grid;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   gap: 0.2rem 0.6rem;
   grid-template-columns: auto 1fr auto;
 }
@@ -5457,7 +5462,7 @@ a {
 .inspection-document code {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
 }
 
 .inspection-advisory span strong {
@@ -5467,19 +5472,19 @@ a {
 .inspection-advisory span code {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
   margin-right: 0.4rem;
 }
 
 .inspection-advisory span small {
   color: var(--muted);
   display: block;
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
 }
 
 .inspection-advisory em {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   font-style: normal;
 }
 
@@ -5507,7 +5512,7 @@ a {
 .inspection-freshness {
   border: 1px solid currentColor;
   font-family: var(--font-mono);
-  font-size: 0.57rem;
+  font-size: var(--text-2xs);
   letter-spacing: 0.08em;
   padding: 0.12rem 0.35rem;
   text-transform: uppercase;
@@ -5535,7 +5540,7 @@ a {
 .inspection-summary small,
 .inspection-summary-missing {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 
 .inspection-ruled-out li {
@@ -5547,18 +5552,19 @@ a {
 }
 
 .inspection-ruled-out time {
+  font-variant-numeric: tabular-nums;
   color: var(--faint);
   font-family: var(--font-mono);
-  font-size: 0.64rem;
+  font-size: var(--text-2xs);
 }
 
 .inspection-ruled-out strong {
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
 }
 
 .inspection-ruled-out p {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   margin: 0;
 }
 
@@ -5568,9 +5574,10 @@ a {
 }
 
 .inspection-ruled-out code {
+  font-variant-numeric: tabular-nums;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.64rem;
+  font-size: var(--text-2xs);
 }
 
 /* ------------------------------------------------------------------ */
@@ -5596,7 +5603,7 @@ a {
 .team-member {
   align-items: baseline;
   display: grid;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   gap: 0.5rem;
   grid-template-columns: 1fr auto auto;
 }
@@ -5606,14 +5613,14 @@ a {
 .team-gate-list code {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
 }
 
 .team-status,
 .team-verdict {
   border: 1px solid currentColor;
   font-family: var(--font-mono);
-  font-size: 0.55rem;
+  font-size: var(--text-2xs);
   font-style: normal;
   letter-spacing: 0.08em;
   padding: 0.1rem 0.32rem;
@@ -5643,7 +5650,7 @@ a {
 
 .team-graded small {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 
 .team-rubric {
@@ -5662,31 +5669,32 @@ a {
 
 .team-rubric small {
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
 }
 
 .team-rubric strong {
+  font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .team-prompt summary {
   color: var(--muted);
   cursor: pointer;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 
 .team-prompt p {
   border-left: 2px solid var(--line-strong);
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   margin: 0.4rem 0 0;
   padding-left: 0.6rem;
 }
 
 .inspection-widget h3 {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   letter-spacing: 0.06em;
   margin: 0;
   text-transform: uppercase;
@@ -5694,14 +5702,14 @@ a {
 
 .team-table {
   border-collapse: collapse;
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   width: 100%;
 }
 
 .team-table th {
   border-bottom: 1px solid var(--line-strong);
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
   font-weight: 600;
   letter-spacing: 0.05em;
   padding: 0.3rem 0.4rem 0.3rem 0;
@@ -5748,14 +5756,14 @@ a {
 }
 
 .overview-head h1 {
-  font-size: 1.35rem;
+  font-size: var(--text-xl);
   letter-spacing: -0.01em;
   margin: 0.15rem 0 0;
 }
 
 .overview-lead {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
   margin: 0.35rem 0 0;
 }
 
@@ -5765,7 +5773,7 @@ a {
   color: var(--muted);
   display: inline-flex;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   gap: 0.35rem;
   padding: 0.3rem 0.6rem;
   white-space: nowrap;
@@ -5787,20 +5795,21 @@ a {
 }
 
 .overview-kpis strong {
-  font-size: 1.45rem;
+  font-size: var(--text-xl);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
 
 .overview-kpis strong code {
+  font-variant-numeric: tabular-nums;
   font-family: var(--font-mono);
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
 }
 
 .overview-kpis span {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
 }
 
@@ -5842,14 +5851,14 @@ a {
 .overview-zone-head h2 {
   align-items: center;
   display: flex;
-  font-size: 0.92rem;
+  font-size: var(--text-base);
   gap: 0.45rem;
   margin: 0;
 }
 
 .overview-zone-head p {
   color: var(--faint);
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   margin: 0.25rem 0 0;
 }
 
@@ -5857,7 +5866,7 @@ a {
   align-items: center;
   color: var(--accent-text);
   display: inline-flex;
-  font-size: 0.74rem;
+  font-size: var(--text-xs);
   gap: 0.25rem;
   text-decoration: none;
   white-space: nowrap;
@@ -5869,7 +5878,7 @@ a {
 
 .overview-empty {
   color: var(--faint);
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   margin: 0;
 }
 
@@ -5900,7 +5909,7 @@ a {
   align-items: center;
   color: var(--muted);
   display: flex;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   gap: 0.75rem;
   justify-content: space-between;
 }
@@ -5963,7 +5972,7 @@ a {
   color: var(--muted);
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 0.62rem;
+  font-size: var(--text-2xs);
   padding: 0.08rem 0.4rem;
 }
 
@@ -5978,13 +5987,13 @@ li[data-todo-status="blocked"] .overview-todo-status {
 }
 
 .overview-todo-title {
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
 }
 
 .overview-todo-list code {
   color: var(--faint);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
 }
 
 /* Zone 3 — agent records */
@@ -6008,19 +6017,20 @@ li[data-todo-status="blocked"] .overview-todo-status {
   color: var(--accent-text);
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
 }
 
 .overview-agent-list span {
   flex: 1;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   min-width: 0;
 }
 
 .overview-agent-list time {
+  font-variant-numeric: tabular-nums;
   color: var(--faint);
   font-family: var(--font-mono);
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
 }
 
 /* Zone 4 — data brain areas */
@@ -6042,7 +6052,7 @@ li[data-todo-status="blocked"] .overview-todo-status {
 }
 
 .overview-brain-label {
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
 }
 
 .overview-brain-bar {
@@ -6059,9 +6069,10 @@ li[data-todo-status="blocked"] .overview-todo-status {
 }
 
 .overview-brain-count {
+  font-variant-numeric: tabular-nums;
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   white-space: nowrap;
 }
 
@@ -6070,7 +6081,7 @@ li[data-todo-status="blocked"] .overview-todo-status {
   border-top: 1px solid var(--line);
   color: var(--muted);
   display: flex;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   gap: 0.75rem;
   justify-content: space-between;
   margin-top: auto;
@@ -6087,7 +6098,7 @@ li[data-todo-status="blocked"] .overview-todo-status {
 
 .overview-brain-grades li {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
 }
 
 .overview-brain-grades li[data-grade="verified"] {
@@ -7071,6 +7082,22 @@ html[data-sidebar="rail"] .app-shell .side-nav-foot {
 }
 
 .table-row > span:nth-child(3) {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Step 4 wave 3: team contribution counts read as number columns (P4). */
+
+.team-table th:nth-child(2),
+.team-table th:nth-child(3),
+.team-table th:nth-child(4) {
+  text-align: right;
+}
+
+.team-table td:nth-child(2),
+.team-table td:nth-child(3),
+.team-table td:nth-child(4) {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   text-align: right;

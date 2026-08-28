@@ -1,3 +1,4 @@
+import { Icon } from "./icon";
 import type { ProgressDashboard, ProgressTodo } from "@arr/core";
 import {
   Activity,
@@ -67,7 +68,7 @@ function Metric({
           {PROGRESS.metrics.completed(metric.completed, metric.total)}
         </span>
         <small>
-          <Link2 size={11} />
+          <Icon icon={Link2} size="xs" />
           {metric.sourceLabel}
         </small>
       </footer>
@@ -84,7 +85,7 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
         aria-labelledby="progress-title"
       >
         <div className="progress-state-mark">
-          <FileCheck2 size={22} />
+          <Icon icon={FileCheck2} size="md" />
         </div>
         <div>
           <p className="progress-kicker">{PROGRESS.kicker}</p>
@@ -122,14 +123,14 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
         <div className="todo-board">
           {report.columns.map((column) => {
             const status = STATUS_COPY[column.status];
-            const Icon = status.icon;
+            const ColumnIcon = status.icon;
             return (
               <section
                 className={`todo-column ${column.status}`}
                 key={column.status}
               >
                 <header>
-                  <Icon size={15} />
+                  <Icon icon={ColumnIcon} size="sm" />
                   <h3>{status.label}</h3>
                   <span>{column.items.length}</span>
                 </header>
@@ -146,7 +147,7 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
                       ) : null}
                       <h4>{todo.title}</h4>
                       <a className="todo-source" href={sourceHref(todo)}>
-                        <Link2 size={11} />
+                        <Icon icon={Link2} size="xs" />
                         {sourceLabel(todo)}
                       </a>
                     </article>
@@ -171,7 +172,7 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
         </header>
         {report.timeline.length === 0 ? (
           <div className="timeline-empty">
-            <Clock3 size={18} />
+            <Icon icon={Clock3} size="md" />
             <span>{PROGRESS.timeline.empty}</span>
           </div>
         ) : (
@@ -183,11 +184,11 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
               >
                 <span className={`timeline-glyph ${event.kind}`}>
                   {event.kind === "commit" ? (
-                    <GitCommitHorizontal size={14} />
+                    <Icon icon={GitCommitHorizontal} size="xs" />
                   ) : event.kind === "finding-resolved" ? (
-                    <CheckCircle2 size={14} />
+                    <Icon icon={CheckCircle2} size="xs" />
                   ) : (
-                    <Activity size={14} />
+                    <Icon icon={Activity} size="xs" />
                   )}
                 </span>
                 <article>

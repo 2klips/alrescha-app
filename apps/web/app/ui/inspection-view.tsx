@@ -16,6 +16,7 @@ import {
 import type { ReactNode } from "react";
 
 import { INSPECTION } from "../../lib/strings";
+import { Icon } from "./icon";
 import { StatusBadge } from "./status-badge";
 
 interface InspectionViewProps {
@@ -25,7 +26,7 @@ interface InspectionViewProps {
 function SourceLine({ label }: { label: string }) {
   return (
     <small className="inspection-source">
-      <Link2 size={11} />
+      <Icon icon={Link2} size="xs" />
       {INSPECTION.sourcePrefix}
       {label}
     </small>
@@ -106,7 +107,7 @@ export function InspectionView({ dashboard }: InspectionViewProps) {
 
       <div className="inspection-grid">
         <Widget
-          icon={<ListChecks size={15} />}
+          icon={<Icon icon={ListChecks} size="sm" />}
           section={dashboard.progress}
           testId="inspection-progress"
           title={INSPECTION.progress.title}
@@ -125,7 +126,7 @@ export function InspectionView({ dashboard }: InspectionViewProps) {
         </Widget>
 
         <Widget
-          icon={<FileWarning size={15} />}
+          icon={<Icon icon={FileWarning} size="sm" />}
           section={dashboard.findings}
           testId="inspection-findings"
           title={INSPECTION.findings.title}
@@ -141,7 +142,7 @@ export function InspectionView({ dashboard }: InspectionViewProps) {
         </Widget>
 
         <Widget
-          icon={<FileText size={15} />}
+          icon={<Icon icon={FileText} size="sm" />}
           section={dashboard.documents}
           testId="inspection-documents"
           title={INSPECTION.documents.title}
@@ -171,7 +172,7 @@ export function InspectionView({ dashboard }: InspectionViewProps) {
         </Widget>
 
         <Widget
-          icon={<ShieldAlert size={15} />}
+          icon={<Icon icon={ShieldAlert} size="sm" />}
           section={dashboard.driftRisks}
           testId="inspection-drift"
           title={INSPECTION.driftRisks.title}
@@ -185,7 +186,7 @@ export function InspectionView({ dashboard }: InspectionViewProps) {
         </Widget>
 
         <Widget
-          icon={<PackageSearch size={15} />}
+          icon={<Icon icon={PackageSearch} size="sm" />}
           section={dashboard.dependencyAudit}
           testId="inspection-audit"
           title={INSPECTION.dependencyAudit.title}
@@ -214,7 +215,7 @@ export function InspectionView({ dashboard }: InspectionViewProps) {
         </Widget>
 
         <Widget
-          icon={<Ban size={15} />}
+          icon={<Icon icon={Ban} size="sm" />}
           section={dashboard.ruledOut}
           testId="inspection-ruled-out"
           title={INSPECTION.ruledOut.title}

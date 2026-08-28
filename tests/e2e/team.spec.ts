@@ -32,7 +32,7 @@ test("shows roles, capture boundaries, and coaching under the inferred label", a
   await expect(capture).toContainText(TEAM.capture.privacyNote);
 
   const coaching = page.getByTestId("team-coaching");
-  await expect(coaching.locator(".grade-badge.inferred")).toBeVisible();
+  await expect(coaching.locator(".status-badge.inferred")).toBeVisible();
   await expect(coaching).toContainText(TEAM.coaching.axes.verifiability);
 
   await page.screenshot({

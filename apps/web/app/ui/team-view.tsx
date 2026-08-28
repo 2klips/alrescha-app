@@ -7,6 +7,7 @@ import { Ban, KeyRound, ShieldCheck, Sparkles, Users } from "lucide-react";
 
 import type { DemoTeam } from "../../lib/team/fixtures";
 import { TEAM } from "../../lib/strings";
+import { Icon } from "./icon";
 import { StatusBadge } from "./status-badge";
 
 /**
@@ -132,7 +133,7 @@ export function TeamView({ team }: TeamViewProps) {
       <div className="team-grid">
         <section className="inspection-widget" data-testid="team-roster">
           <header>
-            <Users size={15} />
+            <Icon icon={Users} size="sm" />
             <h2>{TEAM.roster.title}</h2>
           </header>
           <strong className="inspection-figure">
@@ -154,7 +155,7 @@ export function TeamView({ team }: TeamViewProps) {
 
         <section className="inspection-widget" data-testid="team-capture">
           <header>
-            <KeyRound size={15} />
+            <Icon icon={KeyRound} size="sm" />
             <h2>{TEAM.capture.title}</h2>
           </header>
           <ul className="inspection-list">
@@ -180,7 +181,7 @@ export function TeamView({ team }: TeamViewProps) {
 
         <section className="inspection-widget" data-testid="team-coaching">
           <header>
-            <Sparkles size={15} />
+            <Icon icon={Sparkles} size="sm" />
             <h2>{TEAM.coaching.title}</h2>
           </header>
           <span className="team-graded">
@@ -198,7 +199,7 @@ export function TeamView({ team }: TeamViewProps) {
 
         <section className="inspection-widget" data-testid="team-contribution">
           <header>
-            <ShieldCheck size={15} />
+            <Icon icon={ShieldCheck} size="sm" />
             <h2>{TEAM.contribution.title}</h2>
           </header>
           <ContributionTable
@@ -210,7 +211,7 @@ export function TeamView({ team }: TeamViewProps) {
 
         <section className="inspection-widget" data-testid="team-vibe">
           <header>
-            <Ban size={15} />
+            <Icon icon={Ban} size="sm" />
             <h2>{TEAM.vibe.title}</h2>
           </header>
           <p className="inspection-note">{TEAM.vibe.note}</p>

@@ -6,6 +6,7 @@ import type {
   OverviewTodo,
 } from "../../lib/overview/view-model";
 import { GRADE } from "../../lib/strings/common";
+import { Icon } from "./icon";
 import { OVERVIEW } from "../../lib/strings/overview";
 
 /**
@@ -24,7 +25,7 @@ const NODE_TYPE_CLASS = {
 
 function ZoneHeader({
   href,
-  icon: Icon,
+  icon: Glyph,
   id,
   lead,
   openLabel,
@@ -41,14 +42,14 @@ function ZoneHeader({
     <header className="overview-zone-head">
       <div>
         <h2 id={id}>
-          <Icon size={15} aria-hidden />
+          <Icon icon={Glyph} size="sm" />
           {title}
         </h2>
         <p>{lead}</p>
       </div>
       <Link className="overview-zone-open" href={href}>
         {openLabel}
-        <ArrowUpRight size={12} aria-hidden />
+        <Icon icon={ArrowUpRight} size="xs" />
       </Link>
     </header>
   );
