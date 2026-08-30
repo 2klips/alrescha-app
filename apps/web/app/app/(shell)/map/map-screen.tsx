@@ -23,10 +23,11 @@ import {
   focusLocalGraph,
   graphNodeArea,
   topHubNodes,
+  type GraphData,
   type GraphFilters,
   type GraphNode,
 } from "../../../../lib/dashboard/graph-model";
-import { BRAIN_AREAS, type BrainArea } from "@arr/core";
+import { BRAIN_AREAS, type BrainArea } from "@arr/core/artifact-facets";
 import {
   glowAfterglowNodes,
   glowFromRealtime,
@@ -40,11 +41,14 @@ import {
   relativeEventTime,
   subscribeWorkspaceRealtime,
   type AccessPolicy,
+  type GraphAccessEvent,
+  type RealtimeGraphState,
 } from "../../../../lib/realtime/access-events";
 import { DASHBOARD, GRADE, WORKSPACE_MAP } from "../../../../lib/strings";
 import type { WorkspaceMapModel } from "../../../../lib/map/workspace-map";
 import { BrainMapStage } from "../../../ui/brain-map-stage";
 import { FacetBandView } from "../../../ui/facet-band-view";
+import { useRealtimeClock } from "../../../ui/realtime-clock";
 import { StatusBadge } from "../../../ui/status-badge";
 
 /**
@@ -111,6 +115,155 @@ function EmptyMap() {
   );
 }
 
+type PanelSettings = ReturnType<typeof useGraphPanelSettings>[0];
+
+interface GraphStageSurfaceProps {
+  focusNodeId: string | null;
+  groupByArea: boolean;
+  isClustered: boolean;
+  isEmpty: boolean;
+  nodeCount: number;
+  onLodReport: (level: LodLevel, labels: number) => void;
+  onNodeSelect: (node: GraphNode) => void;
+  onSettingsChange: (patch: Partial<PanelSettings>) => void;
+  realtime: RealtimeGraphState;
+  selectedNodeId: string | null;
+  settings: PanelSettings;
+  visibleGraph: GraphData;
+}
+
+/**
+ * QW-6: the only piece of the screen that needs the 180ms glow clock. It
+ * sits below the filter rail and inspector (both stay in
+ * `WorkspaceMapScreen`) so a tick here re-renders just this stage, not the
+ * whole tree — see `ui/realtime-clock.ts`.
+ */
+function GraphStageSurface({
+  focusNodeId,
+  groupByArea,
+  isClustered,
+  isEmpty,
+  nodeCount,
+  onLodReport,
+  onNodeSelect,
+  onSettingsChange,
+  realtime,
+  selectedNodeId,
+  settings,
+  visibleGraph,
+}: GraphStageSurfaceProps) {
+  const clock = useRealtimeClock(realtime.feed.length, realtime.renderBatches);
+  const glow = useMemo(
+    () => glowFromRealtime(realtime, clock),
+    [clock, realtime],
+  );
+  const afterglow = useMemo(
+    () => glowAfterglowNodes(realtime.pulses, clock),
+    [clock, realtime.pulses],
+  );
+
+  return (
+    <div className="arr-graph-stage">
+      <div className="graph-grid" />
+      {isEmpty ? (
+        <EmptyMap />
+      ) : groupByArea ? (
+        <FacetBandView
+          data={visibleGraph}
+          onNodeActivate={onNodeSelect}
+          onNodeSelect={onNodeSelect}
+          selectedNodeId={selectedNodeId}
+        />
+      ) : (
+        <BrainMapStage
+          afterglow={afterglow}
+          data={visibleGraph}
+          directionalFocus
+          focusNodeId={focusNodeId}
+          glow={glow}
+          onLodReport={onLodReport}
+          onNodeActivate={onNodeSelect}
+          onNodeSelect={onNodeSelect}
+          onSettingsChange={onSettingsChange}
+          selectedNodeId={selectedNodeId}
+          settings={settings}
+          showForcePanel={false}
+        />
+      )}
+      {isClustered ? (
+        <div className="arr-cluster-note" role="status">
+          {DASHBOARD.clusterNote(nodeCount)}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+interface LiveActivityFeedProps {
+  feed: readonly GraphAccessEvent[];
+  nodes: readonly GraphNode[];
+  onFocusNode: (node: GraphNode) => void;
+  renderBatches: number;
+}
+
+/**
+ * QW-6: owns its own copy of the animation clock so the "Ns ago" labels
+ * keep updating live without the rail/inspector re-rendering alongside it
+ * — see `ui/realtime-clock.ts`.
+ */
+function LiveActivityFeed({
+  feed,
+  nodes,
+  onFocusNode,
+  renderBatches,
+}: LiveActivityFeedProps) {
+  const clock = useRealtimeClock(feed.length, renderBatches);
+
+  return (
+    <section className="arr-activity" aria-labelledby="map-activity-title">
+      <header>
+        <div>
+          <span className="arr-live">
+            <Radio size={12} />
+            {WORKSPACE_MAP.activity.live}
+          </span>
+          <h2 id="map-activity-title">{WORKSPACE_MAP.activity.title}</h2>
+        </div>
+      </header>
+      <div
+        aria-label={WORKSPACE_MAP.activity.aria}
+        className="arr-activity-table"
+        role="feed"
+      >
+        {feed.length > 0 ? (
+          feed.map((event) => (
+            <button
+              aria-label={`${event.tool} ${event.targetPath}`}
+              key={event.id}
+              onClick={() => {
+                const node = nodes.find((candidate) =>
+                  event.targetNodeIds.includes(candidate.id),
+                );
+                if (node) onFocusNode(node);
+              }}
+              type="button"
+            >
+              <time>{relativeEventTime(event.occurredAt, clock)}</time>
+              <span className="arr-activity-dot" />
+              <strong>{event.tool}</strong>
+              <span>{event.targetPath}</span>
+            </button>
+          ))
+        ) : (
+          <div className="arr-activity-row">
+            <span>{WORKSPACE_MAP.activity.empty}</span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
   const [filters, setFilters] = useState<GraphFilters>({
     area: "all",
@@ -131,7 +284,6 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
     labels: 0,
     level: "near",
   });
-  const [clock, setClock] = useState(0);
 
   const policy = useMemo<AccessPolicy>(
     () => ({
@@ -189,14 +341,16 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
     [familyGraph, localFocus, selectedNode],
   );
   const hubs = useMemo(() => topHubNodes(model.graph), [model.graph]);
-  const glow = useMemo(
-    () => glowFromRealtime(realtime, clock),
-    [clock, realtime],
-  );
-  const afterglow = useMemo(
-    () => glowAfterglowNodes(realtime.pulses, clock),
-    [clock, realtime.pulses],
-  );
+  // QW-6: one pass over the nodes instead of one `.filter().length` per area
+  // chip on every render — recomputed only when the node list itself changes.
+  const areaCounts = useMemo(() => {
+    const counts = new Map<BrainArea, number>();
+    for (const node of model.graph.nodes) {
+      const area = graphNodeArea(node);
+      counts.set(area, (counts.get(area) ?? 0) + 1);
+    }
+    return counts;
+  }, [model.graph.nodes]);
   const neighbors = useMemo(() => {
     if (!selectedNode) return [];
     const connected = new Set<string>();
@@ -208,17 +362,6 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
       .filter((node) => connected.has(node.id))
       .slice(0, 5);
   }, [model.graph.edges, model.graph.nodes, selectedNode]);
-
-  useEffect(() => {
-    if (realtime.feed.length === 0) return;
-    setClock(Date.now());
-    const timer = window.setInterval(() => setClock(Date.now()), 180);
-    const stop = window.setTimeout(() => window.clearInterval(timer), 12_500);
-    return () => {
-      window.clearInterval(timer);
-      window.clearTimeout(stop);
-    };
-  }, [realtime.renderBatches, realtime.feed.length]);
 
   useEffect(() => {
     return subscribeWorkspaceRealtime(
@@ -296,13 +439,7 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
               >
                 {option.label}
                 {option.value === "all" ? null : (
-                  <small>
-                    {
-                      model.graph.nodes.filter(
-                        (node) => graphNodeArea(node) === option.value,
-                      ).length
-                    }
-                  </small>
+                  <small>{areaCounts.get(option.value) ?? 0}</small>
                 )}
               </button>
             ))}
@@ -493,39 +630,20 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
               {WORKSPACE_MAP.conceptLayer.toggle}
             </button>
           </div>
-          <div className="arr-graph-stage">
-            <div className="graph-grid" />
-            {isEmpty ? (
-              <EmptyMap />
-            ) : groupByArea ? (
-              <FacetBandView
-                data={visibleGraph}
-                onNodeActivate={setSelectedNode}
-                onNodeSelect={setSelectedNode}
-                selectedNodeId={selectedNode?.id ?? null}
-              />
-            ) : (
-              <BrainMapStage
-                afterglow={afterglow}
-                data={visibleGraph}
-                directionalFocus
-                focusNodeId={cameraFocusNodeId}
-                glow={glow}
-                onLodReport={(level, labels) => setHudLod({ labels, level })}
-                onNodeActivate={setSelectedNode}
-                onNodeSelect={setSelectedNode}
-                onSettingsChange={updatePanelSettings}
-                selectedNodeId={selectedNode?.id ?? null}
-                settings={panelSettings}
-                showForcePanel={false}
-              />
-            )}
-            {model.isClustered ? (
-              <div className="arr-cluster-note" role="status">
-                {DASHBOARD.clusterNote(model.graph.nodes.length)}
-              </div>
-            ) : null}
-          </div>
+          <GraphStageSurface
+            focusNodeId={cameraFocusNodeId}
+            groupByArea={groupByArea}
+            isClustered={model.isClustered}
+            isEmpty={isEmpty}
+            nodeCount={model.graph.nodes.length}
+            onLodReport={(level, labels) => setHudLod({ labels, level })}
+            onNodeSelect={setSelectedNode}
+            onSettingsChange={updatePanelSettings}
+            realtime={realtime}
+            selectedNodeId={selectedNode?.id ?? null}
+            settings={panelSettings}
+            visibleGraph={visibleGraph}
+          />
         </section>
 
         <aside
@@ -586,50 +704,15 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
           )}
         </aside>
 
-        <section className="arr-activity" aria-labelledby="map-activity-title">
-          <header>
-            <div>
-              <span className="arr-live">
-                <Radio size={12} />
-                {WORKSPACE_MAP.activity.live}
-              </span>
-              <h2 id="map-activity-title">{WORKSPACE_MAP.activity.title}</h2>
-            </div>
-          </header>
-          <div
-            aria-label={WORKSPACE_MAP.activity.aria}
-            className="arr-activity-table"
-            role="feed"
-          >
-            {realtime.feed.length > 0 ? (
-              realtime.feed.map((event) => (
-                <button
-                  aria-label={`${event.tool} ${event.targetPath}`}
-                  key={event.id}
-                  onClick={() => {
-                    const node = model.graph.nodes.find((candidate) =>
-                      event.targetNodeIds.includes(candidate.id),
-                    );
-                    if (node) {
-                      setSelectedNode(node);
-                      setCameraFocusNodeId(node.id);
-                    }
-                  }}
-                  type="button"
-                >
-                  <time>{relativeEventTime(event.occurredAt, clock)}</time>
-                  <span className="arr-activity-dot" />
-                  <strong>{event.tool}</strong>
-                  <span>{event.targetPath}</span>
-                </button>
-              ))
-            ) : (
-              <div className="arr-activity-row">
-                <span>{WORKSPACE_MAP.activity.empty}</span>
-              </div>
-            )}
-          </div>
-        </section>
+        <LiveActivityFeed
+          feed={realtime.feed}
+          nodes={model.graph.nodes}
+          onFocusNode={(node) => {
+            setSelectedNode(node);
+            setCameraFocusNodeId(node.id);
+          }}
+          renderBatches={realtime.renderBatches}
+        />
       </div>
     </main>
   );

@@ -130,8 +130,13 @@ export interface GraphEngine {
    * must never increment it — visual state and layout are separate systems.
    */
   layoutRestarts(): number;
-  /** Build and hand the current frame to the backend. */
-  paint(): void;
+  /**
+   * Build and hand the current frame to the backend. Pass an already-built
+   * `RenderFrame` (e.g. one the caller also needs for its own bookkeeping
+   * this tick) to skip building a second one; omit it to build fresh, as
+   * every existing caller does.
+   */
+  paint(frame?: RenderFrame): void;
   positions(): ReadonlyMap<string, Position>;
   ready(): boolean;
   resize(width: number, height: number): void;
@@ -252,9 +257,9 @@ export async function createGraphEngine(
     framesReceived: () => buffer.frames(),
     glow: () => new Map(glow),
     layoutRestarts: () => layoutRestarts,
-    paint() {
+    paint(prebuilt) {
       if (disposed) return;
-      backend.render(frame());
+      backend.render(prebuilt ?? frame());
     },
     positions: () => buffer.at(now()),
     ready: () => ready,

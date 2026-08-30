@@ -6,7 +6,7 @@ import {
   type GraphData,
   type GraphNode,
 } from "../../lib/dashboard/graph-model";
-import { BRAIN_AREAS, type BrainArea } from "@arr/core";
+import { BRAIN_AREAS, type BrainArea } from "@arr/core/artifact-facets";
 import { DASHBOARD } from "../../lib/strings";
 
 /**

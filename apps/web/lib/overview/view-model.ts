@@ -6,7 +6,8 @@
  * agree with the screens each zone links to.
  */
 
-import { BRAIN_AREAS, type BrainArea, type ProgressTodo } from "@arr/core";
+import { BRAIN_AREAS, type BrainArea } from "@arr/core/artifact-facets";
+import type { ProgressTodo } from "@arr/core";
 
 import {
   buildDashboardViewModel,

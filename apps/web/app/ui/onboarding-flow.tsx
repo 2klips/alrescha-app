@@ -11,13 +11,28 @@ import {
   Network,
   ScanSearch,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 
 import { parseGitHubRepositoryUrl } from "@arr/core/repository-url";
 
-import { buildDashboardViewModel } from "../../lib/dashboard/graph-model";
 import { BRAND, ONBOARDING } from "../../lib/strings";
-import { DashboardScreen } from "./dashboard-screen";
+
+// Dynamically loaded: DashboardScreen (plus the buildDashboardViewModel /
+// graph-model import chain it needs) is only relevant at the final
+// onboarding step, so it's split into its own chunk instead of shipping in
+// every /onboarding visitor's first-load JS (QW-13). onboarding-flow.tsx is
+// already a client component ("use client" above) rendered entirely on the
+// client after the initial step-0 paint reaches this branch only via later
+// client-side state updates, so `ssr: false` costs nothing and keeps the
+// heavy chunk out of the server render path too.
+const OnboardingDashboardStep = dynamic(
+  () =>
+    import("./onboarding-dashboard-step").then(
+      (mod) => mod.OnboardingDashboardStep,
+    ),
+  { ssr: false },
+);
 
 interface OnboardingFlowProps {
   initialPermissionError?: boolean;
@@ -60,14 +75,7 @@ export function OnboardingFlow({
   };
 
   if (step === 4) {
-    return (
-      <DashboardScreen
-        model={buildDashboardViewModel(
-          "scanned",
-          seededDemo ? "arr/drifted-demo" : "2klips/arr-app",
-        )}
-      />
-    );
+    return <OnboardingDashboardStep seededDemo={seededDemo} />;
   }
 
   return (

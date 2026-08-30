@@ -33,6 +33,39 @@ export interface InspectionArtifactRow {
   readonly path: string;
 }
 
+/**
+ * QW-9: the raw shape of a row from the narrowed artifacts query below.
+ * Only `metadata->summary` is fetched (not the whole, unbounded jsonb
+ * blob) since `artifactSummary` is the only downstream reader of
+ * `metadata`. `->` (not `->>`) preserves the JSON value's native type, so
+ * a non-string summary still fails `artifactSummary`'s `typeof` check
+ * exactly as it would have from the full metadata object.
+ */
+interface InspectionArtifactQueryRow {
+  readonly kind: string;
+  readonly last_seen_commit_sha: string | null;
+  readonly path: string;
+  readonly summary: unknown;
+}
+
+/**
+ * QW-9: reconstructs an `InspectionArtifactRow` from the narrowed query
+ * row above. Exported (only) so the projection can be exercised as a pure
+ * unit — `loadWorkspaceInspectionDashboard` itself needs a live Supabase
+ * client and stays untested at this layer, matching this codebase's other
+ * `load*` wiring functions (e.g. `pilot-report.ts`, `team-report.ts`).
+ */
+export function artifactRowFromQuery(
+  row: InspectionArtifactQueryRow,
+): InspectionArtifactRow {
+  return {
+    kind: row.kind,
+    last_seen_commit_sha: row.last_seen_commit_sha,
+    metadata: { summary: row.summary },
+    path: row.path,
+  };
+}
+
 export interface InspectionRuledOutRow {
   readonly hypothesis: string;
   readonly id: string;
@@ -165,8 +198,9 @@ export async function loadWorkspaceInspectionDashboard(
         .eq("workspace_id", workspaceId),
       client
         .from("artifacts")
-        .select("path,kind,metadata,last_seen_commit_sha")
-        .eq("workspace_id", workspaceId),
+        .select("path,kind,last_seen_commit_sha,summary:metadata->summary")
+        .eq("workspace_id", workspaceId)
+        .in("kind", DOCUMENT_KINDS),
       client
         .from("ruled_out_attempts")
         .select("id,hypothesis,outcome,refs,recorded_at")
@@ -195,9 +229,13 @@ export async function loadWorkspaceInspectionDashboard(
   const latestAudit = (audit.data ?? [])[0] as { report?: unknown } | undefined;
   const latestRun = (head.data ?? [])[0] as { commit_sha?: string } | undefined;
 
+  const artifactRows: InspectionArtifactRow[] = (
+    (artifacts.data ?? []) as InspectionArtifactQueryRow[]
+  ).map(artifactRowFromQuery);
+
   return {
     dashboard: buildWorkspaceInspectionDashboard({
-      artifacts: (artifacts.data ?? []) as InspectionArtifactRow[],
+      artifacts: artifactRows,
       dependencyAuditJson: latestAudit?.report ?? null,
       findings: (findings.data ?? []) as InspectionFindingRow[],
       headCommitSha: latestRun?.commit_sha ?? null,

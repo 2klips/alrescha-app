@@ -99,6 +99,10 @@ export async function createPixiBackend(
   await application.init({
     antialias: true,
     autoDensity: true,
+    // All rendering is driven manually by `render()` below, called from the
+    // client's own rAF loop — Pixi's shared ticker must not also render the
+    // stage every frame, or every frame gets drawn twice.
+    autoStart: false,
     backgroundAlpha: 0,
     canvas: options.canvas,
     height: options.height,
@@ -118,7 +122,12 @@ export async function createPixiBackend(
 
   const glowTexture = createGlowTexture();
   const glowSprites: Sprite[] = [];
-  const labels: Text[] = [];
+  // Keyed by node id, not array index: label order shifts frame to frame as
+  // the LOD grid re-selects which nodes get a label, so an index-keyed pool
+  // would reassign `.text` on every Text object from the first reordering
+  // point onward. Keyed by identity, a node's own Text object keeps its own
+  // string across frames and only a truly relabeled node re-rasterizes.
+  const labels = new Map<string, Text>();
   const fontFamily = options.fontFamily;
   let labelColor = resolveColor(options.palette, "text");
   let destroyed = false;
@@ -139,15 +148,15 @@ export async function createPixiBackend(
     return sprite;
   }
 
-  function labelAt(index: number): Text {
-    const existing = labels[index];
+  function labelAt(nodeId: string): Text {
+    const existing = labels.get(nodeId);
     if (existing) return existing;
     const text = new Text({
       style: { fill: labelColor, fontFamily, fontSize: 11 },
       text: "",
     });
     text.anchor.set(0, 0.5);
-    labels.push(text);
+    labels.set(nodeId, text);
     labelLayer.addChild(text);
     return text;
   }
@@ -229,18 +238,18 @@ export async function createPixiBackend(
         (glowSprites[index] as Sprite).visible = false;
       }
 
-      let labelIndex = 0;
+      const visibleLabelIds = new Set<string>();
       for (const label of frame.labels) {
-        const text = labelAt(labelIndex);
-        labelIndex += 1;
+        const text = labelAt(label.id);
+        visibleLabelIds.add(label.id);
         text.visible = true;
         text.text = label.text;
         text.alpha = label.alpha;
         text.style.fill = labelColor;
         text.position.set(label.x, label.y);
       }
-      for (let index = labelIndex; index < labels.length; index += 1) {
-        (labels[index] as Text).visible = false;
+      for (const [nodeId, text] of labels) {
+        if (!visibleLabelIds.has(nodeId)) text.visible = false;
       }
 
       application.render();
@@ -259,7 +268,7 @@ export async function createPixiBackend(
      */
     setPalette(palette: GraphPalette) {
       labelColor = resolveColor(palette, "text");
-      for (const label of labels) label.style.fill = labelColor;
+      for (const label of labels.values()) label.style.fill = labelColor;
     },
   } satisfies GraphBackend;
 }

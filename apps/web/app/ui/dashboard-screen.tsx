@@ -29,11 +29,12 @@ import {
   topHubNodes,
   type DashboardViewModel,
   type EvidenceGrade,
+  type GraphData,
   type GraphFilters,
   type GraphNode,
   type GraphNodeType,
 } from "../../lib/dashboard/graph-model";
-import { BRAIN_AREAS, type BrainArea } from "@arr/core";
+import { BRAIN_AREAS, type BrainArea } from "@arr/core/artifact-facets";
 import { glowAfterglowNodes, glowFromRealtime } from "../../lib/graph/glow";
 import {
   DEMO_REVOKED_TOKEN_ID,
@@ -45,6 +46,8 @@ import {
   reduceAccessEventBatch,
   relativeEventTime,
   subscribeWorkspaceRealtime,
+  type GraphAccessEvent,
+  type RealtimeGraphState,
 } from "../../lib/realtime/access-events";
 import type { LodLevel } from "../../lib/graph/lod";
 import { DASHBOARD, GRADE } from "../../lib/strings";
@@ -52,6 +55,7 @@ import { BrainMapStage } from "./brain-map-stage";
 import { Button } from "./button";
 import { FacetBandView } from "./facet-band-view";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
+import { useRealtimeClock } from "./realtime-clock";
 import { StatusBadge } from "./status-badge";
 
 interface DashboardScreenProps {
@@ -278,6 +282,167 @@ function requirementCode(node: GraphNode): string {
   return node.id.toUpperCase();
 }
 
+type PanelSettings = ReturnType<typeof useGraphPanelSettings>[0];
+
+interface GraphStageSurfaceProps {
+  blocked: boolean;
+  focusNodeId: string | null;
+  groupByArea: boolean;
+  model: DashboardViewModel;
+  onLodReport: (level: LodLevel, labels: number) => void;
+  onNodeActivate: (node: GraphNode) => void;
+  onNodeSelect: (node: GraphNode) => void;
+  onRetry: () => void;
+  onSettingsChange: (patch: Partial<PanelSettings>) => void;
+  realtime: RealtimeGraphState;
+  selectedNodeId: string | null;
+  settings: PanelSettings;
+  visibleGraph: GraphData;
+}
+
+/**
+ * QW-6: the only piece of the screen that needs the 180ms glow clock. It
+ * sits below the filter rail and inspector (both stay in `DashboardScreen`)
+ * so a tick here re-renders just this stage, not the whole tree — see
+ * `realtime-clock.ts`.
+ */
+function GraphStageSurface({
+  blocked,
+  focusNodeId,
+  groupByArea,
+  model,
+  onLodReport,
+  onNodeActivate,
+  onNodeSelect,
+  onRetry,
+  onSettingsChange,
+  realtime,
+  selectedNodeId,
+  settings,
+  visibleGraph,
+}: GraphStageSurfaceProps) {
+  const clock = useRealtimeClock(realtime.feed.length, realtime.renderBatches);
+  // The renderer takes continuous intensity, not phases: `glowFromRealtime`
+  // inherits the reducer's workspace and revoked-token filtering, so a
+  // cross-workspace read still cannot light a node (see lib/graph/glow.ts).
+  const glow = useMemo(
+    () => glowFromRealtime(realtime, clock),
+    [clock, realtime],
+  );
+  const afterglow = useMemo(
+    () => glowAfterglowNodes(realtime.pulses, clock),
+    [clock, realtime.pulses],
+  );
+
+  return (
+    <div className="arr-graph-stage">
+      <div className="graph-grid" />
+      {blocked ? (
+        <StatusSurface model={model} onRetry={onRetry} />
+      ) : groupByArea ? (
+        <FacetBandView
+          data={visibleGraph}
+          onNodeActivate={onNodeActivate}
+          onNodeSelect={onNodeSelect}
+          selectedNodeId={selectedNodeId}
+        />
+      ) : (
+        <BrainMapStage
+          afterglow={afterglow}
+          data={visibleGraph}
+          focusNodeId={focusNodeId}
+          glow={glow}
+          onLodReport={onLodReport}
+          onNodeActivate={onNodeActivate}
+          onNodeSelect={onNodeSelect}
+          onSettingsChange={onSettingsChange}
+          selectedNodeId={selectedNodeId}
+          settings={settings}
+          showForcePanel={false}
+        />
+      )}
+      {model.isClustered ? (
+        <div className="arr-cluster-note" role="status">
+          <Braces size={14} />
+          {DASHBOARD.clusterNote(500)}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+interface LiveActivityFeedProps {
+  feed: readonly GraphAccessEvent[];
+  nodes: readonly GraphNode[];
+  onFocusNode: (node: GraphNode) => void;
+  onReplay: () => void;
+  renderBatches: number;
+}
+
+/**
+ * QW-6: owns its own copy of the animation clock so the "Ns ago" labels
+ * keep updating live without the rail/inspector re-rendering alongside it
+ * — see `realtime-clock.ts`.
+ */
+function LiveActivityFeed({
+  feed,
+  nodes,
+  onFocusNode,
+  onReplay,
+  renderBatches,
+}: LiveActivityFeedProps) {
+  const clock = useRealtimeClock(feed.length, renderBatches);
+
+  return (
+    <section className="arr-activity" aria-labelledby="activity-title">
+      <header>
+        <div>
+          <span className="arr-live">
+            <Radio size={12} />
+            {DASHBOARD.activity.live}
+          </span>
+          <h2 id="activity-title">{DASHBOARD.activity.title}</h2>
+        </div>
+        <button onClick={onReplay} type="button">
+          <Play size={13} />
+          {DASHBOARD.activity.replay}
+        </button>
+      </header>
+      <div className="arr-activity-table" role="feed">
+        {feed.length > 0
+          ? feed.map((event) => (
+              <button
+                aria-label={`${event.tool} ${event.targetPath}`}
+                key={event.id}
+                onClick={() => {
+                  const node = nodes.find((candidate) =>
+                    event.targetNodeIds.includes(candidate.id),
+                  );
+                  if (node) onFocusNode(node);
+                }}
+                type="button"
+              >
+                <time>{relativeEventTime(event.occurredAt, clock)}</time>
+                <span className="arr-activity-dot" />
+                <strong>{event.tool}</strong>
+                <span>{event.targetPath}</span>
+                <code>{DASHBOARD.activity.trace}</code>
+              </button>
+            ))
+          : STATIC_ACTIVITY.map((event) => (
+              <div className="arr-activity-row" key={event.tool}>
+                <time>{event.time}</time>
+                <span className="arr-activity-dot" />
+                <strong>{event.tool}</strong>
+                <span>{event.detail}</span>
+                <code>{event.meta}</code>
+              </div>
+            ))}
+      </div>
+    </section>
+  );
+}
+
 export function DashboardScreen({ model }: DashboardScreenProps) {
   const [filters, setFilters] = useState<GraphFilters>({
     area: "all",
@@ -305,7 +470,6 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
     level: "near",
   });
   const [recovered, setRecovered] = useState(false);
-  const [clock, setClock] = useState(0);
   const [realtime, setRealtime] = useState(() =>
     createRealtimeGraphState(DEMO_WORKSPACE_ID),
   );
@@ -352,27 +516,16 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
       "revoked",
     ].includes(model.state);
   const hubs = useMemo(() => topHubNodes(model.graph), [model.graph]);
-  // The renderer takes continuous intensity, not phases: `glowFromRealtime`
-  // inherits the reducer's workspace and revoked-token filtering, so a
-  // cross-workspace read still cannot light a node (see lib/graph/glow.ts).
-  const glow = useMemo(
-    () => glowFromRealtime(realtime, clock),
-    [clock, realtime],
-  );
-  const afterglow = useMemo(
-    () => glowAfterglowNodes(realtime.pulses, clock),
-    [clock, realtime.pulses],
-  );
-
-  useEffect(() => {
-    if (realtime.feed.length === 0) return;
-    const timer = window.setInterval(() => setClock(Date.now()), 180);
-    const stop = window.setTimeout(() => window.clearInterval(timer), 12_500);
-    return () => {
-      window.clearInterval(timer);
-      window.clearTimeout(stop);
-    };
-  }, [realtime.renderBatches, realtime.feed.length]);
+  // QW-6: one pass over the nodes instead of one `.filter().length` per area
+  // chip on every render — recomputed only when the node list itself changes.
+  const areaCounts = useMemo(() => {
+    const counts = new Map<BrainArea, number>();
+    for (const node of model.graph.nodes) {
+      const area = graphNodeArea(node);
+      counts.set(area, (counts.get(area) ?? 0) + 1);
+    }
+    return counts;
+  }, [model.graph.nodes]);
 
   useEffect(() => {
     const policy = {
@@ -392,7 +545,6 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
 
   function replayMcpSession() {
     const now = Date.now();
-    setClock(now);
     for (const event of createDemoAccessEvents(now - 720))
       dispatchBrowserAccessEvent(window, event);
   }
@@ -459,13 +611,7 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
               >
                 {option.label}
                 {option.value === "all" ? null : (
-                  <small>
-                    {
-                      model.graph.nodes.filter(
-                        (node) => graphNodeArea(node) === option.value,
-                      ).length
-                    }
-                  </small>
+                  <small>{areaCounts.get(option.value) ?? 0}</small>
                 )}
               </button>
             ))}
@@ -626,47 +772,25 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
               {DASHBOARD.filters.groupMode}
             </button>
           </div>
-          <div className="arr-graph-stage">
-            <div className="graph-grid" />
-            {blocked ? (
-              <StatusSurface model={model} onRetry={() => setRecovered(true)} />
-            ) : groupByArea ? (
-              <FacetBandView
-                data={visibleGraph}
-                onNodeActivate={(node) =>
-                  window.location.assign(
-                    `/graph?node=${encodeURIComponent(node.id)}`,
-                  )
-                }
-                onNodeSelect={setSelectedNode}
-                selectedNodeId={selectedNode?.id ?? null}
-              />
-            ) : (
-              <BrainMapStage
-                afterglow={afterglow}
-                data={visibleGraph}
-                focusNodeId={cameraFocusNodeId}
-                glow={glow}
-                onLodReport={(level, labels) => setHudLod({ labels, level })}
-                onNodeActivate={(node) =>
-                  window.location.assign(
-                    `/graph?node=${encodeURIComponent(node.id)}`,
-                  )
-                }
-                onNodeSelect={setSelectedNode}
-                onSettingsChange={updatePanelSettings}
-                selectedNodeId={selectedNode?.id ?? null}
-                settings={panelSettings}
-                showForcePanel={false}
-              />
-            )}
-            {model.isClustered ? (
-              <div className="arr-cluster-note" role="status">
-                <Braces size={14} />
-                {DASHBOARD.clusterNote(500)}
-              </div>
-            ) : null}
-          </div>
+          <GraphStageSurface
+            blocked={blocked}
+            focusNodeId={cameraFocusNodeId}
+            groupByArea={groupByArea}
+            model={model}
+            onLodReport={(level, labels) => setHudLod({ labels, level })}
+            onNodeActivate={(node) =>
+              window.location.assign(
+                `/graph?node=${encodeURIComponent(node.id)}`,
+              )
+            }
+            onNodeSelect={setSelectedNode}
+            onRetry={() => setRecovered(true)}
+            onSettingsChange={updatePanelSettings}
+            realtime={realtime}
+            selectedNodeId={selectedNode?.id ?? null}
+            settings={panelSettings}
+            visibleGraph={visibleGraph}
+          />
           <footer
             className={`arr-ci-note ${model.state === "no-ci" ? "warning" : ""}`}
             role="status"
@@ -732,55 +856,16 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
           )}
         </aside>
 
-        <section className="arr-activity" aria-labelledby="activity-title">
-          <header>
-            <div>
-              <span className="arr-live">
-                <Radio size={12} />
-                {DASHBOARD.activity.live}
-              </span>
-              <h2 id="activity-title">{DASHBOARD.activity.title}</h2>
-            </div>
-            <button onClick={replayMcpSession} type="button">
-              <Play size={13} />
-              {DASHBOARD.activity.replay}
-            </button>
-          </header>
-          <div className="arr-activity-table" role="feed">
-            {realtime.feed.length > 0
-              ? realtime.feed.map((event) => (
-                  <button
-                    aria-label={`${event.tool} ${event.targetPath}`}
-                    key={event.id}
-                    onClick={() => {
-                      const node = model.graph.nodes.find((candidate) =>
-                        event.targetNodeIds.includes(candidate.id),
-                      );
-                      if (node) {
-                        setSelectedNode(node);
-                        setCameraFocusNodeId(node.id);
-                      }
-                    }}
-                    type="button"
-                  >
-                    <time>{relativeEventTime(event.occurredAt, clock)}</time>
-                    <span className="arr-activity-dot" />
-                    <strong>{event.tool}</strong>
-                    <span>{event.targetPath}</span>
-                    <code>{DASHBOARD.activity.trace}</code>
-                  </button>
-                ))
-              : STATIC_ACTIVITY.map((event) => (
-                  <div className="arr-activity-row" key={event.tool}>
-                    <time>{event.time}</time>
-                    <span className="arr-activity-dot" />
-                    <strong>{event.tool}</strong>
-                    <span>{event.detail}</span>
-                    <code>{event.meta}</code>
-                  </div>
-                ))}
-          </div>
-        </section>
+        <LiveActivityFeed
+          feed={realtime.feed}
+          nodes={model.graph.nodes}
+          onFocusNode={(node) => {
+            setSelectedNode(node);
+            setCameraFocusNodeId(node.id);
+          }}
+          onReplay={replayMcpSession}
+          renderBatches={realtime.renderBatches}
+        />
 
         {/* OQ-007: the HUD channel — a grid SIBLING of the rail and the
             inspector, occupying the middle column. Cards positioned here can

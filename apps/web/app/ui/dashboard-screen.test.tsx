@@ -5,7 +5,9 @@ import { expect, test } from "vitest";
 import {
   DASHBOARD_STATES,
   buildDashboardViewModel,
+  graphNodeArea,
 } from "../../lib/dashboard/graph-model";
+import { BRAIN_AREAS } from "@arr/core/artifact-facets";
 import { BRAND, DASHBOARD } from "../../lib/strings";
 import { DashboardScreen } from "./dashboard-screen";
 
@@ -57,4 +59,26 @@ test("dashboard copy is Korean-first with conventional terms kept in English", (
   // …while the conventional terms stay English, verbatim.
   expect(DASHBOARD.metrics.unresolved).toContain("Findings");
   expect(html).toContain(DASHBOARD.activity.live);
+});
+
+// QW-6: the area chip counts moved from an inline `.filter().length` per
+// render into a `useMemo`. This proves the memoized tally still matches a
+// plain per-node count, so the perf fix didn't change what's on screen.
+test("area chip counts match a plain per-node tally after the useMemo change", () => {
+  const model = buildDashboardViewModel("scanned");
+  const html = renderToStaticMarkup(createElement(DashboardScreen, { model }));
+
+  const expectedCounts = new Map<string, number>();
+  for (const node of model.graph.nodes) {
+    const area = graphNodeArea(node);
+    expectedCounts.set(area, (expectedCounts.get(area) ?? 0) + 1);
+  }
+
+  for (const area of BRAIN_AREAS) {
+    const match = new RegExp(
+      `data-area="${area}"[\\s\\S]*?<small>(\\d+)</small>`,
+    ).exec(html);
+    expect(match, `expected an area chip for "${area}"`).not.toBeNull();
+    expect(Number(match?.[1])).toBe(expectedCounts.get(area) ?? 0);
+  }
 });

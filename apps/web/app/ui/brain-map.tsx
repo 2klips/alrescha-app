@@ -21,6 +21,7 @@ import {
   wrapWorker,
   type GraphEngine,
 } from "../../lib/graph/engine";
+import type { RenderFrame } from "../../lib/graph/render-frame";
 import type { ForceConfig } from "../../lib/graph/simulation-protocol";
 import { readDesignToken, readRendererPalette } from "../../lib/theme/tokens";
 
@@ -131,12 +132,10 @@ export function BrainMap({
      * screen transform the renderer uses, so the DOM affordance and the painted
      * node can never drift apart.
      */
-    function syncHitLayer(created: GraphEngine) {
+    function syncHitLayer(created: GraphEngine, frame: RenderFrame) {
       const layer = hitLayerRef.current?.current;
       if (!layer) return;
-      const painted = new Map(
-        created.frame().nodes.map((node) => [node.id, node]),
-      );
+      const painted = new Map(frame.nodes.map((node) => [node.id, node]));
       const scale = created.camera().scale;
       const camera = created.camera();
       for (const target of layer.querySelectorAll<HTMLElement>(
@@ -200,15 +199,19 @@ export function BrainMap({
       let reportedLabels = -1;
       let syncedAt = 0;
       const paint = () => {
+        // Built once per tick and handed to both the backend and the hit-layer
+        // sync below — each used to call back into the engine for its own
+        // frame, tripling the frame-plan cost (degree map, radii sort,
+        // interpolation, label selection) on the throttled tick.
         const frame = created.frame();
-        created.paint();
+        created.paint(frame);
         // Both the hit layer and the LOD report are React-visible work, so they
         // run on one throttled tick rather than once per painted frame: the
         // label set churns while the simulation settles.
         const stamp = performance.now();
         if (stamp - syncedAt >= HIT_LAYER_SYNC_MS) {
           syncedAt = stamp;
-          syncHitLayer(created);
+          syncHitLayer(created, frame);
           if (
             frame.lod !== reportedLod ||
             frame.labels.length !== reportedLabels

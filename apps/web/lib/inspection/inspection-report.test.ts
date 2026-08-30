@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  artifactRowFromQuery,
   artifactSummary,
   buildWorkspaceInspectionDashboard,
   type WorkspaceInspectionRows,
@@ -34,6 +35,44 @@ describe("artifactSummary", () => {
     ["summary is blank", { summary: "   " }],
   ])("yields null for %s", (_label, metadata) => {
     expect(artifactSummary(metadata)).toBeNull();
+  });
+});
+
+describe("artifactRowFromQuery", () => {
+  /**
+   * QW-9: the artifacts query now projects `metadata->summary` (a single
+   * jsonb value, preserving its native type) instead of the whole,
+   * unbounded `metadata` blob. This proves that re-wrapping keeps
+   * `artifactSummary` behaving exactly as it did against the full object.
+   */
+  it("re-wraps the projected summary so artifactSummary still reads it", () => {
+    const row = artifactRowFromQuery({
+      kind: "spec",
+      last_seen_commit_sha: "a".repeat(40),
+      path: "spec/WORK_SPEC.md",
+      summary: "현행 스펙",
+    });
+    expect(artifactSummary(row.metadata)).toBe("현행 스펙");
+  });
+
+  it("keeps a non-string summary rejected, matching the full-object path", () => {
+    const row = artifactRowFromQuery({
+      kind: "adr",
+      last_seen_commit_sha: null,
+      path: "docs/adr/ADR-001.md",
+      summary: 42,
+    });
+    expect(artifactSummary(row.metadata)).toBeNull();
+  });
+
+  it("treats an absent summary key (SQL NULL) as no summary", () => {
+    const row = artifactRowFromQuery({
+      kind: "adr",
+      last_seen_commit_sha: null,
+      path: "docs/adr/ADR-001.md",
+      summary: null,
+    });
+    expect(artifactSummary(row.metadata)).toBeNull();
   });
 });
 
