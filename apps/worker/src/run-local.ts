@@ -11,6 +11,11 @@
  * those kinds fails with a plain message rather than being quietly skipped —
  * the gap belongs on the commit card where it can be seen, not in a silence.
  *
+ * `WORKER_CONCURRENCY` (default 4) drain loops run side by side, each owning
+ * a disjoint round-robin slice of the workspace list, so one long-running
+ * job on one tenant no longer blocks every other tenant's queue — see
+ * `drain-loop.ts`.
+ *
  * Usage: node --import tsx apps/worker/src/run-local.ts [--once]
  */
 
@@ -21,6 +26,7 @@ import { requestInstallationToken } from "@arr/core";
 import postgres from "postgres";
 
 import { createAnalysisJobHandler } from "./analysis-job";
+import { runDrainLoop } from "./drain-loop";
 import { createEnrichJobHandler } from "./enrich-job";
 import { GitHubRepositorySource } from "./github-repository-source";
 import { PostgresAnalysisStore } from "./postgres-analysis-store";
@@ -28,15 +34,32 @@ import { PostgresEnrichJobStore } from "./postgres-enrich-store";
 import { RepositoryScanStore } from "./repository-scan-store";
 import { runRepositoryScan } from "./repository-scan";
 import { createExpiringSourceCache, readTransientSource } from "./source-cache";
-import { runWorkerOnce, type JobHandler, type JobHandlers } from "./worker";
+import { type JobHandler, type JobHandlers } from "./worker";
 import { PostgresWorkerQueue } from "./queue";
 
 const IDLE_SLEEP_MS = 2_000;
+
+/** Concurrent drain loops when `WORKER_CONCURRENCY` is unset or invalid. */
+const DEFAULT_CONCURRENCY = 4;
 
 function required(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required environment variable: ${name}`);
   return value;
+}
+
+/**
+ * How many drain loops to run side by side (QW-3). `claim_next_job` is
+ * already `FOR UPDATE SKIP LOCKED` with a lease, so concurrent loops are
+ * safe — this only decides how many run at once. Falls back to the default
+ * on anything that isn't a positive integer rather than crashing a worker
+ * process over a malformed env var.
+ */
+function workerConcurrency(): number {
+  const raw = process.env.WORKER_CONCURRENCY;
+  if (!raw) return DEFAULT_CONCURRENCY;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_CONCURRENCY;
 }
 
 /**
@@ -150,7 +173,8 @@ async function main(): Promise<void> {
   }
   const sql = postgres(required("DATABASE_URL"));
   const queue = new PostgresWorkerQueue(sql);
-  const workerId = `local-${process.pid}`;
+  const baseWorkerId = `local-${process.pid}`;
+  const concurrency = workerConcurrency();
   const once = process.argv.includes("--once");
 
   const sourceFor = createSourceFactory(sql);
@@ -204,25 +228,27 @@ async function main(): Promise<void> {
     `;
     if (workspaces.length !== lastWorkspaceCount) {
       console.log(
-        `worker ${workerId} draining ${workspaces.length} workspace(s)${once ? " (once)" : ""}`,
+        `worker ${baseWorkerId} draining ${workspaces.length} workspace(s) across ${concurrency} loop(s)${once ? " (once)" : ""}`,
       );
       lastWorkspaceCount = workspaces.length;
     }
 
-    let worked = false;
-    for (const { id } of workspaces) {
-      for (;;) {
-        const outcome = await runWorkerOnce({
+    // N loops, each a disjoint round-robin slice of `workspaces` (loop i =
+    // indices i, i+concurrency, i+2*concurrency, …) — see drain-loop.ts. A
+    // full poll cycle is idle only once every loop reports no work.
+    const results = await Promise.all(
+      Array.from({ length: concurrency }, (_, loopIndex) =>
+        runDrainLoop({
+          concurrency,
           handlers,
+          loopIndex,
           queue,
-          workerId,
-          workspaceId: id,
-        });
-        if (outcome === "idle") break;
-        worked = true;
-        console.log(`  job → ${outcome}`);
-      }
-    }
+          workerId: `${baseWorkerId}-${loopIndex}`,
+          workspaces,
+        }),
+      ),
+    );
+    const worked = results.some(Boolean);
     if (!worked) {
       if (once) break;
       await new Promise((resolve) => setTimeout(resolve, IDLE_SLEEP_MS));
