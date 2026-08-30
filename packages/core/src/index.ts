@@ -102,8 +102,12 @@ export type {
   LocalIngestStore,
 } from "./ingest/local-ingest";
 
-export { parseMarkdownStructure } from "./parser/markdown";
+export {
+  buildDocumentOffsetIndex,
+  parseMarkdownStructure,
+} from "./parser/markdown";
 export type {
+  DocumentOffsetIndex,
   MarkdownDiagnostic,
   MarkdownSpan,
   ParseMarkdownInput,
@@ -158,6 +162,7 @@ export {
   analyzeRepositoryAssurance,
   assuranceCoverage,
   assuranceSourceRequired,
+  prepareAssuranceContexts,
 } from "./assurance/rules";
 
 export {
@@ -182,8 +187,10 @@ export type {
   AssuranceSeverity,
   AssuranceSourceFile,
   DisabledAssuranceAiAssist,
+  DocumentContext,
   FindingEvidenceLink,
   FindingProvenance,
+  PreparedAssuranceContexts,
 } from "./assurance/rules";
 
 export { probeRepositoryEvidence } from "./evidence/probes";

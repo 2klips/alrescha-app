@@ -24,6 +24,7 @@ import {
   assuranceCoverage,
   assuranceSourceRequired,
   digestInTotoStatement,
+  prepareAssuranceContexts,
   RECEIPT_PREDICATE_TYPE,
   RECEIPT_TOOL,
   type AssuranceFinding,
@@ -189,7 +190,11 @@ export function createAnalysisJobHandler(
     const nodeByPath = new Map(
       artifacts.map((artifact) => [artifact.path, artifact.nodeId]),
     );
-    const findings = analyzeRepositoryAssurance({ files });
+    // Both calls below re-parse the same `files` (remark over every
+    // document) independently by default; preparing once here halves that
+    // work for the one job that always needs both.
+    const prepared = prepareAssuranceContexts(files);
+    const findings = analyzeRepositoryAssurance({ files, prepared });
     const delta = await store.reconcileFindings({
       findings: findings.map((finding) => persisted(finding, nodeByPath)),
       repositoryId,
@@ -201,7 +206,7 @@ export function createAnalysisJobHandler(
       predicate: {
         analyzedAt: (dependencies.now?.() ?? new Date()).toISOString(),
         commitSha,
-        coverage: assuranceCoverage({ files }),
+        coverage: assuranceCoverage({ files, prepared }),
         evidence: {
           inferred: findings.filter(({ grade }) => grade === "inferred").length,
           verified: findings.filter(({ grade }) => grade === "verified").length,

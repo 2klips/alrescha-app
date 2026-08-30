@@ -342,11 +342,47 @@ function isPython(path: string): boolean {
 }
 
 /**
+ * How many owner paths a symbol needs on record to answer "does exactly one
+ * *other* file export this?" for any calling file, without ever storing
+ * every owner. 2 is not enough: if the calling file itself exports the
+ * symbol (self is one slot) and there are 2 genuine other owners, a
+ * 2-slot cap could see only [self, otherA] and wrongly call it unambiguous
+ * once self is filtered out. A 3rd slot absorbs that one extra "self might
+ * be occupying a slot" case; beyond 3 the true owner count is >=2 no matter
+ * which entries got dropped, so the bucketing (0 / exactly 1 / ambiguous)
+ * this function needs is never affected by the cap.
+ */
+const MAX_OWNERS_PER_SYMBOL = 3;
+
+/**
+ * symbol name -> up to MAX_OWNERS_PER_SYMBOL paths that export it, built
+ * once per scan instead of the old per-call full scan over every code
+ * file's export set (O(bareCalls x codeFiles) -> O(totalExportedSymbols)).
+ */
+function buildSymbolOwnerIndex(
+  exportsByPath: ReadonlyMap<string, ReadonlySet<string>>,
+): ReadonlyMap<string, readonly string[]> {
+  const index = new Map<string, string[]>();
+  for (const [ownerPath, names] of exportsByPath) {
+    for (const name of names) {
+      let owners = index.get(name);
+      if (!owners) {
+        owners = [];
+        index.set(name, owners);
+      }
+      if (owners.length < MAX_OWNERS_PER_SYMBOL) owners.push(ownerPath);
+    }
+  }
+  return index;
+}
+
+/**
  * Resolve parsed files into cross-file links, one per
  * (sourcePath, targetPath, kind) — the persisted edge granularity.
  */
 export function resolveCodeLinks(input: ResolveCodeLinksInput): CodeLink[] {
   const links = new Map<string, MutableLink>();
+  const symbolOwners = buildSymbolOwnerIndex(input.exportsByPath);
 
   function record(
     kind: CodeLinkKind,
@@ -358,7 +394,7 @@ export function resolveCodeLinks(input: ResolveCodeLinksInput): CodeLink[] {
     symbols: readonly string[],
   ): void {
     if (sourcePath === targetPath) return;
-    const key = `${kind} ${sourcePath} ${targetPath}`;
+    const key = `${kind} ${sourcePath} ${targetPath}`;
     const existing = links.get(key);
     if (!existing) {
       links.set(key, {
@@ -434,13 +470,9 @@ export function resolveCodeLinks(input: ResolveCodeLinksInput): CodeLink[] {
       if (parsed.localNames.has(call.binding)) continue;
       // Name match: a bare call whose name is exported by exactly one other
       // file. Ambiguous names stay out — a guessed edge is worse than none.
-      const owners: string[] = [];
-      for (const [ownerPath, names] of input.exportsByPath) {
-        if (ownerPath !== path && names.has(call.binding)) {
-          owners.push(ownerPath);
-          if (owners.length > 1) break;
-        }
-      }
+      const owners = (symbolOwners.get(call.binding) ?? []).filter(
+        (ownerPath) => ownerPath !== path,
+      );
       if (owners.length === 1 && owners[0]) {
         record("calls", path, owners[0], "reference", "name-match", call.span, [
           call.binding,

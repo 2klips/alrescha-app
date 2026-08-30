@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
+  buildDocumentOffsetIndex,
   parseMarkdownStructure,
   type MarkdownSpan,
 } from "../packages/core/src/index";
@@ -290,6 +291,70 @@ Body remains available.
       ...parsed.normativeStatements,
     ]) {
       expectExactSpan(source, element.span);
+    }
+  });
+});
+
+/**
+ * QW-14 differential oracle: `buildDocumentOffsetIndex` replaced the old
+ * per-node `source.slice(0, offset).split("\n")` + `Buffer.byteLength`
+ * arithmetic with a precomputed table. This proves the two agree at every
+ * offset (not just the ones the fixtures above happen to touch) on the
+ * edges that arithmetic is easiest to get subtly wrong: CRLF line endings,
+ * multibyte and astral (surrogate-pair) unicode, and offsets that land
+ * mid-surrogate-pair.
+ */
+function oldLineColumn(
+  source: string,
+  offset: number,
+): { column: number; line: number } {
+  const lines = source.slice(0, offset).split("\n");
+  return { column: (lines.at(-1)?.length ?? 0) + 1, line: lines.length };
+}
+
+function oldByteOffset(source: string, offset: number): number {
+  return Buffer.byteLength(source.slice(0, offset));
+}
+
+describe("buildDocumentOffsetIndex (differential oracle for QW-14)", () => {
+  const fixtures: Record<string, string> = {
+    "CRLF line endings": "line one\r\nline two\r\n\r\nline four\r\n",
+    "CRLF mixed with bare LF": "a\r\nb\nc\r\n\nd",
+    "astral emoji adjacent to newlines": "😀\n😀😀\ntext 😀 more\n",
+    "lone high surrogate": "abc\uD83Ddef\nghi",
+    "lone low surrogate": "abc\uDE00def\nghi",
+    "korean and emoji mixed": "제목\n본문 내용 😀 끝\r\n다음 줄",
+    "empty string": "",
+    "no trailing newline": "just one line, no newline at end",
+    "only newlines": "\n\n\n",
+  };
+
+  for (const [name, source] of Object.entries(fixtures)) {
+    it(`matches the slice-based algorithm exactly: ${name}`, () => {
+      const index = buildDocumentOffsetIndex(source);
+      for (let offset = 0; offset <= source.length; offset += 1) {
+        expect(index.lineColumnAt(offset)).toEqual(
+          oldLineColumn(source, offset),
+        );
+        expect(index.byteOffsetAt(offset)).toBe(oldByteOffset(source, offset));
+      }
+    });
+  }
+
+  it("lineStartOffset matches the old offsetAtLine scan for every line", () => {
+    const source = "one\r\ntwo\nthree\n\nfive";
+    const index = buildDocumentOffsetIndex(source);
+    function oldOffsetAtLine(line: number): number {
+      let offset = 0;
+      for (let current = 1; current < line; current += 1) {
+        const next = source.indexOf("\n", offset);
+        if (next === -1) return source.length;
+        offset = next + 1;
+      }
+      return offset;
+    }
+    for (let line = 1; line <= 8; line += 1) {
+      expect(index.lineStartOffset(line)).toBe(oldOffsetAtLine(line));
     }
   });
 });

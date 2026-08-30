@@ -117,26 +117,140 @@ function requirePosition(node: Node): Position {
   return node.position;
 }
 
+/**
+ * UTF-8 byte length of a single Unicode code point, matching how Node's
+ * `Buffer`/`TextEncoder` encode it (a lone surrogate — half of a split pair,
+ * or a surrogate with no partner at all — is replaced with U+FFFD, 3 bytes).
+ */
+function utf8ByteLengthOfCodePoint(codePoint: number): number {
+  if (codePoint <= 0x7f) return 1;
+  if (codePoint <= 0x7ff) return 2;
+  if (codePoint <= 0xffff) return 3;
+  return 4;
+}
+
+const REPLACEMENT_CHARACTER_BYTE_LENGTH = utf8ByteLengthOfCodePoint(0xfffd);
+
+function isHighSurrogate(code: number): boolean {
+  return code >= 0xd800 && code <= 0xdbff;
+}
+
+function isLowSurrogate(code: number): boolean {
+  return code >= 0xdc00 && code <= 0xdfff;
+}
+
+/**
+ * `table[i] === Buffer.byteLength(source.slice(0, i))` for every offset `i`
+ * from 0 to `source.length`, built in one forward pass so every span's byte
+ * offsets become an O(1) lookup afterward instead of re-encoding an
+ * ever-growing prefix per AST node. Surrogate-pair aware: a prefix that cuts
+ * a pair in half sees only the lone leading surrogate, which — like any lone
+ * surrogate — encodes as U+FFFD, exactly matching `Buffer.byteLength`.
+ */
+function buildUtf8ByteOffsetTable(source: string): Uint32Array {
+  const table = new Uint32Array(source.length + 1);
+  let bytes = 0;
+  let index = 0;
+  while (index < source.length) {
+    const code = source.charCodeAt(index);
+    const next = index + 1 < source.length ? source.charCodeAt(index + 1) : -1;
+
+    if (isHighSurrogate(code) && isLowSurrogate(next)) {
+      table[index + 1] = bytes + REPLACEMENT_CHARACTER_BYTE_LENGTH;
+      bytes += utf8ByteLengthOfCodePoint(source.codePointAt(index)!);
+      table[index + 2] = bytes;
+      index += 2;
+      continue;
+    }
+
+    bytes +=
+      isHighSurrogate(code) || isLowSurrogate(code)
+        ? REPLACEMENT_CHARACTER_BYTE_LENGTH
+        : utf8ByteLengthOfCodePoint(code);
+    table[index + 1] = bytes;
+    index += 1;
+  }
+  return table;
+}
+
+export interface DocumentOffsetIndex {
+  /** O(1): UTF-8 byte offset of a character offset, equal to
+   *  `Buffer.byteLength(source.slice(0, charOffset))`. */
+  byteOffsetAt(charOffset: number): number;
+  /** O(log lines): 1-indexed line/column of a character offset, matching
+   *  `source.slice(0, charOffset).split("\n")` counting exactly. */
+  lineColumnAt(charOffset: number): { column: number; line: number };
+  /** O(1): character offset where a 1-indexed line begins; clamps to
+   *  `source.length` past the last line, matching the original scan. */
+  lineStartOffset(line: number): number;
+}
+
+/**
+ * Precomputes, once per document, the line-start table and cumulative UTF-8
+ * byte-offset table every span needs — replacing the O(document length)
+ * slice-and-split (and re-encode) that used to run per AST node.
+ */
+export function buildDocumentOffsetIndex(source: string): DocumentOffsetIndex {
+  const lineStarts: number[] = [0];
+  for (let i = 0; i < source.length; i += 1) {
+    if (source.charCodeAt(i) === 10 /* \n */) {
+      lineStarts.push(i + 1);
+    }
+  }
+  const byteOffsets = buildUtf8ByteOffsetTable(source);
+
+  function lineColumnAt(offset: number): { column: number; line: number } {
+    let low = 0;
+    let high = lineStarts.length - 1;
+    while (low < high) {
+      const mid = (low + high + 1) >>> 1;
+      if (lineStarts[mid]! <= offset) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    return { column: offset - lineStarts[low]! + 1, line: low + 1 };
+  }
+
+  function byteOffsetAt(offset: number): number {
+    return byteOffsets[offset] ?? byteOffsets[byteOffsets.length - 1]!;
+  }
+
+  function lineStartOffset(line: number): number {
+    const index = line - 1;
+    if (index <= 0) return 0;
+    if (index >= lineStarts.length) return source.length;
+    return lineStarts[index]!;
+  }
+
+  return { byteOffsetAt, lineColumnAt, lineStartOffset };
+}
+
 function toSpanAtOffsets(
   path: string,
-  source: string,
+  index: DocumentOffsetIndex,
   startOffset: number,
   endOffset: number,
 ): MarkdownSpan {
-  const startLines = source.slice(0, startOffset).split("\n");
-  const endLines = source.slice(0, endOffset).split("\n");
+  const start = index.lineColumnAt(startOffset);
+  const end = index.lineColumnAt(endOffset);
   return {
-    endByte: Buffer.byteLength(source.slice(0, endOffset)),
-    endColumn: (endLines.at(-1)?.length ?? 0) + 1,
-    endLine: endLines.length,
+    endByte: index.byteOffsetAt(endOffset),
+    endColumn: end.column,
+    endLine: end.line,
     path,
-    startByte: Buffer.byteLength(source.slice(0, startOffset)),
-    startColumn: (startLines.at(-1)?.length ?? 0) + 1,
-    startLine: startLines.length,
+    startByte: index.byteOffsetAt(startOffset),
+    startColumn: start.column,
+    startLine: start.line,
   };
 }
 
-function toSpan(path: string, source: string, node: Node): MarkdownSpan {
+function toSpan(
+  path: string,
+  index: DocumentOffsetIndex,
+  node: Node,
+): MarkdownSpan {
   const position = requirePosition(node);
   const startOffset = position.start.offset;
   const endOffset = position.end.offset;
@@ -144,12 +258,13 @@ function toSpan(path: string, source: string, node: Node): MarkdownSpan {
     throw new Error(`Markdown AST node ${node.type} has no source offsets`);
   }
 
-  return toSpanAtOffsets(path, source, startOffset, endOffset);
+  return toSpanAtOffsets(path, index, startOffset, endOffset);
 }
 
 function wikiLinkSpan(
   path: string,
   source: string,
+  index: DocumentOffsetIndex,
   node: WikiLinkNode,
 ): MarkdownSpan {
   const position = requirePosition(node);
@@ -163,7 +278,7 @@ function wikiLinkSpan(
       ? parsedStart - 2
       : parsedStart;
 
-  return toSpanAtOffsets(path, source, startOffset, endOffset);
+  return toSpanAtOffsets(path, index, startOffset, endOffset);
 }
 
 function listDepth(ancestors: readonly Node[]): number {
@@ -210,7 +325,7 @@ const ACCEPTANCE_HEADINGS = new Set([
 
 function sectionSpan(
   path: string,
-  source: string,
+  index: DocumentOffsetIndex,
   first: Node,
   last: Node,
 ): MarkdownSpan {
@@ -219,18 +334,18 @@ function sectionSpan(
   if (startOffset === undefined || endOffset === undefined) {
     throw new Error("Markdown section AST nodes have no source offsets");
   }
-  return toSpanAtOffsets(path, source, startOffset, endOffset);
+  return toSpanAtOffsets(path, index, startOffset, endOffset);
 }
 
 function extractSections(
   tree: Root,
   path: string,
-  source: string,
+  index: DocumentOffsetIndex,
   names: ReadonlySet<string>,
 ): ParsedMarkdownSection[] {
   const sections: ParsedMarkdownSection[] = [];
-  for (let index = 0; index < tree.children.length; index += 1) {
-    const heading = tree.children[index];
+  for (let position = 0; position < tree.children.length; position += 1) {
+    const heading = tree.children[position];
     if (heading?.type !== "heading") {
       continue;
     }
@@ -239,7 +354,7 @@ function extractSections(
       continue;
     }
 
-    let boundary = index + 1;
+    let boundary = position + 1;
     while (boundary < tree.children.length) {
       const candidate = tree.children[boundary];
       if (candidate?.type === "heading" && candidate.depth <= heading.depth) {
@@ -247,12 +362,12 @@ function extractSections(
       }
       boundary += 1;
     }
-    const content = tree.children.slice(index + 1, boundary);
+    const content = tree.children.slice(position + 1, boundary);
     const last = content.at(-1) ?? heading;
     sections.push({
       depth: heading.depth,
       heading: headingText,
-      span: sectionSpan(path, source, heading, last),
+      span: sectionSpan(path, index, heading, last),
       text: content
         .map((node) => toString(node))
         .filter(Boolean)
@@ -265,6 +380,7 @@ function extractSections(
 function normativeStatementsIn(
   path: string,
   source: string,
+  index: DocumentOffsetIndex,
   node: Paragraph,
 ): ParsedNormativeStatement[] {
   const position = requirePosition(node);
@@ -293,7 +409,7 @@ function normativeStatementsIn(
       keyword,
       span: toSpanAtOffsets(
         path,
-        source,
+        index,
         nodeStart + localStart,
         nodeStart + localEnd,
       ),
@@ -308,6 +424,7 @@ export function parseMarkdownStructure({
   source,
 }: ParseMarkdownInput): ParsedMarkdownStructure {
   const tree = processor.parse(source) as Root;
+  const index = buildDocumentOffsetIndex(source);
   const headings: ParsedHeading[] = [];
   const tasks: ParsedTask[] = [];
   const normativeStatements: ParsedNormativeStatement[] = [];
@@ -317,29 +434,29 @@ export function parseMarkdownStructure({
   const definitions = new Map<string, Definition>();
   const diagnostics: MarkdownDiagnostic[] = [];
   let frontmatter: ParsedFrontmatter | null = null;
-  const adrSections = extractSections(tree, path, source, ADR_SECTION_HEADINGS);
+  const adrSections = extractSections(tree, path, index, ADR_SECTION_HEADINGS);
   const acceptanceCriteria = extractSections(
     tree,
     path,
-    source,
+    index,
     ACCEPTANCE_HEADINGS,
   );
 
   visit(tree, "yaml", (node: YamlNode) => {
     const document = parseDocument(node.value);
-    frontmatter = { data: document.toJS(), span: toSpan(path, source, node) };
+    frontmatter = { data: document.toJS(), span: toSpan(path, index, node) };
     for (const error of document.errors) {
       diagnostics.push({
         message: error.message,
         severity: "error",
-        span: toSpan(path, source, node),
+        span: toSpan(path, index, node),
       });
     }
     for (const warning of document.warnings) {
       diagnostics.push({
         message: warning.message,
         severity: "warning",
-        span: toSpan(path, source, node),
+        span: toSpan(path, index, node),
       });
     }
   });
@@ -351,7 +468,7 @@ export function parseMarkdownStructure({
   visit(tree, "heading", (node: Heading) => {
     headings.push({
       depth: node.depth,
-      span: toSpan(path, source, node),
+      span: toSpan(path, index, node),
       text: toString(node),
     });
   });
@@ -364,7 +481,7 @@ export function parseMarkdownStructure({
     tasks.push({
       checked: node.checked,
       depth: listDepth(ancestors),
-      span: toSpan(path, source, node),
+      span: toSpan(path, index, node),
       text: taskText(node),
     });
   });
@@ -374,14 +491,14 @@ export function parseMarkdownStructure({
       kind: "markdown",
       label: toString(node),
       relative: isRelativeTarget(node.url),
-      span: toSpan(path, source, node),
+      span: toSpan(path, index, node),
       target: node.url,
     });
   });
 
   visit(tree, "inlineCode", (node: InlineCode) => {
     codeReferences.push({
-      span: toSpan(path, source, node),
+      span: toSpan(path, index, node),
       value: node.value,
     });
   });
@@ -395,7 +512,7 @@ export function parseMarkdownStructure({
       kind: "reference",
       label: toString(node),
       relative: isRelativeTarget(definition.url),
-      span: toSpan(path, source, node),
+      span: toSpan(path, index, node),
       target: definition.url,
     });
   });
@@ -406,7 +523,7 @@ export function parseMarkdownStructure({
       kind: "wiki",
       label: typeof alias === "string" ? alias : node.value,
       relative: isRelativeTarget(node.value),
-      span: wikiLinkSpan(path, source, node),
+      span: wikiLinkSpan(path, source, index, node),
       target: node.value,
     });
   });
@@ -414,8 +531,10 @@ export function parseMarkdownStructure({
   links.sort((left, right) => left.span.startByte - right.span.startByte);
 
   visit(tree, "paragraph", (node: Paragraph) => {
-    paragraphs.push({ span: toSpan(path, source, node), text: toString(node) });
-    normativeStatements.push(...normativeStatementsIn(path, source, node));
+    paragraphs.push({ span: toSpan(path, index, node), text: toString(node) });
+    normativeStatements.push(
+      ...normativeStatementsIn(path, source, index, node),
+    );
   });
 
   return {

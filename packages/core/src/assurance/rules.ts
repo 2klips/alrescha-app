@@ -5,7 +5,9 @@ import type {
   ExportedSymbolMetadata,
 } from "../ingest/repository-scanner";
 import {
+  buildDocumentOffsetIndex,
   parseMarkdownStructure,
+  type DocumentOffsetIndex,
   type MarkdownSpan,
   type ParsedMarkdownStructure,
 } from "../parser/markdown";
@@ -65,10 +67,27 @@ export interface AssuranceFinding {
 export interface AnalyzeRepositoryAssuranceInput {
   readonly aiAssist?: DisabledAssuranceAiAssist;
   readonly files: readonly AssuranceSourceFile[];
+  /**
+   * Precomputed via `prepareAssuranceContexts(files)`. Both
+   * `analyzeRepositoryAssurance` and `assuranceCoverage` parse the same
+   * files independently by default (each call computes its own); a caller
+   * that needs both (e.g. one analysis job) should prepare once and pass
+   * the same value to each, halving the remark parses over that file set.
+   * `files` must be the exact set `prepared` was built from — this is not
+   * re-validated.
+   */
+  readonly prepared?: PreparedAssuranceContexts;
 }
 
-interface DocumentContext {
+export interface DocumentContext {
+  /** Encoded once per document; every span slice reuses this instead of
+   *  re-running `Buffer.from(source)` (an O(document length) re-encode). */
+  readonly buffer: Buffer;
   readonly file: AssuranceSourceFile;
+  /** Line-start + cumulative UTF-8 byte-offset table, built once per
+   *  document (see `buildDocumentOffsetIndex`) so `lineSpan` below is O(1)
+   *  per call instead of re-scanning from the start of the file. */
+  readonly offsetIndex: DocumentOffsetIndex;
   readonly parsed: ParsedMarkdownStructure;
   readonly requirements: readonly ExtractedRequirement[];
 }
@@ -93,30 +112,28 @@ function isDocument(classification: ArtifactClassification): boolean {
   return classification !== "code_metadata";
 }
 
-function sliceSpan(source: string, span: MarkdownSpan): string {
-  return Buffer.from(source)
-    .subarray(span.startByte, span.endByte)
-    .toString("utf8");
+function sliceSpan(buffer: Buffer, span: MarkdownSpan): string {
+  return buffer.subarray(span.startByte, span.endByte).toString("utf8");
 }
 
-function provenance(source: string, span: MarkdownSpan): FindingProvenance {
-  return { ...span, excerpt: sliceSpan(source, span) };
+function provenance(buffer: Buffer, span: MarkdownSpan): FindingProvenance {
+  return { ...span, excerpt: sliceSpan(buffer, span) };
 }
 
-function offsetAtLine(source: string, line: number): number {
-  let offset = 0;
-  for (let current = 1; current < line; current += 1) {
-    const next = source.indexOf("\n", offset);
-    if (next === -1) {
-      return source.length;
-    }
-    offset = next + 1;
-  }
-  return offset;
-}
-
-function lineSpan(path: string, source: string, line: number): MarkdownSpan {
-  const startOffset = offsetAtLine(source, line);
+/**
+ * A single source line's span. `offsetIndex` is the document's precomputed
+ * line-start + byte-offset table (see `buildDocumentOffsetIndex`): finding
+ * the line's start and converting both ends to byte offsets are O(1) here.
+ * Scanning to the line's end newline (bounded by that one line's length,
+ * not the document's) is unchanged from before.
+ */
+function lineSpan(
+  path: string,
+  source: string,
+  offsetIndex: DocumentOffsetIndex,
+  line: number,
+): MarkdownSpan {
+  const startOffset = offsetIndex.lineStartOffset(line);
   const newline = source.indexOf("\n", startOffset);
   let endOffset = newline === -1 ? source.length : newline;
   if (endOffset > startOffset && source[endOffset - 1] === "\r") {
@@ -124,11 +141,11 @@ function lineSpan(path: string, source: string, line: number): MarkdownSpan {
   }
   const content = source.slice(startOffset, endOffset);
   return {
-    endByte: Buffer.byteLength(source.slice(0, endOffset)),
+    endByte: offsetIndex.byteOffsetAt(endOffset),
     endColumn: content.length + 1,
     endLine: line,
     path,
-    startByte: Buffer.byteLength(source.slice(0, startOffset)),
+    startByte: offsetIndex.byteOffsetAt(startOffset),
     startColumn: 1,
     startLine: line,
   };
@@ -267,8 +284,13 @@ function sourceReferences(
     references.push({
       path: resolveReferencePath(context.file.path, match[1], knownPaths),
       provenance: provenance(
-        context.file.source,
-        lineSpan(context.file.path, context.file.source, code.span.startLine),
+        context.buffer,
+        lineSpan(
+          context.file.path,
+          context.file.source,
+          context.offsetIndex,
+          code.span.startLine,
+        ),
       ),
       symbol: match[2] ?? null,
     });
@@ -322,7 +344,9 @@ function documentContexts(
         source: file.source,
       });
       return {
+        buffer: Buffer.from(file.source),
         file,
+        offsetIndex: buildDocumentOffsetIndex(file.source),
         parsed,
         requirements: extractRequirements({
           artifactKind: file.classification,
@@ -332,10 +356,40 @@ function documentContexts(
     });
 }
 
+export interface PreparedAssuranceContexts {
+  readonly allSymbols: ReadonlySet<string>;
+  readonly contexts: readonly DocumentContext[];
+  readonly testedRequirementIds: ReadonlySet<string>;
+}
+
+/**
+ * The parse-and-index work `analyzeRepositoryAssurance` and
+ * `assuranceCoverage` each need: every document's remark parse plus the
+ * exported-symbol and tested-requirement-id sets derived from `files`. A
+ * caller that runs both over the same file set (the `analyze` job does)
+ * should call this once and pass the result to both via `prepared`, instead
+ * of letting each function redo the same remark parses independently.
+ */
+export function prepareAssuranceContexts(
+  files: readonly AssuranceSourceFile[],
+): PreparedAssuranceContexts {
+  return {
+    allSymbols: new Set(
+      files.flatMap(({ exportedSymbols }) =>
+        (exportedSymbols ?? []).map(({ name }) => name),
+      ),
+    ),
+    contexts: documentContexts(files),
+    testedRequirementIds: requirementIdsInTests(files),
+  };
+}
+
 export function analyzeRepositoryAssurance({
   files,
+  prepared,
 }: AnalyzeRepositoryAssuranceInput): readonly AssuranceFinding[] {
-  const contexts = documentContexts(files);
+  const { allSymbols, contexts, testedRequirementIds } =
+    prepared ?? prepareAssuranceContexts(files);
   const findings: AssuranceFinding[] = [];
   const occupiedSpans = new Set<string>();
   const knownPaths = new Set(files.map(({ path }) => path));
@@ -345,12 +399,6 @@ export function analyzeRepositoryAssurance({
       new Set((file.exportedSymbols ?? []).map(({ name }) => name)),
     ]),
   );
-  const allSymbols = new Set(
-    files.flatMap(({ exportedSymbols }) =>
-      (exportedSymbols ?? []).map(({ name }) => name),
-    ),
-  );
-  const testedRequirementIds = requirementIdsInTests(files);
   const referencesByDocument = new Map(
     contexts.map((context) => [
       context.file.path,
@@ -376,7 +424,7 @@ export function analyzeRepositoryAssurance({
       }
       pushUnique(findings, occupiedSpans, {
         confidence: explicitSymbols.length > 0 ? 0.95 : 0.75,
-        provenance: [provenance(context.file.source, requirement.span)],
+        provenance: [provenance(context.buffer, requirement.span)],
         requestedSeverity: "high",
         suggestedAction:
           "Implement the requirement or link it to an existing exported symbol.",
@@ -398,7 +446,7 @@ export function analyzeRepositoryAssurance({
       }
       pushUnique(findings, occupiedSpans, {
         confidence: 0.9,
-        provenance: [provenance(context.file.source, requirement.span)],
+        provenance: [provenance(context.buffer, requirement.span)],
         requestedSeverity: "medium",
         suggestedAction:
           "Add a CI-mapped test whose name includes the requirement ID.",
@@ -470,10 +518,11 @@ export function analyzeRepositoryAssurance({
         confidence: 0.96,
         provenance: ordered.map(({ context, statement }) =>
           provenance(
-            context.file.source,
+            context.buffer,
             lineSpan(
               context.file.path,
               context.file.source,
+              context.offsetIndex,
               statement.span.startLine,
             ),
           ),
@@ -508,7 +557,7 @@ export function analyzeRepositoryAssurance({
     const span = decisionStatement?.span ?? decision.span;
     pushUnique(findings, occupiedSpans, {
       confidence: 0.85,
-      provenance: [provenance(context.file.source, span)],
+      provenance: [provenance(context.buffer, span)],
       requestedSeverity: "low",
       suggestedAction:
         "Link the ADR decision to a requirement, implementation, or test.",
@@ -540,11 +589,12 @@ export function analyzeRepositoryAssurance({
       const span = lineSpan(
         context.file.path,
         context.file.source,
+        context.offsetIndex,
         paragraph.span.startLine,
       );
       pushUnique(findings, occupiedSpans, {
         confidence: 0.8,
-        provenance: [provenance(context.file.source, span)],
+        provenance: [provenance(context.buffer, span)],
         requestedSeverity: "medium",
         suggestedAction:
           "Link the claim to implementation and passing test evidence or soften it.",
@@ -573,14 +623,10 @@ export interface AssuranceCoverage {
  */
 export function assuranceCoverage({
   files,
+  prepared,
 }: AnalyzeRepositoryAssuranceInput): AssuranceCoverage {
-  const contexts = documentContexts(files);
-  const allSymbols = new Set(
-    files.flatMap(({ exportedSymbols }) =>
-      (exportedSymbols ?? []).map(({ name }) => name),
-    ),
-  );
-  const testedRequirementIds = requirementIdsInTests(files);
+  const { allSymbols, contexts, testedRequirementIds } =
+    prepared ?? prepareAssuranceContexts(files);
   let requirements = 0;
   let implVerified = 0;
   let testVerified = 0;

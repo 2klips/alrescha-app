@@ -137,6 +137,53 @@ describe("code link extraction (Wave B todo 3)", () => {
     expect(calls[0]?.symbols).toEqual(["shared"]);
   });
 
+  it("stays ambiguous when the calling file is itself among a symbol's exporters (QW-16 self-exclusion)", () => {
+    // Three files' export metadata credits them with `shared` — including
+    // the caller, src/a.ts, which the exportedSymbols scan can list without
+    // a matching local declaration (e.g. a re-export the AST walk here
+    // doesn't itself track as `localNames`). `shared` is never resolved
+    // through an import binding, so this reaches the name-match pass, where
+    // self must not count as an owner — but the two real *other* owners
+    // (b, c) still make it ambiguous.
+    //
+    // This specifically guards the owner-cap: capping at 2 raw owners
+    // before filtering self out could see only [a.ts, b.ts], filter self
+    // out, and wrongly call the remaining [b.ts] a single-owner match.
+    const links = linksOf({
+      exports: {
+        "src/a.ts": ["shared"],
+        "src/b.ts": ["shared"],
+        "src/c.ts": ["shared"],
+      },
+      files: {
+        "src/a.ts": [`export function main() {`, `  shared();`, `}`].join("\n"),
+      },
+    });
+    expect(links.filter((link) => link.kind === "calls")).toHaveLength(0);
+  });
+
+  it("still name-matches when the calling file exports the symbol but only one other file does", () => {
+    // Self is one of the owners, but only one genuine *other* owner exists
+    // — the cap must still resolve this to a single match, not overcount
+    // self as ambiguity.
+    const links = linksOf({
+      exports: {
+        "src/a.ts": ["shared"],
+        "src/b.ts": ["shared"],
+      },
+      files: {
+        "src/a.ts": [`export function main() {`, `  shared();`, `}`].join("\n"),
+      },
+    });
+    const calls = links.filter((link) => link.kind === "calls");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toMatchObject({
+      method: "name-match",
+      targetPath: "src/b.ts",
+      tier: "reference",
+    });
+  });
+
   it("keeps python imports structural: reference tier, dots resolved", () => {
     const links = linksOf({
       exports: { "pkg/mod.py": ["thing"], "pkg/__init__.py": [] },
