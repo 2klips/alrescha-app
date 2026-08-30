@@ -27,6 +27,7 @@ import { PostgresAnalysisStore } from "./postgres-analysis-store";
 import { PostgresEnrichJobStore } from "./postgres-enrich-store";
 import { RepositoryScanStore } from "./repository-scan-store";
 import { runRepositoryScan } from "./repository-scan";
+import { createExpiringSourceCache, readTransientSource } from "./source-cache";
 import { runWorkerOnce, type JobHandler, type JobHandlers } from "./worker";
 import { PostgresWorkerQueue } from "./queue";
 
@@ -77,15 +78,13 @@ interface RepositoryRow {
 /**
  * A repository source on a short-lived installation token, cached per
  * repository. Analysis reads a body per file, and minting a token for each of
- * them would be both slow and pointless — the token already outlives the job.
+ * them would be both slow and pointless — but the token does NOT outlive a
+ * long-running worker: it expires after ~1h, so the cache re-mints ahead of
+ * expiry and evicts failed builds (perf research MT-1; the previous
+ * forever-cache silently mass-resolved findings once the token died).
  */
 function createSourceFactory(sql: postgres.Sql) {
-  const sources = new Map<string, Promise<GitHubRepositorySource>>();
-
-  async function build(
-    workspaceId: string,
-    repositoryId: string,
-  ): Promise<GitHubRepositorySource> {
+  return createExpiringSourceCache(async (workspaceId, repositoryId) => {
     const rows = await sql<RepositoryRow[]>`
       select r.full_name, r.github_repository_id, i.github_installation_id
       from public.repositories r
@@ -111,17 +110,11 @@ function createSourceFactory(sql: postgres.Sql) {
       // on the connect screen, enforced by the API rather than by the copy.
       repositoryIds: [Number(row.github_repository_id)],
     });
-    return new GitHubRepositorySource(owner, repository, token.token);
-  }
-
-  return (workspaceId: string, repositoryId: string) => {
-    const key = `${workspaceId}:${repositoryId}`;
-    const existing = sources.get(key);
-    if (existing) return existing;
-    const created = build(workspaceId, repositoryId);
-    sources.set(key, created);
-    return created;
-  };
+    return {
+      expiresAt: token.expiresAt,
+      source: new GitHubRepositorySource(owner, repository, token.token),
+    };
+  });
 }
 
 type SourceFactory = ReturnType<typeof createSourceFactory>;
@@ -165,31 +158,26 @@ async function main(): Promise<void> {
   const handlers: JobHandlers = {
     analyze: createAnalysisJobHandler({
       // Transient: the body is decoded, handed to the rules, and dropped.
-      readSource: async ({ commitSha, path, repositoryId, workspaceId }) => {
-        const source = await sourceFor(workspaceId, repositoryId);
-        try {
-          const bytes = await source.fetchContent(path, commitSha);
-          return Buffer.from(bytes).toString("utf8");
-        } catch {
-          // A file can disappear between the scan and the analysis; that is a
-          // smaller repository, not a failed job.
-          return null;
-        }
-      },
+      // Only a 404 reads as "file vanished" — any other failure (dead token,
+      // throttling) fails the job into the retry path instead of letting the
+      // findings reconciler mistake an outage for deletions (MT-1).
+      readSource: async ({ commitSha, path, repositoryId, workspaceId }) =>
+        readTransientSource(
+          await sourceFor(workspaceId, repositoryId),
+          path,
+          commitSha,
+        ),
       store: new PostgresAnalysisStore(sql),
     }),
     coach: notImplemented("coach"),
     enrich: createEnrichJobHandler({
       // Transient, like analysis: fetched, clipped, summarized, dropped.
-      readSource: async ({ commitSha, path, repositoryId, workspaceId }) => {
-        const source = await sourceFor(workspaceId, repositoryId);
-        try {
-          const bytes = await source.fetchContent(path, commitSha);
-          return Buffer.from(bytes).toString("utf8");
-        } catch {
-          return null;
-        }
-      },
+      readSource: async ({ commitSha, path, repositoryId, workspaceId }) =>
+        readTransientSource(
+          await sourceFor(workspaceId, repositoryId),
+          path,
+          commitSha,
+        ),
       store: new PostgresEnrichJobStore(sql, {
         masterKey: process.env.BYOK_ENCRYPTION_KEY ?? "",
         platformKeys: {

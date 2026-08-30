@@ -5,6 +5,23 @@ import {
   type RepositoryTreeEntry,
 } from "@arr/core";
 
+/**
+ * A GitHub API failure that keeps the HTTP status, so callers can tell "this
+ * file is gone" (404) apart from "this token is dead" (401/403) or "we are
+ * being throttled" (429). Collapsing those into one opaque error is what let
+ * an expired installation token read as "file deleted" and mass-resolve real
+ * findings (perf research MT-1).
+ */
+export class GitHubRequestError extends Error {
+  constructor(
+    readonly status: number,
+    path: string,
+  ) {
+    super(`GitHub repository request failed: ${status} (${path})`);
+    this.name = "GitHubRequestError";
+  }
+}
+
 type JsonRecord = Record<string, unknown>;
 
 function record(value: unknown, label: string): JsonRecord {
@@ -72,7 +89,7 @@ export class GitHubRepositorySource implements RepositorySource {
       },
     );
     if (!response.ok) {
-      throw new Error(`GitHub repository request failed: ${response.status}`);
+      throw new GitHubRequestError(response.status, path);
     }
     return response;
   }
