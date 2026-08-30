@@ -21,7 +21,7 @@
 
 .side-nav-label {
   color: var(--faint);
-  font-size: 0.64rem;
+  font-size: var(--text-2xs);
   font-weight: 650;
   letter-spacing: 0.12em;
   margin: 0 0.6rem 0.3rem;
@@ -33,7 +33,7 @@
   border-radius: var(--radius-control, 0);
   color: var(--muted);
   display: flex;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   gap: 0.5rem;
   padding: 0.38rem 0.6rem;
   text-decoration: none;
@@ -92,7 +92,7 @@
 }
 
 .side-nav-brand strong {
-  font-size: 1rem;
+  font-size: var(--text-lg);
   letter-spacing: -0.04em;
 }
 

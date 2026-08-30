@@ -559,7 +559,7 @@
 }
 
 .graph-force-panel > header strong {
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
 }
 
 .graph-force-panel > header button {
@@ -568,7 +568,7 @@
   color: var(--muted);
   cursor: pointer;
   font-family: var(--font-mono);
-  font-size: 0.55rem;
+  font-size: var(--text-2xs);
   padding: 0.18rem 0.4rem;
 }
 
@@ -585,7 +585,7 @@
 .graph-force-sliders label span {
   color: var(--muted);
   font-family: var(--font-mono);
-  font-size: 0.55rem;
+  font-size: var(--text-2xs);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -600,14 +600,14 @@
   border: 1px solid var(--line);
   color: var(--muted);
   cursor: pointer;
-  font-size: 0.6rem;
+  font-size: var(--text-2xs);
   padding: 0.3rem;
 }
 
 .graph-force-panel small {
   color: var(--faint);
   font-family: var(--font-mono);
-  font-size: 0.55rem;
+  font-size: var(--text-2xs);
 }
 
 .arr-ci-note {
@@ -1020,7 +1020,7 @@
   align-items: center;
   color: var(--faint);
   display: flex;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   justify-content: center;
 }
 
@@ -1037,7 +1037,7 @@
 
 .facet-band h3 {
   color: var(--faint);
-  font-size: 0.66rem;
+  font-size: var(--text-2xs);
   letter-spacing: 0.12em;
   margin: 0;
   padding: 0.5rem 0.9rem;
@@ -1072,7 +1072,7 @@
   cursor: pointer;
   display: inline-flex;
   font-family: var(--font-sans);
-  font-size: 0.68rem;
+  font-size: var(--text-2xs);
   gap: 0.3rem;
   max-width: 11rem;
   padding: 0.2rem 0.5rem;

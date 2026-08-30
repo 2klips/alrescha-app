@@ -12,7 +12,7 @@
   color: var(--muted);
   cursor: pointer;
   display: inline-flex;
-  font: 0.62rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   gap: 0.35rem;
   letter-spacing: 0.08em;
   min-height: 2rem;

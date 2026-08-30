@@ -133,19 +133,19 @@
 }
 
 .node-glyph {
-  font: 600 10px var(--font-mono);
+  font: 600 var(--text-2xs) var(--font-mono);
   pointer-events: none;
 }
 
 .node-label {
   fill: var(--text);
-  font: 600 11px var(--font-sans);
+  font: 600 var(--text-2xs) var(--font-sans);
   pointer-events: none;
 }
 
 .node-type {
   fill: var(--muted);
-  font: 9px var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   pointer-events: none;
 }
 

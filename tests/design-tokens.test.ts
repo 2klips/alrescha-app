@@ -380,7 +380,7 @@ describe("scale adoption ratchet (design roadmap step 3)", () => {
   // Existing ad-hoc sizes migrate screen by screen in step 4 — this ratchet
   // only forbids NEW debt. When a migration lands, lower the ceiling to the
   // new count; never raise it.
-  const FONT_SIZE_ADHOC_CEILING = 14;
+  const FONT_SIZE_ADHOC_CEILING = 0;
   const RADIUS_ADHOC_CEILING = 0;
 
   // Roadmap step 5: globals.css is only the import hub; the rules live in
@@ -407,9 +407,17 @@ describe("scale adoption ratchet (design roadmap step 3)", () => {
   const appCss = readAppStylesheets();
 
   function adhocFontSizes(): string[] {
-    return [...appCss.matchAll(/font-size:\s*([^;]+);/g)]
+    // Both the longhand and the size slot of `font:` shorthands count —
+    // shorthands were the migration's blind spot until the final pass.
+    // `font-size: 0` is text hiding, not typography, and `font: inherit`
+    // delegates to the parent's (already tokenized) size.
+    const longhand = [...appCss.matchAll(/font-size:\s*([^;]+);/g)]
       .map((match) => (match[1] as string).trim())
-      .filter((value) => !value.startsWith("var(--text-"));
+      .filter((value) => !value.startsWith("var(--text-") && value !== "0");
+    const shorthand = [...appCss.matchAll(/font:\s*([^;]+);/g)]
+      .map((match) => (match[1] as string).trim())
+      .filter((value) => !value.includes("var(--text-") && value !== "inherit");
+    return [...longhand, ...shorthand];
   }
 
   function adhocRadii(): string[] {

@@ -484,7 +484,7 @@
   }
 
   .stepper li > span {
-    font-size: 0.64rem;
+    font-size: var(--text-2xs);
   }
 
   .permission-grid {

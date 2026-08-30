@@ -559,7 +559,7 @@
   align-items: center;
   color: var(--muted);
   display: flex;
-  font: 0.61rem var(--font-mono);
+  font: var(--text-2xs) var(--font-mono);
   gap: 0.5rem;
   text-transform: uppercase;
 }
