@@ -26,6 +26,14 @@ import {
 
 type Row = Record<string, unknown>;
 
+/**
+ * Minimum gap between `last_used_at` touches on the same token (QW-11). The
+ * column is observability only (surfaced in the tokens settings UI), so
+ * coalescing writes within this window trades a little display staleness
+ * for one fewer write per tool call under repeat use.
+ */
+const LAST_USED_AT_TOUCH_THROTTLE_MS = 5 * 60_000;
+
 function queryError(label: string, error: { message: string } | null): void {
   if (error) throw new Error(`${label}: ${error.message}`);
 }
@@ -115,6 +123,27 @@ function findingProvenance(value: unknown) {
 export class SupabaseMcpStore implements McpStore {
   constructor(private readonly client: SupabaseClient) {}
 
+  /**
+   * Verifies actorUserId owns workspaceId. Two call patterns:
+   *
+   * 1. Entry points that receive a bare actorUserId/workspaceId pair with
+   *    no prior check in this request — issueAccessToken, listAccessTokens,
+   *    revokeAccessToken, and authenticateAccessToken itself — MUST call
+   *    this; it is the only ownership check they get.
+   * 2. Methods that instead receive a McpPrincipal (recordPrompt,
+   *    recordRuledOut, assertLink, writeMemory, appendNote, appendProgress,
+   *    loadWorkspace) must NOT call this. Every principal reaching them has
+   *    already had its ownership verified by the time it exists: either
+   *    minted by authenticateAccessToken above (which runs this once per
+   *    hosted-MCP request), or hand-built by a caller that first resolved
+   *    workspaceId from its own ownership-scoped query (e.g. the settings
+   *    server actions, which also run the subsequent store queries through
+   *    that caller's own RLS-scoped client rather than this class's usual
+   *    service-role client). Every query in those methods still scopes by
+   *    principal.workspaceId — dropping this call only skips re-proving an
+   *    ownership fact the caller already established, which used to cost a
+   *    full `workspaces` round trip on every single store call (QW-11).
+   */
   private async assertOwner(
     actorUserId: string,
     workspaceId: string,
@@ -139,7 +168,6 @@ export class SupabaseMcpStore implements McpStore {
       toolName: string;
     },
   ): Promise<{ id: string }> {
-    await this.assertOwner(principal.userId, principal.workspaceId);
     // The consent gate lives in the database trigger, so this call cannot
     // write around workspace enablement or the member's own consent.
     const result = await this.client.rpc("record_prompt_as", {
@@ -167,7 +195,6 @@ export class SupabaseMcpStore implements McpStore {
       repositoryId?: string | undefined;
     },
   ): Promise<{ id: string }> {
-    await this.assertOwner(principal.userId, principal.workspaceId);
     // Append-only is a schema property (a BEFORE trigger refuses update and
     // delete), so this writer cannot rewrite what it recorded either.
     const result = await this.client.rpc("record_ruled_out_as", {
@@ -193,7 +220,6 @@ export class SupabaseMcpStore implements McpStore {
       targetNodeId: string;
     },
   ): Promise<McpAssertLinkResult> {
-    await this.assertOwner(principal.userId, principal.workspaceId);
     // Reconciliation (noop / supersede) is one atomic SQL call, and the
     // bi-temporal property is enforced by triggers — no caller can delete.
     const result = await this.client.rpc("record_agent_assertion", {
@@ -226,7 +252,6 @@ export class SupabaseMcpStore implements McpStore {
       text?: string | undefined;
     },
   ): Promise<McpWriteMemoryResult> {
-    await this.assertOwner(principal.userId, principal.workspaceId);
     const result = await this.client.rpc("write_memory_entry", {
       remove_entry: input.remove ?? false,
       target_anchor_node_id: input.anchorNodeId ?? null,
@@ -252,7 +277,6 @@ export class SupabaseMcpStore implements McpStore {
     principal: McpPrincipal,
     input: { target?: string | undefined; text: string },
   ): Promise<McpNote> {
-    await this.assertOwner(principal.userId, principal.workspaceId);
     const occurredAt = new Date();
     const note: McpNote = {
       id: createUlid(occurredAt),
@@ -285,7 +309,6 @@ export class SupabaseMcpStore implements McpStore {
       task: string;
     },
   ): Promise<McpProgressEvent> {
-    await this.assertOwner(principal.userId, principal.workspaceId);
     const result = await this.client.rpc("log_progress_atomic", {
       p_refs: input.refs ?? [],
       p_status: input.status,
@@ -316,7 +339,9 @@ export class SupabaseMcpStore implements McpStore {
   async authenticateAccessToken(secret: string): Promise<McpPrincipal | null> {
     const result = await this.client
       .from("mcp_tokens")
-      .select("id, workspace_id, created_by, scopes, expires_at, revoked_at")
+      .select(
+        "id, workspace_id, created_by, scopes, expires_at, revoked_at, last_used_at",
+      )
       .eq("token_hash", hashAccessToken(secret))
       .maybeSingle();
     queryError("MCP token lookup failed", result.error);
@@ -334,12 +359,31 @@ export class SupabaseMcpStore implements McpStore {
     const scopes = strings(token.scopes).filter(isScope);
     if (scopes.length === 0) return null;
     const tokenId = requiredString(token, "id");
-    const updated = await this.client
-      .from("mcp_tokens")
-      .update({ last_used_at: new Date().toISOString() })
-      .eq("id", tokenId)
-      .eq("workspace_id", workspaceId);
-    queryError("MCP token usage update failed", updated.error);
+
+    const lastUsedAt = nullableString(token.last_used_at);
+    const dueForTouch =
+      !lastUsedAt ||
+      Date.now() - Date.parse(lastUsedAt) >= LAST_USED_AT_TOUCH_THROTTLE_MS;
+    if (dueForTouch) {
+      // Fire-and-forget and throttled (QW-11): this column is display-only,
+      // so it must never add a round trip to every authenticated call, and a
+      // slow or failing touch must never fail authentication itself.
+      // The query builder is only PromiseLike (no .catch), so both outcomes
+      // are handled via the two-callback form of .then().
+      void this.client
+        .from("mcp_tokens")
+        .update({ last_used_at: new Date().toISOString() })
+        .eq("id", tokenId)
+        .eq("workspace_id", workspaceId)
+        .then(
+          ({ error }) => {
+            if (error) console.error("MCP token usage update failed", error);
+          },
+          (error: unknown) => {
+            console.error("MCP token usage update failed", error);
+          },
+        );
+    }
     return { scopes, tokenId, userId, workspaceId };
   }
 
@@ -411,7 +455,6 @@ export class SupabaseMcpStore implements McpStore {
   }
 
   async loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData> {
-    await this.assertOwner(principal.userId, principal.workspaceId);
     const workspaceId = principal.workspaceId;
     const [
       repositories,
@@ -704,15 +747,18 @@ export class SupabaseMcpStore implements McpStore {
     channel: string,
     event: McpAccessEvent,
   ): Promise<void> {
+    // httpSend() is the documented REST broadcast primitive: it never joins
+    // the WebSocket, so there is no subscribe/wait-for-ack step per event
+    // (QW-17). Calling .send() on an unsubscribed channel worked too, but
+    // only via an implicit, warning-emitting fallback the SDK has flagged
+    // for removal — this is the explicit, supported replacement.
     const realtime = this.client.channel(channel);
     try {
-      const status = await realtime.send({
-        event: "access_event",
-        payload: event,
-        type: "broadcast",
-      });
-      if (status !== "ok")
-        throw new Error(`Realtime broadcast returned ${status}`);
+      const result = await realtime.httpSend("access_event", event);
+      if (!result.success) {
+        const reason = "error" in result ? result.error : "unknown error";
+        throw new Error(`Realtime broadcast failed: ${reason}`);
+      }
     } finally {
       await this.client.removeChannel(realtime);
     }

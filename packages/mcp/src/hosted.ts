@@ -69,43 +69,15 @@ const RELATION_SCHEMA = z.enum([
 ]);
 
 function toolResult(payload: Record<string, unknown>) {
+  // QW-10 proposed dropping the JSON-as-text duplicate, but the MCP spec's
+  // backward-compat SHOULD (structured results also carry equivalent
+  // unstructured content) is load-bearing for real agent clients that only
+  // read text content — keep the duplicate until a real-client compat pass
+  // proves otherwise.
   return {
     content: [{ text: JSON.stringify(payload), type: "text" as const }],
     structuredContent: payload,
   };
-}
-
-function emitAccessEvent(
-  store: McpStore,
-  principal: McpPrincipal,
-  tool: string,
-  targetNodeIds: readonly string[],
-  packTokens?: Pick<McpPackMeasurement, "baselineTokens" | "selectedTokens">,
-): void {
-  const occurredAt = new Date();
-  const event = {
-    id: createUlid(occurredAt),
-    occurredAt: occurredAt.toISOString(),
-    targetNodeIds: [...new Set(targetNodeIds)],
-    tokenId: principal.tokenId,
-    tool,
-    workspaceId: principal.workspaceId,
-  };
-  const measurement = packTokens
-    ? {
-        accessEventId: event.id,
-        ...packTokens,
-        occurredAt: event.occurredAt,
-        workspaceId: event.workspaceId,
-      }
-    : undefined;
-  const channel = `workspace:${principal.workspaceId}:access-events`;
-  queueMicrotask(() => {
-    void Promise.allSettled([
-      Promise.resolve().then(() => store.recordAccessEvent(event, measurement)),
-      Promise.resolve().then(() => store.publishAccessEvent(channel, event)),
-    ]);
-  });
 }
 
 export interface HostedMcpEndpoint {
@@ -153,7 +125,54 @@ function createServer(
   store: McpStore,
   principal: McpPrincipal,
   cacheTtlMs: number,
+  scheduleAfterResponse?: (task: () => void | Promise<void>) => void,
 ): McpServer {
+  // Fire-and-forget fan-out for one access event (insert + realtime
+  // broadcast). A bare `queueMicrotask` can be dropped on a serverless
+  // runtime that freezes the process the instant the HTTP response is sent
+  // (QW-17), so `scheduleAfterResponse` — Next.js's `after()`, wired in from
+  // the web layer, which keeps the invocation alive until the callback
+  // settles — is preferred when the host provides one. Falls back to
+  // `queueMicrotask` so direct callers (including the contract tests, which
+  // construct the endpoint with no web/request context at all) keep working
+  // unchanged.
+  function emitAccessEvent(
+    store: McpStore,
+    principal: McpPrincipal,
+    tool: string,
+    targetNodeIds: readonly string[],
+    packTokens?: Pick<McpPackMeasurement, "baselineTokens" | "selectedTokens">,
+  ): void {
+    const occurredAt = new Date();
+    const event = {
+      id: createUlid(occurredAt),
+      occurredAt: occurredAt.toISOString(),
+      targetNodeIds: [...new Set(targetNodeIds)],
+      tokenId: principal.tokenId,
+      tool,
+      workspaceId: principal.workspaceId,
+    };
+    const measurement = packTokens
+      ? {
+          accessEventId: event.id,
+          ...packTokens,
+          occurredAt: event.occurredAt,
+          workspaceId: event.workspaceId,
+        }
+      : undefined;
+    const channel = `workspace:${principal.workspaceId}:access-events`;
+    const dispatch = async (): Promise<void> => {
+      await Promise.allSettled([
+        Promise.resolve().then(() =>
+          store.recordAccessEvent(event, measurement),
+        ),
+        Promise.resolve().then(() => store.publishAccessEvent(channel, event)),
+      ]);
+    };
+    if (scheduleAfterResponse) scheduleAfterResponse(dispatch);
+    else queueMicrotask(() => void dispatch());
+  }
+
   const server = new McpServer(SERVER_INFO, {
     cacheHints: {
       "resources/list": { cacheScope: "private", ttlMs: cacheTtlMs },
@@ -1394,6 +1413,15 @@ function createServer(
 
 export function createHostedMcpEndpoint(options: {
   cacheTtlMs?: number;
+  /**
+   * Schedules the post-response access-event fan-out (QW-17). Pass a host
+   * primitive that keeps the invocation alive after the response is sent —
+   * e.g. Next.js's `after()` from "next/server" — so the write can't be
+   * dropped by a serverless runtime freezing the process on response. Omit
+   * to keep the previous `queueMicrotask` behavior (fine for tests and
+   * long-lived servers, unsafe on serverless).
+   */
+  scheduleAfterResponse?: (task: () => void | Promise<void>) => void;
   store: McpStore;
 }): HostedMcpEndpoint {
   const cacheTtlMs = options.cacheTtlMs ?? PRIVATE_TTL_MS;
@@ -1402,7 +1430,12 @@ export function createHostedMcpEndpoint(options: {
   }
   const handler = createMcpHandler(
     ({ authInfo }) =>
-      createServer(options.store, principalFromAuth(authInfo), cacheTtlMs),
+      createServer(
+        options.store,
+        principalFromAuth(authInfo),
+        cacheTtlMs,
+        options.scheduleAfterResponse,
+      ),
     { legacy: "reject" },
   );
 
