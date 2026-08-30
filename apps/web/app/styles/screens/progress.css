@@ -42,7 +42,7 @@
 }
 
 .progress-state.full::after {
-  background: var(--ok);
+  background: var(--verified);
   width: 100%;
 }
 
@@ -65,7 +65,7 @@
 
 .progress-state.full .progress-state-mark {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  color: var(--ok);
+  color: var(--verified);
 }
 
 .progress-state.empty .progress-state-mark {
@@ -115,7 +115,7 @@
 }
 
 .progress-metric strong {
-  color: var(--ink);
+  color: var(--text);
   font: var(--text-xl) var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
@@ -179,7 +179,7 @@
 }
 
 .todo-column > header h3 {
-  color: var(--ink);
+  color: var(--text);
   font-size: var(--text-2xs);
   margin: 0;
   text-transform: uppercase;
@@ -194,11 +194,11 @@
 }
 
 .todo-column.done > header {
-  color: var(--ok);
+  color: var(--verified);
 }
 
 .todo-column.blocked > header {
-  color: var(--broken);
+  color: var(--danger);
 }
 
 .todo-stack {
@@ -227,11 +227,11 @@
 }
 
 .done .todo-card {
-  border-left-color: var(--ok);
+  border-left-color: var(--verified);
 }
 
 .blocked .todo-card {
-  border-left-color: var(--broken);
+  border-left-color: var(--danger);
 }
 
 .todo-card h4 {
@@ -299,7 +299,7 @@
 }
 
 .timeline-glyph.finding-resolved {
-  color: var(--ok);
+  color: var(--verified);
 }
 
 .timeline-glyph.commit {

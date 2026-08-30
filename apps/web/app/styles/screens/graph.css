@@ -121,7 +121,7 @@
 }
 
 .graph-node.broken.pulse .node-core {
-  filter: drop-shadow(0 0 9px var(--broken));
+  filter: drop-shadow(0 0 9px var(--danger));
 }
 
 .graph-node.decay .node-core {
@@ -154,7 +154,7 @@
    `.commit-chip` survives: /graph still renders one in its content header. */
 .commit-chip {
   align-items: center;
-  color: var(--ok-text);
+  color: var(--verified-text);
   display: flex;
   font: var(--text-2xs) var(--font-mono);
   font-variant-numeric: tabular-nums;
@@ -339,7 +339,7 @@
 
 .provenance-card > p {
   align-items: start;
-  color: var(--ok);
+  color: var(--verified);
   display: flex;
   font-size: var(--text-2xs);
   gap: 0.35rem;
@@ -410,7 +410,7 @@
 }
 
 .evidence-dot.broken {
-  background: var(--broken);
+  background: var(--danger);
 }
 
 .provenance-inspector > footer {
@@ -424,7 +424,7 @@
   align-items: center;
   background: var(--surface-2);
   border: 1px solid var(--line-strong);
-  color: var(--ink);
+  color: var(--text);
   display: flex;
   font-size: var(--text-2xs);
   gap: 0.3rem;

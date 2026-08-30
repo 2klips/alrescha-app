@@ -65,7 +65,7 @@
 }
 
 .graph-state.error-state svg {
-  color: var(--broken);
+  color: var(--danger);
 }
 
 .pre-scan-orbit {
@@ -115,11 +115,11 @@
 
 .severity-dot.critical,
 .severity-dot.high {
-  background: var(--broken);
+  background: var(--danger);
 }
 
 .severity-dot.medium {
-  background: var(--warn);
+  background: var(--inferred);
 }
 
 .severity-dot.low {
@@ -142,11 +142,11 @@
 
 .severity-label.high,
 .severity-label.critical {
-  color: var(--broken-text);
+  color: var(--danger-text);
 }
 
 .severity-label.medium {
-  color: var(--warn-text);
+  color: var(--inferred-text);
 }
 
 .severity-label.low {
@@ -164,7 +164,7 @@
 }
 
 .error-text {
-  color: var(--broken);
+  color: var(--danger);
 }
 
 .wide-heading {
@@ -230,7 +230,7 @@
 .progress-state-switcher a[aria-current="page"] {
   background: var(--surface-2);
   border-color: var(--line-strong);
-  color: var(--ink);
+  color: var(--text);
 }
 
 .progress-kicker,
@@ -270,7 +270,7 @@
 }
 
 .severity-label.moderate {
-  color: var(--warn-text);
+  color: var(--inferred-text);
 }
 
 .severity-label.info {

@@ -170,7 +170,7 @@
 }
 
 .stepper li[data-active="true"] {
-  color: var(--ink);
+  color: var(--text);
 }
 
 .stepper li[data-active="true"] > span {
@@ -179,11 +179,11 @@
 }
 
 .stepper li[data-complete="true"] {
-  color: var(--ok);
+  color: var(--verified);
 }
 
 .stepper li[data-complete="true"] > span {
-  border-color: var(--ok);
+  border-color: var(--verified);
 }
 
 .onboarding-card {
@@ -256,7 +256,7 @@
 .secondary-action {
   background: transparent;
   border: 1px solid var(--line-strong);
-  color: var(--ink);
+  color: var(--text);
   cursor: pointer;
   margin-top: 0.65rem;
   min-height: 2.6rem;
@@ -315,7 +315,7 @@
 }
 
 .permission-error > svg {
-  color: var(--broken);
+  color: var(--danger);
 }
 
 .permission-error div {
@@ -334,7 +334,7 @@
 
 .permission-error button {
   background: transparent;
-  border: 1px solid var(--broken);
+  border: 1px solid var(--danger);
   color: var(--danger);
   cursor: pointer;
   font-size: var(--text-2xs);

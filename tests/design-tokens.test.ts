@@ -359,6 +359,16 @@ describe("scale tokens (design direction roadmap step 1)", () => {
     expect([...ladder].sort((first, second) => first - second)).toEqual(ladder);
   });
 
+  test("the legacy aliases stayed dead (design roadmap step 6)", () => {
+    // --ink/--panel-strong/--ok/--warn/--broken (+ their -text copies) were
+    // the Phase 2A bridge vocabulary; step 6 deleted them after the screen
+    // migration. This locks the deletion in — reintroducing one is a
+    // deliberate act, not a drift. Checked against the whole tokens file so
+    // neither theme block can smuggle one back.
+    const aliasPattern = /--(ink|panel-strong|ok|warn|broken)(-text)?\s*:/;
+    expect(css).not.toMatch(aliasPattern);
+  });
+
   test("danger is its own literal, split from the brand seal", () => {
     expect(rootBlock).toMatch(/--danger:\s*#[0-9a-fA-F]{6}/);
     expect(rootBlock).toMatch(/--danger-text:\s*var\(--danger\)/);

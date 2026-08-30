@@ -159,20 +159,9 @@
     transparent
   );
 
-  /* Legacy aliases kept so existing rules stay themed while the screen-level
-     restyle lands in Phase 2A todos 7–8. */
-  --ink: var(--text);
-  --panel-strong: var(--surface);
-  --ok: var(--verified);
-  --warn: var(--inferred);
-  --broken: var(--danger);
-
   /* Text-safe counterparts of the derived roles above. */
   --accent-text: var(--info-text);
   --danger-text: var(--danger);
-  --ok-text: var(--verified-text);
-  --warn-text: var(--inferred-text);
-  --broken-text: var(--danger-text);
 
   /* ── Scale tokens (design roadmap step 1 — additive; screens migrate from
      step 3 on). Sizes are the whole vocabulary: font-size, spacing, radius,

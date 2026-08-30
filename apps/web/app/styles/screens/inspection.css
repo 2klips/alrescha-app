@@ -153,11 +153,11 @@
 }
 
 .inspection-freshness.outdated {
-  color: var(--warn-text);
+  color: var(--inferred-text);
 }
 
 .inspection-freshness.drift-suspected {
-  color: var(--broken-text);
+  color: var(--danger-text);
 }
 
 .inspection-summary {

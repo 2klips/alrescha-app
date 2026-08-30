@@ -116,7 +116,7 @@ li[data-todo-status="in-progress"] .overview-todo-status {
 }
 
 li[data-todo-status="blocked"] .overview-todo-status {
-  color: var(--broken-text);
+  color: var(--danger-text);
 }
 
 html[data-sidebar="rail"] .app-shell {

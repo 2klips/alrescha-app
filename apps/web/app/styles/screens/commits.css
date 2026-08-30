@@ -107,7 +107,7 @@
 }
 
 .commit-status.failed {
-  color: var(--broken-text);
+  color: var(--danger-text);
 }
 
 .commit-duration,
@@ -263,7 +263,7 @@
 }
 
 .commit-failure code {
-  color: var(--broken-text);
+  color: var(--danger-text);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   overflow-wrap: anywhere;

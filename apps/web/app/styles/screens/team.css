@@ -56,12 +56,12 @@
 
 .team-status.invited,
 .team-verdict.pending {
-  color: var(--warn-text);
+  color: var(--inferred-text);
 }
 
 .team-status.revoked,
 .team-verdict.rejected {
-  color: var(--broken-text);
+  color: var(--danger-text);
 }
 
 .team-graded {

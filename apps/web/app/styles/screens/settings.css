@@ -26,7 +26,7 @@
 }
 
 .credit-warning {
-  border-left: 2px solid var(--warn);
+  border-left: 2px solid var(--inferred);
   margin: 1rem 0;
   padding-left: 1rem;
 }
@@ -215,7 +215,7 @@
 }
 
 .mcp-secret strong {
-  color: var(--ok);
+  color: var(--verified);
 }
 
 .mcp-secret code {
@@ -224,7 +224,7 @@
 }
 
 .mcp-error {
-  color: var(--broken) !important;
+  color: var(--danger) !important;
 }
 
 .mcp-token-list {
@@ -263,14 +263,14 @@
 
 .mcp-revoke {
   background: transparent;
-  border: 1px solid var(--broken);
-  color: var(--broken);
+  border: 1px solid var(--danger);
+  color: var(--danger);
   cursor: pointer;
   padding: 0.45rem 0.65rem;
 }
 
 .mcp-revoked {
-  color: var(--broken) !important;
+  color: var(--danger) !important;
   font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -381,7 +381,7 @@
 }
 
 .context-success {
-  color: var(--ok) !important;
+  color: var(--verified) !important;
 }
 
 .proposal-diff article {
@@ -485,7 +485,7 @@
 }
 
 .pilot-stat-card p {
-  color: var(--ink);
+  color: var(--text);
   margin: 0 0 1.4rem;
 }
 
@@ -565,7 +565,7 @@
 }
 
 .source-contract > span {
-  background: var(--ok);
+  background: var(--verified);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent);
   height: 0.42rem;
   width: 0.42rem;

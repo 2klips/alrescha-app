@@ -367,7 +367,7 @@
 }
 
 .overview-brain-grades li[data-grade="broken"] {
-  color: var(--broken-text);
+  color: var(--danger-text);
 }
 
 .overview-mini-node.concept {
