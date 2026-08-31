@@ -6,6 +6,14 @@
 
 **Owner workflow:** Claude Code implementation + Codex second-pass verification/frontend work
 
+## Progress
+
+| Wave                       | Status   | Evidence                                             |
+| -------------------------- | -------- | ---------------------------------------------------- |
+| F0 — Contract and baseline | Complete | [`BASELINE_2026-08-31.md`](./BASELINE_2026-08-31.md) |
+| F1 — Desktop design system | Next     | Not started                                          |
+| F2–F6                      | Pending  | Not started                                          |
+
 ## 1. Locked decisions
 
 1. Product name is exactly `Alrescha`.
