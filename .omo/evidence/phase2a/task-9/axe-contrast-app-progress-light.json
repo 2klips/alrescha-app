@@ -24,15 +24,10 @@
       "html": "<span>0</span>",
       "message": "Element content is too short to determine if it is actual text content",
       "target": ".done > header > span"
-    },
-    {
-      "html": "<span>0</span>",
-      "message": "Element content is too short to determine if it is actual text content",
-      "target": ".blocked > header > span"
     }
   ],
-  "incompleteCount": 6,
-  "passes": 25,
+  "incompleteCount": 5,
+  "passes": 51,
   "route": "/app/progress",
   "theme": "light",
   "violationCount": 0,

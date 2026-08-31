@@ -111,6 +111,16 @@
       "target": "button[data-area=\"docs\"] > small"
     },
     {
+      "html": "<button aria-pressed=\"false\" class=\"arr-area-chip\" data-area=\"tests\" type=\"button\">테스트<small>0</small></button>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": "button[data-area=\"tests\"]"
+    },
+    {
+      "html": "<small>0</small>",
+      "message": "Element content is too short to determine if it is actual text content",
+      "target": "button[data-area=\"tests\"] > small"
+    },
+    {
       "html": "<span class=\"arr-kicker\">마지막 스캔 commit<!-- --> ·<!-- --> <!-- -->스캔 전</span>",
       "message": "Element's background color could not be determined due to a background gradient",
       "target": ".arr-proof-heading > div:nth-child(1) > .arr-kicker"
@@ -146,9 +156,9 @@
       "target": "header > .arr-kicker"
     },
     {
-      "html": "<span class=\"arr-grade inferred\">대기</span>",
+      "html": "<span class=\"status-badge inferred\" data-grade=\"inferred\">대기</span>",
       "message": "Element's background color could not be determined due to a background gradient",
-      "target": ".arr-grade"
+      "target": ".status-badge"
     },
     {
       "html": "<p>노드를 선택하면 연결과 출처를 볼 수 있습니다.</p>",
@@ -156,8 +166,8 @@
       "target": "p"
     }
   ],
-  "incompleteCount": 31,
-  "passes": 16,
+  "incompleteCount": 33,
+  "passes": 37,
   "route": "/app/map",
   "theme": "light",
   "violationCount": 0,

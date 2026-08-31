@@ -17,12 +17,12 @@
     },
     {
       "html": "<strong>저장 00개</strong>",
-      "message": "Element's background color could not be determined due to a pseudo element",
-      "target": "strong"
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".library-hero > strong"
     }
   ],
   "incompleteCount": 4,
-  "passes": 12,
+  "passes": 37,
   "route": "/app/library",
   "theme": "light",
   "violationCount": 0,
