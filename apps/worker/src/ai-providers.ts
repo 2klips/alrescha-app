@@ -1,8 +1,12 @@
 import {
   CONCEPT_SYNTHESIS_JSON_SCHEMA,
+  rubricCeilings,
   type JudgmentProvider,
   type JudgmentRequest,
+  type PromptSignals,
 } from "@arr/core";
+
+import type { CoachingProvider } from "./coaching-job";
 
 type Fetch = (
   input: string | URL | Request,
@@ -556,4 +560,163 @@ function anthropicToolInput(payload: unknown, toolName: string): unknown {
     }
   }
   throw new Error("Anthropic response did not contain the forced tool call.");
+}
+
+/**
+ * Coaching providers (Phase 2C todo 5 runner wiring) — one prompt in, one
+ * rubric out. The deterministic floor stays with the handler: the request
+ * carries the per-axis ceilings so the model is TOLD the caps, but an output
+ * above a cap is rejected unbilled by `validateCoachingOutput`, never
+ * clamped into validity here.
+ */
+
+const COACHING_AXIS_SCHEMA = { enum: [0, 1, 2], type: "integer" } as const;
+
+const COACHING_JSON_SCHEMA = {
+  additionalProperties: false,
+  properties: {
+    grade: { enum: ["inferred"], type: "string" },
+    rubric: {
+      additionalProperties: false,
+      properties: {
+        batchSize: COACHING_AXIS_SCHEMA,
+        contextGrounding: COACHING_AXIS_SCHEMA,
+        noOverInstruction: COACHING_AXIS_SCHEMA,
+        specificity: COACHING_AXIS_SCHEMA,
+        stopCondition: COACHING_AXIS_SCHEMA,
+        verifiability: COACHING_AXIS_SCHEMA,
+      },
+      required: [
+        "batchSize",
+        "contextGrounding",
+        "noOverInstruction",
+        "specificity",
+        "stopCondition",
+        "verifiability",
+      ],
+      type: "object",
+    },
+    suggestions: {
+      items: { maxLength: 300, minLength: 1, type: "string" },
+      maxItems: 3,
+      type: "array",
+    },
+  },
+  required: ["grade", "rubric", "suggestions"],
+  type: "object",
+} as const;
+
+const COACHING_SYSTEM_PROMPT = [
+  "You coach one AI prompt against a six-axis rubric (0-2 per axis).",
+  "The request lists per-axis ceilings computed from observable signals in",
+  "the prompt text — never score an axis above its ceiling; such an output",
+  "is rejected. Refine the supplied baseline suggestions into at most three",
+  "concrete, actionable ones written in the prompt's own language. The grade",
+  "is always 'inferred'. Return one JSON object matching the schema.",
+].join(" ");
+
+interface CoachingCallRequest {
+  readonly ceilings: PromptSignals;
+  readonly promptText: string;
+  readonly suggestions: readonly string[];
+}
+
+function coachingPrompt(request: CoachingCallRequest): string {
+  return JSON.stringify({
+    axisCeilings: rubricCeilings(request.ceilings),
+    baselineSuggestions: request.suggestions,
+    promptText: request.promptText,
+  });
+}
+
+export class OpenAiCoachingProvider implements CoachingProvider {
+  readonly name = "openai";
+  readonly model: string;
+  private readonly apiKey: string;
+  private readonly fetch: Fetch;
+
+  constructor(input: {
+    readonly apiKey: string;
+    readonly fetch?: Fetch;
+    readonly model: string;
+  }) {
+    this.apiKey = input.apiKey;
+    this.fetch = input.fetch ?? globalThis.fetch;
+    this.model = input.model;
+  }
+
+  async run(request: CoachingCallRequest): Promise<unknown> {
+    const response = await this.fetch("https://api.openai.com/v1/responses", {
+      body: JSON.stringify({
+        input: [
+          { content: COACHING_SYSTEM_PROMPT, role: "system" },
+          { content: coachingPrompt(request), role: "user" },
+        ],
+        max_output_tokens: 800,
+        model: this.model,
+        store: false,
+        text: {
+          format: {
+            name: "arr_prompt_coaching",
+            schema: COACHING_JSON_SCHEMA,
+            strict: true,
+            type: "json_schema",
+          },
+        },
+      }),
+      headers: {
+        Authorization: `Bearer ${this.apiKey}`,
+        "Content-Type": "application/json",
+      },
+      method: "POST",
+    });
+    if (!response.ok) {
+      throw new Error(
+        `OpenAI coaching request failed with status ${response.status}.`,
+      );
+    }
+    return parseJson(openAiOutputText(await response.json()), "OpenAI");
+  }
+}
+
+export class AnthropicCoachingProvider implements CoachingProvider {
+  readonly name = "anthropic";
+  readonly model: string;
+  private readonly apiKey: string;
+  private readonly fetch: Fetch;
+
+  constructor(input: {
+    readonly apiKey: string;
+    readonly fetch?: Fetch;
+    readonly model: string;
+  }) {
+    this.apiKey = input.apiKey;
+    this.fetch = input.fetch ?? globalThis.fetch;
+    this.model = input.model;
+  }
+
+  async run(request: CoachingCallRequest): Promise<unknown> {
+    const response = await this.fetch("https://api.anthropic.com/v1/messages", {
+      body: JSON.stringify({
+        max_tokens: 800,
+        messages: [{ content: coachingPrompt(request), role: "user" }],
+        model: this.model,
+        system: [COACHING_SYSTEM_PROMPT, JSON.stringify(COACHING_JSON_SCHEMA)].join(
+          "\n",
+        ),
+      }),
+      headers: {
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+        "x-api-key": this.apiKey,
+      },
+      method: "POST",
+    });
+    if (!response.ok) {
+      throw new Error(
+        `Anthropic coaching request failed with status ${response.status}.`,
+      );
+    }
+    return parseJson(anthropicOutputText(await response.json()), "Anthropic");
+  }
 }

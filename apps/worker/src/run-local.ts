@@ -6,10 +6,10 @@
  * pilot is what made that visible: real webhooks enqueued real jobs and nothing
  * on this machine could drain them.
  *
- * This is the drain loop for local runs. It registers only the handlers that
- * are actually implemented; `analyze` and `pack` have none, so a claimed job of
- * those kinds fails with a plain message rather than being quietly skipped —
- * the gap belongs on the commit card where it can be seen, not in a silence.
+ * This is the drain loop for local runs. Every implemented kind is registered
+ * (scan, analyze, enrich, judge, coach); `pack` alone stays a reserved kind —
+ * it has no defined producer or semantics (OQ-021), so a claimed pack job
+ * fails with the pointer rather than being quietly skipped.
  *
  * `WORKER_CONCURRENCY` (default 4) drain loops run side by side, each owning
  * a disjoint round-robin slice of the workspace list, so one long-running
@@ -26,13 +26,18 @@ import { requestInstallationToken } from "@arr/core";
 import postgres from "postgres";
 
 import { createAnalysisJobHandler } from "./analysis-job";
+import { createCoachingJobHandler } from "./coaching-job";
 import { runDrainLoop } from "./drain-loop";
 import { createEnrichJobHandler } from "./enrich-job";
 import { GitHubRepositorySource } from "./github-repository-source";
+import { createJudgmentJobHandler } from "./judgment-job";
 import { PostgresAnalysisStore } from "./postgres-analysis-store";
+import { PostgresCoachingJobStore } from "./postgres-coaching-store";
 import { PostgresEnrichJobStore } from "./postgres-enrich-store";
+import { PostgresJudgmentJobStore } from "./postgres-judgment-store";
 import { RepositoryScanStore } from "./repository-scan-store";
 import { runRepositoryScan } from "./repository-scan";
+import { reservedPackHandler } from "./reserved-jobs";
 import { createExpiringSourceCache, readTransientSource } from "./source-cache";
 import { type JobHandler, type JobHandlers } from "./worker";
 import { PostgresWorkerQueue } from "./queue";
@@ -83,12 +88,26 @@ function appJwt(appId: string, privateKey: string, now = Date.now()): string {
   return `${unsigned}.${signer.sign(privateKey).toString("base64url")}`;
 }
 
-function notImplemented(kind: string): JobHandler {
-  return async () => {
-    throw new Error(
-      `No worker handler is implemented for '${kind}' jobs. The rules engine ` +
-        "exists in @arr/core but nothing wires it to the queue yet.",
-    );
+/**
+ * One key bundle for every AI-calling store (judgment, coaching, enrich):
+ * BYOK envelopes decrypt with the master key; credits use the platform keys.
+ */
+function aiKeyConfig(): {
+  readonly masterKey: string;
+  readonly platformKeys: Readonly<
+    Partial<Record<"anthropic" | "openai", string>>
+  >;
+} {
+  return {
+    masterKey: process.env.BYOK_ENCRYPTION_KEY ?? "",
+    platformKeys: {
+      ...(process.env.ANTHROPIC_API_KEY
+        ? { anthropic: process.env.ANTHROPIC_API_KEY }
+        : {}),
+      ...(process.env.OPENAI_API_KEY
+        ? { openai: process.env.OPENAI_API_KEY }
+        : {}),
+    },
   };
 }
 
@@ -178,6 +197,7 @@ async function main(): Promise<void> {
   const once = process.argv.includes("--once");
 
   const sourceFor = createSourceFactory(sql);
+  const aiKeys = aiKeyConfig();
 
   const handlers: JobHandlers = {
     analyze: createAnalysisJobHandler({
@@ -193,7 +213,7 @@ async function main(): Promise<void> {
         ),
       store: new PostgresAnalysisStore(sql),
     }),
-    coach: notImplemented("coach"),
+    coach: createCoachingJobHandler(new PostgresCoachingJobStore(sql, aiKeys)),
     enrich: createEnrichJobHandler({
       // Transient, like analysis: fetched, clipped, summarized, dropped.
       readSource: async ({ commitSha, path, repositoryId, workspaceId }) =>
@@ -202,20 +222,10 @@ async function main(): Promise<void> {
           path,
           commitSha,
         ),
-      store: new PostgresEnrichJobStore(sql, {
-        masterKey: process.env.BYOK_ENCRYPTION_KEY ?? "",
-        platformKeys: {
-          ...(process.env.ANTHROPIC_API_KEY
-            ? { anthropic: process.env.ANTHROPIC_API_KEY }
-            : {}),
-          ...(process.env.OPENAI_API_KEY
-            ? { openai: process.env.OPENAI_API_KEY }
-            : {}),
-        },
-      }),
+      store: new PostgresEnrichJobStore(sql, aiKeys),
     }),
-    judge: notImplemented("judge"),
-    pack: notImplemented("pack"),
+    judge: createJudgmentJobHandler(new PostgresJudgmentJobStore(sql, aiKeys)),
+    pack: reservedPackHandler(),
     scan: createScanHandler(sql, sourceFor),
   };
 

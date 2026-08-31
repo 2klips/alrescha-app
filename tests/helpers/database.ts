@@ -95,6 +95,8 @@ export const INITPLAN_SELECT_POLICIES_MIGRATION =
   "supabase/migrations/202608300001_initplan_select_policies.sql";
 export const ACCESS_EVENTS_OCCURRED_IDX_MIGRATION =
   "supabase/migrations/202608300002_access_events_occurred_idx.sql";
+export const PROMPT_COACHING_MIGRATION =
+  "supabase/migrations/202608310001_prompt_coaching.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -133,6 +135,7 @@ export const ALL_MIGRATIONS = [
   BOUND_INDEX_ENTRY_SEARCH_KEYS_MIGRATION,
   INITPLAN_SELECT_POLICIES_MIGRATION,
   ACCESS_EVENTS_OCCURRED_IDX_MIGRATION,
+  PROMPT_COACHING_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

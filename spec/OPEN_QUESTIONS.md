@@ -188,3 +188,11 @@
 - 임시 결정: 실행 전 측정 정의 보충(`measurement-preregistration.md`, SHA 잠금)으로 고정 — V1은 코퍼스 실존 경로 인용률로 관측, V2~V7은 정확도 악화 시 폐기(rejected)할 수 있으나 이 하네스에서는 채택(adopted)될 수 없고 측정값과 함께 pending 유지. 그리드·지시문·채택 규칙 자체는 불변.
 - 필요한 결정: V2~V7의 Goodhart 게이트를 통과시키려면 세션형 하네스(작업 단위: 코드 변경 → 커밋 → 영수증 생성까지 시뮬레이트)를 새로 사전등록해야 한다. 팀 표면 노출(ADR-013 `unguarded-team-surface`)의 전제이기도 하므로, 팀 기능 착수 시점에 설계 판정.
 - 상태: open.
+
+## OQ-021 — 'pack' 잡 kind는 생산자·의미가 정의된 적이 없다
+
+- 발견: Phase 2C todo 5 잔여 러너 구현(2026-08-31) / `supabase/migrations/202608100004_worker_credit_lifecycle.sql`(kind 화이트리스트), `apps/worker/src/run-local.ts`
+- 내용: 'pack'은 Phase 1 BUILD_PLAN("scan/analyze/judge/pack jobs")부터 큐 화이트리스트에 예약됐지만, 이를 enqueue하는 코드·소비 스펙·테스트가 저장소 어디에도 없다. WORK_SPEC §12는 컨텍스트 팩을 **온디맨드·읽기 전용** MCP 선택(`request_context_pack` — READ_ONLY 주석, 영속 쓰기 없음)으로 확정했고, 최소 인덱스는 advisory PR 액션이다 — 어느 쪽도 큐 잡을 요구하지 않는다.
+- 임시 결정: 워커는 `reservedPackHandler`(`apps/worker/src/reserved-jobs.ts`)를 등록한다 — 클레임된 pack 잡은 이 OQ를 가리키며 큰 소리로 실패한다(조용한 스킵 금지). 아무것도 enqueue하지 않으므로 실환경 영향은 없다.
+- 필요한 결정: ⑴ kind 회수 — 새 마이그레이션으로 `enqueue_job` 화이트리스트에서 'pack' 제거(기존 마이그레이션 수정 금지 규칙 준수) ⑵ 생산자 정의 — 예: 커밋 후 워크스페이스 팩 사전계산(§12의 온디맨드 원칙과 충돌하므로 스펙 개정 필요) ⑶ 현행 예약 유지.
+- 상태: open. 기본 후보는 ⑴ — 예약 kind는 미래 요구가 구체화되면 그때 다시 추가하는 편이 정직하다.

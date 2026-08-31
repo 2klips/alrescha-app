@@ -45,3 +45,10 @@ export { PostgresEnrichJobStore } from "./postgres-enrich-store";
 export { EnrichProviderLoader } from "./provider-loader";
 export { AnthropicEnrichProvider, OpenAiEnrichProvider } from "./ai-providers";
 export type { EnrichProvider } from "./ai-providers";
+export { PostgresCoachingJobStore } from "./postgres-coaching-store";
+export { CoachingProviderLoader } from "./provider-loader";
+export {
+  AnthropicCoachingProvider,
+  OpenAiCoachingProvider,
+} from "./ai-providers";
+export { reservedPackHandler } from "./reserved-jobs";

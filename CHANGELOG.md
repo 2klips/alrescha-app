@@ -12,8 +12,9 @@ phase.
 
 ### Phase 2C — 실물 기동: 실데이터 배선 · 실기 연동 · 동결 실험 · 배포 (2026-08-31)
 
-Plan: `spec/BUILD_PLAN_PHASE2C.md` (11 todos — 10 delivered; todo 5 keeps one
-narrow remainder: `judge`/`coach`/`pack` worker runners). Governing decisions:
+Plan: `spec/BUILD_PLAN_PHASE2C.md` (11 todos, all delivered — the last
+remainder, the judge/coach/pack runners, closed on 2026-08-31 with `pack`
+held as a reserved kind under OQ-021). Governing decisions:
 ADR-013 (scope boundaries), ADR-014 (symbol provenance), ADR-015 (assurance
 from server-observed evidence only). Per-todo evidence:
 `.omo/evidence/phase2c/`.
@@ -39,6 +40,16 @@ from server-observed evidence only). Per-todo evidence:
   112 trials: V1 adopted, V5/V6 rejected, the rest pending (OQ-020 —
   unobservable in a QA-shaped harness). Coaching charged through the credit
   ledger with refund-on-failure and idempotent retries proven on a real DB.
+- **Worker runners completed (todo 5 close-out, 2026-08-31)**: the judgment
+  runner is registered on its existing store; the coaching runner gained its
+  missing stack — Anthropic/OpenAI coaching providers with the deterministic
+  ceilings carried in-prompt, a BYOK-aware loader, and
+  `PostgresCoachingJobStore` persisting valid rubrics onto
+  `prompt_records.rubric` and schema-invalid outputs into the append-only,
+  never-billed `prompt_coaching_attempts` log
+  (`202608310001_prompt_coaching.sql`). The `pack` kind turned out to have no
+  producer or semantics anywhere — held as a reserved kind that fails loudly,
+  pending OQ-021.
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the
@@ -65,9 +76,10 @@ from server-observed evidence only). Per-todo evidence:
 
 - CI artifact assurance ADR (OIDC provenance design) — deferred until a
   demand signal, per the Wave 5 note.
-- Todo 5 remainder (`judge`/`coach`/`pack` runners), receipt detail routing
-  from commit cards, custom domain alias once the registrar transfer lock
-  clears (2026-10-25), and the OQ-019/OQ-020 judgments.
+- Receipt detail routing from commit cards, custom domain alias once the
+  registrar transfer lock clears (2026-10-25), and the OQ-019/OQ-020/OQ-021
+  judgments (tree-sitter, session-shaped VIBE harness, the reserved `pack`
+  kind).
 
 ### Phase 2B — 등록 플로우 · Data Brain v2 · 점검 · 팀 (2026-08-17)
 
