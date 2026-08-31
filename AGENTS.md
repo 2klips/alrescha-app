@@ -1,6 +1,13 @@
 # AGENTS.md — arr-app
 
-This repository implements Arr (AI development assurance SaaS). Full product spec lives in `spec/`.
+This repository implements Alrescha (formerly Arr; AI development assurance SaaS). Full product spec lives in `spec/`.
+
+## Active frontend track
+
+- Product name is `Alrescha`. Treat `Arr`, `SpecProof`, and `Alresca` as legacy names to migrate deliberately.
+- Before frontend work, read `docs/frontend/README.md` and its linked active plan.
+- Desktop web only for this track. Mobile-specific design and acceptance work is deferred.
+- Record every frontend task in `docs/frontend/logs/` and update `docs/frontend/WORKLOG.md`.
 
 ## Before doing anything
 
