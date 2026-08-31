@@ -43,7 +43,12 @@ test("saves a harness skill, dedupes its digest, and browses exact provenance", 
     page.getByRole("heading", { name: "Review auth" }),
   ).toBeVisible();
   await page.getByLabel(LIBRARY.filters.searchLabel).fill("authentication");
-  await page.getByRole("button", { name: ACTION.search }).click();
+  // Scoped to the filter form: the shell's side-nav palette trigger is also
+  // named "검색", so the bare role query is ambiguous since the AppShell pass.
+  await page
+    .getByLabel(LIBRARY.filters.aria)
+    .getByRole("button", { name: ACTION.search })
+    .click();
   await expect(page).toHaveURL(/query=authentication/);
   await expect(
     page.getByRole("heading", { name: "Review auth" }),

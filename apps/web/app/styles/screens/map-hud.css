@@ -537,8 +537,10 @@
   /* Capped and scrollable so a short viewport cannot grow the card up into the
      controls strip overlaying the top of this channel. brain-map.spec.ts
      asserts the two boxes never intersect, so this reserve cannot silently
-     rot. */
-  max-height: min(20rem, calc(100% - 16rem));
+     rot. 18rem (was 16rem): the AppShell pass raised the strip's buttons to
+     the 24px floor, which pushed its bottom edge past the old reserve at
+     1280x720 — measured overlap +12.6px, so the reserve grows by 2rem. */
+  max-height: min(20rem, calc(100% - 18rem));
   overflow-y: auto;
   padding: 0 0.85rem 0.7rem;
   position: absolute;

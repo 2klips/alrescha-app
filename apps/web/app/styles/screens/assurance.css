@@ -221,6 +221,14 @@
   user-select: none;
 }
 
+/* The highlighted row's 9%-accent tint over --surface lands between the flat
+   surfaces --faint is calibrated for and measures only ~4.4:1 under it (axe,
+   dark). Line numbers on emphasized rows step up one rung of the ramp;
+   tests/design-tokens.test.ts pins --muted against this composite. */
+.source-panel pre > span.highlighted i {
+  color: var(--muted);
+}
+
 .source-panel pre code {
   color: var(--text);
 }

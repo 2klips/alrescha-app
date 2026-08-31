@@ -84,21 +84,21 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 녹화 픽스처로 만든 파이프라인을 실제 GitHub에 1회 완주시킨다. 목적은 기능 추가가 아니라 **픽스처와 실물의 차이 발견**이다.
 
-- [ ] **5. 실기 파일럿: install → push → 카드 → receipt** _(2026-08-21 대부분 완료 — receipt는 기능 미구현으로 도달 불가)_
+- [ ] **5. 실기 파일럿: install → push → 카드 → receipt** _(2026-08-31 기준: 파일럿 경로 자체는 receipt까지 완주 — 로컬(2026-08-21)과 프로덕션(todo 9, `00d8f27`) 양쪽에서. 잔여는 아래 러너 3종뿐)_
       **완료**: 이관된 잔여 전부(로더 3종 `/app/*` 배선, 11화면 두 테마 순회 + axe, `arr push` graph-only e2e) + **실기 완주 — install → 콜백 → 레포 선택 → push → webhook(서명 검증) → scan 잡 → 실데이터 아티팩트 370개 · 커밋 카드 `assurance=full`**.
       **발견(이 페이즈의 산출물)**: ⑴ **GitHub 스캔 경로는 한 번도 저장에 성공한 적이 없었다** — postgres.js가 `${JSON.stringify(plan)}::jsonb`를 문자열 스칼라로 보내 `apply_repository_scan`이 조용히 0을 반환. PGlite 하네스는 드라이버가 달라 원리적으로 못 잡는다. `sql.json`으로 수정 + 이음매 회귀 테스트(위반 심기 재증명). ⑵ **워커에 실행 진입점이 없었고 `analyze` 핸들러와 receipt writer는 아예 없다** — `run-local.ts` 추가로 진입점은 해소. ⑶ 같은 출처 가드가 호스트 별칭(`127.0.0.1` vs `localhost`)에서 깨진다. ⑷ OQ-017(로그인 vs 최소 권한 App). 상세: `.omo/evidence/phase2c/wave-2-todo-5-pilot.md`.
       **후속 완료(2026-08-21)**: **analyze 핸들러 + receipt 발급 구현** — `createAnalysisJobHandler` + `PostgresAnalysisStore` + `findings.fingerprint` 마이그레이션. 실기에서 analyze 잡 3/3 성공, receipt 3건 발급·**verified**(변조 시 tampered). findings 0건은 이 레포에 `spec`/`adr` 문서가 없어서이고, 동작 증명은 테스트가 맡는다(드리프트 spec에서 finding 생성·resolved 정합·digest 검증·아티팩트 0건이면 발급 거부). 상세: `.omo/evidence/phase2c/wave-2-analyze-receipt.md`.
-      **잔여**: `judge`·`coach` 러너 등록(judge는 G3) · `pack` 핸들러 · ~~OQ-018~~(2026-08-22 해소 — 현행 구현을 운영 v1 정본으로 §13 개정, 실질 필드 4종은 Wave 4 predicateType 교체와 한 번에) · ~~같은 출처 가드~~(2026-08-22 수정 — Origin을 `request.url`이 아니라 Host 헤더와 비교, 리다이렉트도 `addressedOrigin`으로; 도메인 지식 불요라 Wave 4 대기 불필요였다. `.omo/evidence/phase2c/wave-2-same-origin-guard.md`) · OQ-017 판정.
+      **잔여**: `judge`·`coach` 러너 등록(judge는 G3) · `pack` 핸들러 — `apps/worker/src/run-local.ts`에서 셋 다 `notImplemented`(2026-08-31 확인; enrich는 202608240001에서 등록됨) · ~~OQ-018~~(2026-08-22 해소 — 현행 구현을 운영 v1 정본으로 §13 개정, 실질 필드 4종은 Wave 4 predicateType 교체와 한 번에) · ~~같은 출처 가드~~(2026-08-22 수정 — Origin을 `request.url`이 아니라 Host 헤더와 비교, 리다이렉트도 `addressedOrigin`으로; 도메인 지식 불요라 Wave 4 대기 불필요였다. `.omo/evidence/phase2c/wave-2-same-origin-guard.md`) · ~~OQ-017~~(2026-08-25 ⑴ 채택으로 해소 — 로그인용 OAuth App 분리, 프로덕션에서 GitHub 로그인 실측 완료. `.omo/evidence/phase3/followups-2026-08-25.md` §1).
       Commit: `feat(worker): drain jobs locally and fix the scan plan encoding`
 
 ## Wave 3 — 동결 실험 실행 _(G3)_ — **사전등록 수정 금지**
 
-- [ ] **6. 벤치마크 v3 본 실행 (600시행)**
+- [x] **6. 벤치마크 v3 본 실행 (600시행)** _(2026-08-25 Phase 3에서 완료 — 동결 사전등록 그대로 시도 4가 유효 릴리스: 600/600, 구간 게이트 3스코프 전면 MET — pooled Δ정확도 +8.69pp [3.86, 13.43] · 토큰 −67.39% [63.67, 70.19], `verify-benchmark-report.ts` PASS, 사이트 정확도 주장 복원(`743ff8d`). 증빙 `.omo/evidence/benchmark-v3.md` §16)_
       `benchmarks/databrain/tasks.v3.json` 그대로. 구간 게이트(ADR-012)로 정확도·토큰 판정 → 통과 시 사이트 정확도 주장 복원 절차(ADR-012에 정의), 미통과 시 철회 유지 + 결과 공개.
       수용 기준: 결과 다이제스트 잠금, 리포트 검증 스크립트(`scripts/verify-benchmark-report.ts`) 통과, 판정과 무관하게 결과 게시.
       Commit: `feat(bench): run the v3 benchmark and publish verdicts`
 
-- [ ] **7. VIBE 주입 실험 (112시행) + 기법 실모델 A/B**
+- [x] **7. VIBE 주입 실험 (112시행) + 기법 실모델 A/B** _(2026-08-25 Phase 3에서 완료 — V1 adopted · V5/V6 rejected · 나머지 pending(OQ-020: QA형 하네스에서 V2~V7 지표 이동 관측 불가 — 실행 전 측정 정의 보충 `measurement-preregistration.md`로 잠금), 판정은 `benchmarks/vibe/gate-results.json`·`vibe-injection.real.{json,md}`에 게시, 미채택 지표 비노출 유지. 기법 4종 실모델 재측정 + 3반복 재판정: id-first·static-prefix·lazy-tool **off**, compaction-safe **on**. 증빙 `.omo/evidence/phase3/wave-f.md` · `followups-2026-08-25.md` §2)_
       주입 그리드 실행 → 지표별 채택/폐기 판정을 `benchmarks/vibe/gate-results.json`에 기록 — **adopted가 생기면 `/team` VIBE 위젯이 자동으로 렌더되기 시작한다**(픽스처-게시 파일 일치 테스트가 이미 강제). 기법 4종(id-first 등)의 dry-run 델타를 실모델로 재측정.
       수용 기준: 판정 기록이 게시 파일에 반영, 미채택 지표 비노출 유지, 실모델 델타가 리포트에 사전등록 대비로 기록.
       Commit: `feat(bench): judge vibe metrics and techniques on real models`
@@ -122,7 +122,7 @@ arr-app 레포에서 Phase 2C를 이어간다.
 
 ## Wave 5 — 최종 게이트
 
-- [ ] **11. 최종 검증·핸드오프**
+- [x] **11. 최종 검증·핸드오프** _(2026-08-31 완료 — vitest 935/1 skipped · Playwright **120 passed**(로컬 스택 기동, 풀 스위트) · lint/typecheck clean · scope 12경계 PASS · adr-guardrails PASS(위반 심기 자가 테스트는 vitest 상주). 풀 스위트가 08-28 디자인·08-30 성능 작업의 잠복 리그레션 4건을 잡아 함께 수정 — 다크 AA(highlighted 줄번호), HUD force 패널 겹침·포인터 가로채기, library 로케이터 모호. CHANGELOG Phase 2C 섹션 추가. 증빙 `.omo/evidence/phase2c/wave-5-todo-11.md`)_
       전체 vitest/Playwright green, 가드레일 12경계 무변경 증명(위반 심기 재확인), CHANGELOG Phase 2C 섹션, 다음 페이즈 후보(CI 아티팩트 보증 ADR — OIDC 출처 증명 설계 — 는 수요 신호 후) 기록.
       Commit: `chore(release): phase 2c verification`
 

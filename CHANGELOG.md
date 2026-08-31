@@ -10,6 +10,65 @@ phase.
 
 ## [Unreleased]
 
+### Phase 2C — 실물 기동: 실데이터 배선 · 실기 연동 · 동결 실험 · 배포 (2026-08-31)
+
+Plan: `spec/BUILD_PLAN_PHASE2C.md` (11 todos — 10 delivered; todo 5 keeps one
+narrow remainder: `judge`/`coach`/`pack` worker runners). Governing decisions:
+ADR-013 (scope boundaries), ADR-014 (symbol provenance), ADR-015 (assurance
+from server-observed evidence only). Per-todo evidence:
+`.omo/evidence/phase2c/`.
+
+#### Added
+
+- **Real-data wiring (Wave 1)**: Supabase loaders for `/inspection` and
+  `/team` plus the authed `/app/*` screens — empty workspaces render
+  "insufficient evidence", never demo fixtures; `record_ruled_out` MCP tool
+  persists ruled-out hypotheses append-only (UPDATE/DELETE rejected at the
+  schema level); live auth screens pass axe AA in the e2e suite.
+- **Live GitHub pilot (Wave 2)**: install → push → webhook (signature
+  verified) → scan → analyze → commit card `assurance=full` → verified
+  receipt — first locally, then re-run end to end in production (`00d8f27`).
+  The pilot surfaced real defects fixtures could not: the scan-plan jsonb
+  encoding bug (fixed with a seam regression test), the missing worker
+  entrypoint (`run-local.ts`), and the then-missing analyze handler + receipt
+  issuance (implemented with digest verification and tamper detection).
+- **Frozen experiments (Wave 3, executed under the Phase 3 plan)**: benchmark
+  v3 attempt 4 is the valid release — 600/600 trials, interval gates MET on
+  all three scopes (pooled accuracy Δ +8.69pp [3.86, 13.43], tokens −67.39%
+  [63.67, 70.19]); site accuracy claims restored (`743ff8d`). VIBE injection
+  112 trials: V1 adopted, V5/V6 rejected, the rest pending (OQ-020 —
+  unobservable in a QA-shaped harness). Coaching charged through the credit
+  ledger with refund-on-failure and idempotent retries proven on a real DB.
+- **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
+  (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
+  `predicateType` finalized on the production namespace together with the
+  WORK_SPEC §13 reserved fields; rollback procedures documented
+  (`docs/DEPLOYMENT_RUNBOOK.md`).
+
+#### Verification (todo 11)
+
+- vitest 935 passed / 1 skipped; Playwright e2e 120 passed — the full suite
+  against a running local Supabase stack; `eslint --max-warnings=0` and
+  workspace-wide `tsc --noEmit` clean; `verify-scope-boundaries.ts` PASS (12
+  boundaries, 285 files, 0 forbidden paths); `adr-guardrails.ts` PASS.
+  Violation-seeding self-tests are part of the vitest run
+  (`tests/scope-fidelity.test.ts`, `tests/adr-guardrails.test.ts`).
+- The full-suite run itself caught and fixed four latent regressions that
+  the DB-less subset gates of 08-28/08-30 could not see: dark-mode AA
+  contrast on highlighted code-row line numbers (now `--muted`, with a new
+  composite-contrast assertion in `tests/design-tokens.test.ts`), the map
+  force panel overlapping the graph controls strip and intercepting node
+  double-clicks (HUD reserve 16rem → 18rem), and an ambiguous library search
+  locator after the AppShell pass (scoped to the filter form).
+
+#### Next-phase candidates
+
+- CI artifact assurance ADR (OIDC provenance design) — deferred until a
+  demand signal, per the Wave 5 note.
+- Todo 5 remainder (`judge`/`coach`/`pack` runners), receipt detail routing
+  from commit cards, custom domain alias once the registrar transfer lock
+  clears (2026-10-25), and the OQ-019/OQ-020 judgments.
+
 ### Phase 2B — 등록 플로우 · Data Brain v2 · 점검 · 팀 (2026-08-17)
 
 Plan: `spec/BUILD_PLAN_PHASE2B.md` (15 todos, all delivered). Governing

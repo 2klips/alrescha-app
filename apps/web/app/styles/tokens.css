@@ -62,14 +62,17 @@
 
   /* Text
      `--faint` is the dimmest colour still allowed to carry text: WCAG 2.2 AA
-     (4.5:1) against every surface it lands on, including the `.highlighted`
-     code row. Its pre-Wave-4 value (#5a6478) measured 2.57:1 there — the
-     axe-core audit in tests/e2e/a11y-contrast.spec.ts is what raised it.
-     Design roadmap step 1 re-lowered it from #848ea2, which sat within
-     0.4:1 of --muted and collapsed the three-step ramp, to the AA floor
-     with margin: 4.62:1 on --surface-2 and 4.73:1 on the highlighted code
-     row, measured with the same math as tests/design-tokens.test.ts.
-     Ordering `text > muted > faint` still holds. */
+     (4.5:1) against every flat surface it lands on. Its pre-Wave-4 value
+     (#5a6478) measured 2.57:1 on the highlighted code row — the axe-core
+     audit in tests/e2e/a11y-contrast.spec.ts is what raised it. Design
+     roadmap step 1 re-lowered it from #848ea2, which sat within 0.4:1 of
+     --muted and collapsed the three-step ramp, to the AA floor with margin
+     on the flat surfaces (4.62:1 on --surface-2). The one place that floor
+     is NOT enough is the highlighted code row: its 9%-accent tint over
+     --surface composites to a lighter ground where #808b9f measures ~4.4:1,
+     so `.highlighted` line numbers step up to --muted instead
+     (assurance.css; pinned by tests/design-tokens.test.ts against the
+     composite). Ordering `text > muted > faint` still holds. */
   --text: #e8ecf4;
   --muted: #8a94a8;
   --faint: #808b9f;

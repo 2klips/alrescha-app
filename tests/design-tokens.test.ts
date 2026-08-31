@@ -297,6 +297,32 @@ describe("token contrast (WCAG 2.2 AA — Phase 2A todo 9)", () => {
     expect(failures).toEqual([]);
   });
 
+  test.each(THEMES)(
+    "%s: highlighted code-row line numbers clear AA on the composite",
+    (theme) => {
+      // `.source-panel pre > span.highlighted` paints
+      // `color-mix(in srgb, var(--accent) 9%, transparent)` over --surface
+      // (assurance.css), a ground none of SURFACES covers. --faint measures
+      // only ~4.4:1 there (the axe audit caught it), so highlighted line
+      // numbers use --muted — this pins that pairing to the composite.
+      const mixChannel = (hex: string, offset: number) =>
+        Number.parseInt(hex.replace("#", "").slice(offset, offset + 2), 16);
+      const composite = `#${[0, 2, 4]
+        .map((offset) =>
+          Math.round(
+            mixChannel(resolve("--accent", theme), offset) * 0.09 +
+              mixChannel(resolve("--surface", theme), offset) * 0.91,
+          )
+            .toString(16)
+            .padStart(2, "0"),
+        )
+        .join("")}`;
+      expect(
+        contrastRatio(resolve("--muted", theme), composite),
+      ).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
   test.each(THEMES)("%s: the text ramp stays ordered", (theme) => {
     const on = (token: string) =>
       contrastRatio(resolve(token, theme), resolve("--surface", theme));

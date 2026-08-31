@@ -27,6 +27,10 @@ export default tseslint.config(
       "**/test-results/**",
       // Supabase CLI runtime scratch — vendored Deno bundles, not our source.
       "supabase/.temp/**",
+      // Claude Code session scratch: .claude/worktrees holds full working-tree
+      // copies (git-excluded via .git/info/exclude, which ESLint cannot see) —
+      // linting them double-parses every file against ambiguous tsconfig roots.
+      ".claude/**",
     ],
   },
   eslint.configs.recommended,
