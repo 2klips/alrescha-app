@@ -6,8 +6,8 @@
  */
 
 .home-shell {
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg-default);
+  color: var(--fg-default);
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -30,17 +30,17 @@
 }
 
 .home-lead {
-  color: var(--muted);
+  color: var(--fg-muted);
   margin-top: 0.75rem;
   max-width: 40em;
 }
 
 .home-revoked {
   align-items: center;
-  border: 1px solid var(--danger);
+  border: 1px solid var(--danger-fg);
   border-radius: var(--radius-card);
   background: var(--tint-danger);
-  color: var(--danger-text);
+  color: var(--danger-fg);
   display: flex;
   font-size: var(--text-base);
   gap: 0.5rem;
@@ -51,8 +51,8 @@
 
 .home-graph-card {
   align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   border-radius: var(--radius-card);
   display: flex;
   flex-wrap: wrap;
@@ -69,7 +69,7 @@
 }
 
 .home-graph-counts span {
-  color: var(--muted);
+  color: var(--fg-muted);
   display: grid;
   font-size: var(--text-xs);
   gap: 0.1rem;
@@ -78,13 +78,13 @@
 .home-graph-counts strong {
   font-family: var(--font-mono);
   font-size: var(--text-xl);
-  color: var(--text);
+  color: var(--fg-default);
   font-variant-numeric: tabular-nums;
 }
 
 .home-graph-commit {
   align-items: center;
-  color: var(--faint);
+  color: var(--fg-muted);
   display: flex;
   font-size: var(--text-xs);
   gap: 0.4rem;
@@ -97,9 +97,9 @@
 
 .home-graph-open {
   align-items: center;
-  background: var(--accent);
+  background: var(--accent-fg);
   border-radius: var(--radius-control);
-  color: var(--on-accent);
+  color: var(--fg-on-emphasis);
   display: inline-flex;
   font-size: var(--text-base);
   font-weight: 600;
@@ -121,8 +121,8 @@
 }
 
 .home-journey > li {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   border-radius: var(--radius-card);
   display: grid;
   gap: 1rem;
@@ -131,7 +131,7 @@
 }
 
 .home-journey > li[data-step-state="active"] {
-  border-color: var(--accent);
+  border-color: var(--accent-fg);
   box-shadow: 0 0 0 2px var(--tint-accent);
 }
 
@@ -144,9 +144,9 @@
 
 .home-step-badge {
   align-items: center;
-  border: 1.5px solid var(--line-strong);
+  border: 1.5px solid var(--border-default);
   border-radius: var(--radius-pill);
-  color: var(--muted);
+  color: var(--fg-muted);
   display: inline-flex;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
@@ -158,13 +158,13 @@
 
 .home-step-badge[data-step-state="done"] {
   background: var(--tint-verified);
-  border-color: var(--verified);
-  color: var(--verified-text);
+  border-color: var(--success-fg);
+  color: var(--success-fg);
 }
 
 .home-step-badge[data-step-state="active"] {
-  border-color: var(--accent);
-  color: var(--accent-text);
+  border-color: var(--accent-fg);
+  color: var(--accent-fg);
 }
 
 .home-journey h2 {
@@ -175,9 +175,9 @@
 }
 
 .home-step-state {
-  border: 1px solid var(--line);
+  border: 1px solid var(--border-muted);
   border-radius: var(--radius-control);
-  color: var(--muted);
+  color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
   margin-left: 0.35rem;
@@ -185,30 +185,30 @@
 }
 
 .home-step-state[data-step-state="done"] {
-  border-color: var(--verified);
-  color: var(--verified-text);
+  border-color: var(--success-fg);
+  color: var(--success-fg);
 }
 
 .home-step-state[data-step-state="active"] {
-  border-color: var(--accent);
-  color: var(--accent-text);
+  border-color: var(--accent-fg);
+  color: var(--accent-fg);
 }
 
 .home-journey p {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-base);
   margin-top: 0.45rem;
   max-width: 46em;
 }
 
 .home-journey p.home-step-done {
-  color: var(--text);
+  color: var(--fg-default);
   font-family: var(--font-mono);
   font-size: var(--text-sm);
 }
 
 .home-journey small {
-  color: var(--faint);
+  color: var(--fg-muted);
   display: block;
   font-size: var(--text-xs);
   margin-top: 0.2rem;
@@ -216,9 +216,9 @@
 
 .home-step-cta {
   align-items: center;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-control);
-  color: var(--accent-text);
+  color: var(--accent-fg);
   display: inline-flex;
   font-size: var(--text-sm);
   font-weight: 600;
@@ -229,7 +229,7 @@
 }
 
 .home-step-cta:hover {
-  border-color: var(--accent);
+  border-color: var(--accent-fg);
 }
 
 @media (max-width: 640px) {
@@ -237,4 +237,18 @@
     align-items: flex-start;
     flex-direction: column;
   }
+}
+
+.home-shell {
+  min-height: calc(100svh - var(--shell-stack-h));
+}
+
+.home-main {
+  gap: var(--space-6);
+  max-width: var(--layout-page-max);
+  padding: var(--layout-page-padding) var(--layout-page-padding) var(--space-7);
+}
+
+.home-hero > .product-page-header {
+  padding-top: 0;
 }

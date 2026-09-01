@@ -29,15 +29,15 @@
 }
 
 .overview-lead {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-sm);
   margin: 0.35rem 0 0;
 }
 
 .overview-repo {
   align-items: center;
-  border: 1px solid var(--line);
-  color: var(--muted);
+  border: 1px solid var(--border-muted);
+  color: var(--fg-muted);
   display: inline-flex;
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
@@ -53,8 +53,8 @@
 }
 
 .overview-kpis article {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
@@ -75,7 +75,7 @@
 }
 
 .overview-kpis span {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
   letter-spacing: 0.04em;
 }
@@ -87,8 +87,8 @@
 }
 
 .overview-zone {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
@@ -106,7 +106,7 @@
 
 .overview-zone-head {
   align-items: flex-start;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-muted);
   display: flex;
   gap: 0.75rem;
   justify-content: space-between;
@@ -122,14 +122,14 @@
 }
 
 .overview-zone-head p {
-  color: var(--faint);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
   margin: 0.25rem 0 0;
 }
 
 .overview-zone-open {
   align-items: center;
-  color: var(--accent-text);
+  color: var(--accent-fg);
   display: inline-flex;
   font-size: var(--text-xs);
   gap: 0.25rem;
@@ -142,15 +142,15 @@
 }
 
 .overview-empty {
-  color: var(--faint);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
   margin: 0;
 }
 
 /* Zone 1 — graph miniature */
 .overview-minimap {
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
   flex: 1;
   min-height: 8rem;
   width: 100%;
@@ -174,7 +174,7 @@
 
 .overview-graph-foot {
   align-items: center;
-  color: var(--muted);
+  color: var(--fg-muted);
   display: flex;
   font-size: var(--text-xs);
   gap: 0.75rem;
@@ -237,8 +237,8 @@
 }
 
 .overview-todo-status {
-  border: 1px solid var(--line-strong);
-  color: var(--muted);
+  border: 1px solid var(--border-default);
+  color: var(--fg-muted);
   flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
@@ -250,7 +250,7 @@
 }
 
 .overview-todo-list code {
-  color: var(--faint);
+  color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
 }
@@ -272,7 +272,7 @@
 }
 
 .overview-agent-list code {
-  color: var(--accent-text);
+  color: var(--accent-fg);
   flex-shrink: 0;
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
@@ -286,7 +286,7 @@
 
 .overview-agent-list time {
   font-variant-numeric: tabular-nums;
-  color: var(--faint);
+  color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
 }
@@ -313,21 +313,21 @@
 }
 
 .overview-brain-bar {
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
   display: block;
   height: 0.55rem;
 }
 
 .overview-brain-bar i {
-  background: var(--accent);
+  background: var(--accent-fg);
   display: block;
   height: 100%;
 }
 
 .overview-brain-count {
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
+  color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
   white-space: nowrap;
@@ -335,8 +335,8 @@
 
 .overview-brain-grades {
   align-items: center;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
+  border-top: 1px solid var(--border-muted);
+  color: var(--fg-muted);
   display: flex;
   font-size: var(--text-xs);
   gap: 0.75rem;
@@ -359,15 +359,15 @@
 }
 
 .overview-brain-grades li[data-grade="verified"] {
-  color: var(--verified-text);
+  color: var(--success-fg);
 }
 
 .overview-brain-grades li[data-grade="inferred"] {
-  color: var(--inferred-text);
+  color: var(--attention-fg);
 }
 
 .overview-brain-grades li[data-grade="broken"] {
-  color: var(--danger-text);
+  color: var(--danger-fg);
 }
 
 .overview-mini-node.concept {
@@ -391,4 +391,10 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}
+
+.overview-kpis article,
+.overview-zone {
+  background: var(--bg-default);
+  border-radius: var(--radius-medium);
 }

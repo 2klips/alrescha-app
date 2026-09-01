@@ -5,6 +5,7 @@ import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { createClient } from "../../../../lib/supabase/server";
 import { loadWorkspacePilotReport } from "../../../../lib/stats/pilot-report";
 import { PilotStatsDashboard } from "./pilot-stats-dashboard";
+import { ProductPageHeader } from "../../../ui/page-layout";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,12 @@ export default async function PilotStatsPage() {
   const { report } = await loadWorkspacePilotReport(client, userId);
 
   return (
-    <main className="mcp-settings-shell pilot-stats-shell">
-      <header>
-        <div className="eyebrow">{STATS.page.eyebrow}</div>
-        <h1>{STATS.page.title}</h1>
-        <p>{STATS.page.body}</p>
-      </header>
+    <main className="mcp-settings-shell pilot-stats-shell product-page">
+      <ProductPageHeader
+        description={STATS.page.body}
+        kicker={STATS.page.eyebrow}
+        title={STATS.page.title}
+      />
       <PilotStatsDashboard report={report} />
     </main>
   );

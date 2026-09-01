@@ -26,8 +26,8 @@ import {
   inspectEdgeProvenance,
 } from "../../lib/dashboard/local-graph";
 import { GRAPH } from "../../lib/strings";
-import { GraphTableView } from "./dashboard-screen";
 import { GraphCanvas } from "./graph-canvas";
+import { GraphTableView } from "./graph-table-view";
 
 interface GraphDetailProps {
   initialNodeId: string;

@@ -13,6 +13,7 @@ import {
   INITIAL_INDEX_PROPOSAL_STATE,
 } from "./state";
 import { McpTokenManager } from "./token-manager";
+import { ProductPageHeader } from "../../../../ui/page-layout";
 
 export const dynamic = "force-dynamic";
 
@@ -43,16 +44,18 @@ export default async function McpSettingsPage() {
   });
 
   return (
-    <main className="mcp-settings-shell">
-      <header>
-        <div className="eyebrow">{SETTINGS.mcp.eyebrow}</div>
-        <h1>{SETTINGS.mcp.title}</h1>
-        <p>
-          {SETTINGS.mcp.introPrefix}
-          <code>{SETTINGS.mcp.apiPath}</code>
-          {SETTINGS.mcp.introSuffix}
-        </p>
-      </header>
+    <main className="mcp-settings-shell product-page">
+      <ProductPageHeader
+        description={
+          <>
+            {SETTINGS.mcp.introPrefix}
+            <code>{SETTINGS.mcp.apiPath}</code>
+            {SETTINGS.mcp.introSuffix}
+          </>
+        }
+        kicker={SETTINGS.mcp.eyebrow}
+        title={SETTINGS.mcp.title}
+      />
       <McpTokenManager tokens={tokens} />
       <InstructionBlocks baseUrl={await requestBaseUrl()} />
       <ContextTools

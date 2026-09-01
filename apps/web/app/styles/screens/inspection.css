@@ -23,8 +23,8 @@
 }
 
 .inspection-widget {
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
   display: flex;
   flex-direction: column;
   gap: 0.55rem;
@@ -34,7 +34,7 @@
 
 .inspection-widget > header {
   align-items: center;
-  color: var(--muted);
+  color: var(--fg-muted);
   display: flex;
   gap: 0.4rem;
 }
@@ -53,14 +53,14 @@
 }
 
 .inspection-note {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
   margin: 0;
 }
 
 .inspection-insufficient {
-  border: 1px dashed var(--line-strong);
-  color: var(--muted);
+  border: 1px dashed var(--border-default);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
   margin: 0;
   padding: 0.6rem 0.7rem;
@@ -68,8 +68,8 @@
 
 .inspection-source {
   align-items: center;
-  border-top: 1px solid var(--line);
-  color: var(--faint);
+  border-top: 1px solid var(--border-muted);
+  color: var(--fg-muted);
   display: inline-flex;
   font-size: var(--text-2xs);
   gap: 0.3rem;
@@ -97,7 +97,7 @@
 
 .inspection-finding code,
 .inspection-document code {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
 }
@@ -107,20 +107,20 @@
 }
 
 .inspection-advisory span code {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
   margin-right: 0.4rem;
 }
 
 .inspection-advisory span small {
-  color: var(--muted);
+  color: var(--fg-muted);
   display: block;
   font-size: var(--text-2xs);
 }
 
 .inspection-advisory em {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
   font-style: normal;
 }
@@ -149,15 +149,15 @@
 }
 
 .inspection-freshness.current {
-  color: var(--verified-text);
+  color: var(--success-fg);
 }
 
 .inspection-freshness.outdated {
-  color: var(--inferred-text);
+  color: var(--attention-fg);
 }
 
 .inspection-freshness.drift-suspected {
-  color: var(--danger-text);
+  color: var(--danger-fg);
 }
 
 .inspection-summary {
@@ -168,12 +168,12 @@
 
 .inspection-summary small,
 .inspection-summary-missing {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
 }
 
 .inspection-ruled-out li {
-  border-left: 2px solid var(--line-strong);
+  border-left: 2px solid var(--border-default);
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
@@ -182,7 +182,7 @@
 
 .inspection-ruled-out time {
   font-variant-numeric: tabular-nums;
-  color: var(--faint);
+  color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
 }
@@ -192,27 +192,32 @@
 }
 
 .inspection-ruled-out p {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
   margin: 0;
 }
 
 .inspection-ruled-out p span {
-  color: var(--faint);
+  color: var(--fg-muted);
   margin-right: 0.35rem;
 }
 
 .inspection-ruled-out code {
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
+  color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
 }
 
 .inspection-widget h3 {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
   letter-spacing: 0.06em;
   margin: 0;
   text-transform: uppercase;
+}
+
+.inspection-widget {
+  background: var(--bg-default);
+  border-radius: var(--radius-medium);
 }

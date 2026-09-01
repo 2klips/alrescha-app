@@ -1,5 +1,5 @@
 /*
- * Ink & Seal stylesheet hub (design roadmap step 5).
+ * Alrescha stylesheet hub (F4 core-screen migration).
  *
  * globals.css is now only the ordered import list — tokens first, then
  * foundation -> primitives -> shared chrome -> shell -> screens -> theme

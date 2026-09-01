@@ -13,6 +13,7 @@ import Link from "next/link";
 
 import { Icon } from "./ui-icon";
 import { COMMITS } from "../../lib/strings";
+import { ProductEmptyState, ProductPageHeader } from "./page-layout";
 
 interface CommitAnalysisBoardProps {
   /** Route the cards link back to — `/commits` for the demo board and
@@ -216,21 +217,20 @@ export function CommitAnalysisBoard({
 }: CommitAnalysisBoardProps) {
   const selected = cards.find((card) => card.runId === selectedRunId) ?? null;
   return (
-    <main className="commit-main">
+    <main className="commit-main product-page">
       <section className="commit-rail" aria-label={COMMITS.ariaList}>
-        <header className="progress-section-heading">
-          <div>
-            <span>{COMMITS.kicker}</span>
-            <h1>{COMMITS.title}</h1>
-          </div>
-          <small>{COMMITS.list.countSuffix(cards.length)}</small>
-        </header>
-        <p className="commit-lead">{COMMITS.lead}</p>
+        <ProductPageHeader
+          actions={<small>{COMMITS.list.countSuffix(cards.length)}</small>}
+          className="commit-page-header"
+          description={COMMITS.lead}
+          kicker={COMMITS.kicker}
+          title={COMMITS.title}
+        />
         {cards.length === 0 ? (
-          <div className="empty-list">
-            <strong>{COMMITS.list.empty.title}</strong>
-            <p>{COMMITS.list.empty.body}</p>
-          </div>
+          <ProductEmptyState
+            body={COMMITS.list.empty.body}
+            title={COMMITS.list.empty.title}
+          />
         ) : (
           <ol className="commit-card-list">
             {cards.map((card) => (

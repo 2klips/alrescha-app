@@ -1,295 +1,273 @@
-/*
- * Cross-screen shared chrome: kickers, headings, state panels, demo controls.
- * Split from globals.css (design roadmap step 5) — cascade order is
- * preserved by the @import order in globals.css; keep new rules with
- * their owner.
- */
+/* F4 shared page primitives. Screen files own only domain-specific layout. */
+
+.product-page {
+  background: var(--bg-default);
+  color: var(--fg-default);
+}
+
+.product-page-header {
+  align-items: center;
+  border-bottom: 1px solid var(--border-muted);
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 5rem;
+  padding-bottom: var(--space-4);
+}
+
+.product-page-header--with-icon {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.product-page-heading {
+  min-width: 0;
+}
+
+.product-page-kicker,
+.panel-kicker,
+.eyebrow,
+.progress-kicker,
+.progress-section-heading span,
+.product-section-header > div > span {
+  color: var(--fg-muted);
+  display: block;
+  font: var(--text-body-sm) / var(--line-body-sm) var(--font-mono);
+  letter-spacing: 0.04em;
+  margin: 0 0 var(--space-1);
+}
+
+.product-page-header h1 {
+  font-size: var(--text-title-md);
+  line-height: var(--line-title-md);
+  margin: 0;
+}
+
+.product-page-description {
+  color: var(--fg-muted);
+  font-size: var(--text-body-md);
+  line-height: var(--line-body-lg);
+  margin: var(--space-1) 0 0;
+  max-width: var(--layout-readable-max);
+}
+
+.product-page-description strong {
+  color: var(--attention-fg);
+  font-weight: 600;
+}
+.product-page-description a {
+  color: var(--accent-fg);
+}
+
+.product-page-icon,
+.product-empty-icon {
+  align-items: center;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-medium);
+  color: var(--accent-fg);
+  display: flex;
+  height: var(--space-7);
+  justify-content: center;
+  width: var(--space-7);
+}
+
+.product-page-actions {
+  align-items: center;
+  color: var(--fg-muted);
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.product-section-header,
+.progress-section-heading {
+  align-items: end;
+  border-bottom: 1px solid var(--border-muted);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-2);
+}
+
+.product-section-header h2,
+.progress-section-heading h2 {
+  font-size: var(--text-title-sm);
+  line-height: var(--line-title-sm);
+  margin: 0;
+}
+
+.product-section-header p {
+  color: var(--fg-muted);
+  margin: var(--space-1) 0 0;
+}
+
+.product-section-header small,
+.progress-section-heading small {
+  color: var(--fg-muted);
+  font: var(--text-body-sm) / var(--line-body-sm) var(--font-mono);
+}
+
+.product-empty-state,
+.empty-list {
+  align-content: center;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-medium);
+  color: var(--fg-muted);
+  display: grid;
+  gap: var(--space-2);
+  justify-items: center;
+  min-height: 12rem;
+  padding: var(--space-5);
+  text-align: center;
+}
+
+.product-empty-state strong,
+.empty-list strong {
+  color: var(--fg-default);
+  font-size: var(--text-title-sm);
+}
+.product-empty-state p,
+.empty-list p {
+  line-height: var(--line-body-lg);
+  margin: 0;
+  max-width: var(--layout-readable-max);
+}
+
+.surface-heading.product-page-header {
+  display: grid;
+  min-height: auto;
+}
+.wide-heading.product-page-header {
+  align-items: end;
+}
 
 .hud-panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  box-shadow: 0 14px 36px
-    color-mix(in srgb, var(--shadow-color) 26%, transparent);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-medium);
+  box-shadow: none;
 }
 
-.panel-kicker {
-  color: var(--accent);
-  display: block;
-  font: var(--text-2xs) var(--font-mono);
-  letter-spacing: 0.12em;
-  margin-bottom: 0.55rem;
-  text-transform: uppercase;
-}
-
-.graph-state {
-  align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--line-strong);
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  left: 50%;
-  max-width: calc(100% - 2rem);
-  padding: 1.6rem;
-  position: absolute;
-  text-align: center;
-  top: 53%;
-  transform: translate(-50%, -50%);
-  width: 25rem;
-  z-index: 2;
-}
-
-.graph-state strong {
-  font-family: var(--font-sans);
-  font-size: var(--text-lg);
-}
-
-.graph-state h2 {
-  font-family: var(--font-sans);
-  font-size: var(--text-lg);
-  margin: 0;
-}
-
-.graph-state > span {
-  color: var(--muted);
-  font-size: var(--text-xs);
-  line-height: 1.45;
-}
-
-.graph-state svg {
-  color: var(--accent);
-}
-
-.graph-state.error-state {
-  border-color: color-mix(in srgb, var(--danger) 55%, transparent);
-}
-
-.graph-state.error-state svg {
-  color: var(--danger);
-}
-
-.pre-scan-orbit {
-  align-items: center;
-  animation: breathe 1.8s ease-in-out infinite;
-  border: 1px solid var(--accent);
-  display: flex;
-  height: 3.5rem;
-  justify-content: center;
-  width: 3.5rem;
-}
-
-.revoked-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-  justify-content: center;
-}
-
-.surface-heading h1 {
-  font-family: var(--font-sans);
-  font-size: var(--text-display);
-  letter-spacing: -0.035em;
-  line-height: 1;
-  margin: 0;
-}
-
-.surface-heading p {
-  color: var(--muted);
-  font-size: var(--text-xs);
-  line-height: 1.5;
-  margin: 0.65rem 0 0;
-}
-
-.surface-heading p strong {
-  color: var(--inferred);
-  font-family: var(--font-mono);
-  font-weight: 500;
-}
-
-.severity-dot {
-  background: var(--muted);
-  height: 0.48rem;
-  margin-top: 0.2rem;
-  width: 0.48rem;
+.severity-dot,
+.evidence-dot {
+  background: var(--fg-muted);
+  border-radius: var(--radius-full);
+  height: var(--space-2);
+  margin-top: var(--space-1);
+  width: var(--space-2);
 }
 
 .severity-dot.critical,
 .severity-dot.high {
-  background: var(--danger);
+  background: var(--danger-fg);
 }
-
-.severity-dot.medium {
-  background: var(--inferred);
-}
-
+.severity-dot.medium,
 .severity-dot.low {
-  background: var(--inferred);
+  background: var(--attention-fg);
 }
 
-.empty-list {
-  border: 1px dashed var(--line-strong);
-  color: var(--muted);
-  font-size: var(--text-2xs);
-  padding: 1rem;
-  text-align: center;
-}
-
-.severity-label {
-  font: var(--text-2xs) var(--font-mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.severity-label,
+.inline-status {
+  font: var(--text-body-sm) / var(--line-body-sm) var(--font-mono);
 }
 
 .severity-label.high,
-.severity-label.critical {
-  color: var(--danger-text);
+.severity-label.critical,
+.error-text {
+  color: var(--danger-fg);
 }
-
-.severity-label.medium {
-  color: var(--inferred-text);
+.severity-label.medium,
+.severity-label.low,
+.severity-label.moderate {
+  color: var(--attention-fg);
 }
-
-.severity-label.low {
-  color: var(--inferred-text);
+.severity-label.info {
+  color: var(--accent-fg);
 }
 
 .inline-status {
   align-items: center;
-  color: var(--muted);
+  color: var(--fg-muted);
   display: flex;
-  font: var(--text-2xs) var(--font-mono);
-  gap: 0.4rem;
+  gap: var(--space-2);
   margin: 0;
-  padding: 1rem;
+  padding: var(--space-4);
 }
 
-.error-text {
-  color: var(--danger);
+.commit-lead {
+  color: var(--fg-muted);
+  font-size: var(--text-body-md);
+  line-height: var(--line-body-lg);
+  margin: 0;
 }
 
-.wide-heading {
-  align-items: end;
+.severity-marker {
+  align-items: center;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0 1.5rem;
-  justify-content: space-between;
+  gap: var(--space-1);
 }
 
-.wide-heading .panel-kicker {
-  width: 100%;
-}
-
-/* Existing auth/error routes retain compact shell styling. */
+/* Compact auth/connect routes remain outside the repository work surface. */
 .shell {
-  background: var(--panel);
-  border: 1px solid var(--line-strong);
-  margin: 8vh auto;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-large);
+  margin: var(--space-8) auto;
   max-width: 44rem;
-  padding: clamp(1.5rem, 5vw, 3rem);
-  width: calc(100% - 2rem);
+  padding: var(--space-6);
+  width: calc(100% - (var(--space-5) * 2));
 }
 
 .shell h1 {
-  font-family: var(--font-sans);
-  font-size: var(--text-display);
-  margin: 0.6rem 0;
+  font-size: var(--text-title-lg);
+  line-height: var(--line-title-lg);
+  margin: var(--space-2) 0;
 }
-
 .shell p {
-  color: var(--muted);
-  line-height: 1.65;
+  color: var(--fg-muted);
+  line-height: var(--line-body-lg);
 }
 
-.eyebrow {
-  color: var(--accent);
-  font: var(--text-2xs) var(--font-mono);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-/* Progress ledger */
 .progress-state-switcher {
   align-items: center;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
+  background: var(--bg-default);
+  border-bottom: 1px solid var(--border-muted);
   display: flex;
-  gap: 0.25rem;
+  gap: var(--space-1);
   justify-content: flex-end;
-  padding: 0.5rem max(1rem, calc((100vw - 92rem) / 2));
+  padding: var(--space-2)
+    max(var(--space-4), calc((100vw - var(--layout-page-max)) / 2));
 }
 
 .progress-state-switcher a {
   border: 1px solid transparent;
-  color: var(--muted);
-  font: var(--text-2xs) var(--font-mono);
-  padding: 0.35rem 0.55rem;
+  border-radius: var(--radius-medium);
+  color: var(--fg-muted);
+  font: var(--text-body-sm) / var(--line-body-sm) var(--font-mono);
+  padding: var(--space-2);
   text-decoration: none;
-  text-transform: uppercase;
 }
 
 .progress-state-switcher a[aria-current="page"] {
-  background: var(--surface-2);
-  border-color: var(--line-strong);
-  color: var(--text);
+  background: var(--bg-selected);
+  border-color: var(--accent-fg);
+  color: var(--accent-fg);
 }
 
-.progress-kicker,
-.progress-section-heading span {
-  color: var(--accent);
-  font: var(--text-2xs) var(--font-mono);
-  letter-spacing: 0.13em;
-  margin: 0 0 0.4rem;
-  text-transform: uppercase;
-}
-
-.progress-section-heading {
-  align-items: end;
-  border-bottom: 1px solid var(--line-strong);
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.85rem;
-  padding-bottom: 0.7rem;
-}
-
-.progress-section-heading h2 {
-  font-family: var(--font-sans);
-  font-size: var(--text-xl);
-  letter-spacing: -0.02em;
-  margin: 0;
-}
-
-.progress-section-heading small {
-  color: var(--muted);
-  font: var(--text-2xs) var(--font-mono);
-}
-
-.commit-lead {
-  color: var(--muted);
-  font-size: var(--text-sm);
-  margin: 0;
-}
-
-.severity-label.moderate {
-  color: var(--inferred-text);
-}
-
-.severity-label.info {
-  color: var(--info-text);
-}
-
-/* Step 4 wave 1 (assurance): severity is never colour-alone — the dot gets
-   its text label (P2), and the lint cost table's count column reads as a
-   number column (P4). */
-.severity-marker {
-  align-items: center;
-  display: flex;
-  gap: 0.3rem;
-}
-
-@media (max-width: 42rem) {
+@media (max-width: 58rem) {
+  .product-page-header--with-icon {
+    align-items: start;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .product-page-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+  .product-section-header,
   .progress-section-heading {
     align-items: start;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: var(--space-1);
   }
 }

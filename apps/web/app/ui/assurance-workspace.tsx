@@ -39,6 +39,7 @@ import {
 } from "../../lib/assurance/fixtures";
 import { ASSURANCE, GRADE } from "../../lib/strings";
 import { Icon } from "./ui-icon";
+import { ProductPageHeader } from "./page-layout";
 import { StatusBadge } from "./status-badge";
 
 type AssuranceSurface = "findings" | "lint" | "receipts";
@@ -126,13 +127,17 @@ function FindingsSurface() {
     FINDINGS[0]!;
 
   return (
-    <main className="assurance-main findings-layout">
+    <main className="assurance-main findings-layout product-page">
       <aside className="findings-rail">
-        <header className="surface-heading">
-          <span className="panel-kicker">{ASSURANCE.findings.kicker}</span>
-          <h1>{ASSURANCE.findings.title}</h1>
-          <p>{ASSURANCE.findings.summary(visible.length, FINDINGS.length)}</p>
-        </header>
+        <ProductPageHeader
+          className="surface-heading"
+          description={ASSURANCE.findings.summary(
+            visible.length,
+            FINDINGS.length,
+          )}
+          kicker={ASSURANCE.findings.kicker}
+          title={ASSURANCE.findings.title}
+        />
         <div className="finding-filters">
           <label>
             <Icon icon={ListFilter} size="xs" />
@@ -292,16 +297,19 @@ function LintSurface() {
     0,
   );
   return (
-    <main className="assurance-main lint-surface">
-      <header className="surface-heading wide-heading">
-        <span className="panel-kicker">{ASSURANCE.lint.kicker}</span>
-        <h1>{ASSURANCE.lint.title}</h1>
-        <p>
-          {ASSURANCE.lint.lead}
-          <strong>{GRADE.inferred}</strong>
-          {ASSURANCE.lint.leadTail}
-        </p>
-      </header>
+    <main className="assurance-main lint-surface product-page">
+      <ProductPageHeader
+        className="surface-heading wide-heading"
+        description={
+          <>
+            {ASSURANCE.lint.lead}
+            <strong>{GRADE.inferred}</strong>
+            {ASSURANCE.lint.leadTail}
+          </>
+        }
+        kicker={ASSURANCE.lint.kicker}
+        title={ASSURANCE.lint.title}
+      />
       <section className="lint-summary">
         <div>
           <span>{ASSURANCE.lint.summary.perTurn}</span>
@@ -575,13 +583,14 @@ function ReceiptsSurface({
   const selected =
     RECEIPTS.find((receipt) => receipt.id === selectedId) ?? initial;
   return (
-    <main className="assurance-main receipts-layout">
+    <main className="assurance-main receipts-layout product-page">
       <aside className="receipt-rail">
-        <header className="surface-heading">
-          <span className="panel-kicker">{ASSURANCE.receipts.kicker}</span>
-          <h1>{ASSURANCE.receipts.title}</h1>
-          <p>{ASSURANCE.receipts.summary(RECEIPTS.length)}</p>
-        </header>
+        <ProductPageHeader
+          className="surface-heading"
+          description={ASSURANCE.receipts.summary(RECEIPTS.length)}
+          kicker={ASSURANCE.receipts.kicker}
+          title={ASSURANCE.receipts.title}
+        />
         <div className="receipt-list">
           {RECEIPTS.map((receipt) => (
             <button

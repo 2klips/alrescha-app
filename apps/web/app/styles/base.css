@@ -89,11 +89,12 @@ a {
 @keyframes breathe {
   0%,
   100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 8%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-fg) 8%, transparent);
     opacity: 0.65;
   }
   50% {
-    box-shadow: 0 0 0 0.65rem color-mix(in srgb, var(--accent) 5%, transparent);
+    box-shadow: 0 0 0 0.65rem
+      color-mix(in srgb, var(--accent-fg) 5%, transparent);
     opacity: 1;
   }
 }
@@ -126,13 +127,13 @@ a {
 }
 
 li[data-todo-status="done"] .overview-todo-status {
-  color: var(--verified-text);
+  color: var(--success-fg);
 }
 
 li[data-todo-status="in-progress"] .overview-todo-status {
-  color: var(--info-text);
+  color: var(--accent-fg);
 }
 
 li[data-todo-status="blocked"] .overview-todo-status {
-  color: var(--danger-text);
+  color: var(--danger-fg);
 }

@@ -7,7 +7,7 @@
 
 .finding-ring {
   fill: none;
-  stroke: var(--danger);
+  stroke: var(--danger-fg);
   stroke-width: 2.2;
 }
 
@@ -23,8 +23,8 @@
 
 .findings-rail,
 .receipt-rail {
-  background: var(--surface);
-  border-right: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border-right: 1px solid var(--border-muted);
   min-height: calc(100dvh - var(--contextstrip-h));
   padding: 1.3rem;
 }
@@ -38,9 +38,9 @@
 
 .finding-filters label {
   align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  color: var(--muted);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
+  color: var(--fg-muted);
   display: flex;
   padding-left: 0.55rem;
 }
@@ -57,7 +57,7 @@
 }
 
 .finding-filters option {
-  background: var(--surface);
+  background: var(--bg-overlay);
 }
 
 .finding-list,
@@ -68,8 +68,8 @@
 
 .finding-row {
   align-items: start;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   cursor: pointer;
   display: grid;
   gap: 0.55rem;
@@ -80,12 +80,12 @@
 
 .finding-row:hover,
 .finding-row[aria-pressed="true"] {
-  background: var(--surface-2);
-  border-color: var(--line-strong);
+  background: var(--bg-subtle);
+  border-color: var(--border-default);
 }
 
 .finding-row[aria-pressed="true"] {
-  box-shadow: inset 2px 0 var(--accent);
+  box-shadow: inset 2px 0 var(--accent-fg);
 }
 
 .finding-row > span:nth-child(2) {
@@ -99,7 +99,7 @@
 }
 
 .finding-row small {
-  color: var(--muted);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
@@ -112,7 +112,7 @@
 .finding-titlebar,
 .receipt-titlebar {
   align-items: start;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-muted);
   display: flex;
   gap: 1rem;
   justify-content: space-between;
@@ -142,8 +142,8 @@
 }
 
 .detail-meta span {
-  border-right: 1px solid var(--line);
-  color: var(--muted);
+  border-right: 1px solid var(--border-muted);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   font-variant-numeric: tabular-nums;
   padding: 0 0.75rem;
@@ -158,7 +158,7 @@
 }
 
 .detail-meta strong {
-  color: var(--text);
+  color: var(--fg-default);
   font-weight: 500;
 }
 
@@ -167,20 +167,20 @@
 .suggested-action,
 .lint-block,
 .receipt-detail {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
 }
 
 .source-panel > header {
   align-items: center;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-muted);
   display: flex;
   justify-content: space-between;
   padding: 0.6rem 0.75rem;
 }
 
 .source-panel > header span {
-  color: var(--muted);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   text-transform: uppercase;
 }
@@ -188,7 +188,7 @@
 .source-panel > header code {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--accent-fg);
   font-size: var(--text-2xs);
 }
 
@@ -210,13 +210,13 @@
 }
 
 .source-panel pre > span.highlighted {
-  background: color-mix(in srgb, var(--accent) 9%, transparent);
-  border-left: 2px solid var(--accent);
+  background: color-mix(in srgb, var(--accent-fg) 9%, transparent);
+  border-left: 2px solid var(--accent-fg);
   padding-left: calc(0.75rem - 2px);
 }
 
 .source-panel pre i {
-  color: var(--faint);
+  color: var(--fg-muted);
   font-style: normal;
   user-select: none;
 }
@@ -226,11 +226,11 @@
    dark). Line numbers on emphasized rows step up one rung of the ramp;
    tests/design-tokens.test.ts pins --muted against this composite. */
 .source-panel pre > span.highlighted i {
-  color: var(--muted);
+  color: var(--fg-muted);
 }
 
 .source-panel pre code {
-  color: var(--text);
+  color: var(--fg-default);
 }
 
 .evidence-chain {
@@ -254,8 +254,8 @@
 }
 
 .evidence-chain li {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   display: grid;
   gap: 0.45rem;
   grid-template-columns: auto 1fr auto;
@@ -265,7 +265,7 @@
 }
 
 .chain-index {
-  color: var(--faint);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
@@ -277,7 +277,7 @@
 }
 
 .evidence-chain li small {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
 }
 
@@ -288,7 +288,7 @@
 .evidence-chain li code {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -296,7 +296,7 @@
 }
 
 .chain-arrow {
-  color: var(--line-strong);
+  color: var(--border-default);
   position: absolute;
   right: -0.78rem;
   top: 50%;
@@ -311,7 +311,7 @@
 
 .suggested-action > span {
   align-items: center;
-  color: var(--verified-text);
+  color: var(--success-fg);
   display: flex;
   font: var(--text-2xs) var(--font-mono);
   gap: 0.4rem;
@@ -319,7 +319,7 @@
 }
 
 .suggested-action p {
-  color: var(--text);
+  color: var(--fg-default);
   font-size: var(--text-xs);
   line-height: 1.5;
   margin: 0.55rem 0;
@@ -347,13 +347,13 @@
 }
 
 .lint-summary > div {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   padding: 0.75rem;
 }
 
 .lint-summary span {
-  color: var(--muted);
+  color: var(--fg-muted);
   display: block;
   font-size: var(--text-2xs);
 }
@@ -374,7 +374,7 @@
 
 .lint-block > header {
   align-items: center;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-muted);
   display: flex;
   gap: 1rem;
   justify-content: space-between;
@@ -386,7 +386,7 @@
 }
 
 .lint-block > header p {
-  color: var(--muted);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   margin: 0;
   max-width: 34rem;
@@ -403,7 +403,7 @@
 
 .table-row {
   align-items: center;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-muted);
   display: grid;
   font-size: var(--text-2xs);
   gap: 1rem;
@@ -418,11 +418,11 @@
 .table-row code {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--accent-fg);
 }
 
 .table-row > span {
-  color: var(--muted);
+  color: var(--fg-muted);
 }
 
 .table-row > strong {
@@ -432,7 +432,7 @@
 }
 
 .table-head {
-  color: var(--faint);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -440,7 +440,7 @@
 
 .overlap-list article {
   align-items: center;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-muted);
   display: grid;
   gap: 0.75rem;
   grid-template-columns: 1fr 1.25fr 1fr;
@@ -454,13 +454,13 @@
 .overlap-list code {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--accent-fg);
   font-size: var(--text-2xs);
 }
 
 .overlap-list span {
   align-items: center;
-  color: var(--muted);
+  color: var(--fg-muted);
   display: flex;
   font-size: var(--text-2xs);
   gap: 0.4rem;
@@ -470,7 +470,7 @@
 .overlap-list strong {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--inferred);
+  color: var(--attention-fg);
   margin-left: auto;
 }
 
@@ -483,20 +483,20 @@
 }
 
 .contradiction-pair > div {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   padding: 0.75rem;
 }
 
 .contradiction-pair code {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--inferred);
+  color: var(--attention-fg);
   font-size: var(--text-2xs);
 }
 
 .contradiction-pair blockquote {
-  color: var(--text);
+  color: var(--fg-default);
   font-size: var(--text-2xs);
   line-height: 1.5;
   margin: 0.55rem 0 0;
@@ -504,7 +504,7 @@
 
 .contradiction-pair > span {
   align-items: center;
-  color: var(--danger);
+  color: var(--danger-fg);
   display: flex;
   flex-direction: column;
   font: var(--text-2xs) var(--font-mono);
@@ -519,8 +519,8 @@
 
 .receipt-list button {
   align-items: center;
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   cursor: pointer;
   display: grid;
   gap: 0.6rem;
@@ -531,15 +531,15 @@
 
 .receipt-list button:hover,
 .receipt-list button[aria-pressed="true"] {
-  border-color: var(--line-strong);
+  border-color: var(--border-default);
 }
 
 .receipt-list button[aria-pressed="true"] {
-  box-shadow: inset 2px 0 var(--accent);
+  box-shadow: inset 2px 0 var(--accent-fg);
 }
 
 .receipt-list button > svg:first-child {
-  color: var(--accent);
+  color: var(--accent-fg);
 }
 
 .receipt-list button > span {
@@ -552,7 +552,7 @@
 }
 
 .receipt-list small {
-  color: var(--muted);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
@@ -564,8 +564,8 @@
 
 .verification-badge {
   align-items: center;
-  border: 1px solid var(--line-strong);
-  color: var(--muted);
+  border: 1px solid var(--border-default);
+  color: var(--fg-muted);
   display: flex;
   font: var(--text-2xs) var(--font-mono);
   gap: 0.35rem;
@@ -575,9 +575,9 @@
 
 .stale-banner {
   align-items: center;
-  background: color-mix(in srgb, var(--inferred) 38%, transparent);
-  border: 1px solid color-mix(in srgb, var(--inferred) 42%, transparent);
-  color: var(--inferred);
+  background: color-mix(in srgb, var(--attention-fg) 38%, transparent);
+  border: 1px solid color-mix(in srgb, var(--attention-fg) 42%, transparent);
+  color: var(--attention-fg);
   display: flex;
   font-size: var(--text-2xs);
   gap: 0.4rem;
@@ -592,14 +592,14 @@
 }
 
 .receipt-fields div {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-muted);
   display: grid;
   gap: 0.3rem;
   padding: 0.7rem 0.4rem;
 }
 
 .receipt-fields dt {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
 }
 
@@ -611,22 +611,22 @@
 }
 
 .digest-panel {
-  background: var(--surface);
-  border: 1px solid var(--line);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
   display: grid;
   gap: 0.4rem;
   padding: 0.75rem;
 }
 
 .digest-panel span {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
 }
 
 .digest-panel code {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
   overflow-wrap: anywhere;
 }
@@ -641,9 +641,9 @@
 }
 
 .receipt-verdict {
-  background: color-mix(in srgb, var(--accent) 32%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
-  color: var(--verified);
+  background: color-mix(in srgb, var(--accent-fg) 32%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-fg) 45%, transparent);
+  color: var(--success-fg);
 }
 
 .receipt-verdict > div {
@@ -659,22 +659,22 @@
 .receipt-verdict strong {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  color: var(--text);
+  color: var(--fg-default);
   font-size: var(--text-xs);
 }
 
 .receipt-locked {
-  background: var(--surface);
-  border: 1px dashed var(--line-strong);
-  color: var(--muted);
+  background: var(--bg-overlay);
+  border: 1px dashed var(--border-default);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
 }
 
 .verify-action {
   align-items: center;
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  color: var(--on-accent);
+  background: var(--accent-fg);
+  border: 1px solid var(--accent-fg);
+  color: var(--fg-on-emphasis);
   cursor: pointer;
   display: flex;
   font-size: var(--text-xs);
@@ -705,7 +705,7 @@
 
   .findings-rail,
   .receipt-rail {
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--border-muted);
     border-right: 0;
     min-height: auto;
   }

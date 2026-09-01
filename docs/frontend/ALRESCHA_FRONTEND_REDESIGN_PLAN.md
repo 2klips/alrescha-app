@@ -14,7 +14,7 @@
 | F1 — Desktop design system | Complete | [`ALRESCHA_DESIGN_SYSTEM.md`](./ALRESCHA_DESIGN_SYSTEM.md)                                           |
 | F2 — App shell/navigation  | Complete | [`logs/2026-09-01-f2-app-shell-navigation.md`](./logs/2026-09-01-f2-app-shell-navigation.md)         |
 | F3 — Evidence graph        | Complete | [`logs/2026-09-01-f3-evidence-graph-workspace.md`](./logs/2026-09-01-f3-evidence-graph-workspace.md) |
-| F4 — Core screens          | Next     | Shared page primitives and route migration                                                           |
+| F4 — Core screens          | Complete | [`logs/2026-09-01-f4-core-product-screens.md`](./logs/2026-09-01-f4-core-product-screens.md)         |
 | F5 — Naming migration      | Pending  | User-facing residuals and compatibility review remain                                                |
 | F6 — Verification/handoff  | Pending  | Full desktop comparison and handoff remain                                                           |
 
@@ -131,6 +131,8 @@ Delivered 2026-09-01: fixed plot/inspector grid, compact toolbar and facets, gra
 
 Exit: all desktop routes use the Alrescha system; legacy visual components have no active consumers.
 
+Delivered 2026-09-01: shared page/header/section/empty-state primitives, canonical semantic-token consumers, normalized overview/commits/assurance/progress/library/harness/inspection/team/home/stats/settings routes, authenticated map compatibility grid without floating HUD overlays, and an independently split accessible graph table. `/map` is 404.9KB gzip idle and `/graph` is 222.1KB, both within the 450KB budget.
+
 ### F5 — Naming migration
 
 - Replace user-facing product strings and metadata with `Alrescha`.
@@ -186,6 +188,5 @@ Never overwrite another agent's uncommitted work. Do not claim a baseline file a
 
 ## 9. Remaining work
 
-1. **F4 — Next:** migrate dashboard, findings, assurance, commits, team, stats, settings, and remaining desktop screens to shared primitives; remove legacy visual CSS only after its final consumer moves.
-2. **F5 — Pending:** finish the user-facing `Arr` → `Alrescha` audit, review metadata and legacy `Alresca` assets, and retain package/env/schema/URI identifiers until a compatibility migration is approved.
-3. **F6 — Pending:** run the complete desktop Playwright/axe matrix, compare before/after evidence at all three widths and both themes, close remaining regressions, document mobile deferral, and create the final Claude Code handoff.
+1. **F5 — Next:** finish the user-facing `Arr` → `Alrescha` audit, review metadata and legacy `Alresca` assets, and retain package/env/schema/URI identifiers until a compatibility migration is approved.
+2. **F6 — Pending:** run the complete desktop Playwright/axe matrix, compare before/after evidence at all three widths and both themes, close remaining regressions, document mobile deferral, and create the final Claude Code handoff.

@@ -1099,6 +1099,227 @@
   box-shadow: 0 0 0 var(--space-0) var(--tint-accent);
 }
 
+/* Stored workspace graph: route-local rail, plot and inspector. This is a
+   compatibility layout for the real-data component, using the same F3 tokens
+   and ordinary document flow. No global or floating HUD is reintroduced. */
+.arr-home {
+  background: var(--bg-default);
+  height: calc(100svh - var(--shell-stack-h));
+  min-height: 38rem;
+  overflow: hidden;
+}
+
+.arr-workspace {
+  display: grid;
+  grid-template-areas:
+    "rail plot inspector"
+    "rail activity inspector";
+  grid-template-columns: var(--layout-local-nav) minmax(0, 1fr) var(
+      --layout-inspector
+    );
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.arr-repo-rail {
+  background: var(--bg-subtle);
+  border-right: 1px solid var(--border-muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  grid-area: rail;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.arr-repo-block {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.arr-repo-block strong,
+.arr-repo-block small {
+  align-items: center;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.arr-repo-block small {
+  color: var(--fg-muted);
+  font: var(--text-body-sm) / var(--line-body-sm) var(--font-mono);
+}
+
+.arr-repo-rail .arr-metrics {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.arr-repo-rail .arr-metric {
+  min-width: 0;
+  width: 100%;
+}
+.arr-repo-rail .arr-area-chips {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.arr-hubs {
+  border-top: 1px solid var(--border-muted);
+  padding-top: var(--space-3);
+}
+.arr-hubs ol {
+  display: grid;
+  gap: var(--space-1);
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.arr-hubs button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-medium);
+  color: var(--fg-muted);
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: var(--space-2);
+  grid-template-columns: var(--space-2) minmax(0, 1fr) auto;
+  padding: var(--space-2);
+  text-align: left;
+  width: 100%;
+}
+
+.arr-hubs button:hover,
+.arr-hubs button[aria-pressed="true"] {
+  background: var(--bg-hover);
+  color: var(--fg-default);
+}
+.arr-hubs button i {
+  background: var(--node-concept);
+  border-radius: var(--radius-full);
+  height: var(--space-2);
+  width: var(--space-2);
+}
+.arr-hubs button i.requirement {
+  background: var(--node-requirement);
+}
+.arr-hubs button i.document {
+  background: var(--node-doc);
+}
+.arr-hubs button i.code {
+  background: var(--node-code);
+}
+.arr-hubs button i.test {
+  background: var(--node-test);
+}
+.arr-hubs button span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.arr-hubs button small {
+  color: var(--fg-muted);
+  font-size: var(--text-body-sm);
+}
+
+.arr-rail-links {
+  border-top: 1px solid var(--border-muted);
+  margin-top: auto;
+  padding-top: var(--space-3);
+}
+
+.arr-rail-links a {
+  align-items: center;
+  color: var(--accent-fg);
+  display: flex;
+  font-size: var(--text-body-sm);
+  gap: var(--space-2);
+  text-decoration: none;
+}
+
+.arr-proof-panel {
+  display: grid;
+  grid-area: plot;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
+}
+
+.arr-proof-heading {
+  align-items: center;
+  border-bottom: 1px solid var(--border-muted);
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+  min-height: var(--space-8);
+  padding: var(--space-2) var(--space-4);
+}
+
+.arr-proof-heading h1 {
+  align-items: baseline;
+  display: flex;
+  font-size: var(--text-title-md);
+  gap: var(--space-2);
+  line-height: var(--line-title-md);
+  margin: 0;
+}
+
+.arr-proof-repo {
+  color: var(--fg-muted);
+  font: 400 var(--text-body-sm) / var(--line-body-sm) var(--font-mono);
+}
+
+.arr-graph-controls {
+  align-items: center;
+  border-bottom: 1px solid var(--border-muted);
+  display: flex;
+  gap: var(--space-2);
+  min-height: var(--workspace-toolbar-h);
+  overflow-x: auto;
+  padding: var(--space-1) var(--space-4);
+}
+
+.arr-workspace > .arr-inspector {
+  background: var(--bg-default);
+  border-left: 1px solid var(--border-muted);
+  grid-area: inspector;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--space-4);
+}
+
+.arr-workspace > .arr-inspector > header {
+  align-items: center;
+  border-bottom: 1px solid var(--border-muted);
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: var(--space-3);
+}
+
+.arr-workspace > .arr-inspector h2 {
+  font-size: var(--text-title-md);
+  line-height: var(--line-title-md);
+  margin: var(--space-4) 0 var(--space-2);
+}
+.arr-workspace > .arr-inspector > p {
+  color: var(--fg-muted);
+}
+
+.arr-workspace > .arr-activity {
+  background: var(--bg-default);
+  border-top: 1px solid var(--border-muted);
+  grid-area: activity;
+  max-height: 12rem;
+  min-width: 0;
+  overflow: auto;
+  padding: var(--space-3) var(--space-4);
+}
+
 @media (max-width: 80rem) {
   .graph-workspace-summary,
   .graph-workspace-toolbar,
@@ -1112,6 +1333,10 @@
   }
   .graph-workspace-body {
     grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem);
+  }
+
+  .arr-workspace {
+    grid-template-columns: 13rem minmax(0, 1fr) minmax(20rem, 22rem);
   }
 }
 
@@ -1144,6 +1369,24 @@
     border-left: 0;
     border-top: 1px solid var(--border-muted);
     min-height: 30rem;
+  }
+
+  .arr-home {
+    height: auto;
+    overflow: visible;
+  }
+  .arr-workspace {
+    grid-template-areas: "rail" "plot" "inspector" "activity";
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(34rem, auto) auto auto;
+  }
+  .arr-repo-rail {
+    border-bottom: 1px solid var(--border-muted);
+    border-right: 0;
+  }
+  .arr-workspace > .arr-inspector {
+    border-left: 0;
+    border-top: 1px solid var(--border-muted);
   }
 }
 

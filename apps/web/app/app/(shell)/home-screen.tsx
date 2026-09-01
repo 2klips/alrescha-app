@@ -15,6 +15,7 @@ import type {
   WorkspaceJourneyModel,
 } from "../../../lib/home/journey";
 import { HOME } from "../../../lib/strings/home";
+import { ProductPageHeader } from "../../ui/page-layout";
 
 /**
  * `/app` workspace home (Phase 3 Wave E todo 13) — the onboarding spine as
@@ -53,12 +54,14 @@ export function WorkspaceHomeScreen({
   const graphReady = model.steps.graph === "done";
 
   return (
-    <main className="home-shell" aria-label={HOME.ariaMain}>
+    <main className="home-shell product-page" aria-label={HOME.ariaMain}>
       <div className="home-main">
         <section className="home-hero">
-          <p className="panel-kicker">{HOME.kicker}</p>
-          <h1>{HOME.title}</h1>
-          <p className="home-lead">{HOME.lead}</p>
+          <ProductPageHeader
+            description={HOME.lead}
+            kicker={HOME.kicker}
+            title={HOME.title}
+          />
 
           {model.installationRevoked ? (
             <p className="home-revoked" role="alert">

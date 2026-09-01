@@ -8,6 +8,7 @@ import type {
 import { GRADE } from "../../lib/strings/common";
 import { Icon } from "./ui-icon";
 import { OVERVIEW } from "../../lib/strings/overview";
+import { ProductPageHeader } from "./page-layout";
 
 /**
  * Four-zone overview (Phase 2D Wave 1) — the calm entry point. Every zone is
@@ -217,14 +218,13 @@ function BrainZone({ model }: { model: OverviewViewModel }) {
 
 export function OverviewScreen({ model }: { model: OverviewViewModel }) {
   return (
-    <main className="overview-main">
-      <header className="overview-head">
-        <div>
-          <p className="panel-kicker">{OVERVIEW.kicker}</p>
-          <h1>{OVERVIEW.title}</h1>
-          <p className="overview-lead">{OVERVIEW.lead}</p>
-        </div>
-      </header>
+    <main className="overview-main product-page">
+      <ProductPageHeader
+        className="overview-head"
+        description={OVERVIEW.lead}
+        kicker={OVERVIEW.kicker}
+        title={OVERVIEW.title}
+      />
       <section className="overview-kpis" aria-label={OVERVIEW.kpi.ariaLabel}>
         <article>
           <strong>{model.kpi.unresolved}</strong>

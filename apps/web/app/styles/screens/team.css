@@ -33,7 +33,7 @@
 .team-member code,
 .team-table code,
 .team-gate-list code {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-family: var(--font-mono);
   font-size: var(--text-2xs);
 }
@@ -51,17 +51,17 @@
 
 .team-status.active,
 .team-verdict.adopted {
-  color: var(--verified-text);
+  color: var(--success-fg);
 }
 
 .team-status.invited,
 .team-verdict.pending {
-  color: var(--inferred-text);
+  color: var(--attention-fg);
 }
 
 .team-status.revoked,
 .team-verdict.rejected {
-  color: var(--danger-text);
+  color: var(--danger-fg);
 }
 
 .team-graded {
@@ -71,7 +71,7 @@
 }
 
 .team-graded small {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
 }
 
@@ -82,7 +82,7 @@
 }
 
 .team-rubric span {
-  border: 1px solid var(--line);
+  border: 1px solid var(--border-muted);
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
@@ -90,7 +90,7 @@
 }
 
 .team-rubric small {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
 }
 
@@ -101,14 +101,14 @@
 }
 
 .team-prompt summary {
-  color: var(--muted);
+  color: var(--fg-muted);
   cursor: pointer;
   font-size: var(--text-xs);
 }
 
 .team-prompt p {
-  border-left: 2px solid var(--line-strong);
-  color: var(--muted);
+  border-left: 2px solid var(--border-default);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
   margin: 0.4rem 0 0;
   padding-left: 0.6rem;
@@ -121,8 +121,8 @@
 }
 
 .team-table th {
-  border-bottom: 1px solid var(--line-strong);
-  color: var(--muted);
+  border-bottom: 1px solid var(--border-default);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -132,12 +132,12 @@
 }
 
 .team-table td {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border-muted);
   padding: 0.35rem 0.4rem 0.35rem 0;
 }
 
 .team-none {
-  color: var(--faint);
+  color: var(--fg-muted);
 }
 
 .team-gate-list li {
@@ -160,4 +160,9 @@
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+.team-main .inspection-widget {
+  background: var(--bg-default);
+  border-radius: var(--radius-medium);
 }

@@ -8,6 +8,7 @@ import { Ban, KeyRound, ShieldCheck, Sparkles, Users } from "lucide-react";
 import type { DemoTeam } from "../../lib/team/fixtures";
 import { TEAM } from "../../lib/strings";
 import { Icon } from "./ui-icon";
+import { ProductPageHeader } from "./page-layout";
 import { StatusBadge } from "./status-badge";
 
 /**
@@ -121,14 +122,12 @@ export function TeamView({ team }: TeamViewProps) {
   const exposedMetrics = Object.keys(team.vibe.teamView);
 
   return (
-    <main className="team-main" aria-label={TEAM.ariaMain}>
-      <header className="progress-section-heading inspection-heading">
-        <div>
-          <span>{TEAM.kicker}</span>
-          <h1>{TEAM.title}</h1>
-        </div>
-      </header>
-      <p className="commit-lead">{TEAM.lead}</p>
+    <main className="team-main product-page" aria-label={TEAM.ariaMain}>
+      <ProductPageHeader
+        description={TEAM.lead}
+        kicker={TEAM.kicker}
+        title={TEAM.title}
+      />
 
       <div className="team-grid">
         <section className="inspection-widget" data-testid="team-roster">

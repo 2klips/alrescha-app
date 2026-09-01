@@ -6,6 +6,7 @@ import { SETTINGS } from "../../../../../lib/strings";
 import { createClient } from "../../../../../lib/supabase/server";
 import { runEnrichPass } from "./actions";
 import { Button } from "../../../../ui/button";
+import { ProductPageHeader } from "../../../../ui/page-layout";
 import {
   AiUsageSettings,
   type AiProviderName,
@@ -75,16 +76,18 @@ export default async function AiSettingsPage({
   );
 
   return (
-    <main className="mcp-settings-shell">
-      <header>
-        <div className="eyebrow">{SETTINGS.ai.eyebrow}</div>
-        <h1>{SETTINGS.ai.title}</h1>
-        <p>
-          {SETTINGS.ai.introPrefix}
-          <a href="/app/settings/privacy">{SETTINGS.privacy.linkLabel}</a>
-          {SETTINGS.ai.introSuffix}
-        </p>
-      </header>
+    <main className="mcp-settings-shell product-page">
+      <ProductPageHeader
+        description={
+          <>
+            {SETTINGS.ai.introPrefix}
+            <a href="/app/settings/privacy">{SETTINGS.privacy.linkLabel}</a>
+            {SETTINGS.ai.introSuffix}
+          </>
+        }
+        kicker={SETTINGS.ai.eyebrow}
+        title={SETTINGS.ai.title}
+      />
       <section className="mcp-token-card" data-testid="enrich-card">
         <h2>{SETTINGS.ai.enrich.heading}</h2>
         <p>{SETTINGS.ai.enrich.intro}</p>

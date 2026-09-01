@@ -9,7 +9,8 @@ import {
 } from "../../lib/dashboard/graph-model";
 import { BRAIN_AREAS } from "@arr/core/artifact-facets";
 import { BRAND, DASHBOARD } from "../../lib/strings";
-import { DashboardScreen, GraphTableView } from "./dashboard-screen";
+import { DashboardScreen } from "./dashboard-screen";
+import { GraphTableView } from "./graph-table-view";
 
 test.each(DASHBOARD_STATES)(
   "dashboard component renders the %s state",
@@ -60,7 +61,7 @@ test("dashboard copy is Korean-first with conventional terms kept in English", (
   expect(html).toContain(DASHBOARD.inspector.lead);
   // …while the conventional terms stay English, verbatim.
   expect(DASHBOARD.metrics.unresolved).toContain("Findings");
-  expect(html).toContain(DASHBOARD.activity.live);
+  expect(html).toContain(DASHBOARD.inspector.kicker);
 });
 
 test("graph table is a complete keyboard-addressable alternative to canvas", () => {

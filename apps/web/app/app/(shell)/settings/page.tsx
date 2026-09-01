@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { NAV, SETTINGS } from "../../../../lib/strings";
+import { ProductPageHeader } from "../../../ui/page-layout";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +39,12 @@ export default async function SettingsIndexPage() {
   ] as const;
 
   return (
-    <main className="mcp-settings-shell">
-      <header>
-        <div className="eyebrow">{SETTINGS.index.eyebrow}</div>
-        <h1>{SETTINGS.index.title}</h1>
-        <p>{SETTINGS.index.body}</p>
-      </header>
+    <main className="mcp-settings-shell product-page">
+      <ProductPageHeader
+        description={SETTINGS.index.body}
+        kicker={SETTINGS.index.eyebrow}
+        title={SETTINGS.index.title}
+      />
       <ul className="settings-index-list">
         {entries.map((entry) => (
           <li key={entry.href}>

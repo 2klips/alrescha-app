@@ -6,6 +6,7 @@ import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { HARNESS } from "../../../../lib/strings";
 import { createClient } from "../../../../lib/supabase/server";
 import { saveHarnessAsset } from "./actions";
+import { ProductEmptyState, ProductPageHeader } from "../../../ui/page-layout";
 
 interface ArtifactRow {
   classification: string;
@@ -94,18 +95,19 @@ export default async function HarnessPage() {
   );
 
   return (
-    <main className="harness-shell">
-      <header className="harness-hero">
-        <p>{HARNESS.live.kicker}</p>
-        <h1>{HARNESS.title}</h1>
-        <span>{HARNESS.live.lead}</span>
-      </header>
+    <main className="harness-shell product-page">
+      <ProductPageHeader
+        className="harness-hero"
+        description={HARNESS.live.lead}
+        kicker={HARNESS.live.kicker}
+        title={HARNESS.title}
+      />
       <section className="harness-assets" aria-label={HARNESS.ariaAssets}>
         {assets.length === 0 ? (
-          <div className="library-empty">
-            <h2>{HARNESS.empty.title}</h2>
-            <p>{HARNESS.empty.body}</p>
-          </div>
+          <ProductEmptyState
+            body={HARNESS.empty.body}
+            title={HARNESS.empty.title}
+          />
         ) : (
           assets.map((asset) => (
             <HarnessAssetCard

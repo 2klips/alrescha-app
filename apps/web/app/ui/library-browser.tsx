@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 import { ACTION, LIBRARY } from "../../lib/strings";
+import { ProductPageHeader } from "./page-layout";
 
 type DeleteAction = string | ((formData: FormData) => void | Promise<void>);
 
@@ -52,20 +53,19 @@ export function LibraryBrowser({
   const allTags = [...new Set(items.flatMap((item) => item.tags))].sort();
 
   return (
-    <main className="library-shell">
-      <header className="library-hero">
-        <div className="library-mark">
-          <Archive aria-hidden="true" size={22} />
-        </div>
-        <div>
-          <p>{LIBRARY.hero.kicker}</p>
-          <h1>{LIBRARY.hero.title}</h1>
-          <span>{LIBRARY.hero.lead}</span>
-        </div>
-        <strong>
-          {LIBRARY.hero.saved(items.length.toString().padStart(2, "0"))}
-        </strong>
-      </header>
+    <main className="library-shell product-page">
+      <ProductPageHeader
+        actions={
+          <strong>
+            {LIBRARY.hero.saved(items.length.toString().padStart(2, "0"))}
+          </strong>
+        }
+        className="library-hero"
+        description={LIBRARY.hero.lead}
+        icon={<Archive aria-hidden="true" size={22} />}
+        kicker={LIBRARY.hero.kicker}
+        title={LIBRARY.hero.title}
+      />
 
       <div className="library-layout">
         <aside className="library-filters" aria-label={LIBRARY.filters.aria}>

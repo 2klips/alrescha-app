@@ -16,11 +16,11 @@
   background:
     linear-gradient(
       100deg,
-      color-mix(in srgb, var(--accent) 9%, transparent),
+      color-mix(in srgb, var(--accent-fg) 9%, transparent),
       transparent 42%
     ),
-    var(--panel);
-  border: 1px solid var(--line-strong);
+    var(--bg-overlay);
+  border: 1px solid var(--border-default);
   display: grid;
   gap: 1rem;
   grid-template-columns: auto 1fr auto;
@@ -31,7 +31,7 @@
 }
 
 .progress-state::after {
-  background: var(--accent);
+  background: var(--accent-fg);
   content: "";
   height: 1px;
   left: 0;
@@ -42,20 +42,20 @@
 }
 
 .progress-state.full::after {
-  background: var(--verified);
+  background: var(--success-fg);
   width: 100%;
 }
 
 .progress-state.empty::after {
-  background: var(--faint);
+  background: var(--fg-muted);
   width: 14%;
 }
 
 .progress-state-mark {
   align-items: center;
-  background: var(--surface-2);
-  border: 1px solid var(--line-strong);
-  color: var(--accent);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  color: var(--accent-fg);
   display: flex;
   height: 3.2rem;
   justify-content: center;
@@ -64,12 +64,12 @@
 }
 
 .progress-state.full .progress-state-mark {
-  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  color: var(--verified);
+  border-color: color-mix(in srgb, var(--accent-fg) 60%, transparent);
+  color: var(--success-fg);
 }
 
 .progress-state.empty .progress-state-mark {
-  color: var(--muted);
+  color: var(--fg-muted);
 }
 
 .progress-state h1 {
@@ -82,7 +82,7 @@
 }
 
 .progress-state > div:nth-child(2) > p:last-child {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
   margin: 0.65rem 0 0;
   max-width: 46rem;
@@ -96,8 +96,8 @@
 }
 
 .progress-metric {
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
   padding: 1rem 1.15rem;
 }
 
@@ -110,19 +110,19 @@
 }
 
 .progress-metric > div > span {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-xs);
 }
 
 .progress-metric strong {
-  color: var(--text);
+  color: var(--fg-default);
   font: var(--text-xl) var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
 
 .progress-metric progress {
-  accent-color: var(--accent);
-  background: var(--surface-2);
+  accent-color: var(--accent-fg);
+  background: var(--bg-subtle);
   border: 0;
   height: 0.26rem;
   margin: 0.8rem 0 0.6rem;
@@ -130,19 +130,19 @@
 }
 
 .progress-metric progress::-webkit-progress-bar {
-  background: var(--surface-2);
+  background: var(--bg-subtle);
 }
 
 .progress-metric progress::-webkit-progress-value {
-  background: linear-gradient(90deg, var(--accent), var(--accent));
+  background: linear-gradient(90deg, var(--accent-fg), var(--accent-fg));
 }
 
 .progress-metric progress::-moz-progress-bar {
-  background: var(--accent);
+  background: var(--accent-fg);
 }
 
 .progress-metric footer {
-  color: var(--muted);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
 }
 
@@ -163,15 +163,15 @@
 }
 
 .todo-column {
-  background: color-mix(in srgb, var(--surface) 76%, transparent);
-  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-overlay) 76%, transparent);
+  border: 1px solid var(--border-muted);
   min-height: 13rem;
 }
 
 .todo-column > header {
   align-items: center;
-  border-bottom: 1px solid var(--line);
-  color: var(--muted);
+  border-bottom: 1px solid var(--border-muted);
+  color: var(--fg-muted);
   display: grid;
   gap: 0.45rem;
   grid-template-columns: auto 1fr auto;
@@ -179,7 +179,7 @@
 }
 
 .todo-column > header h3 {
-  color: var(--text);
+  color: var(--fg-default);
   font-size: var(--text-2xs);
   margin: 0;
   text-transform: uppercase;
@@ -190,15 +190,15 @@
 }
 
 .todo-column.in-progress > header {
-  color: var(--accent);
+  color: var(--accent-fg);
 }
 
 .todo-column.done > header {
-  color: var(--verified);
+  color: var(--success-fg);
 }
 
 .todo-column.blocked > header {
-  color: var(--danger);
+  color: var(--danger-fg);
 }
 
 .todo-stack {
@@ -208,30 +208,30 @@
 }
 
 .todo-empty {
-  color: var(--faint);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   margin: 0.3rem;
 }
 
 .todo-card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-left: 2px solid var(--faint);
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
+  border-left: 2px solid var(--fg-muted);
   display: grid;
   gap: 0.55rem;
   padding: 0.8rem;
 }
 
 .in-progress .todo-card {
-  border-left-color: var(--accent);
+  border-left-color: var(--accent-fg);
 }
 
 .done .todo-card {
-  border-left-color: var(--verified);
+  border-left-color: var(--success-fg);
 }
 
 .blocked .todo-card {
-  border-left-color: var(--danger);
+  border-left-color: var(--danger-fg);
 }
 
 .todo-card h4 {
@@ -241,13 +241,13 @@
 }
 
 .todo-requirement {
-  color: var(--inferred);
+  color: var(--attention-fg);
   font: var(--text-2xs) var(--font-mono);
 }
 
 .todo-source {
   align-items: center;
-  color: var(--muted);
+  color: var(--fg-muted);
   display: flex;
   font: var(--text-2xs) var(--font-mono);
   gap: 0.3rem;
@@ -256,7 +256,7 @@
 }
 
 .todo-source:hover {
-  color: var(--accent);
+  color: var(--accent-fg);
 }
 
 .timeline-section {
@@ -277,7 +277,7 @@
 }
 
 .progress-timeline > li:not(:last-child)::before {
-  background: var(--line);
+  background: var(--border-muted);
   bottom: -0.4rem;
   content: "";
   left: 0.96rem;
@@ -288,9 +288,9 @@
 
 .timeline-glyph {
   align-items: center;
-  background: var(--surface-2);
-  border: 1px solid var(--line-strong);
-  color: var(--accent);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-default);
+  color: var(--accent-fg);
   display: flex;
   height: 2rem;
   justify-content: center;
@@ -299,16 +299,16 @@
 }
 
 .timeline-glyph.finding-resolved {
-  color: var(--verified);
+  color: var(--success-fg);
 }
 
 .timeline-glyph.commit {
-  color: var(--inferred);
+  color: var(--attention-fg);
 }
 
 .progress-timeline article {
-  background: color-mix(in srgb, var(--surface) 68%, transparent);
-  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg-overlay) 68%, transparent);
+  border: 1px solid var(--border-muted);
   margin-bottom: 0.55rem;
   padding: 0.8rem 1rem;
 }
@@ -327,19 +327,19 @@
 }
 
 .progress-timeline time {
-  color: var(--muted);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
 .progress-timeline p {
-  color: var(--text);
+  color: var(--fg-default);
   font-size: var(--text-2xs);
   margin: 0.45rem 0 0.65rem;
 }
 
 .progress-timeline footer > span {
-  color: var(--muted);
+  color: var(--fg-muted);
   font: var(--text-2xs) var(--font-mono);
   text-transform: uppercase;
 }
@@ -347,16 +347,16 @@
 .progress-timeline code {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  background: var(--surface-2);
-  color: var(--muted);
+  background: var(--bg-subtle);
+  color: var(--fg-muted);
   font-size: var(--text-2xs);
   padding: 0.2rem 0.35rem;
 }
 
 .timeline-empty {
   align-items: center;
-  border: 1px dashed var(--line-strong);
-  color: var(--muted);
+  border: 1px dashed var(--border-default);
+  color: var(--fg-muted);
   display: flex;
   font-size: var(--text-2xs);
   gap: 0.6rem;
@@ -389,4 +389,39 @@
     flex-direction: column;
     gap: 0.35rem;
   }
+}
+
+/* F4: calm repository ledger, no decorative dashboard hero. */
+.progress-main {
+  max-width: var(--layout-page-max);
+  padding: var(--layout-page-padding) var(--layout-page-padding) var(--space-7);
+}
+
+.progress-state {
+  background: var(--bg-default);
+  border-color: var(--border-muted);
+  border-radius: var(--radius-medium);
+  min-height: 7rem;
+  padding: var(--space-4);
+}
+
+.progress-state-mark {
+  border-radius: var(--radius-medium);
+  height: var(--space-7);
+  transform: none;
+  width: var(--space-7);
+}
+
+.progress-state h1 {
+  font-size: var(--text-title-md);
+  font-stretch: normal;
+  letter-spacing: 0;
+  line-height: var(--line-title-md);
+}
+
+.progress-metric,
+.todo-column,
+.todo-card {
+  background: var(--bg-default);
+  border-radius: var(--radius-medium);
 }

@@ -16,6 +16,7 @@ import {
 import type { ReactNode } from "react";
 
 import { INSPECTION } from "../../lib/strings";
+import { ProductPageHeader } from "./page-layout";
 import { Icon } from "./ui-icon";
 import { StatusBadge } from "./status-badge";
 
@@ -96,14 +97,15 @@ function AdvisoryRow({ advisory }: { advisory: DependencyAdvisory }) {
 
 export function InspectionView({ dashboard }: InspectionViewProps) {
   return (
-    <main className="inspection-main" aria-label={INSPECTION.ariaMain}>
-      <header className="progress-section-heading inspection-heading">
-        <div>
-          <span>{INSPECTION.kicker}</span>
-          <h1>{INSPECTION.title}</h1>
-        </div>
-      </header>
-      <p className="commit-lead">{INSPECTION.lead}</p>
+    <main
+      className="inspection-main product-page"
+      aria-label={INSPECTION.ariaMain}
+    >
+      <ProductPageHeader
+        description={INSPECTION.lead}
+        kicker={INSPECTION.kicker}
+        title={INSPECTION.title}
+      />
 
       <div className="inspection-grid">
         <Widget

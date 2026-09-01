@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { PROGRESS } from "../../lib/strings";
+import { ProductSectionHeader } from "./page-layout";
 
 interface ProgressDashboardViewProps {
   readonly report: ProgressDashboard;
@@ -79,7 +80,10 @@ function Metric({
 export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
   const state = STATE_COPY[report.state];
   return (
-    <main className="progress-main" data-progress-state={report.state}>
+    <main
+      className="progress-main product-page"
+      data-progress-state={report.state}
+    >
       <section
         className={`progress-state ${report.state}`}
         aria-labelledby="progress-title"
@@ -107,19 +111,15 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
       </section>
 
       <section className="progress-section" aria-labelledby="todo-board-title">
-        <header className="progress-section-heading">
-          <div>
-            <span>{PROGRESS.todoBoard.kicker}</span>
-            <h2 id="todo-board-title">{PROGRESS.todoBoard.title}</h2>
-          </div>
-          <small>
-            {report.columns.reduce(
-              (count, column) => count + column.items.length,
-              0,
-            )}
-            {PROGRESS.todoBoard.itemsSuffix}
-          </small>
-        </header>
+        <ProductSectionHeader
+          count={`${report.columns.reduce(
+            (count, column) => count + column.items.length,
+            0,
+          )}${PROGRESS.todoBoard.itemsSuffix}`}
+          kicker={PROGRESS.todoBoard.kicker}
+          title={PROGRESS.todoBoard.title}
+          titleId="todo-board-title"
+        />
         <div className="todo-board">
           {report.columns.map((column) => {
             const status = STATUS_COPY[column.status];
@@ -163,13 +163,12 @@ export function ProgressDashboardView({ report }: ProgressDashboardViewProps) {
         className="progress-section timeline-section"
         aria-labelledby="timeline-title"
       >
-        <header className="progress-section-heading">
-          <div>
-            <span>{PROGRESS.timeline.kicker}</span>
-            <h2 id="timeline-title">{PROGRESS.timeline.title}</h2>
-          </div>
-          <small>{PROGRESS.timeline.eventCount(report.timeline.length)}</small>
-        </header>
+        <ProductSectionHeader
+          count={PROGRESS.timeline.eventCount(report.timeline.length)}
+          kicker={PROGRESS.timeline.kicker}
+          title={PROGRESS.timeline.title}
+          titleId="timeline-title"
+        />
         {report.timeline.length === 0 ? (
           <div className="timeline-empty">
             <Icon icon={Clock3} size="md" />

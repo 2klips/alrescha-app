@@ -31,9 +31,9 @@
 }
 
 .button {
-  background: var(--accent);
-  border: 1px solid var(--accent);
-  color: var(--on-accent);
+  background: var(--accent-fg);
+  border: 1px solid var(--accent-fg);
+  color: var(--fg-on-emphasis);
   cursor: pointer;
   display: inline-block;
   font-weight: 700;
@@ -75,16 +75,16 @@
 }
 
 .status-badge.verified {
-  color: var(--verified-text);
+  color: var(--success-fg);
 }
 
 .status-badge.inferred {
   border-style: dashed;
-  color: var(--inferred-text);
+  color: var(--attention-fg);
 }
 
 .status-badge.broken {
-  color: var(--danger-text);
+  color: var(--danger-fg);
 }
 
 .btn {
@@ -121,11 +121,7 @@
 }
 
 .btn-primary:hover {
-  background: color-mix(
-    in srgb,
-    var(--accent-emphasis) 88%,
-    var(--fg-default)
-  );
+  background: color-mix(in srgb, var(--accent-emphasis) 88%, var(--fg-default));
 }
 
 .btn-secondary {
@@ -158,5 +154,4 @@
   .btn {
     transition: none;
   }
-
 }
