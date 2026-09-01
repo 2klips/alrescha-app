@@ -73,4 +73,13 @@ export const INSPECTION = {
     count: (count: number) => `${count}건`,
     outcomeLabel: "배제 사유",
   },
+
+  judgment: {
+    title: "AI 판정 요청",
+    note: "애매한 발견을 판단 잡으로 확정합니다 — 결과는 항상 inferred이고, 성공한 판정만 과금됩니다(BYOK는 크레딧 0).",
+    action: "AI 확정",
+    queued: "판단 잡이 큐에 들어갔습니다 — 워커가 처리하면 요약에 반영됩니다.",
+    empty: "열린 발견이 없습니다 — 판정할 대상이 없습니다.",
+    source: "Findings 테이블의 열린 발견",
+  },
 } as const;

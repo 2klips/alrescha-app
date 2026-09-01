@@ -97,6 +97,8 @@ export const ACCESS_EVENTS_OCCURRED_IDX_MIGRATION =
   "supabase/migrations/202608300002_access_events_occurred_idx.sql";
 export const PROMPT_COACHING_MIGRATION =
   "supabase/migrations/202608310001_prompt_coaching.sql";
+export const JUDGMENT_COACHING_ENQUEUE_MIGRATION =
+  "supabase/migrations/202608310002_judgment_coaching_enqueue.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -136,6 +138,7 @@ export const ALL_MIGRATIONS = [
   INITPLAN_SELECT_POLICIES_MIGRATION,
   ACCESS_EVENTS_OCCURRED_IDX_MIGRATION,
   PROMPT_COACHING_MIGRATION,
+  JUDGMENT_COACHING_ENQUEUE_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

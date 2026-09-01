@@ -65,6 +65,18 @@ export const TEAM = {
     insufficient: "증거 부족 — 이 워크스페이스에는 채점된 프롬프트가 없습니다.",
   },
 
+  coachingRequest: {
+    title: "내 프롬프트 코칭 요청",
+    note: "내가 기록한 프롬프트만 요청할 수 있고, 원문 동기화에 동의한 기록만 채점됩니다. 성공 시 1크레딧(BYOK 0).",
+    action: "코칭 요청",
+    queued: "코칭 잡이 큐에 들어갔습니다 — 채점되면 루브릭이 채워집니다.",
+    needsRaw: "원문 미동기화 — 코칭 불가",
+    graded: "채점 완료",
+    empty: "기록된 내 프롬프트가 없습니다.",
+    /** `<n> tokens` */
+    tokens: (count: number) => `${count} tokens`,
+  },
+
   contribution: {
     title: "증거 기반 기여도",
     note: "자가보고 입력은 스키마 단계에서 거부됩니다 — 전부 commit·receipt·발견에서 계산합니다.",

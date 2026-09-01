@@ -3,7 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   VIBE_METRICS,
   buildVibeIndex,
+  promptCoachingOutputSchema,
   vibeGateResultsSchema,
+  type PromptRubric,
   type VibeGateResults,
   type VibeIndex,
 } from "@arr/core";
@@ -74,6 +76,53 @@ export interface WorkspaceTeamRows {
     readonly consented: boolean;
     readonly rawSyncEnabled: boolean;
   };
+}
+
+/**
+ * The viewer's OWN prompt records only (ADR-011-4): this shape exists solely
+ * for the coaching-request list, is queried with an explicit `user_id =
+ * viewer` filter, and never mixes into the shared team rows above.
+ * `coachable` derives from the row's own raw-text presence — for the author,
+ * that is their own consent state, which they may see.
+ */
+export interface OwnPromptRecord {
+  readonly coachable: boolean;
+  readonly graded: boolean;
+  readonly id: string;
+  readonly occurredAt: string;
+  readonly tokenCount: number;
+}
+
+/** The latest own graded rubric in the screen's coaching shape, if any. */
+export interface OwnCoachingView {
+  readonly promptText: string;
+  readonly rubric: PromptRubric;
+  readonly suggestions: readonly string[];
+}
+
+interface OwnPromptRow {
+  readonly id: string;
+  readonly occurred_at: string;
+  readonly raw_text: string | null;
+  readonly rubric: unknown;
+  readonly token_count: number;
+}
+
+export function buildOwnCoaching(
+  rows: readonly OwnPromptRow[],
+): OwnCoachingView | null {
+  for (const row of rows) {
+    const parsed = promptCoachingOutputSchema.safeParse(row.rubric);
+    if (!parsed.success) continue;
+    return {
+      // The coached prompt is the viewer's own text; a graded record always
+      // had raw sync on, but fall back to empty rather than trusting that.
+      promptText: row.raw_text ?? "",
+      rubric: parsed.data.rubric,
+      suggestions: parsed.data.suggestions,
+    };
+  }
+  return null;
 }
 
 export interface WorkspaceTeamReport {
@@ -186,7 +235,12 @@ export function buildWorkspaceTeamReport(
 export async function loadWorkspaceTeamReport(
   client: SupabaseClient,
   userId: string,
-): Promise<{ report: WorkspaceTeamReport; workspaceId: string }> {
+): Promise<{
+  coaching: OwnCoachingView | null;
+  ownPrompts: readonly OwnPromptRecord[];
+  report: WorkspaceTeamReport;
+  workspaceId: string;
+}> {
   const workspaceResult = await client
     .from("workspaces")
     .select("id")
@@ -198,7 +252,7 @@ export async function loadWorkspaceTeamReport(
   }
   const workspaceId = String(workspaceResult.data.id);
 
-  const [members, settings, consent, prompts] = await Promise.all([
+  const [members, settings, consent, prompts, ownPromptRows] = await Promise.all([
     client
       .from("workspace_members")
       .select("user_id,role,status")
@@ -220,8 +274,17 @@ export async function loadWorkspaceTeamReport(
       .from("prompt_records")
       .select("user_id,occurred_at,token_count,rubric")
       .eq("workspace_id", workspaceId),
+    // The viewer's own records only — the single place raw_text may be read,
+    // and only to power their own coaching panel (ADR-011-4).
+    client
+      .from("prompt_records")
+      .select("id,occurred_at,token_count,rubric,raw_text")
+      .eq("workspace_id", workspaceId)
+      .eq("user_id", userId)
+      .order("occurred_at", { ascending: false })
+      .limit(10),
   ]);
-  for (const result of [members, settings, consent, prompts]) {
+  for (const result of [members, settings, consent, prompts, ownPromptRows]) {
     if (result.error) throw new Error(result.error.message);
   }
 
@@ -230,7 +293,17 @@ export async function loadWorkspaceTeamReport(
     revoked_at?: string | null;
   } | null;
 
+  const ownRows = (ownPromptRows.data ?? []) as OwnPromptRow[];
+
   return {
+    coaching: buildOwnCoaching(ownRows),
+    ownPrompts: ownRows.map((row) => ({
+      coachable: row.raw_text !== null,
+      graded: promptCoachingOutputSchema.safeParse(row.rubric).success,
+      id: row.id,
+      occurredAt: row.occurred_at,
+      tokenCount: row.token_count,
+    })),
     report: buildWorkspaceTeamReport({
       captureEnabled: Boolean(
         (settings.data as { enabled?: boolean } | null)?.enabled,

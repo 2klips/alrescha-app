@@ -50,6 +50,15 @@ from server-observed evidence only). Per-todo evidence:
   (`202608310001_prompt_coaching.sql`). The `pack` kind turned out to have no
   producer or semantics anywhere — held as a reserved kind that fails loudly,
   pending OQ-021.
+- **Judge/coach enqueue surfaces (same-day follow-up)**: `/app/inspection`
+  gained a live-only judgment panel (open findings → `AI 확정`), `/app/team` a
+  personal coaching panel over the viewer's OWN records only, with the graded
+  rubric flowing back into the team view's coaching card. Both buttons call
+  security-definer SQL (`202608310002_judgment_coaching_enqueue.sql`) that
+  owns the rules the UI must not be trusted with: open-only findings and the
+  §14 kind mapping, ADR-011's own-author + raw-consent checks, BYOK-zero /
+  credits pricing (10 and 1), and one job per target via idempotency keys —
+  proven by seven service-role database tests.
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the
