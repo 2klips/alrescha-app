@@ -60,4 +60,18 @@ describe("graph force panel", () => {
       DASHBOARD.forcePanel.lodStatus(DASHBOARD.forcePanel.lodLevels.mid, 12),
     );
   });
+
+  test("popover mode stays expanded and exposes an accessible close action", () => {
+    const html = renderToStaticMarkup(
+      createElement(GraphForcePanel, {
+        onChange: () => undefined,
+        onClose: () => undefined,
+        settings: clampPanelSettings({ collapsed: true }),
+      }),
+    );
+
+    expect(html).toContain("data-force-close");
+    expect(html).toContain(`aria-label="${DASHBOARD.forcePanel.close}"`);
+    expect(html.match(/type="range"/g)).toHaveLength(5);
+  });
 });

@@ -9,7 +9,7 @@ import {
 } from "../../lib/dashboard/graph-model";
 import { BRAIN_AREAS } from "@arr/core/artifact-facets";
 import { BRAND, DASHBOARD } from "../../lib/strings";
-import { DashboardScreen } from "./dashboard-screen";
+import { DashboardScreen, GraphTableView } from "./dashboard-screen";
 
 test.each(DASHBOARD_STATES)(
   "dashboard component renders the %s state",
@@ -19,10 +19,12 @@ test.each(DASHBOARD_STATES)(
     );
 
     expect(html).toContain(DASHBOARD.ariaMain);
-    // Design roadmap step 2: brand, nav and theme toggle moved to the
-    // AppShell sidebar — the screen must no longer assemble its own topbar
-    // or duplicate the sidebar's harness/library destinations.
+    // F3: repository navigation stays in AppShell. The graph screen owns only
+    // its page summary, toolbar, plot and non-overlay inspector.
     expect(html).not.toContain("arr-topbar");
+    expect(html).not.toContain("arr-repo-rail");
+    expect(html).toContain("graph-workspace");
+    expect(html).toContain("graph-inspector-tabs");
     expect(html).not.toContain(BRAND.tagline);
     if (state === "loading")
       expect(html).toContain(DASHBOARD.states.loading.title);
@@ -59,6 +61,25 @@ test("dashboard copy is Korean-first with conventional terms kept in English", (
   // …while the conventional terms stay English, verbatim.
   expect(DASHBOARD.metrics.unresolved).toContain("Findings");
   expect(html).toContain(DASHBOARD.activity.live);
+});
+
+test("graph table is a complete keyboard-addressable alternative to canvas", () => {
+  const model = buildDashboardViewModel("scanned");
+  const selected = model.graph.nodes[1];
+  const html = renderToStaticMarkup(
+    createElement(GraphTableView, {
+      data: model.graph,
+      onNodeActivate: () => undefined,
+      onNodeSelect: () => undefined,
+      selectedNodeId: selected?.id ?? null,
+    }),
+  );
+
+  expect(html).toContain("<table");
+  expect(html).toContain(DASHBOARD.table.caption);
+  expect(html.match(/<tbody>[\s\S]*<tr/g)?.length).toBeGreaterThanOrEqual(1);
+  expect(html).toContain('data-selected="true"');
+  expect(html).toContain('aria-pressed="true"');
 });
 
 // QW-6: the area chip counts moved from an inline `.filter().length` per

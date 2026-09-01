@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Activity,
   AlertTriangle,
   Braces,
   CheckCircle2,
@@ -8,25 +9,33 @@ import {
   Code2,
   FileText,
   Filter,
-  GitBranch,
   LayoutGrid,
+  List,
   LoaderCircle,
   Network,
+  PanelRightClose,
+  PanelRightOpen,
   Play,
   Radio,
   RotateCcw,
   Search,
+  SlidersHorizontal,
   TestTube2,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import {
+  type KeyboardEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   filterGraph,
   focusLocalGraph,
   graphNodeArea,
-  topHubNodes,
   type DashboardViewModel,
   type EvidenceGrade,
   type GraphData,
@@ -63,6 +72,8 @@ interface DashboardScreenProps {
 }
 
 type MetricPanel = "implementation" | "tests" | "tokens" | "unresolved";
+type GraphView = "canvas" | "table";
+type InspectorTab = "activity" | "details" | "relationships";
 
 const TYPE_OPTIONS: readonly { label: string; value: GraphNodeType | "all" }[] =
   [
@@ -235,47 +246,6 @@ function MetricEvidence({
   );
 }
 
-/**
- * Top-5 most-connected nodes (REVIEW_EXTERNAL_PROJECTS G2). The brain map's
- * entry points: a click selects the node and flies the camera to it, which is
- * the same gesture the activity feed uses.
- */
-function HubChips({
-  hubs,
-  onFocus,
-  selectedNodeId,
-}: {
-  hubs: readonly { degree: number; node: GraphNode }[];
-  onFocus: (node: GraphNode) => void;
-  selectedNodeId: string | null;
-}) {
-  return (
-    <div className="arr-hubs" aria-label={DASHBOARD.hubs.aria}>
-      <span className="arr-kicker">{DASHBOARD.hubs.kicker}</span>
-      {hubs.length === 0 ? (
-        <small>{DASHBOARD.hubs.empty}</small>
-      ) : (
-        <ol>
-          {hubs.map(({ degree, node }) => (
-            <li key={node.id}>
-              <button
-                aria-pressed={node.id === selectedNodeId}
-                data-hub-node={node.id}
-                onClick={() => onFocus(node)}
-                type="button"
-              >
-                <i className={node.type} />
-                <span>{node.label}</span>
-                <small>{DASHBOARD.hubs.degree(degree)}</small>
-              </button>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
-  );
-}
-
 function requirementCode(node: GraphNode): string {
   if (node.id.startsWith("req-"))
     return `${node.id.replace("req-", "REQ-").toUpperCase()}-001`;
@@ -371,6 +341,108 @@ function GraphStageSurface({
   );
 }
 
+export function GraphTableView({
+  data,
+  onNodeActivate,
+  onNodeSelect,
+  selectedNodeId,
+}: {
+  data: GraphData;
+  onNodeActivate: (node: GraphNode) => void;
+  onNodeSelect: (node: GraphNode) => void;
+  selectedNodeId: string | null;
+}) {
+  const rowRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const relationCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const edge of data.edges) {
+      counts.set(edge.source, (counts.get(edge.source) ?? 0) + 1);
+      counts.set(edge.target, (counts.get(edge.target) ?? 0) + 1);
+    }
+    return counts;
+  }, [data.edges]);
+
+  function moveRowFocus(
+    event: KeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) {
+    const delta =
+      event.key === "ArrowDown"
+        ? 1
+        : event.key === "ArrowUp"
+          ? -1
+          : event.key === "Home"
+            ? Number.NEGATIVE_INFINITY
+            : event.key === "End"
+              ? Number.POSITIVE_INFINITY
+              : null;
+    if (delta === null || data.nodes.length === 0) return;
+    event.preventDefault();
+    const next =
+      delta === Number.NEGATIVE_INFINITY
+        ? 0
+        : delta === Number.POSITIVE_INFINITY
+          ? data.nodes.length - 1
+          : (index + delta + data.nodes.length) % data.nodes.length;
+    rowRefs.current[next]?.focus();
+  }
+
+  if (data.nodes.length === 0) {
+    return (
+      <div className="graph-table-empty" role="status">
+        <List aria-hidden size={24} />
+        <strong>{DASHBOARD.table.emptyTitle}</strong>
+        <span>{DASHBOARD.table.emptyBody}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="graph-table-scroll" data-testid="graph-table-view">
+      <table className="graph-table">
+        <caption className="sr-only">{DASHBOARD.table.caption}</caption>
+        <thead>
+          <tr>
+            <th scope="col">{DASHBOARD.table.node}</th>
+            <th scope="col">{DASHBOARD.table.type}</th>
+            <th scope="col">{DASHBOARD.table.grade}</th>
+            <th scope="col">{DASHBOARD.table.relations}</th>
+            <th scope="col">{DASHBOARD.table.source}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {data.nodes.map((node, index) => (
+            <tr data-selected={node.id === selectedNodeId} key={node.id}>
+              <th scope="row">
+                <button
+                  aria-pressed={node.id === selectedNodeId}
+                  onClick={() => onNodeSelect(node)}
+                  onDoubleClick={() => onNodeActivate(node)}
+                  onKeyDown={(event) => moveRowFocus(event, index)}
+                  ref={(element) => {
+                    rowRefs.current[index] = element;
+                  }}
+                  type="button"
+                >
+                  {node.label}
+                </button>
+              </th>
+              <td>{DASHBOARD.filters.types[node.type]}</td>
+              <td>
+                <StatusBadge grade={node.grade}>{node.grade}</StatusBadge>
+              </td>
+              <td>{relationCounts.get(node.id) ?? 0}</td>
+              <td>
+                <code>{node.path}</code>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 interface LiveActivityFeedProps {
   feed: readonly GraphAccessEvent[];
   nodes: readonly GraphNode[];
@@ -452,6 +524,12 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
   });
   const [localFocus, setLocalFocus] = useState(false);
   const [groupByArea, setGroupByArea] = useState(false);
+  const [graphView, setGraphView] = useState<GraphView>("canvas");
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>("details");
+  const [forceOpen, setForceOpen] = useState(false);
+  const forceButtonRef = useRef<HTMLButtonElement | null>(null);
+  const forcePopoverRef = useRef<HTMLDivElement | null>(null);
   const [cameraFocusNodeId, setCameraFocusNodeId] = useState<string | null>(
     null,
   );
@@ -505,6 +583,17 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
       .sort((left, right) => order[left.type] - order[right.type])
       .slice(0, 3);
   }, [model.graph.edges, model.graph.nodes, selectedNode]);
+  const selectedRelationships = useMemo(() => {
+    if (!selectedNode) return [];
+    return model.graph.edges.flatMap((edge) => {
+      if (edge.source !== selectedNode.id && edge.target !== selectedNode.id)
+        return [];
+      const otherId =
+        edge.source === selectedNode.id ? edge.target : edge.source;
+      const other = model.graph.nodes.find((node) => node.id === otherId);
+      return other ? [{ edge, node: other }] : [];
+    });
+  }, [model.graph.edges, model.graph.nodes, selectedNode]);
   const blocked =
     !recovered &&
     [
@@ -515,7 +604,6 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
       "permission-error",
       "revoked",
     ].includes(model.state);
-  const hubs = useMemo(() => topHubNodes(model.graph), [model.graph]);
   // QW-6: one pass over the nodes instead of one `.filter().length` per area
   // chip on every render — recomputed only when the node list itself changes.
   const areaCounts = useMemo(() => {
@@ -543,6 +631,40 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
     );
   }, []);
 
+  useEffect(() => {
+    if (!forceOpen) return;
+    forcePopoverRef.current
+      ?.querySelector<HTMLButtonElement>("[data-force-close]")
+      ?.focus();
+  }, [forceOpen]);
+
+  useEffect(() => {
+    function onWorkspaceKeyDown(event: globalThis.KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "SELECT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+      if (!typing && event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        setGraphView((current) => (current === "canvas" ? "table" : "canvas"));
+        return;
+      }
+      if (event.key !== "Escape") return;
+      if (forceOpen) {
+        setForceOpen(false);
+        forceButtonRef.current?.focus();
+      } else if (inspectorTab !== "details") {
+        setInspectorTab("details");
+      } else if (selectedNode) {
+        setSelectedNode(null);
+      }
+    }
+    window.addEventListener("keydown", onWorkspaceKeyDown);
+    return () => window.removeEventListener("keydown", onWorkspaceKeyDown);
+  }, [forceOpen, inspectorTab, selectedNode]);
+
   function replayMcpSession() {
     const now = Date.now();
     for (const event of createDemoAccessEvents(now - 720))
@@ -550,345 +672,470 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
   }
 
   return (
-    <main className="arr-home" aria-label={DASHBOARD.ariaMain}>
-      <div className="arr-workspace">
-        <aside className="arr-repo-rail" aria-label={DASHBOARD.ariaRepoRail}>
-          <div className="arr-repo-block">
-            <span className="arr-kicker">{DASHBOARD.repoKicker}</span>
-            <strong>
-              <Network size={17} />
-              {model.repo}
-            </strong>
-            <small>
-              <GitBranch size={12} />
-              {DASHBOARD.repoBranchLine}
-            </small>
-          </div>
-          <div className="arr-metrics" aria-label={DASHBOARD.ariaMetrics}>
-            <MetricChip
-              active={metricPanel === "unresolved"}
-              label={DASHBOARD.metrics.unresolved}
-              onClick={() => setMetricPanel("unresolved")}
-              value={model.metrics.unresolved}
-            />
-            <MetricChip
-              active={metricPanel === "implementation"}
-              label={DASHBOARD.metrics.implementation}
-              onClick={() => setMetricPanel("implementation")}
-              suffix="%"
-              value={model.metrics.implementation}
-            />
-            <MetricChip
-              active={metricPanel === "tests"}
-              label={DASHBOARD.metrics.tests}
-              onClick={() => setMetricPanel("tests")}
-              suffix="%"
-              value={model.metrics.tests}
-            />
-            <MetricChip
-              active={metricPanel === "tokens"}
-              label={DASHBOARD.metrics.tokens}
-              onClick={() => setMetricPanel("tokens")}
-              suffix="k"
-              value={Number((model.metrics.tokenCost / 1000).toFixed(1))}
-            />
-          </div>
-          <div
-            className="arr-area-chips"
-            aria-label={DASHBOARD.filters.areaLabel}
-            role="group"
-          >
-            {AREA_OPTIONS.map((option) => (
-              <button
-                aria-pressed={filters.area === option.value}
-                className="arr-area-chip"
-                data-area={option.value}
-                key={option.value}
-                onClick={() =>
-                  setFilters((current) => ({ ...current, area: option.value }))
-                }
-                type="button"
-              >
-                {option.label}
-                {option.value === "all" ? null : (
-                  <small>{areaCounts.get(option.value) ?? 0}</small>
-                )}
-              </button>
-            ))}
-          </div>
-          <HubChips
-            hubs={hubs}
-            onFocus={(node) => {
-              setSelectedNode(node);
-              setCameraFocusNodeId(node.id);
-            }}
-            selectedNodeId={selectedNode?.id ?? null}
+    <main className="graph-workspace" aria-label={DASHBOARD.ariaMain}>
+      <header className="graph-workspace-summary">
+        <div className="graph-workspace-title">
+          <span className="arr-kicker">{DASHBOARD.commitKicker} · bad0551</span>
+          <h1>
+            {DASHBOARD.title}
+            <span>{model.repo}</span>
+          </h1>
+        </div>
+        <div className="arr-metrics" aria-label={DASHBOARD.ariaMetrics}>
+          <MetricChip
+            active={metricPanel === "unresolved"}
+            label={DASHBOARD.metrics.unresolved}
+            onClick={() => setMetricPanel("unresolved")}
+            value={model.metrics.unresolved}
           />
-        </aside>
+          <MetricChip
+            active={metricPanel === "implementation"}
+            label={DASHBOARD.metrics.implementation}
+            onClick={() => setMetricPanel("implementation")}
+            suffix="%"
+            value={model.metrics.implementation}
+          />
+          <MetricChip
+            active={metricPanel === "tests"}
+            label={DASHBOARD.metrics.tests}
+            onClick={() => setMetricPanel("tests")}
+            suffix="%"
+            value={model.metrics.tests}
+          />
+          <MetricChip
+            active={metricPanel === "tokens"}
+            label={DASHBOARD.metrics.tokens}
+            onClick={() => setMetricPanel("tokens")}
+            suffix="k"
+            value={Number((model.metrics.tokenCost / 1000).toFixed(1))}
+          />
+        </div>
+        {metricPanel ? (
+          <MetricEvidence
+            onClose={() => setMetricPanel(null)}
+            panel={metricPanel}
+          />
+        ) : null}
+      </header>
 
-        <section className="arr-proof-panel" aria-labelledby="proof-map-title">
-          <header className="arr-proof-heading">
-            <div>
-              <span className="arr-kicker">
-                {DASHBOARD.commitKicker} · bad0551
-              </span>
-              {/*
-                The heading names the map *and* the repository it proves. Before
-                `e0057dc` the h1 was the repo alone; that commit replaced it with
-                the map title, which left every workspace with an identical h1
-                and no connected-repo identity in the page heading. Both halves
-                are here now — the accessible name carries the repo again.
-              */}
-              <h1 id="proof-map-title">
-                {DASHBOARD.title}
-                <span className="arr-proof-repo">{model.repo}</span>
-              </h1>
-            </div>
-            <div className="arr-legend" aria-label={DASHBOARD.ariaLegend}>
-              <span>
-                <i className="requirement" />
-                {DASHBOARD.legend.requirement}
-              </span>
-              <span>
-                <i className="code" />
-                {DASHBOARD.legend.code}
-              </span>
-              <span>
-                <i className="test" />
-                {DASHBOARD.legend.test}
-              </span>
-            </div>
-          </header>
-          <div
-            className="arr-metrics arr-metrics-mobile"
-            aria-label={DASHBOARD.ariaMetricsMobile}
-          >
-            <MetricChip
-              active={metricPanel === "unresolved"}
-              label={DASHBOARD.metrics.unresolved}
-              onClick={() => setMetricPanel("unresolved")}
-              value={model.metrics.unresolved}
-            />
-            <MetricChip
-              active={metricPanel === "implementation"}
-              label={DASHBOARD.metrics.implementation}
-              onClick={() => setMetricPanel("implementation")}
-              suffix="%"
-              value={model.metrics.implementation}
-            />
-            <MetricChip
-              active={metricPanel === "tests"}
-              label={DASHBOARD.metrics.tests}
-              onClick={() => setMetricPanel("tests")}
-              suffix="%"
-              value={model.metrics.tests}
-            />
-            <MetricChip
-              active={metricPanel === "tokens"}
-              label={DASHBOARD.metrics.tokens}
-              onClick={() => setMetricPanel("tokens")}
-              suffix="k"
-              value={Number((model.metrics.tokenCost / 1000).toFixed(1))}
-            />
-          </div>
-          <div
-            className="arr-graph-controls"
-            aria-label={DASHBOARD.ariaControls}
-          >
-            <label className="arr-search">
-              <Search size={15} />
-              <span className="sr-only">{DASHBOARD.search.label}</span>
-              <input
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    query: event.target.value,
-                  }))
-                }
-                placeholder={DASHBOARD.search.placeholder}
-                type="search"
-                value={filters.query}
-              />
-            </label>
-            <label className="arr-select">
-              <Filter size={14} />
-              <span className="sr-only">{DASHBOARD.filters.typeLabel}</span>
-              <select
-                aria-label={DASHBOARD.filters.typeLabel}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    type: event.target.value as GraphFilters["type"],
-                  }))
-                }
-                value={filters.type}
-              >
-                {TYPE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="arr-select">
-              <CircleDotDashed size={14} />
-              <span className="sr-only">{DASHBOARD.filters.gradeLabel}</span>
-              <select
-                aria-label={DASHBOARD.filters.gradeLabel}
-                onChange={(event) =>
-                  setFilters((current) => ({
-                    ...current,
-                    grade: event.target.value as GraphFilters["grade"],
-                  }))
-                }
-                value={filters.grade}
-              >
-                {GRADE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              aria-pressed={localFocus}
-              className="arr-focus"
-              disabled={!selectedNode}
-              onClick={() => setLocalFocus((value) => !value)}
-              type="button"
-            >
-              <Network size={14} />
-              {DASHBOARD.filters.localFocus}
-            </button>
-            <button
-              aria-label={DASHBOARD.filters.groupModeAria}
-              aria-pressed={groupByArea}
-              className="arr-focus"
-              data-testid="graph-group-mode"
-              onClick={() => setGroupByArea((value) => !value)}
-              type="button"
-            >
-              <LayoutGrid size={14} />
-              {DASHBOARD.filters.groupMode}
-            </button>
-          </div>
-          <GraphStageSurface
-            blocked={blocked}
-            focusNodeId={cameraFocusNodeId}
-            groupByArea={groupByArea}
-            model={model}
-            onLodReport={(level, labels) => setHudLod({ labels, level })}
-            onNodeActivate={(node) =>
-              window.location.assign(
-                `/graph?node=${encodeURIComponent(node.id)}`,
-              )
+      <section
+        aria-label={DASHBOARD.ariaControls}
+        className="graph-workspace-toolbar"
+      >
+        <label className="arr-search">
+          <Search aria-hidden size={15} />
+          <span className="sr-only">{DASHBOARD.search.label}</span>
+          <input
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                query: event.target.value,
+              }))
             }
-            onNodeSelect={setSelectedNode}
-            onRetry={() => setRecovered(true)}
-            onSettingsChange={updatePanelSettings}
-            realtime={realtime}
-            selectedNodeId={selectedNode?.id ?? null}
-            settings={panelSettings}
-            visibleGraph={visibleGraph}
+            placeholder={DASHBOARD.search.placeholder}
+            type="search"
+            value={filters.query}
           />
+        </label>
+        <label className="arr-select">
+          <Filter aria-hidden size={14} />
+          <select
+            aria-label={DASHBOARD.filters.typeLabel}
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                type: event.target.value as GraphFilters["type"],
+              }))
+            }
+            value={filters.type}
+          >
+            {TYPE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="arr-select">
+          <CircleDotDashed aria-hidden size={14} />
+          <select
+            aria-label={DASHBOARD.filters.gradeLabel}
+            onChange={(event) =>
+              setFilters((current) => ({
+                ...current,
+                grade: event.target.value as GraphFilters["grade"],
+              }))
+            }
+            value={filters.grade}
+          >
+            {GRADE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div aria-label={DASHBOARD.views.aria} className="graph-view-toggle">
+          <button
+            aria-pressed={graphView === "canvas"}
+            onClick={() => setGraphView("canvas")}
+            type="button"
+          >
+            <Network aria-hidden size={14} />
+            {DASHBOARD.views.canvas}
+          </button>
+          <button
+            aria-pressed={graphView === "table"}
+            onClick={() => setGraphView("table")}
+            type="button"
+          >
+            <List aria-hidden size={14} />
+            {DASHBOARD.views.table}
+            <kbd aria-hidden>L</kbd>
+          </button>
+        </div>
+        <button
+          aria-pressed={localFocus}
+          className="arr-focus"
+          disabled={!selectedNode || graphView === "table"}
+          onClick={() => setLocalFocus((value) => !value)}
+          type="button"
+        >
+          <Network aria-hidden size={14} />
+          {DASHBOARD.filters.localFocus}
+        </button>
+        <button
+          aria-label={DASHBOARD.filters.groupModeAria}
+          aria-pressed={groupByArea}
+          className="arr-focus"
+          data-testid="graph-group-mode"
+          disabled={graphView === "table"}
+          onClick={() => setGroupByArea((value) => !value)}
+          type="button"
+        >
+          <LayoutGrid aria-hidden size={14} />
+          {DASHBOARD.filters.groupMode}
+        </button>
+        <div className="graph-toolbar-spacer" />
+        <div className="graph-toolbar-popover-anchor">
+          <button
+            aria-expanded={forceOpen}
+            aria-haspopup="dialog"
+            className="arr-focus"
+            disabled={blocked || graphView === "table"}
+            onClick={() => setForceOpen((value) => !value)}
+            ref={forceButtonRef}
+            type="button"
+          >
+            <SlidersHorizontal aria-hidden size={14} />
+            {DASHBOARD.forcePanel.open}
+          </button>
+          {forceOpen ? (
+            <div
+              aria-label={DASHBOARD.forcePanel.aria}
+              className="graph-force-popover"
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                event.preventDefault();
+                event.stopPropagation();
+                setForceOpen(false);
+                forceButtonRef.current?.focus();
+              }}
+              ref={forcePopoverRef}
+              role="dialog"
+            >
+              <GraphForcePanel
+                labelCount={hudLod.labels}
+                lod={hudLod.level}
+                onChange={updatePanelSettings}
+                onClose={() => {
+                  setForceOpen(false);
+                  forceButtonRef.current?.focus();
+                }}
+                settings={panelSettings}
+              />
+            </div>
+          ) : null}
+        </div>
+        <button
+          aria-label={
+            inspectorOpen ? DASHBOARD.inspector.close : DASHBOARD.inspector.open
+          }
+          aria-pressed={inspectorOpen}
+          className="arr-focus graph-inspector-toggle"
+          onClick={() => setInspectorOpen((value) => !value)}
+          type="button"
+        >
+          {inspectorOpen ? (
+            <PanelRightClose aria-hidden size={15} />
+          ) : (
+            <PanelRightOpen aria-hidden size={15} />
+          )}
+        </button>
+      </section>
+
+      <div className="graph-facet-bar">
+        <div
+          aria-label={DASHBOARD.filters.areaLabel}
+          className="arr-area-chips"
+          role="group"
+        >
+          {AREA_OPTIONS.map((option) => (
+            <button
+              aria-pressed={filters.area === option.value}
+              className="arr-area-chip"
+              data-area={option.value}
+              key={option.value}
+              onClick={() =>
+                setFilters((current) => ({ ...current, area: option.value }))
+              }
+              type="button"
+            >
+              {option.label}
+              {option.value === "all" ? null : (
+                <small>{areaCounts.get(option.value) ?? 0}</small>
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="arr-legend" aria-label={DASHBOARD.ariaLegend}>
+          <span>
+            <i className="requirement" />
+            {DASHBOARD.legend.requirement}
+          </span>
+          <span>
+            <i className="document" />
+            {DASHBOARD.legend.document}
+          </span>
+          <span>
+            <i className="code" />
+            {DASHBOARD.legend.code}
+          </span>
+          <span>
+            <i className="test" />
+            {DASHBOARD.legend.test}
+          </span>
+        </div>
+        <span className="graph-visible-count">
+          {DASHBOARD.visibleCount(visibleGraph.nodes.length)}
+        </span>
+      </div>
+
+      <section
+        className="graph-workspace-body"
+        data-inspector={inspectorOpen ? "open" : "closed"}
+      >
+        <section className="graph-plot-column" aria-label={DASHBOARD.plotAria}>
+          <div className="graph-plot-surface">
+            {blocked || graphView === "canvas" ? (
+              <GraphStageSurface
+                blocked={blocked}
+                focusNodeId={cameraFocusNodeId}
+                groupByArea={groupByArea}
+                model={model}
+                onLodReport={(level, labels) => setHudLod({ labels, level })}
+                onNodeActivate={(node) =>
+                  window.location.assign(
+                    `/graph?node=${encodeURIComponent(node.id)}`,
+                  )
+                }
+                onNodeSelect={setSelectedNode}
+                onRetry={() => setRecovered(true)}
+                onSettingsChange={updatePanelSettings}
+                realtime={realtime}
+                selectedNodeId={selectedNode?.id ?? null}
+                settings={panelSettings}
+                visibleGraph={visibleGraph}
+              />
+            ) : (
+              <GraphTableView
+                data={visibleGraph}
+                onNodeActivate={(node) =>
+                  window.location.assign(
+                    `/graph?node=${encodeURIComponent(node.id)}`,
+                  )
+                }
+                onNodeSelect={setSelectedNode}
+                selectedNodeId={selectedNode?.id ?? null}
+              />
+            )}
+          </div>
           <footer
             className={`arr-ci-note ${model.state === "no-ci" ? "warning" : ""}`}
             role="status"
           >
             {model.state === "no-ci" ? (
-              <AlertTriangle size={15} />
+              <AlertTriangle aria-hidden size={15} />
             ) : (
-              <CheckCircle2 size={15} />
+              <CheckCircle2 aria-hidden size={15} />
             )}
             {model.ciMessage}
           </footer>
         </section>
 
-        <aside className="arr-inspector" aria-label={DASHBOARD.ariaInspector}>
-          <header>
-            <span className="arr-kicker">{DASHBOARD.inspector.kicker}</span>
-            <StatusBadge grade={selectedNode?.grade ?? "inferred"}>
-              {selectedNode?.grade ?? GRADE.waiting}
-            </StatusBadge>
-          </header>
-          {selectedNode ? (
-            <>
-              <h2>{requirementCode(selectedNode)}</h2>
-              <p>{DASHBOARD.inspector.lead}</p>
-              <code className="arr-selected-path">{selectedNode.path}</code>
-              {selectedNode.findingCount ? (
-                <span className="arr-finding">
-                  <AlertTriangle size={13} />
-                  {DASHBOARD.inspector.findingCount(selectedNode.findingCount)}
-                </span>
-              ) : null}
-              <section
-                className="arr-chain"
-                aria-labelledby="evidence-chain-title"
-              >
-                <span className="arr-kicker" id="evidence-chain-title">
-                  {DASHBOARD.inspector.chainTitle}
-                </span>
-                <ol>
-                  {evidenceChain.map((node) => (
-                    <li className={node.grade} key={node.id}>
-                      <span className="arr-chain-icon">
-                        {node.type === "code" ? (
-                          <Code2 size={16} />
-                        ) : node.type === "test" ? (
-                          <TestTube2 size={16} />
-                        ) : (
-                          <FileText size={16} />
+        {inspectorOpen ? (
+          <aside
+            aria-label={DASHBOARD.ariaInspector}
+            className="graph-inspector"
+          >
+            <header className="graph-inspector-head">
+              <div>
+                <span className="arr-kicker">{DASHBOARD.inspector.kicker}</span>
+                <strong>
+                  {selectedNode?.label ?? DASHBOARD.inspector.noSelection}
+                </strong>
+              </div>
+              <StatusBadge grade={selectedNode?.grade ?? "inferred"}>
+                {selectedNode?.grade ?? GRADE.waiting}
+              </StatusBadge>
+            </header>
+            <div
+              aria-label={DASHBOARD.inspector.tabsAria}
+              className="graph-inspector-tabs"
+              role="tablist"
+            >
+              {(["details", "relationships", "activity"] as const).map(
+                (tab) => (
+                  <button
+                    aria-controls={`graph-inspector-${tab}`}
+                    aria-selected={inspectorTab === tab}
+                    id={`graph-inspector-tab-${tab}`}
+                    key={tab}
+                    onClick={() => setInspectorTab(tab)}
+                    role="tab"
+                    type="button"
+                  >
+                    {tab === "activity" ? (
+                      <Activity aria-hidden size={14} />
+                    ) : null}
+                    {DASHBOARD.inspector.tabs[tab]}
+                    {tab === "relationships" &&
+                    selectedRelationships.length > 0 ? (
+                      <small>{selectedRelationships.length}</small>
+                    ) : null}
+                  </button>
+                ),
+              )}
+            </div>
+
+            <div
+              aria-labelledby={`graph-inspector-tab-${inspectorTab}`}
+              className="graph-inspector-panel"
+              id={`graph-inspector-${inspectorTab}`}
+              role="tabpanel"
+            >
+              {inspectorTab === "details" ? (
+                selectedNode ? (
+                  <div className="graph-node-details">
+                    <h2>{requirementCode(selectedNode)}</h2>
+                    <p>{DASHBOARD.inspector.lead}</p>
+                    <code className="arr-selected-path">
+                      {selectedNode.path}
+                    </code>
+                    {selectedNode.findingCount ? (
+                      <span className="arr-finding">
+                        <AlertTriangle aria-hidden size={13} />
+                        {DASHBOARD.inspector.findingCount(
+                          selectedNode.findingCount,
                         )}
                       </span>
-                      <div>
-                        <small>{node.type}</small>
-                        <strong>{node.label}</strong>
-                        <code>{node.path}</code>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-              </section>
-            </>
-          ) : (
-            <p>{DASHBOARD.inspector.empty}</p>
-          )}
-        </aside>
+                    ) : null}
+                    <section
+                      aria-labelledby="evidence-chain-title"
+                      className="arr-chain"
+                    >
+                      <span className="arr-kicker" id="evidence-chain-title">
+                        {DASHBOARD.inspector.chainTitle}
+                      </span>
+                      <ol>
+                        {evidenceChain.map((node) => (
+                          <li className={node.grade} key={node.id}>
+                            <span className="arr-chain-icon">
+                              {node.type === "code" ? (
+                                <Code2 aria-hidden size={16} />
+                              ) : node.type === "test" ? (
+                                <TestTube2 aria-hidden size={16} />
+                              ) : (
+                                <FileText aria-hidden size={16} />
+                              )}
+                            </span>
+                            <div>
+                              <small>
+                                {DASHBOARD.filters.types[node.type]}
+                              </small>
+                              <strong>{node.label}</strong>
+                              <code>{node.path}</code>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    </section>
+                  </div>
+                ) : (
+                  <div className="graph-inspector-empty">
+                    <Network aria-hidden size={24} />
+                    <p>{DASHBOARD.inspector.empty}</p>
+                  </div>
+                )
+              ) : null}
 
-        <LiveActivityFeed
-          feed={realtime.feed}
-          nodes={model.graph.nodes}
-          onFocusNode={(node) => {
-            setSelectedNode(node);
-            setCameraFocusNodeId(node.id);
-          }}
-          onReplay={replayMcpSession}
-          renderBatches={realtime.renderBatches}
-        />
+              {inspectorTab === "relationships" ? (
+                selectedNode && selectedRelationships.length > 0 ? (
+                  <ul className="graph-relationships">
+                    {selectedRelationships.map(({ edge, node }) => (
+                      <li key={edge.id}>
+                        <button
+                          onClick={() => {
+                            setSelectedNode(node);
+                            setCameraFocusNodeId(node.id);
+                          }}
+                          type="button"
+                        >
+                          <span>
+                            <strong>{edge.provenance.relation}</strong>
+                            <StatusBadge grade={edge.provenance.grade} />
+                          </span>
+                          <b>{node.label}</b>
+                          <code>
+                            {edge.provenance.sourcePath}:
+                            {edge.provenance.startLine}
+                          </code>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="graph-inspector-empty">
+                    <List aria-hidden size={24} />
+                    <p>{DASHBOARD.inspector.noRelationships}</p>
+                  </div>
+                )
+              ) : null}
 
-        {/* OQ-007: the HUD channel — a grid SIBLING of the rail and the
-            inspector, occupying the middle column. Cards positioned here can
-            never collide with the side panels: the grid owns the geometry,
-            so the old passage constants (17.5rem/22.5rem) are gone. */}
-        <div className="arr-hud-channel">
-          {/* No force panel while a status surface owns the stage — the card
-              would sit over the recovery controls. */}
-          {blocked ? null : (
-            <GraphForcePanel
-              labelCount={hudLod.labels}
-              lod={hudLod.level}
-              onChange={updatePanelSettings}
-              settings={panelSettings}
-            />
-          )}
-          {metricPanel ? (
-            <MetricEvidence
-              onClose={() => setMetricPanel(null)}
-              panel={metricPanel}
-            />
-          ) : null}
-        </div>
+              {inspectorTab === "activity" ? (
+                <LiveActivityFeed
+                  feed={realtime.feed}
+                  nodes={model.graph.nodes}
+                  onFocusNode={(node) => {
+                    setSelectedNode(node);
+                    setCameraFocusNodeId(node.id);
+                    setInspectorTab("details");
+                  }}
+                  onReplay={replayMcpSession}
+                  renderBatches={realtime.renderBatches}
+                />
+              ) : null}
+            </div>
+          </aside>
+        ) : null}
+      </section>
+      <div aria-live="polite" className="sr-only">
+        {selectedNode
+          ? DASHBOARD.selectionAnnouncement(
+              selectedNode.label,
+              selectedRelationships.length,
+            )
+          : DASHBOARD.inspector.noSelection}
       </div>
     </main>
   );

@@ -1,14 +1,16 @@
 "use client";
 
 /**
- * Obsidian-style force parameter HUD card (Phase 2A todo 5).
+ * Graph layout settings shared by the workspace popover and legacy fixtures.
  *
  * Four force sliders plus the text fade threshold, collapsible, persisted per
  * user. The card is deliberately presentational: all clamping and persistence
  * lives in `lib/graph/graph-panel-settings.ts`, which is where the rules are
- * tested. Wave 3 restyles this chrome; the contract below is what it must keep.
+ * tested. When `onClose` is present, the panel is always expanded and returns
+ * focus through the popover owner after its close button is used.
  */
 
+import { X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -68,6 +70,7 @@ export interface GraphForcePanelProps {
   labelCount?: number;
   lod?: LodLevel;
   onChange: (patch: Partial<GraphPanelSettings>) => void;
+  onClose?: () => void;
   settings: GraphPanelSettings;
 }
 
@@ -75,27 +78,40 @@ export function GraphForcePanel({
   labelCount,
   lod,
   onChange,
+  onClose,
   settings,
 }: GraphForcePanelProps) {
   const copy = DASHBOARD.forcePanel;
+  const collapsed = onClose ? false : settings.collapsed;
   return (
     <section
       aria-label={copy.aria}
       className="graph-force-panel"
-      data-collapsed={settings.collapsed}
+      data-collapsed={collapsed}
       data-testid="graph-force-panel"
     >
       <header>
         <strong>{copy.title}</strong>
-        <button
-          aria-expanded={!settings.collapsed}
-          onClick={() => onChange({ collapsed: !settings.collapsed })}
-          type="button"
-        >
-          {settings.collapsed ? copy.expand : copy.collapse}
-        </button>
+        {onClose ? (
+          <button
+            aria-label={copy.close}
+            data-force-close
+            onClick={onClose}
+            type="button"
+          >
+            <X aria-hidden size={15} />
+          </button>
+        ) : (
+          <button
+            aria-expanded={!settings.collapsed}
+            onClick={() => onChange({ collapsed: !settings.collapsed })}
+            type="button"
+          >
+            {settings.collapsed ? copy.expand : copy.collapse}
+          </button>
+        )}
       </header>
-      {settings.collapsed ? null : (
+      {collapsed ? null : (
         <div className="graph-force-sliders">
           {SLIDERS.map((slider) => (
             <label key={slider.key}>

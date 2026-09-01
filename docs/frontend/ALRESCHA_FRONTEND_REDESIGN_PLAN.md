@@ -8,15 +8,15 @@
 
 ## Progress
 
-| Wave                       | Status   | Evidence                                                   |
-| -------------------------- | -------- | ---------------------------------------------------------- |
-| F0 — Contract and baseline | Complete | [`BASELINE_2026-08-31.md`](./BASELINE_2026-08-31.md)       |
-| F1 — Desktop design system | Complete | [`ALRESCHA_DESIGN_SYSTEM.md`](./ALRESCHA_DESIGN_SYSTEM.md) |
-| F2 — App shell/navigation  | Complete | [`logs/2026-09-01-f2-app-shell-navigation.md`](./logs/2026-09-01-f2-app-shell-navigation.md) |
-| F3 — Evidence graph        | Next     | Legacy graph workspace remains inside the new shell        |
-| F4 — Core screens          | Pending  | Starts after F3 acceptance                                 |
-| F5 — Naming migration      | Pending  | User-facing residuals and compatibility review remain      |
-| F6 — Verification/handoff  | Pending  | Full desktop comparison and handoff remain                 |
+| Wave                       | Status   | Evidence                                                                                             |
+| -------------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| F0 — Contract and baseline | Complete | [`BASELINE_2026-08-31.md`](./BASELINE_2026-08-31.md)                                                 |
+| F1 — Desktop design system | Complete | [`ALRESCHA_DESIGN_SYSTEM.md`](./ALRESCHA_DESIGN_SYSTEM.md)                                           |
+| F2 — App shell/navigation  | Complete | [`logs/2026-09-01-f2-app-shell-navigation.md`](./logs/2026-09-01-f2-app-shell-navigation.md)         |
+| F3 — Evidence graph        | Complete | [`logs/2026-09-01-f3-evidence-graph-workspace.md`](./logs/2026-09-01-f3-evidence-graph-workspace.md) |
+| F4 — Core screens          | Next     | Shared page primitives and route migration                                                           |
+| F5 — Naming migration      | Pending  | User-facing residuals and compatibility review remain                                                |
+| F6 — Verification/handoff  | Pending  | Full desktop comparison and handoff remain                                                           |
 
 ## 1. Locked decisions
 
@@ -122,6 +122,8 @@ Delivered 2026-09-01: 56px global header, 48px repository identity row, 40px hor
 
 Exit: real graph fixtures pass visual, keyboard, accessibility, and performance acceptance.
 
+Delivered 2026-09-01: fixed plot/inspector grid, compact toolbar and facets, graph/table shared selection, keyboard navigation, inspector relationship/activity tabs, focus-returning layout popover, migrated local provenance graph, and 405.4KB gzip `/map` idle payload.
+
 ### F4 — Core product screens
 
 - Migrate dashboard, findings, assurance workspace, commits, team, stats, settings, and remaining shell routes in dependency order.
@@ -184,7 +186,6 @@ Never overwrite another agent's uncommitted work. Do not claim a baseline file a
 
 ## 9. Remaining work
 
-1. **F3 — Next:** rebuild the graph workspace grid, toolbar, filters, legend, right inspector, force controls as a popover, loading/empty/error states, and accessible relationship list. Resolve current label collisions and verify large fixtures.
-2. **F4 — Pending:** migrate dashboard, findings, assurance, commits, team, stats, settings, and remaining desktop screens to the shared primitives; remove legacy visual CSS only after its final consumer moves.
-3. **F5 — Pending:** finish the user-facing `Arr` → `Alrescha` audit, review metadata and legacy `Alresca` assets, and retain package/env/schema/URI identifiers until a compatibility migration is approved.
-4. **F6 — Pending:** run the complete desktop Playwright/axe matrix, compare before/after evidence at all three widths and both themes, close remaining regressions, document mobile deferral, and create the final Claude Code handoff.
+1. **F4 — Next:** migrate dashboard, findings, assurance, commits, team, stats, settings, and remaining desktop screens to shared primitives; remove legacy visual CSS only after its final consumer moves.
+2. **F5 — Pending:** finish the user-facing `Arr` → `Alrescha` audit, review metadata and legacy `Alresca` assets, and retain package/env/schema/URI identifiers until a compatibility migration is approved.
+3. **F6 — Pending:** run the complete desktop Playwright/axe matrix, compare before/after evidence at all three widths and both themes, close remaining regressions, document mobile deferral, and create the final Claude Code handoff.

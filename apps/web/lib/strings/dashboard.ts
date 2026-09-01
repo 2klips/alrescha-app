@@ -11,6 +11,7 @@ export const DASHBOARD = {
   ariaLegend: "Graph 범례",
   ariaControls: "Graph 제어",
   ariaInspector: "선택한 노드",
+  plotAria: "증거 Graph 작업 영역",
 
   repoKicker: "레포",
   /** 헤더 레포 칩의 브랜치·commit 줄 */
@@ -30,8 +31,28 @@ export const DASHBOARD = {
 
   legend: {
     requirement: "요구사항",
+    document: "문서",
     code: "코드",
     test: "verified 테스트",
+  },
+
+  views: {
+    aria: "Graph 보기 방식",
+    canvas: "Graph",
+    table: "목록",
+  },
+
+  visibleCount: (count: number) => `표시 중 ${count}개`,
+
+  table: {
+    caption: "현재 필터에 포함된 증거 노드",
+    node: "노드",
+    type: "유형",
+    grade: "등급",
+    relations: "관계",
+    source: "소스",
+    emptyTitle: "표시할 노드가 없습니다",
+    emptyBody: "검색어나 필터를 바꿔 다시 확인하세요.",
   },
 
   search: {
@@ -74,6 +95,8 @@ export const DASHBOARD = {
   forcePanel: {
     title: "Graph 힘",
     aria: "Graph 힘 파라미터",
+    open: "레이아웃 설정",
+    close: "레이아웃 설정 닫기",
     expand: "힘 패널 펼치기",
     collapse: "힘 패널 접기",
     reset: "기본값 복원",
@@ -182,12 +205,25 @@ export const DASHBOARD = {
 
   inspector: {
     kicker: "Inspector",
+    open: "Inspector 열기",
+    close: "Inspector 닫기",
+    noSelection: "선택 없음",
+    noRelationships: "선택한 노드에 표시할 관계가 없습니다.",
+    tabsAria: "Inspector 보기",
+    tabs: {
+      details: "상세",
+      relationships: "관계",
+      activity: "활동",
+    },
     lead: "이 주장을 요구사항에서 구현·테스트 증거까지 따라갑니다.",
     chainTitle: "증거 체인",
     /** `미해소 Findings <n>건` */
     findingCount: (count: number) => `미해소 Findings ${count}건`,
     empty: "노드를 선택하면 증명 체인을 볼 수 있습니다.",
   },
+
+  selectionAnnouncement: (label: string, relationshipCount: number) =>
+    `${label} 선택됨 · 관계 ${relationshipCount}개`,
 
   activity: {
     live: "Live",

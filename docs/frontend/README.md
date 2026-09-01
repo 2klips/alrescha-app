@@ -29,8 +29,8 @@ This directory is the shared handoff surface for Claude Code and Codex frontend 
 - F0 contract and desktop baseline: complete.
 - F1 desktop design system: complete.
 - F2 app shell and navigation: complete.
-- F3 evidence graph workspace: next.
-- F4 core product screens: pending.
+- F3 evidence graph workspace: complete.
+- F4 core product screens: next.
 - F5 naming migration: pending.
 - F6 second-pass verification and handoff: pending.
 

@@ -5,7 +5,7 @@ import {
   Braces,
   ExternalLink,
   FileSearch,
-  GitBranch,
+  List,
   Link2,
   Network,
   Orbit,
@@ -26,6 +26,7 @@ import {
   inspectEdgeProvenance,
 } from "../../lib/dashboard/local-graph";
 import { GRAPH } from "../../lib/strings";
+import { GraphTableView } from "./dashboard-screen";
 import { GraphCanvas } from "./graph-canvas";
 
 interface GraphDetailProps {
@@ -41,6 +42,7 @@ export function GraphDetail({ initialNodeId }: GraphDetailProps) {
     ? initialNodeId
     : "req-auth";
   const [includeOrphans, setIncludeOrphans] = useState(false);
+  const [view, setView] = useState<"canvas" | "table">("canvas");
   const localGraph = useMemo(
     () =>
       buildLocalEvidenceGraph(completeGraph, rootNode, {
@@ -66,33 +68,58 @@ export function GraphDetail({ initialNodeId }: GraphDetailProps) {
   return (
     <main className="graph-detail-shell">
       <header className="graph-detail-header">
-        <Link href="/">
-          <ArrowLeft size={15} />
-          {GRAPH.back}
-        </Link>
-        <span>
-          <Network size={16} />
+        <div>
+          <Link href="/">
+            <ArrowLeft aria-hidden size={15} />
+            {GRAPH.back}
+          </Link>
+          <span className="panel-kicker">{GRAPH.commitChip}</span>
           <h1>{GRAPH.heading}</h1>
           <small>{GRAPH.depthLabel(localGraph.nodes.length)}</small>
-        </span>
-        <span className="commit-chip">
-          <GitBranch size={13} />
-          {GRAPH.commitChip}
-        </span>
+        </div>
+        <div aria-label={GRAPH.canvas.label} className="graph-detail-actions">
+          <button
+            aria-pressed={view === "canvas"}
+            onClick={() => setView("canvas")}
+            type="button"
+          >
+            <Network aria-hidden size={14} />
+            Graph
+          </button>
+          <button
+            aria-pressed={view === "table"}
+            onClick={() => setView("table")}
+            type="button"
+          >
+            <List aria-hidden size={14} />
+            List
+          </button>
+        </div>
       </header>
       <section className="local-graph-stage" aria-label={GRAPH.regionLabel}>
         <div className="local-graph-canvas">
-          <GraphCanvas
-            data={localGraph}
-            focusNodeId={selectedNode?.id ?? rootNode}
-            onEdgeSelect={(edge: GraphEdge) => setSelectedEdgeId(edge.id)}
-            onNodeSelect={setSelectedNode}
-            selectedEdgeId={selectedEdge?.id ?? null}
-          />
-          <div className="local-graph-label">
-            <Orbit size={14} />
-            {GRAPH.canvas.label}
-          </div>
+          {view === "canvas" ? (
+            <>
+              <GraphCanvas
+                data={localGraph}
+                focusNodeId={selectedNode?.id ?? rootNode}
+                onEdgeSelect={(edge: GraphEdge) => setSelectedEdgeId(edge.id)}
+                onNodeSelect={setSelectedNode}
+                selectedEdgeId={selectedEdge?.id ?? null}
+              />
+              <div className="local-graph-label">
+                <Orbit aria-hidden size={14} />
+                {GRAPH.canvas.label}
+              </div>
+            </>
+          ) : (
+            <GraphTableView
+              data={localGraph}
+              onNodeActivate={setSelectedNode}
+              onNodeSelect={setSelectedNode}
+              selectedNodeId={selectedNode?.id ?? null}
+            />
+          )}
         </div>
 
         <aside className="provenance-inspector">
