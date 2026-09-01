@@ -1,6 +1,6 @@
 # Alrescha desktop frontend redesign plan
 
-**Status:** Active
+**Status:** Complete
 
 **Decision date:** 2026-08-31
 
@@ -16,7 +16,7 @@
 | F3 — Evidence graph        | Complete | [`logs/2026-09-01-f3-evidence-graph-workspace.md`](./logs/2026-09-01-f3-evidence-graph-workspace.md) |
 | F4 — Core screens          | Complete | [`logs/2026-09-01-f4-core-product-screens.md`](./logs/2026-09-01-f4-core-product-screens.md)         |
 | F5 — Naming migration      | Complete | [`logs/2026-09-01-f5-naming-migration.md`](./logs/2026-09-01-f5-naming-migration.md)                 |
-| F6 — Verification/handoff  | Next     | Full desktop comparison and handoff remain                                                           |
+| F6 — Verification/handoff  | Complete | [`logs/2026-09-01-f6-verification-handoff.md`](./logs/2026-09-01-f6-verification-handoff.md)         |
 
 ## 1. Locked decisions
 
@@ -151,6 +151,8 @@ Delivered 2026-09-01: active UI/state/help copy, metadata, current public and op
 
 Exit: all relevant gates green, visual review accepted, handoff log complete.
 
+Delivered 2026-09-01: 90/90 public-route desktop checks passed across 1280×720, 1440×900, and 1920×1080 in light/dark; keyboard graph/table and command-palette interactions passed; 32 axe contrast reports were clean; the isolated full Playwright suite finished with 119 passed, 1 explicitly deferred mobile test, and 0 failures; lint, typecheck, 976 unit/integration tests, production build, and both 450KB graph bundle budgets passed. Handoff: [`ALRESCHA_F6_HANDOFF.md`](./ALRESCHA_F6_HANDOFF.md).
+
 ## 6. Task logging contract
 
 Every frontend task creates `docs/frontend/logs/YYYY-MM-DD-<task-slug>.md` and appends one row to `docs/frontend/WORKLOG.md`.
@@ -190,4 +192,8 @@ Never overwrite another agent's uncommitted work. Do not claim a baseline file a
 
 ## 9. Remaining work
 
-1. **F6 — Next:** run the complete desktop browser/axe matrix, compare before/after evidence at all three widths and both themes, close remaining regressions, document mobile deferral, and create the final Claude Code handoff.
+No active desktop redesign wave remains after F6.
+
+1. **Deferred mobile track:** navigation, layout, touch behavior, screenshots, and acceptance certification remain intentionally out of scope until product direction authorizes a dedicated mobile version.
+2. **Compatibility identifiers:** `arr` packages, protocols, environment variables, storage keys, integration keys, repository names, and branch markers remain unchanged. Rename only through a separately approved migration plan.
+3. **Brand assets:** untracked `docs/brand/**` assets remain reference-only until reviewed for the exact `Alrescha` spelling and approved as final identity work.

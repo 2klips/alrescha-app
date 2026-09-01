@@ -199,8 +199,8 @@
 .library-filters button,
 .harness-save-form button {
   align-items: center;
-  background: var(--accent-fg);
-  border: 1px solid var(--accent-fg);
+  background: var(--accent-emphasis);
+  border: 1px solid var(--accent-emphasis);
   color: var(--fg-on-emphasis);
   cursor: pointer;
   display: inline-flex;

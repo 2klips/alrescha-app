@@ -30,6 +30,9 @@ test("scripted MCP reads pulse the graph and feed focus follows the newest call"
 }) => {
   await page.goto("/map");
   await hydrated(page, "[data-testid='brain-map-stage']");
+  await page
+    .getByRole("tab", { name: DASHBOARD.inspector.tabs.activity })
+    .click();
   await page.getByRole("button", { name: DASHBOARD.activity.replay }).click();
 
   const feed = page.getByRole("feed");

@@ -75,10 +75,9 @@ test("an agent orients, records memory, and the map shows it", async ({
 
     // 2. A live agent session over HTTP: orient, then write back.
     await mcp.connect(
-      new StreamableHTTPClientTransport(
-        new URL("http://127.0.0.1:3000/api/mcp"),
-        { authProvider: { token: async () => secret } },
-      ),
+      new StreamableHTTPClientTransport(new URL("/api/mcp", page.url()), {
+        authProvider: { token: async () => secret },
+      }),
     );
 
     const schema = await mcp.callTool({

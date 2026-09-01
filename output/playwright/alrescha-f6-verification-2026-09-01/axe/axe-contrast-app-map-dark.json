@@ -1,0 +1,25 @@
+{
+  "incomplete": [
+    {
+      "html": "<strong>이 워크스페이스에는 아직 Graph가 없습니다</strong>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".graph-state > strong"
+    },
+    {
+      "html": "<span>GitHub 레포를 연결하면 commit마다 스캔이 문서·심볼·근거 노트를 이 화면에 그립니다. 원본 코드는 저장되지 않습니다 — Graph는 메타데이터만 담습니다.</span>",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".graph-state > span:nth-child(3)"
+    },
+    {
+      "html": "<a class=\"btn btn-secondary btn-sm\" href=\"/app/connect/github\">",
+      "message": "Element's background color could not be determined due to a background gradient",
+      "target": ".btn"
+    }
+  ],
+  "incompleteCount": 3,
+  "passes": 53,
+  "route": "/app/map",
+  "theme": "dark",
+  "violationCount": 0,
+  "violations": []
+}

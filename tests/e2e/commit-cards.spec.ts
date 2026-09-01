@@ -113,7 +113,7 @@ test("the empty state explains how the first card appears", async ({
   page,
 }) => {
   await page.goto("/commits?state=empty");
-  await expect(page.locator(".empty-list")).toContainText(
+  await expect(page.locator(".product-empty-state")).toContainText(
     COMMITS.list.empty.title,
   );
   await expect(page.locator(".commit-card")).toHaveCount(0);

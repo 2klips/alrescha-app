@@ -1,0 +1,1500 @@
+{
+  "routes": [
+    "/",
+    "/map",
+    "/graph?node=req-auth",
+    "/commits",
+    "/findings",
+    "/lint",
+    "/receipts",
+    "/progress",
+    "/library",
+    "/inspection",
+    "/team",
+    "/harness",
+    "/overview",
+    "/onboarding",
+    "/auth/login"
+  ],
+  "viewports": [
+    {
+      "requested": {
+        "width": 1280,
+        "height": 720
+      },
+      "actual": {
+        "clientHeight": 720,
+        "clientWidth": 1265,
+        "height": 720,
+        "width": 1280
+      }
+    },
+    {
+      "requested": {
+        "width": 1440,
+        "height": 900
+      },
+      "actual": {
+        "clientHeight": 900,
+        "clientWidth": 1425,
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "requested": {
+        "width": 1920,
+        "height": 1080
+      },
+      "actual": {
+        "clientHeight": 1080,
+        "clientWidth": 1905,
+        "height": 1080,
+        "width": 1920
+      }
+    }
+  ],
+  "results": [
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/map",
+      "actualUrl": "http://127.0.0.1:3010/map",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 증명 맵2klips/arr-app"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/graph?node=req-auth",
+      "actualUrl": "http://127.0.0.1:3010/graph?node=req-auth",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "증거 이웃"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/commits",
+      "actualUrl": "http://127.0.0.1:3010/commits",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "commit 분석 카드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/findings",
+      "actualUrl": "http://127.0.0.1:3010/findings",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Findings"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/lint",
+      "actualUrl": "http://127.0.0.1:3010/lint",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "AI 지시문 검사"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/receipts",
+      "actualUrl": "http://127.0.0.1:3010/receipts",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Receipts"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/progress",
+      "actualUrl": "http://127.0.0.1:3010/progress",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "부분 증거"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/library",
+      "actualUrl": "http://127.0.0.1:3010/library",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "개인 라이브러리"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/inspection",
+      "actualUrl": "http://127.0.0.1:3010/inspection",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "통합 점검 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/team",
+      "actualUrl": "http://127.0.0.1:3010/team",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "팀 · 코칭 · 기여도"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/harness",
+      "actualUrl": "http://127.0.0.1:3010/harness",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "이미 작동하는 것을 저장합니다."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/overview",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/onboarding",
+      "actualUrl": "http://127.0.0.1:3010/onboarding",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "레포지토리로 시작하세요."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/auth/login",
+      "actualUrl": "http://127.0.0.1:3010/auth/login",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "로그인."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/map",
+      "actualUrl": "http://127.0.0.1:3010/map",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 증명 맵2klips/arr-app"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/graph?node=req-auth",
+      "actualUrl": "http://127.0.0.1:3010/graph?node=req-auth",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "증거 이웃"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/commits",
+      "actualUrl": "http://127.0.0.1:3010/commits",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "commit 분석 카드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/findings",
+      "actualUrl": "http://127.0.0.1:3010/findings",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Findings"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/lint",
+      "actualUrl": "http://127.0.0.1:3010/lint",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "AI 지시문 검사"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/receipts",
+      "actualUrl": "http://127.0.0.1:3010/receipts",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Receipts"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/progress",
+      "actualUrl": "http://127.0.0.1:3010/progress",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "부분 증거"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/library",
+      "actualUrl": "http://127.0.0.1:3010/library",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "개인 라이브러리"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/inspection",
+      "actualUrl": "http://127.0.0.1:3010/inspection",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "통합 점검 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/team",
+      "actualUrl": "http://127.0.0.1:3010/team",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "팀 · 코칭 · 기여도"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/harness",
+      "actualUrl": "http://127.0.0.1:3010/harness",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "이미 작동하는 것을 저장합니다."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/overview",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/onboarding",
+      "actualUrl": "http://127.0.0.1:3010/onboarding",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "레포지토리로 시작하세요."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "requestedRoute": "/auth/login",
+      "actualUrl": "http://127.0.0.1:3010/auth/login",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "로그인."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/map",
+      "actualUrl": "http://127.0.0.1:3010/map",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 증명 맵2klips/arr-app"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/graph?node=req-auth",
+      "actualUrl": "http://127.0.0.1:3010/graph?node=req-auth",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "증거 이웃"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/commits",
+      "actualUrl": "http://127.0.0.1:3010/commits",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "commit 분석 카드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/findings",
+      "actualUrl": "http://127.0.0.1:3010/findings",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Findings"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/lint",
+      "actualUrl": "http://127.0.0.1:3010/lint",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "AI 지시문 검사"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/receipts",
+      "actualUrl": "http://127.0.0.1:3010/receipts",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Receipts"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/progress",
+      "actualUrl": "http://127.0.0.1:3010/progress",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "부분 증거"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/library",
+      "actualUrl": "http://127.0.0.1:3010/library",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "개인 라이브러리"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/inspection",
+      "actualUrl": "http://127.0.0.1:3010/inspection",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "통합 점검 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/team",
+      "actualUrl": "http://127.0.0.1:3010/team",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "팀 · 코칭 · 기여도"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/harness",
+      "actualUrl": "http://127.0.0.1:3010/harness",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "이미 작동하는 것을 저장합니다."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/overview",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/onboarding",
+      "actualUrl": "http://127.0.0.1:3010/onboarding",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "레포지토리로 시작하세요."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/auth/login",
+      "actualUrl": "http://127.0.0.1:3010/auth/login",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "로그인."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/map",
+      "actualUrl": "http://127.0.0.1:3010/map",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 증명 맵2klips/arr-app"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/graph?node=req-auth",
+      "actualUrl": "http://127.0.0.1:3010/graph?node=req-auth",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "증거 이웃"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/commits",
+      "actualUrl": "http://127.0.0.1:3010/commits",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "commit 분석 카드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/findings",
+      "actualUrl": "http://127.0.0.1:3010/findings",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Findings"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/lint",
+      "actualUrl": "http://127.0.0.1:3010/lint",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "AI 지시문 검사"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/receipts",
+      "actualUrl": "http://127.0.0.1:3010/receipts",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Receipts"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/progress",
+      "actualUrl": "http://127.0.0.1:3010/progress",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "부분 증거"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/library",
+      "actualUrl": "http://127.0.0.1:3010/library",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "개인 라이브러리"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/inspection",
+      "actualUrl": "http://127.0.0.1:3010/inspection",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "통합 점검 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/team",
+      "actualUrl": "http://127.0.0.1:3010/team",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "팀 · 코칭 · 기여도"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/harness",
+      "actualUrl": "http://127.0.0.1:3010/harness",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "이미 작동하는 것을 저장합니다."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/overview",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/onboarding",
+      "actualUrl": "http://127.0.0.1:3010/onboarding",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "레포지토리로 시작하세요."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "requestedRoute": "/auth/login",
+      "actualUrl": "http://127.0.0.1:3010/auth/login",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "로그인."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/map",
+      "actualUrl": "http://127.0.0.1:3010/map",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 증명 맵2klips/arr-app"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/graph?node=req-auth",
+      "actualUrl": "http://127.0.0.1:3010/graph?node=req-auth",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "증거 이웃"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/commits",
+      "actualUrl": "http://127.0.0.1:3010/commits",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "commit 분석 카드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/findings",
+      "actualUrl": "http://127.0.0.1:3010/findings",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Findings"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/lint",
+      "actualUrl": "http://127.0.0.1:3010/lint",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "AI 지시문 검사"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/receipts",
+      "actualUrl": "http://127.0.0.1:3010/receipts",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Receipts"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/progress",
+      "actualUrl": "http://127.0.0.1:3010/progress",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "부분 증거"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/library",
+      "actualUrl": "http://127.0.0.1:3010/library",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "개인 라이브러리"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/inspection",
+      "actualUrl": "http://127.0.0.1:3010/inspection",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "통합 점검 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/team",
+      "actualUrl": "http://127.0.0.1:3010/team",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "팀 · 코칭 · 기여도"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/harness",
+      "actualUrl": "http://127.0.0.1:3010/harness",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "이미 작동하는 것을 저장합니다."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/overview",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/onboarding",
+      "actualUrl": "http://127.0.0.1:3010/onboarding",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "레포지토리로 시작하세요."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/auth/login",
+      "actualUrl": "http://127.0.0.1:3010/auth/login",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "로그인."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "dark"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/map",
+      "actualUrl": "http://127.0.0.1:3010/map",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 증명 맵2klips/arr-app"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/graph?node=req-auth",
+      "actualUrl": "http://127.0.0.1:3010/graph?node=req-auth",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "증거 이웃"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/commits",
+      "actualUrl": "http://127.0.0.1:3010/commits",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "commit 분석 카드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/findings",
+      "actualUrl": "http://127.0.0.1:3010/findings",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Findings"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/lint",
+      "actualUrl": "http://127.0.0.1:3010/lint",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "AI 지시문 검사"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/receipts",
+      "actualUrl": "http://127.0.0.1:3010/receipts",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "Receipts"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/progress",
+      "actualUrl": "http://127.0.0.1:3010/progress",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "부분 증거"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/library",
+      "actualUrl": "http://127.0.0.1:3010/library",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "개인 라이브러리"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/inspection",
+      "actualUrl": "http://127.0.0.1:3010/inspection",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "통합 점검 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/team",
+      "actualUrl": "http://127.0.0.1:3010/team",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "팀 · 코칭 · 기여도"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/harness",
+      "actualUrl": "http://127.0.0.1:3010/harness",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "이미 작동하는 것을 저장합니다."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/overview",
+      "actualUrl": "http://127.0.0.1:3010/",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "프로젝트 대시보드"
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/onboarding",
+      "actualUrl": "http://127.0.0.1:3010/onboarding",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "레포지토리로 시작하세요."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    },
+    {
+      "width": 1920,
+      "height": 1080,
+      "requestedRoute": "/auth/login",
+      "actualUrl": "http://127.0.0.1:3010/auth/login",
+      "title": "Alrescha · 살아있는 증거 그래프",
+      "blank": false,
+      "errorOverlay": false,
+      "errorText": false,
+      "h1": [
+        "로그인."
+      ],
+      "mainCount": 1,
+      "overflow": false,
+      "theme": "light"
+    }
+  ],
+  "logs": []
+}

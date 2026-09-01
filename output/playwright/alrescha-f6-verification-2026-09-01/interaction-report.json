@@ -1,0 +1,49 @@
+{
+  "viewports": [
+    {
+      "requested": {
+        "width": 1280,
+        "height": 720
+      },
+      "actual": {
+        "clientHeight": 720,
+        "clientWidth": 1265,
+        "height": 720,
+        "width": 1280
+      }
+    },
+    {
+      "requested": {
+        "width": 1440,
+        "height": 900
+      },
+      "actual": {
+        "clientHeight": 900,
+        "clientWidth": 1425,
+        "height": 900,
+        "width": 1440
+      }
+    },
+    {
+      "requested": {
+        "width": 1920,
+        "height": 1080
+      },
+      "actual": {
+        "clientHeight": 1080,
+        "clientWidth": 1905,
+        "height": 1080,
+        "width": 1920
+      }
+    }
+  ],
+  "interaction": {
+    "dialogVisible": true,
+    "focusAfterPalette": "검색 또는 화면 이동⌘K",
+    "navigatedUrl": "http://127.0.0.1:3010/map",
+    "tableVisible": true,
+    "firstRowLabel": "Tenant-safe auth",
+    "focusAfterArrow": "Idempotent webhooks",
+    "canvasVisible": true
+  }
+}

@@ -76,7 +76,7 @@ test("arr push renders a graph-only card on the workspace board", async ({
     await writeFile(path.join(projectDir, "PROGRESS.md"), TODO, "utf8");
 
     const outcome = await pushLocalProject({
-      baseUrl: "http://127.0.0.1:3000",
+      baseUrl: new URL(page.url()).origin,
       repositoryFullName: REPOSITORY,
       rootDir: projectDir,
       token: secret,

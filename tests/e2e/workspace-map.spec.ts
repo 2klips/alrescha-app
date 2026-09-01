@@ -11,6 +11,8 @@ import {
   signIn,
 } from "./helpers/session";
 
+test.use({ viewport: { height: 900, width: 1440 } });
+
 /**
  * Phase 3 Wave A todo 1 — `/app/map` renders the stored graph, not the demo.
  *

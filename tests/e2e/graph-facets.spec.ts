@@ -42,6 +42,7 @@ test("area chips filter the map and report their counts", async ({ page }) => {
 });
 
 test("group mode shows one labelled band per area", async ({ page }) => {
+  await page.setViewportSize({ height: 900, width: 1440 });
   await page.goto("/map");
 
   const toggle = page.getByTestId("graph-group-mode");

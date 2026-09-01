@@ -32,6 +32,8 @@ This directory is the shared handoff surface for Claude Code and Codex frontend 
 - F3 evidence graph workspace: complete.
 - F4 core product screens: complete.
 - F5 naming migration: complete.
-- F6 second-pass verification and handoff: next.
+- F6 second-pass verification and handoff: complete.
+
+Desktop redesign track F0–F6 is complete. See [`ALRESCHA_F6_HANDOFF.md`](./ALRESCHA_F6_HANDOFF.md) for verification results and Claude Code continuation rules.
 
 `docs/brand/ALRESCA_LOGO_DIRECTION.md` and its assets predate the `Alrescha` naming decision. They are reference-only until separately reviewed and renamed; they do not override this contract.

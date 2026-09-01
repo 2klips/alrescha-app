@@ -32,6 +32,19 @@ async function glowActive(page: Page): Promise<number> {
   return Number(await page.locator(STAGE).getAttribute("data-glow-active"));
 }
 
+async function openForcePanel(page: Page) {
+  await page.getByRole("button", { name: DASHBOARD.forcePanel.open }).click();
+  const panel = page.getByTestId("graph-force-panel");
+  await expect(panel).toBeVisible();
+  return panel;
+}
+
+async function openActivityTab(page: Page) {
+  await page
+    .getByRole("tab", { name: DASHBOARD.inspector.tabs.activity })
+    .click();
+}
+
 /**
  * Wheel over the canvas until the LOD band is reached.
  *
@@ -72,6 +85,7 @@ test("mounts the WebGL brain map with a reachable node for every fixture node", 
 test("zooming walks the three LOD bands and thins the labels out", async ({
   page,
 }) => {
+  await page.setViewportSize({ height: 900, width: 1440 });
   await page.goto("/map");
   await expect(page.locator("canvas.brain-map-canvas")).toBeVisible();
   // Wait for the engine's first reported frame; zooming before it lands would
@@ -95,7 +109,8 @@ test("zooming walks the three LOD bands and thins the labels out", async ({
   await zoomUntil(page, "near", -240);
   expect(await lod(page)).toBe("near");
 
-  // The HUD reports the same band the stage does.
+  // The settings popover reports the same band as the stage.
+  await openForcePanel(page);
   await expect(page.getByTestId("graph-lod-status")).toHaveText(
     DASHBOARD.forcePanel.lodStatus(
       DASHBOARD.forcePanel.lodLevels.near,
@@ -105,6 +120,7 @@ test("zooming walks the three LOD bands and thins the labels out", async ({
 });
 
 test("force panel values survive a reload", async ({ page }) => {
+  await page.setViewportSize({ height: 900, width: 1440 });
   await page.goto("/map");
   // The panel is server-rendered, so it is visible and fillable *before* React
   // attaches its listeners; an input made in that window is silently discarded
@@ -112,8 +128,7 @@ test("force panel values survive a reload", async ({ page }) => {
   // Pixi canvas — which only the `dynamic(ssr:false)` renderer can create —
   // proves the client bundle has run before the slider is touched.
   await expect(page.locator(`${STAGE} canvas`)).toBeVisible();
-  const panel = page.getByTestId("graph-force-panel");
-  await expect(panel).toBeVisible();
+  const panel = await openForcePanel(page);
 
   const linkDistance = panel.locator("[data-force-key='linkDistance']");
   await linkDistance.fill("140");
@@ -126,83 +141,60 @@ test("force panel values survive a reload", async ({ page }) => {
   expect(stored).toContain("140");
 
   await page.reload();
+  const reloadedPanel = await openForcePanel(page);
   await expect(
-    page
-      .getByTestId("graph-force-panel")
-      .locator("[data-force-key='linkDistance']"),
+    reloadedPanel.locator("[data-force-key='linkDistance']"),
   ).toHaveValue("140");
-
-  // Collapsing is part of the workspace and persists too.
-  await page
-    .getByTestId("graph-force-panel")
-    .getByRole("button", { name: DASHBOARD.forcePanel.collapse })
-    .click();
-  await page.reload();
-  await expect(page.getByTestId("graph-force-panel")).toHaveAttribute(
-    "data-collapsed",
-    "true",
-  );
 });
 
 /**
- * Phase 2A todo 9 — the HUD cards must not sit on top of one another.
- *
- * OQ-007 parked the force panel in the corridor between the repo rail and the
- * inspector, clear of the controls strip. That clearance measured 4px, and the
- * strip's position tracks the height of the title band, so any copy or type
- * change walks the strip onto the panel's collapse button — which is exactly
- * how the test above began failing intermittently. Geometry is asserted here so
- * the next such change fails with a readable reason instead of a flake.
+ * F3 replaces floating HUD cards with a grid workspace. Prove the plot and
+ * inspector stay in separate columns at every supported desktop width.
  */
-const HUD_CLEARANCE_PX = 8;
-
 for (const viewport of [
   { height: 720, width: 1280 },
   { height: 900, width: 1440 },
   { height: 1080, width: 1920 },
 ]) {
-  test(`HUD cards stay clear of one another at ${viewport.width}x${viewport.height}`, async ({
+  test(`workspace panels stay clear at ${viewport.width}x${viewport.height}`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
     await page.goto("/map");
-    await expect(page.getByTestId("graph-force-panel")).toBeVisible();
+    await expect(page.locator(".graph-inspector")).toBeVisible();
 
-    const overlap = await page.evaluate(() => {
-      const panel = document
-        .querySelector('[data-testid="graph-force-panel"]')
+    const geometry = await page.evaluate(() => {
+      const plot = document
+        .querySelector(".graph-plot-column")
         ?.getBoundingClientRect();
-      const controls = document
-        .querySelector(".arr-graph-controls")
+      const inspector = document
+        .querySelector(".graph-inspector")
         ?.getBoundingClientRect();
-      if (!panel || !controls) return null;
-      // Positive on an axis means the boxes overlap on that axis.
+      const toolbar = document
+        .querySelector(".graph-workspace-toolbar")
+        ?.getBoundingClientRect();
+      const body = document
+        .querySelector(".graph-workspace-body")
+        ?.getBoundingClientRect();
+      if (!plot || !inspector || !toolbar || !body) return null;
       return {
-        horizontal:
-          Math.min(panel.right, controls.right) -
-          Math.max(panel.left, controls.left),
-        vertical:
-          Math.min(panel.bottom, controls.bottom) -
-          Math.max(panel.top, controls.top),
+        bodyTop: body.top,
+        inspectorLeft: inspector.left,
+        inspectorRight: inspector.right,
+        plotLeft: plot.left,
+        plotRight: plot.right,
+        toolbarBottom: toolbar.bottom,
+        viewportWidth: window.innerWidth,
       };
     });
 
-    expect(overlap).not.toBeNull();
-    // The two cards share a column, so the separation has to be vertical.
-    expect(
-      (overlap as { vertical: number }).vertical,
-      "force panel overlaps the graph controls strip",
-    ).toBeLessThanOrEqual(-HUD_CLEARANCE_PX);
-
-    // And the collapse control is genuinely reachable, not merely disjoint.
-    await page
-      .getByTestId("graph-force-panel")
-      .getByRole("button", { name: DASHBOARD.forcePanel.collapse })
-      .click({ timeout: 5_000 });
-    await expect(page.getByTestId("graph-force-panel")).toHaveAttribute(
-      "data-collapsed",
-      "true",
+    expect(geometry).not.toBeNull();
+    expect(geometry?.plotLeft).toBeGreaterThanOrEqual(0);
+    expect(geometry?.plotRight).toBeLessThanOrEqual(geometry!.inspectorLeft);
+    expect(geometry?.inspectorRight).toBeLessThanOrEqual(
+      geometry!.viewportWidth,
     );
+    expect(geometry?.toolbarBottom).toBeLessThanOrEqual(geometry!.bodyTop);
   });
 }
 
@@ -213,6 +205,7 @@ test("a scripted MCP burst lights nodes and then fades them out", async ({
   await expect(page.locator("canvas.brain-map-canvas")).toBeVisible();
   expect(await glowActive(page)).toBe(0);
 
+  await openActivityTab(page);
   await page.getByRole("button", { name: DASHBOARD.activity.replay }).click();
   await expect.poll(() => glowActive(page)).toBeGreaterThan(0);
 
@@ -221,17 +214,18 @@ test("a scripted MCP burst lights nodes and then fades them out", async ({
   await expect.poll(() => glowActive(page), { timeout: 20_000 }).toBe(0);
 });
 
-test("a hub chip focuses its node", async ({ page }) => {
+test("a relationship row focuses its connected node", async ({ page }) => {
   await page.goto("/map");
 
-  const chip = page.locator("[data-hub-node]").first();
-  const nodeId = await chip.getAttribute("data-hub-node");
-  await chip.click();
-
-  await expect(chip).toHaveAttribute("aria-pressed", "true");
-  await expect(
-    page.getByTestId("brain-map-hits").locator(`[data-node-id='${nodeId}']`),
-  ).toHaveAttribute("aria-pressed", "true");
+  await page
+    .getByRole("tab", { name: DASHBOARD.inspector.tabs.relationships })
+    .click();
+  const relationship = page.locator(".graph-relationships button").first();
+  const targetLabel = await relationship.locator("b").innerText();
+  await relationship.click();
+  await expect(page.locator(".graph-inspector-head strong")).toHaveText(
+    targetLabel,
+  );
 });
 
 test("remounting the stage ten times leaks no WebGL context", async ({
