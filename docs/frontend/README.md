@@ -5,11 +5,14 @@ This directory is the shared handoff surface for Claude Code and Codex frontend 
 ## Read order
 
 1. [`ALRESCHA_FRONTEND_REDESIGN_PLAN.md`](./ALRESCHA_FRONTEND_REDESIGN_PLAN.md)
-2. [`BASELINE_2026-08-31.md`](./BASELINE_2026-08-31.md)
-3. [`NAMING_MIGRATION_INVENTORY.md`](./NAMING_MIGRATION_INVENTORY.md)
-4. [`WORKLOG.md`](./WORKLOG.md)
-5. The latest file in [`logs/`](./logs/)
-6. Existing product rules in [`../../spec/IMPLEMENTATION_GUIDE.md`](../../spec/IMPLEMENTATION_GUIDE.md), [`../../spec/WORK_SPEC.md`](../../spec/WORK_SPEC.md), and [`../../spec/BUILD_PLAN.md`](../../spec/BUILD_PLAN.md)
+2. [`ALRESCHA_DESIGN_SYSTEM.md`](./ALRESCHA_DESIGN_SYSTEM.md)
+3. [`COMPONENT_STATE_MATRIX.md`](./COMPONENT_STATE_MATRIX.md)
+4. [`F1_RESEARCH_2026-09-01.md`](./F1_RESEARCH_2026-09-01.md)
+5. [`BASELINE_2026-08-31.md`](./BASELINE_2026-08-31.md)
+6. [`NAMING_MIGRATION_INVENTORY.md`](./NAMING_MIGRATION_INVENTORY.md)
+7. [`WORKLOG.md`](./WORKLOG.md)
+8. The latest file in [`logs/`](./logs/)
+9. Existing product rules in [`../../spec/IMPLEMENTATION_GUIDE.md`](../../spec/IMPLEMENTATION_GUIDE.md), [`../../spec/WORK_SPEC.md`](../../spec/WORK_SPEC.md), and [`../../spec/BUILD_PLAN.md`](../../spec/BUILD_PLAN.md)
 
 ## Current contract
 
@@ -24,6 +27,7 @@ This directory is the shared handoff surface for Claude Code and Codex frontend 
 ## Progress
 
 - F0 contract and desktop baseline: complete.
-- F1 desktop design-system proposal: next.
+- F1 desktop design system: complete.
+- F2 app shell and navigation: next.
 
 `docs/brand/ALRESCA_LOGO_DIRECTION.md` and its assets predate the `Alrescha` naming decision. They are reference-only until separately reviewed and renamed; they do not override this contract.

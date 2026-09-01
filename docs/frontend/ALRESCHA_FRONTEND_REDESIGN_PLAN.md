@@ -8,11 +8,12 @@
 
 ## Progress
 
-| Wave                       | Status   | Evidence                                             |
-| -------------------------- | -------- | ---------------------------------------------------- |
-| F0 — Contract and baseline | Complete | [`BASELINE_2026-08-31.md`](./BASELINE_2026-08-31.md) |
-| F1 — Desktop design system | Next     | Not started                                          |
-| F2–F6                      | Pending  | Not started                                          |
+| Wave                       | Status   | Evidence                                                   |
+| -------------------------- | -------- | ---------------------------------------------------------- |
+| F0 — Contract and baseline | Complete | [`BASELINE_2026-08-31.md`](./BASELINE_2026-08-31.md)       |
+| F1 — Desktop design system | Complete | [`ALRESCHA_DESIGN_SYSTEM.md`](./ALRESCHA_DESIGN_SYSTEM.md) |
+| F2 — App shell/navigation  | Next     | Not started                                                |
+| F3–F6                      | Pending  | Not started                                                |
 
 ## 1. Locked decisions
 
@@ -35,6 +36,8 @@ Snapshot: 2026-08-31. GitHub stars are repository-level because GitHub does not 
 | ibelick UI Skills           |             7.9k | 22 for registry entry inspected | Not selected                   |
 
 Primary selection: Anthropic `frontend-design`. It is the first Design & UI entry in Skills.sh, ranks fourth across the all-time leaderboard, and has the highest repository star count among the inspected frontend-design candidates. Codex applied the installed copy during this planning task; Claude Code must load the official skill/plugin or apply the recorded rules from this plan before implementation.
+
+F1 rechecked the ranking on 2026-09-01. Repository order was unchanged; exact GitHub API counts and live GitHub UI captures are in [`F1_RESEARCH_2026-09-01.md`](./F1_RESEARCH_2026-09-01.md).
 
 Research sources:
 
