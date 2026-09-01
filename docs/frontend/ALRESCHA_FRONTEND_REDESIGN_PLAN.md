@@ -12,8 +12,11 @@
 | -------------------------- | -------- | ---------------------------------------------------------- |
 | F0 — Contract and baseline | Complete | [`BASELINE_2026-08-31.md`](./BASELINE_2026-08-31.md)       |
 | F1 — Desktop design system | Complete | [`ALRESCHA_DESIGN_SYSTEM.md`](./ALRESCHA_DESIGN_SYSTEM.md) |
-| F2 — App shell/navigation  | Next     | Not started                                                |
-| F3–F6                      | Pending  | Not started                                                |
+| F2 — App shell/navigation  | Complete | [`logs/2026-09-01-f2-app-shell-navigation.md`](./logs/2026-09-01-f2-app-shell-navigation.md) |
+| F3 — Evidence graph        | Next     | Legacy graph workspace remains inside the new shell        |
+| F4 — Core screens          | Pending  | Starts after F3 acceptance                                 |
+| F5 — Naming migration      | Pending  | User-facing residuals and compatibility review remain      |
+| F6 — Verification/handoff  | Pending  | Full desktop comparison and handoff remain                 |
 
 ## 1. Locked decisions
 
@@ -54,7 +57,7 @@ Research sources:
 Use GitHub Primer as the structural reference, not as a trademark clone.
 
 - Product chrome: quiet neutral surfaces, one-pixel semantic borders, compact controls, clear selected states, low shadow usage.
-- Information architecture: repository-style context header, horizontal section tabs, predictable left navigation, main content plus contextual right rail where needed.
+- Information architecture: repository-style context header, horizontal section tabs, route-local left navigation only where the information architecture requires it, and a contextual right rail where needed. No permanent global sidebar.
 - Typography: efficient left-aligned reading, restrained size scale, hierarchy through weight and spacing. Use a UI sans stack for normal copy; reserve monospace for SHAs, paths, code, counts that require digit alignment, and machine identifiers.
 - Color: neutral foundation with restrained blue interaction accent. Keep `verified`, `inferred`, `failed`, artifact type, and edge direction meanings explicit through text, icon/shape, and line style; never color alone.
 - Motion: 120–200ms state feedback only. No ambient glow, decorative graph pulsing, parallax, or scroll-reveal dependency. Honor `prefers-reduced-motion`.
@@ -103,11 +106,13 @@ Exit: token proposal and component matrix approved before broad page edits.
 
 ### F2 — App shell and navigation
 
-- Implement desktop shell, repository-style context header, tabs, left navigation, and page frame.
+- Implement desktop shell, repository-style context header, horizontal tabs, route-local navigation, and page frame.
 - Migrate global actions, project/repository selector, theme control, and account controls.
 - Remove obsolete HUD/chrome rules only after all consumers migrate.
 
 Exit: every desktop route renders in the new shell; keyboard navigation and theme gates pass.
+
+Delivered 2026-09-01: 56px global header, 48px repository identity row, 40px horizontal tab row, settings-only local navigation, command palette focus containment/return, paired light/dark geometry, and system-font loading. Existing graph-internal rails and HUD remain explicitly assigned to F3.
 
 ### F3 — Evidence graph workspace
 
@@ -176,3 +181,10 @@ Never overwrite another agent's uncommitted work. Do not claim a baseline file a
 - GitHub trademark, logo, or exact branded asset copying.
 - Backend/domain behavior changes unrelated to frontend migration.
 - Renaming external identifiers without a compatibility plan.
+
+## 9. Remaining work
+
+1. **F3 — Next:** rebuild the graph workspace grid, toolbar, filters, legend, right inspector, force controls as a popover, loading/empty/error states, and accessible relationship list. Resolve current label collisions and verify large fixtures.
+2. **F4 — Pending:** migrate dashboard, findings, assurance, commits, team, stats, settings, and remaining desktop screens to the shared primitives; remove legacy visual CSS only after its final consumer moves.
+3. **F5 — Pending:** finish the user-facing `Arr` → `Alrescha` audit, review metadata and legacy `Alresca` assets, and retain package/env/schema/URI identifiers until a compatibility migration is approved.
+4. **F6 — Pending:** run the complete desktop Playwright/axe matrix, compare before/after evidence at all three widths and both themes, close remaining regressions, document mobile deferral, and create the final Claude Code handoff.

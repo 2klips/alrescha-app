@@ -1,5 +1,5 @@
 /**
- * Typed accessor for the Ink & Seal design tokens (ADR-009-3).
+ * Typed accessor for the Alrescha desktop design tokens.
  *
  * The palette itself lives in exactly one place — `apps/web/app/styles/tokens.css`.
  * This module never repeats a colour value; it reads the resolved custom
@@ -12,7 +12,22 @@ export const THEMES = ["dark", "light"] as const;
 
 export type Theme = (typeof THEMES)[number];
 
-/** Surface + text ramp. */
+/** Canonical Alrescha surface + text ramp. */
+export const CANONICAL_SURFACE_TOKENS = [
+  "bg-default",
+  "bg-subtle",
+  "bg-inset",
+  "bg-overlay",
+  "bg-hover",
+  "bg-selected",
+  "fg-default",
+  "fg-muted",
+  "fg-disabled",
+  "border-default",
+  "border-muted",
+] as const;
+
+/** Compatibility aliases retained while F4 migrates existing screens. */
 export const SURFACE_TOKENS = [
   "bg",
   "surface",
@@ -23,6 +38,20 @@ export const SURFACE_TOKENS = [
   "text",
   "muted",
   "faint",
+] as const;
+
+/** Canonical interaction and evidence roles. */
+export const CANONICAL_STATUS_TOKENS = [
+  "accent-fg",
+  "accent-emphasis",
+  "success-fg",
+  "attention-fg",
+  "attention-text",
+  "danger-fg",
+  "done-fg",
+  "focus-ring",
+  "fg-on-emphasis",
+  "fg-on-success",
 ] as const;
 
 /**
@@ -76,6 +105,20 @@ export const FOCUS_TOKENS = ["focus-out", "focus-in"] as const;
  * tests/design-tokens.test.ts asserts every entry is declared.
  */
 export const SCALE_TOKENS = [
+  "text-body-sm",
+  "text-body-md",
+  "text-body-lg",
+  "text-title-sm",
+  "text-title-md",
+  "text-title-lg",
+  "text-code",
+  "line-body-sm",
+  "line-body-md",
+  "line-body-lg",
+  "line-title-sm",
+  "line-title-md",
+  "line-title-lg",
+  "line-code",
   "text-2xs",
   "text-xs",
   "text-sm",
@@ -84,6 +127,7 @@ export const SCALE_TOKENS = [
   "text-xl",
   "text-2xl",
   "text-display",
+  "space-0",
   "space-1",
   "space-2",
   "space-3",
@@ -94,7 +138,16 @@ export const SCALE_TOKENS = [
   "space-8",
   "page-pad",
   "page-max",
+  "radius-small",
+  "radius-medium",
+  "radius-large",
+  "radius-full",
+  "radius-card",
+  "radius-control",
   "radius-pill",
+  "shadow-popover",
+  "shadow-dialog",
+  "card-shadow",
   "shadow-1",
   "shadow-2",
   "shadow-3",
@@ -107,8 +160,10 @@ export const SCALE_TOKENS = [
   "z-popover",
   "z-modal",
   "z-toast",
+  "z-skip-link",
   "dur-fast",
   "dur-base",
+  "ease-in",
   "ease-out",
   "hud-blur",
   "alpha-hover",
@@ -118,12 +173,25 @@ export const SCALE_TOKENS = [
   "sidebar-w",
   "sidebar-w-rail",
   "contextstrip-h",
+  "shell-header-h",
+  "shell-context-h",
+  "shell-tabs-h",
+  "shell-stack-h",
+  "workspace-toolbar-h",
+  "layout-page-max",
+  "layout-readable-max",
+  "layout-local-nav",
+  "layout-inspector",
+  "layout-page-padding",
+  "layout-page-padding-wide",
 ] as const;
 
 export type ScaleToken = (typeof SCALE_TOKENS)[number];
 
 /** Every semantic token that both themes must resolve. */
 export const DESIGN_TOKENS = [
+  ...CANONICAL_SURFACE_TOKENS,
+  ...CANONICAL_STATUS_TOKENS,
   ...SURFACE_TOKENS,
   ...STATUS_TOKENS,
   ...NODE_TOKENS,

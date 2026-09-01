@@ -1,4 +1,4 @@
-// Client component by inheritance: imported only from `side-nav.tsx`
+// Client component by inheritance: imported only from `shell-header.tsx`
 // ("use client"). No own directive, so it never becomes a client entry whose
 // props would need to be serializable.
 import { CornerDownLeft, MoonStar, Search } from "lucide-react";
@@ -36,7 +36,9 @@ export function CommandPalette({
   readonly tree: ShellTree;
 }) {
   const router = useRouter();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const returnFocusRef = useRef<HTMLElement | null>(null);
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
 
@@ -72,10 +74,14 @@ export function CommandPalette({
 
   useEffect(() => {
     if (open) {
+      returnFocusRef.current = document.activeElement as HTMLElement | null;
       setQuery("");
       setCursor(0);
       inputRef.current?.focus();
     }
+    return () => {
+      returnFocusRef.current?.focus();
+    };
   }, [open]);
 
   useEffect(() => {
@@ -103,6 +109,21 @@ export function CommandPalette({
     } else if (event.key === "Enter") {
       event.preventDefault();
       runEntry(matches[cursor]);
+    } else if (event.key === "Tab") {
+      const focusable = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'input, button, [href], [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+      const first = focusable.at(0);
+      const last = focusable.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
     }
   }
 
@@ -112,8 +133,10 @@ export function CommandPalette({
         aria-label={SHELL.palette.aria}
         aria-modal="true"
         className="command-palette"
+        id="shell-command-palette"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={onKeyDown}
+        ref={dialogRef}
         role="dialog"
       >
         <div className="command-palette-input">

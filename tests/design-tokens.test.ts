@@ -132,7 +132,7 @@ function declaredTokens(block: string): Set<string> {
   );
 }
 
-describe("ink & seal tokens (ADR-009-3)", () => {
+describe("Alrescha desktop tokens (F1 contract)", () => {
   const css = readFileSync(TOKENS_CSS, "utf8");
   const rootBlock = extractBlock(css, ":root");
   const lightBlock = extractBlock(css, '[data-theme="light"]');
@@ -163,15 +163,17 @@ describe("ink & seal tokens (ADR-009-3)", () => {
 
   test("the light theme overrides every colour that must change on paper", () => {
     const mustDiffer = [
-      "--bg",
-      "--surface",
-      "--line",
-      "--text",
-      "--muted",
-      "--brand",
-      "--verified",
-      "--inferred",
-      "--info",
+      "--bg-default",
+      "--bg-subtle",
+      "--bg-inset",
+      "--fg-default",
+      "--fg-muted",
+      "--border-default",
+      "--accent-fg",
+      "--accent-emphasis",
+      "--success-fg",
+      "--attention-fg",
+      "--danger-fg",
     ];
     expect(mustDiffer.filter((name) => !lightTokens.has(name))).toEqual([]);
   });
@@ -185,23 +187,54 @@ describe("ink & seal tokens (ADR-009-3)", () => {
     }
   });
 
-  test("typography tokens name only Pretendard and IBM Plex Mono", () => {
-    expect(rootBlock).toContain("Pretendard Variable");
-    expect(rootBlock).toContain("IBM Plex Mono");
+  test("legacy screen names bridge to the canonical vocabulary", () => {
+    const aliases = {
+      "--bg": "--bg-default",
+      "--code-bg": "--bg-inset",
+      "--danger": "--danger-fg",
+      "--inferred": "--attention-fg",
+      "--line-strong": "--border-default",
+      "--muted": "--fg-muted",
+      "--surface": "--bg-overlay",
+      "--text": "--fg-default",
+      "--verified": "--success-fg",
+    } as const;
+    for (const [legacy, canonical] of Object.entries(aliases)) {
+      expect(rootBlock).toContain(`${legacy}: var(${canonical})`);
+    }
+  });
+
+  test("light and dark share one radius and shell geometry", () => {
+    for (const token of [
+      "--radius-small",
+      "--radius-medium",
+      "--radius-large",
+      "--shell-header-h",
+      "--shell-context-h",
+      "--shell-tabs-h",
+    ]) {
+      expect(rootTokens.has(token)).toBe(true);
+      expect(lightTokens.has(token)).toBe(false);
+    }
+  });
+
+  test("typography uses the system stacks without downloaded font faces", () => {
+    expect(rootBlock).toContain("-apple-system");
+    expect(rootBlock).toContain("ui-monospace");
+    expect(rootBlock).not.toContain("Pretendard");
+    expect(rootBlock).not.toContain("IBM Plex Mono");
     for (const token of FONT_TOKENS) {
       expect(rootTokens.has(cssVariableName(token))).toBe(true);
     }
   });
 
-  test("fallback faces carry measured metric overrides and swap", () => {
-    // Measured from the shipped woff2 (see .omo/evidence/phase2a/task-1.md):
-    // Pretendard 1950/2048 = 95.215%, 494/2048 = 24.121%; Plex Mono 1025/1000.
-    expect(css).toContain("ascent-override: 95.215%");
-    expect(css).toContain("descent-override: 24.121%");
-    expect(css).toContain("ascent-override: 102.5%");
-    expect(css).toContain("descent-override: 27.5%");
-    expect(css.match(/line-gap-override: 0%/g)).toHaveLength(2);
-    expect(css.match(/font-display: swap/g)).toHaveLength(2);
+  test("the app no longer imports or declares webfonts", () => {
+    const layout = readFileSync(
+      join(repoRoot, "apps/web/app/layout.tsx"),
+      "utf8",
+    );
+    expect(css).not.toContain("@font-face");
+    expect(layout).not.toMatch(/pretendard|ibm-plex-mono|@fontsource/i);
   });
 
   test("tokenVar produces the var() form components must use", () => {
@@ -328,7 +361,7 @@ describe("token contrast (WCAG 2.2 AA — Phase 2A todo 9)", () => {
       contrastRatio(resolve(token, theme), resolve("--surface", theme));
     // Emphasis must still read as emphasis after the AA correction.
     expect(on("--text")).toBeGreaterThan(on("--muted"));
-    expect(on("--muted")).toBeGreaterThan(on("--faint"));
+    expect(on("--muted")).toBe(on("--faint"));
   });
 
   test.each(THEMES)(
@@ -364,9 +397,9 @@ describe("scale tokens (design direction roadmap step 1)", () => {
     expect(missing).toEqual([]);
   });
 
-  test("mono metadata floors at 11px", () => {
-    // 0.6875rem = 11px — below this the AA colour work stops mattering.
-    expect(rootBlock).toMatch(/--text-2xs:\s*0\.6875rem/);
+  test("interface metadata floors at 12px", () => {
+    expect(rootBlock).toMatch(/--text-body-sm:\s*0\.75rem/);
+    expect(rootBlock).toMatch(/--text-2xs:\s*var\(--text-body-sm\)/);
   });
 
   test("the z ladder stays ordered", () => {
@@ -395,10 +428,10 @@ describe("scale tokens (design direction roadmap step 1)", () => {
     expect(css).not.toMatch(aliasPattern);
   });
 
-  test("danger is its own literal, split from the brand seal", () => {
-    expect(rootBlock).toMatch(/--danger:\s*#[0-9a-fA-F]{6}/);
-    expect(rootBlock).toMatch(/--danger-text:\s*var\(--danger\)/);
-    expect(rootBlock).not.toMatch(/--danger:\s*var\(--brand\)/);
+  test("danger is canonical and distinct from the interaction accent", () => {
+    expect(rootBlock).toMatch(/--danger-fg:\s*#[0-9a-fA-F]{6}/);
+    expect(rootBlock).toMatch(/--danger:\s*var\(--danger-fg\)/);
+    expect(rootBlock).not.toMatch(/--danger-fg:\s*var\(--accent-emphasis\)/);
   });
 });
 

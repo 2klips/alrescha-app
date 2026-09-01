@@ -78,7 +78,8 @@ const CONVERTED_SCREENS = [
   // Phase 3 Wave E
   "apps/web/app/app/(shell)/home-screen.tsx",
   // Design roadmap step 2 — AppShell chrome
-  "apps/web/app/ui/side-nav.tsx",
+  "apps/web/app/ui/shell-header.tsx",
+  "apps/web/app/ui/settings-local-nav.tsx",
   "apps/web/app/ui/app-shell.tsx",
   "apps/web/app/ui/context-strip.tsx",
   "apps/web/app/ui/command-palette.tsx",

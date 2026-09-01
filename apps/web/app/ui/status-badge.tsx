@@ -7,7 +7,7 @@ import { GRADE } from "../../lib/strings/common";
  * Absorbs the scattered badge families (`.grade-badge`, `.arr-grade`, …)
  * into one contract:
  *
- * - mono uppercase at the 11px floor (`--text-2xs`), 1px currentColor border
+ * - system sans at the 12px floor, 1px currentColor border
  * - colour comes only from the AA-safe `*-text` tokens
  * - a text label is always rendered — colour alone never carries state (P2)
  * - `inferred` double-encodes with a dashed border, continuing the

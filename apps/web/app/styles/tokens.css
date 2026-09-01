@@ -1,189 +1,140 @@
 /*
- * Ink & Seal design tokens — ADR-009-3.
+ * Alrescha desktop design tokens — F1 implementation contract.
  *
- * THIS IS THE ONLY FILE IN THE APP ALLOWED TO CONTAIN LITERAL COLOR VALUES.
- * Everything else (globals.css, components, the Pixi renderer) must read these
- * custom properties. Enforced by tests/design-tokens.test.ts + the
- * `arr/no-hardcoded-hex` ESLint rule.
- *
- * Dark is the default (`:root`). Light ("paper") is opt-in via
- * `[data-theme="light"]` which the theme boot script stamps on <html> before
- * hydration (see app/theme/theme-script.ts).
- *
- * Font metric overrides below are measured from the shipped woff2 files
- * (head.unitsPerEm, hhea.ascender/descender/lineGap) — see
- * .omo/evidence/phase2a/task-1.md for the measurement method.
+ * THIS IS THE ONLY APP FILE ALLOWED TO CONTAIN LITERAL COLOR VALUES.
+ * Components consume canonical semantic properties. The legacy Ink & Seal
+ * names remain as aliases until F4 migrates every screen and renderer reader.
  */
-
-/* Pretendard Variable: unitsPerEm 2048, ascender 1950, descender -494, lineGap 0. */
-@font-face {
-  font-family: "Pretendard Fallback";
-  src:
-    local("Pretendard"), local("Malgun Gothic"), local("Apple SD Gothic Neo"),
-    local("Noto Sans KR"), local("Arial");
-  ascent-override: 95.215%;
-  descent-override: 24.121%;
-  line-gap-override: 0%;
-  size-adjust: 100%;
-  font-display: swap;
-}
-
-/* IBM Plex Mono: unitsPerEm 1000, ascender 1025, descender -275, lineGap 0. */
-@font-face {
-  font-family: "IBM Plex Mono Fallback";
-  src:
-    local("Consolas"), local("Menlo"), local("DejaVu Sans Mono"),
-    local("Courier New");
-  ascent-override: 102.5%;
-  descent-override: 27.5%;
-  line-gap-override: 0%;
-  size-adjust: 100%;
-  font-display: swap;
-}
 
 :root {
   color-scheme: dark;
 
-  /* Typography */
+  /* System typography: no downloaded UI font. */
   --font-sans:
-    "Pretendard Variable", Pretendard, "Pretendard Fallback", system-ui,
-    -apple-system, "Segoe UI", sans-serif;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", "Noto Sans KR",
+    "Apple SD Gothic Neo", "Malgun Gothic", Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
   --font-mono:
-    "IBM Plex Mono", "IBM Plex Mono Fallback", ui-monospace, SFMono-Regular,
-    Consolas, monospace;
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
 
-  /* Surfaces — ADR-009-3 dark */
-  --bg: #0b0e14;
-  --surface: #141926;
-  --surface-2: #1b2233;
-  --code-bg: #0f1420;
-  --line: #232b3d;
-  --line-strong: #35405a;
+  /* Canonical semantic surfaces and foregrounds. */
+  --bg-default: #0d1117;
+  --bg-subtle: #151b23;
+  --bg-inset: #010409;
+  --bg-overlay: #151b23;
+  --bg-hover: #1c2128;
+  --bg-selected: #1c2d41;
+  --fg-default: #f0f6fc;
+  --fg-muted: #9198a1;
+  --fg-disabled: #6e7681;
+  --border-default: #3d444d;
+  --border-muted: #30363d;
 
-  /* Text
-     `--faint` is the dimmest colour still allowed to carry text: WCAG 2.2 AA
-     (4.5:1) against every flat surface it lands on. Its pre-Wave-4 value
-     (#5a6478) measured 2.57:1 on the highlighted code row — the axe-core
-     audit in tests/e2e/a11y-contrast.spec.ts is what raised it. Design
-     roadmap step 1 re-lowered it from #848ea2, which sat within 0.4:1 of
-     --muted and collapsed the three-step ramp, to the AA floor with margin
-     on the flat surfaces (4.62:1 on --surface-2). The one place that floor
-     is NOT enough is the highlighted code row: its 9%-accent tint over
-     --surface composites to a lighter ground where #808b9f measures ~4.4:1,
-     so `.highlighted` line numbers step up to --muted instead
-     (assurance.css; pinned by tests/design-tokens.test.ts against the
-     composite). Ordering `text > muted > faint` still holds. */
-  --text: #e8ecf4;
-  --muted: #8a94a8;
-  --faint: #808b9f;
+  /* Canonical interaction and evidence roles. */
+  --accent-fg: #4493f8;
+  --accent-emphasis: #1f6feb;
+  --success-fg: #3fb950;
+  --attention-fg: #d29922;
+  --attention-text: var(--attention-fg);
+  --danger-fg: #f85149;
+  --done-fg: #ab7df8;
+  --focus-ring: #4493f8;
+  --fg-on-emphasis: #ffffff;
+  --fg-on-success: #0d1117;
 
-  /* Identity + status — ADR-009-3 values, used for fills, node colours,
-     borders, tints and (in dark) text. */
-  --brand: #ff5a45;
-  --verified: #3ddc97;
-  --inferred: #f5b84a;
-  --info: #6c9eff;
+  /* Legacy palette aliases — remove only after F4 reaches zero consumers. */
+  --bg: var(--bg-default);
+  --surface: var(--bg-overlay);
+  --surface-2: var(--bg-subtle);
+  --code-bg: var(--bg-inset);
+  --line: var(--border-muted);
+  --line-strong: var(--border-default);
+  --text: var(--fg-default);
+  --muted: var(--fg-muted);
+  --faint: var(--fg-muted);
+  --brand: var(--accent-emphasis);
+  --verified: var(--success-fg);
+  --inferred: var(--attention-fg);
+  --info: var(--accent-fg);
+  --brand-text: var(--accent-fg);
+  --verified-text: var(--success-fg);
+  --inferred-text: var(--attention-text);
+  --info-text: var(--accent-fg);
+  --accent: var(--accent-fg);
+  --danger: var(--danger-fg);
+  --danger-text: var(--danger-fg);
+  --on-brand: var(--fg-on-emphasis);
+  --on-accent: var(--fg-on-emphasis);
+  --on-verified: var(--fg-on-success);
 
-  /* AA-safe small-text variants of the four status colours.
-     ADR-009-3 fixes the palette above and it is not relitigated here; in the
-     light ("paper") theme those exact values measure 3.2–4.4:1 on paper white,
-     which fails AA for the 9–11px mono badges that use them. So text keeps a
-     darkened sibling while every non-text use (graph nodes, dots, rings, tints,
-     borders) keeps the ADR value. In dark the base colours already clear AA, so
-     these are plain aliases. See OQ-009. */
-  --brand-text: var(--brand);
-  --verified-text: var(--verified);
-  --inferred-text: var(--inferred);
-  --info-text: var(--info);
+  /* Graph roles preserve evidence meaning while the renderer migrates. */
+  --node-doc: var(--accent-fg);
+  --node-requirement: var(--done-fg);
+  --node-code: var(--success-fg);
+  --node-test: var(--attention-fg);
+  --node-concept: var(--done-fg);
+  --focus-out: var(--attention-fg);
+  --focus-in: var(--accent-fg);
 
-  /* Contrast pairs for filled controls */
-  --on-brand: #0b0e14;
-  --on-accent: #0b0e14;
-  --on-verified: #0b0e14;
-
-  /* Graph node type colours (ADR-009-3: doc=blue, requirement=vermilion,
-     code=verified green, test=amber) */
-  --node-doc: var(--info);
-  --node-requirement: var(--brand);
-  --node-code: var(--verified);
-  --node-test: var(--inferred);
-  /* AI-synthesized concept layer (Wave C todo 7): same accent family as
-     documents — always paired with dashed inferred edges and the 개념 label,
-     never colour alone (OQ-004 discipline). */
-  --node-concept: var(--accent);
-
-  /* Focus-mode direction strokes (Phase 3 Wave A todo 2, Graft focus UX):
-     선택한 노드의 진출 엣지 = "의존한다"(앰버), 진입 엣지 = "의존받는다"(틸).
-     Graph strokes and legend dots only — never text. */
-  --focus-out: #ff9e57;
-  --focus-in: #4fd8c6;
-
-  /* Derived roles used across the app chrome. */
-  --accent: var(--info);
-  /* Design roadmap step 1: failed/refuted is a *status*, not the brand — the
-     seal keeps #ff5a45 for logo/CTA/requirement nodes while danger gets its
-     own literal so the two can be tuned apart (they stay near neighbours by
-     design). AA 5.15:1 worst-case on --surface-2, so the -text sibling can
-     alias it directly. */
-  --danger: #f4645c;
-  --panel: color-mix(in srgb, var(--surface) 94%, transparent);
-  /* Phase 2D: 다크=각진 Ink & Seal, 라이트=둥근 Toss 질감. */
-  --radius-card: 0px;
-  --radius-control: 0px;
-  --card-shadow: none;
-  --panel-soft: color-mix(in srgb, var(--surface) 88%, transparent);
+  /* Derived surfaces and state tints. */
+  --panel: color-mix(in srgb, var(--bg-overlay) 96%, transparent);
+  --panel-soft: color-mix(in srgb, var(--bg-overlay) 90%, transparent);
   --shadow-color: #000000;
-  --panel-shadow: color-mix(in srgb, var(--shadow-color) 32%, transparent);
-  /* Alpha ramp (design roadmap step 1): translucent colour derives from one
-     of four fixed steps — hover 8, tint 12, emphasis 24, scrim 48 — instead
-     of the 18 ad-hoc percentages the screens had accumulated. */
+  --panel-shadow: color-mix(in srgb, var(--shadow-color) 24%, transparent);
   --alpha-hover: 8%;
   --alpha-tint: 12%;
   --alpha-emphasis: 24%;
   --alpha-scrim: 48%;
   --tint-accent: color-mix(
     in srgb,
-    var(--accent) var(--alpha-tint),
+    var(--accent-fg) var(--alpha-tint),
     transparent
   );
   --tint-verified: color-mix(
     in srgb,
-    var(--verified) var(--alpha-tint),
+    var(--success-fg) var(--alpha-tint),
     transparent
   );
   --tint-inferred: color-mix(
     in srgb,
-    var(--inferred) var(--alpha-tint),
+    var(--attention-fg) var(--alpha-tint),
     transparent
   );
   --tint-danger: color-mix(
     in srgb,
-    var(--danger) var(--alpha-tint),
+    var(--danger-fg) var(--alpha-tint),
     transparent
   );
 
-  /* Text-safe counterparts of the derived roles above. */
-  --accent-text: var(--info-text);
-  --danger-text: var(--danger);
+  /* Type scale. No interface text falls below 12px. */
+  --text-body-sm: 0.75rem;
+  --text-body-md: 0.875rem;
+  --text-body-lg: 1rem;
+  --text-title-sm: 1rem;
+  --text-title-md: 1.25rem;
+  --text-title-lg: 2rem;
+  --text-code: 0.8125rem;
+  --line-body-sm: 1rem;
+  --line-body-md: 1.25rem;
+  --line-body-lg: 1.5rem;
+  --line-title-sm: 1.5rem;
+  --line-title-md: 1.75rem;
+  --line-title-lg: 2.5rem;
+  --line-code: 1.25rem;
 
-  /* ── Scale tokens (design roadmap step 1 — additive; screens migrate from
-     step 3 on). Sizes are the whole vocabulary: font-size, spacing, radius,
-     elevation, icon, z-index and motion must come from here, enforced by
-     lint rules landing with step 3. ── */
-
-  /* Type scale. --text-2xs is the mono-metadata floor: 11px, below which the
-     AA colour work above stops mattering. Hierarchy comes from weight + colour
-     more than size. */
-  --text-2xs: 0.6875rem;
-  --text-xs: 0.75rem;
-  --text-sm: 0.8125rem;
-  --text-base: 0.875rem;
-  --text-lg: 1rem;
-  --text-xl: 1.25rem;
+  /* Legacy type aliases used by existing screens. */
+  --text-2xs: var(--text-body-sm);
+  --text-xs: var(--text-body-sm);
+  --text-sm: var(--text-body-md);
+  --text-base: var(--text-body-md);
+  --text-lg: var(--text-body-lg);
+  --text-xl: var(--text-title-md);
   --text-2xl: 1.75rem;
-  --text-display: clamp(1.75rem, 2.5vw, 2.5rem);
+  --text-display: var(--text-title-lg);
 
-  /* Spacing — the dense 8–32px band is the primary working range. */
+  /* 4px spacing grid with the 2px focus/indicator exception. */
+  --space-0: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -192,97 +143,90 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
-  --page-pad: clamp(1rem, 2.5vw, 2rem);
-  --page-max: 80rem;
+  --page-pad: var(--layout-page-padding);
+  --page-max: var(--layout-page-max);
 
-  /* Pills are the one sanctioned radius exception to the dark=0 texture. */
-  --radius-pill: 999px;
+  /* Shared geometry in light and dark. */
+  --radius-small: 3px;
+  --radius-medium: 6px;
+  --radius-large: 12px;
+  --radius-full: 9999px;
+  --radius-card: var(--radius-medium);
+  --radius-control: var(--radius-medium);
+  --radius-pill: var(--radius-full);
 
-  /* Elevation — three steps; only floating things (inspector, HUD, popover,
-     modal) may cast. --shadow-color is themed above/below. */
-  --shadow-1: 0 1px 4px color-mix(in srgb, var(--shadow-color) 8%, transparent);
-  --shadow-2: 0 14px 36px
-    color-mix(in srgb, var(--shadow-color) 28%, transparent);
-  --shadow-3: 0 24px 64px
+  /* Borders carry ordinary hierarchy; only overlays cast shadows. */
+  --shadow-popover: 0 8px 24px
+    color-mix(in srgb, var(--shadow-color) 32%, transparent);
+  --shadow-dialog: 0 16px 48px
     color-mix(in srgb, var(--shadow-color) 40%, transparent);
+  --shadow-1: none;
+  --shadow-2: var(--shadow-popover);
+  --shadow-3: var(--shadow-dialog);
+  --card-shadow: none;
 
-  /* Icon sizes for the <Icon> wrapper (step 3). */
   --icon-xs: 14px;
   --icon-sm: 16px;
   --icon-md: 20px;
 
-  /* Fixed z ladder. */
+  /* Layer order: canvas -> sticky chrome -> popover -> dialog -> toast. */
   --z-canvas: 0;
-  --z-hud: 10;
-  --z-sidebar: 20;
-  --z-popover: 30;
-  --z-modal: 40;
-  --z-toast: 50;
+  --z-hud: 100;
+  --z-sidebar: 100;
+  --z-popover: 200;
+  --z-modal: 300;
+  --z-toast: 400;
+  --z-skip-link: 500;
 
-  /* Motion budget: UI feedback ≤200ms, compositor properties only. */
   --dur-fast: 120ms;
   --dur-base: 200ms;
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
 
-  /* Canvas-HUD backdrop treatment — never animated. */
+  /* Legacy graph-HUD treatment remains until F3 removes its consumers. */
   --hud-blur: blur(16px) saturate(120%);
 
-  /* AppShell dimensions (design §2.2) — consumed from roadmap step 2 on. */
-  --sidebar-w: 16rem;
-  --sidebar-w-rail: 3rem;
-  --contextstrip-h: 40px;
+  /* Desktop shell and workspace layout. */
+  --shell-header-h: 56px;
+  --shell-context-h: 48px;
+  --shell-tabs-h: 40px;
+  --shell-stack-h: 144px;
+  --workspace-toolbar-h: 44px;
+  --layout-page-max: 1280px;
+  --layout-readable-max: 80ch;
+  --layout-local-nav: 240px;
+  --layout-inspector: clamp(336px, 24vw, 400px);
+  --layout-page-padding: 24px;
+  --layout-page-padding-wide: 32px;
+
+  /* Retained dimension names for screen compatibility. */
+  --sidebar-w: var(--layout-local-nav);
+  --sidebar-w-rail: 48px;
+  --contextstrip-h: var(--shell-stack-h);
 }
 
 [data-theme="light"] {
   color-scheme: light;
 
-  /* Surfaces — Phase 2D 사용자 판정: 라이트는 Toss형(친근한 연회색+흰 카드).
-     다크는 Ink & Seal 그대로(먹색+주홍 인장). */
-  --bg: #f2f4f6;
-  --surface: #ffffff;
-  --surface-2: #f9fafb;
-  --code-bg: #f2f4f6;
-  --line: #e5e8eb;
-  --line-strong: #d1d6db;
-
-  /* Text — Toss 그레이 램프. --faint는 --surface-2 대비 AA를 지켜야 한다. */
-  --text: #191f28;
-  --muted: #4e5968;
-  --faint: #62697a;
-
-  /* Identity + status — 브랜드 주홍은 유지(제품 인장), info는 Toss 블루로. */
-  --brand: #d6402e;
-  --verified: #1e8a5e;
-  --inferred: #b07a14;
-  --info: #3182f6;
-
-  /* AA-safe small-text variants — worst case is the lightest painted ground
-     (#ffffff / #f9fafb / #f2f4f6); tests/design-tokens.test.ts measures. */
-  --brand-text: #c43a2b;
-  --verified-text: #177a52;
-  --inferred-text: #8f6310;
-  --info-text: #1b64da;
-
-  /* Accent text/fill must clear AA on white; the brighter Toss blue stays on
-     --info for graphics (nodes, bars) where large-area color is the point. */
-  --accent: #1b64da;
-
-  /* Failed/refuted status on paper — split from the brand seal like dark.
-     AA 4.96:1 worst-case (bg / code-bg); --danger-text aliases it via :root. */
-  --danger: #c53030;
-
-  /* Focus-mode direction strokes — darkened for the paper ground. */
-  --focus-out: #b45309;
-  --focus-in: #0f766e;
-
-  --on-brand: #ffffff;
-  --on-accent: #ffffff;
-  --on-verified: #ffffff;
-
-  --radius-card: 14px;
-  --radius-control: 10px;
-  --card-shadow: 0 1px 4px
-    color-mix(in srgb, var(--shadow-color) 7%, transparent);
-  --shadow-color: #20242e;
-  --panel-shadow: color-mix(in srgb, var(--shadow-color) 14%, transparent);
+  --bg-default: #ffffff;
+  --bg-subtle: #f6f8fa;
+  --bg-inset: #eff2f5;
+  --bg-overlay: #ffffff;
+  --bg-hover: #eff2f5;
+  --bg-selected: #ddf4ff;
+  --fg-default: #1f2328;
+  --fg-muted: #59636e;
+  --fg-disabled: #818b98;
+  --border-default: #d1d9e0;
+  --border-muted: #e6eaef;
+  --accent-fg: #0969da;
+  --accent-emphasis: #0969da;
+  --success-fg: #1a7f37;
+  --attention-fg: #9a6700;
+  --attention-text: #7d4e00;
+  --danger-fg: #d1242f;
+  --done-fg: #8250df;
+  --focus-ring: #0969da;
+  --fg-on-success: #ffffff;
+  --shadow-color: #1f2328;
 }

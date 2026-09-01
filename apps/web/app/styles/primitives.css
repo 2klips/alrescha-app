@@ -7,23 +7,27 @@
 
 .theme-toggle {
   align-items: center;
-  background: var(--surface-2);
-  border: 1px solid var(--line-strong);
-  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-medium);
+  color: var(--fg-muted);
   cursor: pointer;
   display: inline-flex;
-  font: var(--text-2xs) var(--font-mono);
+  font: var(--text-body-sm) / var(--line-body-sm) var(--font-sans);
   gap: 0.35rem;
-  letter-spacing: 0.08em;
   min-height: 2rem;
   padding: 0.35rem 0.55rem;
-  text-transform: uppercase;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
   white-space: nowrap;
 }
 
 .theme-toggle:hover {
-  border-color: var(--accent);
-  color: var(--text);
+  background: var(--bg-hover);
+  border-color: var(--border-default);
+  color: var(--fg-default);
 }
 
 .button {
@@ -61,13 +65,11 @@
   border: 1px solid currentColor;
   border-radius: var(--radius-control);
   display: inline-flex;
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
   font-weight: 500;
   gap: 0.3rem;
-  letter-spacing: 0.08em;
   padding: 0.1rem 0.45rem;
-  text-transform: uppercase;
   white-space: nowrap;
   width: fit-content;
 }
@@ -97,12 +99,11 @@
   gap: 0.4rem;
   justify-content: center;
   padding: 0 0.8rem;
-  transition: transform var(--dur-fast) var(--ease-out);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
   white-space: nowrap;
-}
-
-.btn:active {
-  transform: scale(0.98);
 }
 
 .btn-sm {
@@ -114,33 +115,38 @@
 }
 
 .btn-primary {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: var(--on-brand);
+  background: var(--accent-emphasis);
+  border-color: var(--accent-emphasis);
+  color: var(--fg-on-emphasis);
 }
 
 .btn-primary:hover {
-  background: color-mix(in srgb, var(--brand) 88%, var(--text));
+  background: color-mix(
+    in srgb,
+    var(--accent-emphasis) 88%,
+    var(--fg-default)
+  );
 }
 
 .btn-secondary {
   background: transparent;
-  border-color: var(--line-strong);
-  color: var(--text);
+  border-color: var(--border-default);
+  color: var(--fg-default);
 }
 
 .btn-secondary:hover {
-  border-color: var(--accent);
+  background: var(--bg-hover);
+  border-color: var(--border-default);
 }
 
 .btn-ghost {
   background: transparent;
-  color: var(--muted);
+  color: var(--fg-muted);
 }
 
 .btn-ghost:hover {
-  background: var(--surface-2);
-  color: var(--text);
+  background: var(--bg-hover);
+  color: var(--fg-default);
 }
 
 .btn-icon {
@@ -153,7 +159,4 @@
     transition: none;
   }
 
-  .btn:active {
-    transform: none;
-  }
 }

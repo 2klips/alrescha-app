@@ -17,7 +17,7 @@ const LABELS: Record<Theme, string> = {
 };
 
 /**
- * Header control for the Ink & Seal dark/light ("paper") themes.
+ * Header control for Alrescha's paired dark/light themes.
  *
  * The rendered markup is theme-agnostic on the server: the inline boot script
  * has already stamped `data-theme` on <html>, and this component syncs to that

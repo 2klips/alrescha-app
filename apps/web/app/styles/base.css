@@ -7,9 +7,10 @@
 
 /* Every colour below must come from ./styles/tokens.css — no literals here. */
 html {
-  background: var(--bg);
-  color: var(--text);
+  background: var(--bg-default);
+  color: var(--fg-default);
   font-family: var(--font-sans);
+  scroll-padding-top: var(--shell-stack-h);
 }
 
 * {
@@ -20,7 +21,7 @@ html,
 body {
   margin: 0;
   min-height: 100%;
-  background: var(--bg);
+  background: var(--bg-default);
 }
 
 button,
@@ -40,12 +41,29 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-fg);
+}
+
+.skip-link {
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-default);
+  color: var(--fg-default);
+  left: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  position: fixed;
+  top: var(--space-3);
+  transform: translateY(calc(-100% - var(--space-5)));
+  transition: transform var(--dur-fast) var(--ease-out);
+  z-index: var(--z-skip-link);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .sr-only {
@@ -117,41 +135,4 @@ li[data-todo-status="in-progress"] .overview-todo-status {
 
 li[data-todo-status="blocked"] .overview-todo-status {
   color: var(--danger-text);
-}
-
-html[data-sidebar="rail"] .app-shell {
-  grid-template-columns: var(--sidebar-w-rail) minmax(0, 1fr);
-}
-
-html[data-sidebar="rail"] .app-shell .side-nav {
-  align-items: center;
-  padding: 1.4rem 0.35rem;
-}
-
-html[data-sidebar="rail"] .app-shell .side-nav-item-label,
-html[data-sidebar="rail"] .app-shell .side-nav-label,
-html[data-sidebar="rail"] .app-shell .side-nav-tagline,
-html[data-sidebar="rail"] .app-shell .side-nav-brand strong,
-html[data-sidebar="rail"] .app-shell .side-nav-search kbd,
-html[data-sidebar="rail"] .app-shell .side-nav-foot .theme-toggle {
-  display: none;
-}
-
-html[data-sidebar="rail"] .app-shell .side-nav a {
-  justify-content: center;
-  padding: 0.38rem;
-}
-
-html[data-sidebar="rail"] .app-shell .side-nav-search {
-  justify-content: center;
-  padding: 0.35rem;
-}
-
-html[data-sidebar="rail"] .app-shell .side-nav-brand {
-  justify-content: center;
-  padding: 0;
-}
-
-html[data-sidebar="rail"] .app-shell .side-nav-foot {
-  justify-content: center;
 }

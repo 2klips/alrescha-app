@@ -164,7 +164,7 @@
 
 .graph-detail-shell {
   background: var(--bg);
-  min-height: 100dvh;
+  min-height: calc(100dvh - var(--shell-stack-h));
 }
 
 .graph-detail-header {
@@ -213,7 +213,7 @@
 .local-graph-stage {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 22rem;
-  min-height: calc(100dvh - 4rem);
+  min-height: calc(100dvh - var(--shell-stack-h) - 4rem);
 }
 
 .local-graph-canvas {

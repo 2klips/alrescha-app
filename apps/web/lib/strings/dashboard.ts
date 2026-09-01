@@ -4,7 +4,7 @@
  */
 
 export const DASHBOARD = {
-  ariaMain: "Arr 프로젝트 보증 Dashboard",
+  ariaMain: "Alrescha 프로젝트 보증 Dashboard",
   ariaRepoRail: "레포 요약",
   ariaMetrics: "보증 지표",
   ariaMetricsMobile: "모바일 보증 지표",

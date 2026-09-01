@@ -9,9 +9,11 @@
 
 export const CONVENTIONAL_ENGLISH_TERMS = [
   // Product + surfaces
+  "Alrescha",
+  /** Legacy user-facing copy still migrating in F5. */
   "Arr",
-  /** Brand tagline — an asset, not copy (ADR-008). */
-  "Proof, before merge.",
+  /** Brand tagline — an asset, not copy. */
+  "Evidence, connected.",
   "Dark",
   "Light",
   "Dashboard",

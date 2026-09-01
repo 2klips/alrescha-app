@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 
 import type { ShellContext } from "../../lib/shell/context";
-import { ContextStrip } from "./context-strip";
-import { SideNav } from "./side-nav";
+import { SHELL } from "../../lib/strings/shell";
+import { RepositoryHeader } from "./context-strip";
+import { RepositoryTabs, ShellHeader } from "./shell-header";
 import type { ShellTree } from "./shell-nav-data";
 
 /**
- * The shared screen frame (design roadmap step 2): sidebar column + content
- * column with the ContextStrip on top. Mounted once per tree by the `(shell)`
- * route-group layouts — screens stop assembling their own chrome.
+ * Shared GitHub-style repository frame: global header, repository identity,
+ * horizontal route tabs, then the route-owned screen.
  *
  * Screens keep owning their `<main>` landmark; this component deliberately
  * renders none.
@@ -23,12 +23,20 @@ export function AppShell({
   readonly tree: ShellTree;
 }) {
   return (
-    <div className="app-shell">
-      <SideNav tree={tree} />
-      <div className="app-shell-content">
-        <ContextStrip context={context} tree={tree} />
-        {children}
+    <>
+      <a className="skip-link" href="#main-content">
+        {SHELL.global.skip}
+      </a>
+      <div className="app-shell" data-tree={tree}>
+        <div className="shell-chrome">
+          <ShellHeader tree={tree} />
+          <RepositoryHeader context={context} tree={tree} />
+          <RepositoryTabs tree={tree} />
+        </div>
+        <div className="app-shell-body" id="main-content" tabIndex={-1}>
+          {children}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

@@ -4,7 +4,7 @@ import { getCurrentUserId } from "../auth/current-user";
 import { createClient } from "../supabase/server";
 
 /**
- * Data the AppShell's ContextStrip shows on every screen (WORK_SPEC §5:
+ * Data the AppShell repository header shows on every screen (WORK_SPEC §5:
  * 현재 레포 · 브랜치 · 마지막 분석 커밋 SHA(7) · 영수증 링크).
  */
 export interface ShellContext {

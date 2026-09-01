@@ -23,7 +23,7 @@ Every boundary maps to a scenario and an explicit negative assertion. The six re
       "proof": {
         "kind": "browser-qa",
         "path": "tests/e2e/app-shell.spec.ts",
-        "contains": "opens the Arr app shell"
+        "contains": "opens the Alrescha repository shell"
       }
     },
     {

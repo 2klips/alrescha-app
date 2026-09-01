@@ -4,7 +4,7 @@ import type { ButtonHTMLAttributes } from "react";
  * Button primitive (design roadmap step 3) — four variants replace the twelve
  * ad-hoc button styles:
  *
- * - `primary`   brand fill (the seal's one sanctioned CTA use)
+ * - `primary`   brand fill for the strongest action in a view
  * - `secondary` 1px `--line-strong` outline
  * - `ghost`     no chrome until hover
  * - `icon`      32px square; MUST carry `aria-label`

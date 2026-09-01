@@ -217,11 +217,10 @@ describe("theme toggle control", () => {
   });
 
   test("is mounted in the shared shell chrome", () => {
-    // Design roadmap step 2: the per-screen headers retired; every shell
-    // screen now gets the toggle from the sidebar foot.
+    // F2: every shell screen gets the toggle from the global header.
     expect(
-      readSource("apps/web/app/ui/side-nav.tsx"),
-      "apps/web/app/ui/side-nav.tsx",
+      readSource("apps/web/app/ui/shell-header.tsx"),
+      "apps/web/app/ui/shell-header.tsx",
     ).toContain("<ThemeToggle />");
   });
 
@@ -230,8 +229,8 @@ describe("theme toggle control", () => {
     // primitives sheet.
     const css = readSource("apps/web/app/styles/primitives.css");
     const rule = css.slice(css.indexOf(".theme-toggle {"));
-    expect(rule).toContain("var(--surface-2)");
-    expect(rule).toContain("var(--line-strong)");
+    expect(rule).toContain("var(--border-default)");
+    expect(rule).toContain("var(--fg-muted)");
   });
 });
 

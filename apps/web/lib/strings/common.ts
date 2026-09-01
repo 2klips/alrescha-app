@@ -4,14 +4,14 @@
  */
 
 export const BRAND = {
-  name: "Arr",
-  /** Brand asset — deliberately not translated (ADR-008). */
-  tagline: "Proof, before merge.",
-  homeLabel: "Arr 홈",
+  name: "Alrescha",
+  tagline: "Evidence, connected.",
+  homeLabel: "Alrescha 홈",
 } as const;
 
 export const NAV = {
   ariaPrimary: "주요 내비게이션",
+  ariaRepository: "레포 내비게이션",
   /** 사이드바 그룹 — Phase 2D의 4그룹에 design roadmap step 2가 설정을 더한 5그룹. */
   groups: {
     glance: "한눈에",
@@ -40,6 +40,8 @@ export const NAV = {
   settingsAi: "AI 사용량",
   settingsPrivacy: "프라이버시",
   settingsIndex: "설정",
+  account: "계정 설정",
+  openApp: "앱 열기",
 } as const;
 
 export const THEME = {
@@ -66,6 +68,6 @@ export const ACTION = {
 export const NOT_FOUND = {
   eyebrow: "404 · 알 수 없는 경로",
   title: "여기엔 아무것도 없습니다.",
-  body: "이 경로는 Arr 워크스페이스 밖에 있습니다.",
+  body: "이 경로는 Alrescha 워크스페이스 밖에 있습니다.",
   cta: "앱으로 돌아가기",
 } as const;

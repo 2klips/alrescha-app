@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { DASHBOARD } from "../../apps/web/lib/strings";
+import { DASHBOARD, SHELL } from "../../apps/web/lib/strings";
 
 /**
  * Phase 2A todo 7 — the Ink & Seal HUD over the full-bleed brain map.
@@ -61,20 +61,21 @@ test("every HUD metric opens its own provenance", async ({ page }) => {
   }
 });
 
-test("the sidebar reaches the harness and library surfaces", async ({
+test("the tabs and command palette reach product surfaces", async ({
   page,
 }) => {
   await page.goto("/map");
 
-  // Design roadmap step 2: the rail's ad-hoc links moved into the shared
-  // sidebar, which keeps the demo tree inside the demo tree.
-  await expect(
-    page.getByRole("link", { name: "에이전트 지시문" }),
-  ).toHaveAttribute("href", "/harness");
+  // F2 keeps primary repository surfaces visible as tabs. Less-frequent
+  // routes remain keyboard-reachable through the dependency-free palette.
   await expect(page.getByRole("link", { name: "저장된 증거" })).toHaveAttribute(
     "href",
     "/library",
   );
+  await page.getByRole("button", { name: SHELL.global.search }).click();
+  await expect(
+    page.getByRole("option", { name: /에이전트 지시문/ }),
+  ).toBeVisible();
 });
 
 test("the HUD is token-themed in dark and light, and captures evidence", async ({

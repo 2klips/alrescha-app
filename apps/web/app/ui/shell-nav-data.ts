@@ -21,8 +21,9 @@ import {
 import { NAV } from "../../lib/strings/common";
 
 /**
- * The 5-group IA from the design direction doc (§2.3), for both trees.
- * The workspace tree is the canonical IA; the demo tree is the same IA with
+ * Complete route inventory for command-palette search, grouped by the
+ * design direction IA (§2.3). The primary shell uses `*_TABS` below.
+ * The workspace tree is canonical; the demo tree is the same IA with
  * fixtures plugged in (its extra Findings/Lint/Receipts/노드 탐색 entries are
  * routes the workspace tree has not shipped yet).
  */
@@ -101,6 +102,7 @@ const WORKSPACE_GROUPS: readonly ShellNavGroup[] = [
   {
     key: "settings",
     items: [
+      { href: "/app/settings", icon: Settings, label: NAV.settingsIndex },
       { href: "/app/stats", icon: Activity, label: NAV.stats },
       { href: "/app/settings/mcp", icon: Settings, label: NAV.settingsMcp },
       { href: "/app/settings/ai", icon: Bot, label: NAV.settingsAi },
@@ -109,8 +111,31 @@ const WORKSPACE_GROUPS: readonly ShellNavGroup[] = [
   },
 ] as const;
 
+const DEMO_TABS: readonly ShellNavItem[] = [
+  { href: "/", icon: LayoutDashboard, label: NAV.overview },
+  { href: "/map", icon: Network, label: NAV.graph },
+  { href: "/commits", icon: GitCommitHorizontal, label: NAV.commits },
+  { href: "/findings", icon: AlertTriangle, label: NAV.findings },
+  { href: "/progress", icon: ListTodo, label: NAV.progress },
+  { href: "/library", icon: Archive, label: NAV.library },
+] as const;
+
+const WORKSPACE_TABS: readonly ShellNavItem[] = [
+  { href: "/app", icon: LayoutDashboard, label: NAV.overview },
+  { href: "/app/map", icon: Network, label: NAV.graph },
+  { href: "/app/commits", icon: GitCommitHorizontal, label: NAV.commits },
+  { href: "/app/inspection", icon: SearchCheck, label: NAV.inspection },
+  { href: "/app/progress", icon: ListTodo, label: NAV.progress },
+  { href: "/app/library", icon: Archive, label: NAV.library },
+  { href: "/app/settings", icon: Settings, label: NAV.settingsIndex },
+] as const;
+
 export function shellNavGroups(tree: ShellTree): readonly ShellNavGroup[] {
   return tree === "demo" ? DEMO_GROUPS : WORKSPACE_GROUPS;
+}
+
+export function shellTabs(tree: ShellTree): readonly ShellNavItem[] {
+  return tree === "demo" ? DEMO_TABS : WORKSPACE_TABS;
 }
 
 export function shellHome(tree: ShellTree): string {
