@@ -4,8 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "alrescha": "./dist/alrescha.js",
-    "arr": "./dist/alrescha.js"
+    "alrescha": "./dist/alrescha.js"
   },
   "exports": {
     ".": "./src/index.ts"

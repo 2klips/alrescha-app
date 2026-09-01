@@ -17,7 +17,6 @@ export const RECEIPT_PREDICATE_TYPE =
 
 /** The issuing tool identity recorded in every receipt. */
 export const RECEIPT_TOOL = { name: "alrescha", version: "0.1.0" } as const;
-export const LEGACY_RECEIPT_TOOL_NAME = "arr" as const;
 
 /**
  * File subjects carry the scan's sha256 blob digests; the analyzed commit
@@ -51,7 +50,7 @@ export const alreschaReceiptPredicateSchema = z.strictObject({
   repository: z.string().regex(/^[^/]+\/[^/]+$/),
   runId: z.string().min(1),
   tool: z.strictObject({
-    name: z.enum([RECEIPT_TOOL.name, LEGACY_RECEIPT_TOOL_NAME]),
+    name: z.literal(RECEIPT_TOOL.name),
     version: z.string().min(1),
   }),
 });
@@ -64,9 +63,6 @@ export const inTotoStatementSchema = z.strictObject({
 });
 
 export type InTotoStatement = z.infer<typeof inTotoStatementSchema>;
-
-/** @deprecated Use alreschaReceiptPredicateSchema. */
-export const arrReceiptPredicateSchema = alreschaReceiptPredicateSchema;
 
 function canonicalize(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);

@@ -16,7 +16,6 @@ import { runForceLayout } from "../apps/web/lib/graph/force-simulation";
 import {
   DEFAULT_PANEL_SETTINGS,
   GRAPH_PANEL_STORAGE_KEY,
-  LEGACY_GRAPH_PANEL_STORAGE_KEY,
   clampPanelSettings,
   forceConfigOf,
   loadPanelSettings,
@@ -462,7 +461,6 @@ describe("force panel settings", () => {
     expect(forceConfigOf(DEFAULT_PANEL_SETTINGS)).toEqual(DEFAULT_FORCE_CONFIG);
     expect(DEFAULT_PANEL_SETTINGS.textFadeThreshold).toBeGreaterThanOrEqual(0);
     expect(GRAPH_PANEL_STORAGE_KEY).toBe("alrescha-graph-panel");
-    expect(LEGACY_GRAPH_PANEL_STORAGE_KEY).toBe("arr-graph-panel");
   });
 
   test("values survive a serialize and reload round trip", () => {
@@ -477,30 +475,20 @@ describe("force panel settings", () => {
     );
   });
 
-  test("loads legacy settings only when canonical settings are absent", () => {
-    const legacy = serializePanelSettings(
-      clampPanelSettings({ collapsed: true, linkDistance: 180 }),
-    );
+  test("loads canonical settings from storage", () => {
     const canonical = serializePanelSettings(
       clampPanelSettings({ collapsed: false, linkDistance: 220 }),
     );
     const original = globalThis.localStorage;
-    let canonicalValue: string | null = null;
     Object.defineProperty(globalThis, "localStorage", {
       configurable: true,
       value: {
         getItem: (key: string) =>
-          key === GRAPH_PANEL_STORAGE_KEY
-            ? canonicalValue
-            : key === LEGACY_GRAPH_PANEL_STORAGE_KEY
-              ? legacy
-              : null,
+          key === GRAPH_PANEL_STORAGE_KEY ? canonical : null,
       },
     });
 
     try {
-      expect(loadPanelSettings().linkDistance).toBe(180);
-      canonicalValue = canonical;
       expect(loadPanelSettings().linkDistance).toBe(220);
     } finally {
       if (original === undefined)

@@ -60,7 +60,9 @@ export default async function WorkspaceTeamPage({
                 {ownPrompts.map((record) => (
                   <li key={record.id} className="inspection-finding">
                     <span>{record.occurredAt}</span>{" "}
-                    <span>{TEAM.coachingRequest.tokens(record.tokenCount)}</span>{" "}
+                    <span>
+                      {TEAM.coachingRequest.tokens(record.tokenCount)}
+                    </span>{" "}
                     {record.graded ? (
                       <span>{TEAM.coachingRequest.graded}</span>
                     ) : record.coachable ? (

@@ -127,7 +127,7 @@ const TECHNICAL_TOKENS = [
   "md",
   "ts",
   "bad0551",
-  "arr-app",
+  "alrescha",
   "app",
   "klips",
   "progress",

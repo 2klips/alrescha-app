@@ -86,7 +86,7 @@ function workspaceFixture(): McpWorkspaceData {
             title: "CI evidence missing",
           },
         ],
-        fullName: "2klips/arr-app",
+        fullName: "2klips/alrescha-app",
         id: REPOSITORY_ID,
         indexEntries: [
           {

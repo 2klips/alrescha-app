@@ -1,13 +1,6 @@
 export const ALRESCHA_INDEX_BEGIN =
   "<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->";
 export const ALRESCHA_INDEX_END = "<!-- ALRESCHA:END -->";
-export const LEGACY_ARR_INDEX_BEGIN =
-  "<!-- ARR:BEGIN (managed — do not edit inside) -->";
-export const LEGACY_ARR_INDEX_END = "<!-- ARR:END -->";
-/** @deprecated Use ALRESCHA_INDEX_BEGIN. */
-export const ARR_INDEX_BEGIN = ALRESCHA_INDEX_BEGIN;
-/** @deprecated Use ALRESCHA_INDEX_END. */
-export const ARR_INDEX_END = ALRESCHA_INDEX_END;
 export const PROGRESS_LOGGING_INSTRUCTION = [
   "- Once per completed task unit, call `log_progress`:",
   '  `{"task":"<todo id/title>","status":"done","summary":"<verified result; max 200 chars>","refs":["<path/commit>"]}`',
@@ -83,17 +76,10 @@ export function applyManagedIndex(
     return `${section}\n`;
   }
 
-  const canonicalBeginCount = occurrences(existing, ALRESCHA_INDEX_BEGIN);
-  const canonicalEndCount = occurrences(existing, ALRESCHA_INDEX_END);
-  const legacyBeginCount = occurrences(existing, LEGACY_ARR_INDEX_BEGIN);
-  const legacyEndCount = occurrences(existing, LEGACY_ARR_INDEX_END);
+  const beginCount = occurrences(existing, ALRESCHA_INDEX_BEGIN);
+  const endCount = occurrences(existing, ALRESCHA_INDEX_END);
 
-  if (
-    canonicalBeginCount === 0 &&
-    canonicalEndCount === 0 &&
-    legacyBeginCount === 0 &&
-    legacyEndCount === 0
-  ) {
+  if (beginCount === 0 && endCount === 0) {
     const separator = existing.endsWith("\n\n")
       ? ""
       : existing.endsWith("\n")
@@ -102,33 +88,17 @@ export function applyManagedIndex(
     return `${existing}${separator}${section}\n`;
   }
 
-  const hasCanonicalPair =
-    canonicalBeginCount === 1 &&
-    canonicalEndCount === 1 &&
-    legacyBeginCount === 0 &&
-    legacyEndCount === 0;
-  const hasLegacyPair =
-    legacyBeginCount === 1 &&
-    legacyEndCount === 1 &&
-    canonicalBeginCount === 0 &&
-    canonicalEndCount === 0;
-
-  if (!hasCanonicalPair && !hasLegacyPair) {
+  if (beginCount !== 1 || endCount !== 1) {
     throw new TypeError(
       "AGENTS.md must contain exactly one complete Alrescha managed index.",
     );
   }
 
-  const beginMarker = hasCanonicalPair
-    ? ALRESCHA_INDEX_BEGIN
-    : LEGACY_ARR_INDEX_BEGIN;
-  const endMarker = hasCanonicalPair
-    ? ALRESCHA_INDEX_END
-    : LEGACY_ARR_INDEX_END;
-  const start = existing.indexOf(beginMarker);
-  const end = existing.indexOf(endMarker, start) + endMarker.length;
+  const start = existing.indexOf(ALRESCHA_INDEX_BEGIN);
+  const end =
+    existing.indexOf(ALRESCHA_INDEX_END, start) + ALRESCHA_INDEX_END.length;
 
-  if (end < start + endMarker.length) {
+  if (end < start + ALRESCHA_INDEX_END.length) {
     throw new TypeError("Alrescha managed index markers are out of order.");
   }
 

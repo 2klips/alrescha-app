@@ -14,7 +14,7 @@ describe("GitHub installation state", () => {
       SECRET,
       {
         installationId: 154_681_535,
-        repositoryFullName: "2klips/arr-app",
+        repositoryFullName: "2klips/alrescha-app",
         userId: "user-1",
         workspaceId: "workspace-1",
       },
@@ -23,7 +23,7 @@ describe("GitHub installation state", () => {
 
     expect(verifyGitHubInstallState(SECRET, state, NOW)).toMatchObject({
       installationId: 154_681_535,
-      repositoryFullName: "2klips/arr-app",
+      repositoryFullName: "2klips/alrescha-app",
       userId: "user-1",
       workspaceId: "workspace-1",
     });

@@ -6,7 +6,7 @@
 
 export const TEAM = {
   header: {
-    repoLine: "2klips/arr-app · 팀",
+    repoLine: "2klips/alrescha-app · 팀",
     commitChip: "main · 공유 그래프",
   },
   kicker: "팀 워크스페이스",

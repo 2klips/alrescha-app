@@ -64,9 +64,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -80,9 +78,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 증명 맵2klips/arr-app"
-      ],
+      "h1": ["프로젝트 증명 맵2klips/arr-app"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -96,9 +92,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "증거 이웃"
-      ],
+      "h1": ["증거 이웃"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -112,9 +106,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "commit 분석 카드"
-      ],
+      "h1": ["commit 분석 카드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -128,9 +120,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Findings"
-      ],
+      "h1": ["Findings"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -144,9 +134,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "AI 지시문 검사"
-      ],
+      "h1": ["AI 지시문 검사"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -160,9 +148,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Receipts"
-      ],
+      "h1": ["Receipts"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -176,9 +162,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "부분 증거"
-      ],
+      "h1": ["부분 증거"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -192,9 +176,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "개인 라이브러리"
-      ],
+      "h1": ["개인 라이브러리"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -208,9 +190,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "통합 점검 대시보드"
-      ],
+      "h1": ["통합 점검 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -224,9 +204,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "팀 · 코칭 · 기여도"
-      ],
+      "h1": ["팀 · 코칭 · 기여도"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -240,9 +218,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "이미 작동하는 것을 저장합니다."
-      ],
+      "h1": ["이미 작동하는 것을 저장합니다."],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -256,9 +232,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -272,9 +246,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "레포지토리로 시작하세요."
-      ],
+      "h1": ["레포지토리로 시작하세요."],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -288,9 +260,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "로그인."
-      ],
+      "h1": ["로그인."],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -304,9 +274,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -320,9 +288,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 증명 맵2klips/arr-app"
-      ],
+      "h1": ["프로젝트 증명 맵2klips/arr-app"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -336,9 +302,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "증거 이웃"
-      ],
+      "h1": ["증거 이웃"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -352,9 +316,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "commit 분석 카드"
-      ],
+      "h1": ["commit 분석 카드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -368,9 +330,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Findings"
-      ],
+      "h1": ["Findings"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -384,9 +344,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "AI 지시문 검사"
-      ],
+      "h1": ["AI 지시문 검사"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -400,9 +358,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Receipts"
-      ],
+      "h1": ["Receipts"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -416,9 +372,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "부분 증거"
-      ],
+      "h1": ["부분 증거"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -432,9 +386,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "개인 라이브러리"
-      ],
+      "h1": ["개인 라이브러리"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -448,9 +400,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "통합 점검 대시보드"
-      ],
+      "h1": ["통합 점검 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -464,9 +414,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "팀 · 코칭 · 기여도"
-      ],
+      "h1": ["팀 · 코칭 · 기여도"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -480,9 +428,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "이미 작동하는 것을 저장합니다."
-      ],
+      "h1": ["이미 작동하는 것을 저장합니다."],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -496,9 +442,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -512,9 +456,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "레포지토리로 시작하세요."
-      ],
+      "h1": ["레포지토리로 시작하세요."],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -528,9 +470,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "로그인."
-      ],
+      "h1": ["로그인."],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -544,9 +484,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -560,9 +498,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 증명 맵2klips/arr-app"
-      ],
+      "h1": ["프로젝트 증명 맵2klips/arr-app"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -576,9 +512,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "증거 이웃"
-      ],
+      "h1": ["증거 이웃"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -592,9 +526,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "commit 분석 카드"
-      ],
+      "h1": ["commit 분석 카드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -608,9 +540,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Findings"
-      ],
+      "h1": ["Findings"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -624,9 +554,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "AI 지시문 검사"
-      ],
+      "h1": ["AI 지시문 검사"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -640,9 +568,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Receipts"
-      ],
+      "h1": ["Receipts"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -656,9 +582,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "부분 증거"
-      ],
+      "h1": ["부분 증거"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -672,9 +596,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "개인 라이브러리"
-      ],
+      "h1": ["개인 라이브러리"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -688,9 +610,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "통합 점검 대시보드"
-      ],
+      "h1": ["통합 점검 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -704,9 +624,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "팀 · 코칭 · 기여도"
-      ],
+      "h1": ["팀 · 코칭 · 기여도"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -720,9 +638,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "이미 작동하는 것을 저장합니다."
-      ],
+      "h1": ["이미 작동하는 것을 저장합니다."],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -736,9 +652,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -752,9 +666,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "레포지토리로 시작하세요."
-      ],
+      "h1": ["레포지토리로 시작하세요."],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -768,9 +680,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "로그인."
-      ],
+      "h1": ["로그인."],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -784,9 +694,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -800,9 +708,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 증명 맵2klips/arr-app"
-      ],
+      "h1": ["프로젝트 증명 맵2klips/arr-app"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -816,9 +722,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "증거 이웃"
-      ],
+      "h1": ["증거 이웃"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -832,9 +736,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "commit 분석 카드"
-      ],
+      "h1": ["commit 분석 카드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -848,9 +750,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Findings"
-      ],
+      "h1": ["Findings"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -864,9 +764,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "AI 지시문 검사"
-      ],
+      "h1": ["AI 지시문 검사"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -880,9 +778,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Receipts"
-      ],
+      "h1": ["Receipts"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -896,9 +792,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "부분 증거"
-      ],
+      "h1": ["부분 증거"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -912,9 +806,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "개인 라이브러리"
-      ],
+      "h1": ["개인 라이브러리"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -928,9 +820,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "통합 점검 대시보드"
-      ],
+      "h1": ["통합 점검 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -944,9 +834,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "팀 · 코칭 · 기여도"
-      ],
+      "h1": ["팀 · 코칭 · 기여도"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -960,9 +848,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "이미 작동하는 것을 저장합니다."
-      ],
+      "h1": ["이미 작동하는 것을 저장합니다."],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -976,9 +862,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -992,9 +876,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "레포지토리로 시작하세요."
-      ],
+      "h1": ["레포지토리로 시작하세요."],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1008,9 +890,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "로그인."
-      ],
+      "h1": ["로그인."],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1024,9 +904,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1040,9 +918,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 증명 맵2klips/arr-app"
-      ],
+      "h1": ["프로젝트 증명 맵2klips/arr-app"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1056,9 +932,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "증거 이웃"
-      ],
+      "h1": ["증거 이웃"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1072,9 +946,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "commit 분석 카드"
-      ],
+      "h1": ["commit 분석 카드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1088,9 +960,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Findings"
-      ],
+      "h1": ["Findings"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1104,9 +974,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "AI 지시문 검사"
-      ],
+      "h1": ["AI 지시문 검사"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1120,9 +988,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Receipts"
-      ],
+      "h1": ["Receipts"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1136,9 +1002,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "부분 증거"
-      ],
+      "h1": ["부분 증거"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1152,9 +1016,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "개인 라이브러리"
-      ],
+      "h1": ["개인 라이브러리"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1168,9 +1030,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "통합 점검 대시보드"
-      ],
+      "h1": ["통합 점검 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1184,9 +1044,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "팀 · 코칭 · 기여도"
-      ],
+      "h1": ["팀 · 코칭 · 기여도"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1200,9 +1058,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "이미 작동하는 것을 저장합니다."
-      ],
+      "h1": ["이미 작동하는 것을 저장합니다."],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1216,9 +1072,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1232,9 +1086,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "레포지토리로 시작하세요."
-      ],
+      "h1": ["레포지토리로 시작하세요."],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1248,9 +1100,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "로그인."
-      ],
+      "h1": ["로그인."],
       "mainCount": 1,
       "overflow": false,
       "theme": "dark"
@@ -1264,9 +1114,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1280,9 +1128,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 증명 맵2klips/arr-app"
-      ],
+      "h1": ["프로젝트 증명 맵2klips/arr-app"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1296,9 +1142,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "증거 이웃"
-      ],
+      "h1": ["증거 이웃"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1312,9 +1156,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "commit 분석 카드"
-      ],
+      "h1": ["commit 분석 카드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1328,9 +1170,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Findings"
-      ],
+      "h1": ["Findings"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1344,9 +1184,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "AI 지시문 검사"
-      ],
+      "h1": ["AI 지시문 검사"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1360,9 +1198,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "Receipts"
-      ],
+      "h1": ["Receipts"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1376,9 +1212,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "부분 증거"
-      ],
+      "h1": ["부분 증거"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1392,9 +1226,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "개인 라이브러리"
-      ],
+      "h1": ["개인 라이브러리"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1408,9 +1240,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "통합 점검 대시보드"
-      ],
+      "h1": ["통합 점검 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1424,9 +1254,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "팀 · 코칭 · 기여도"
-      ],
+      "h1": ["팀 · 코칭 · 기여도"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1440,9 +1268,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "이미 작동하는 것을 저장합니다."
-      ],
+      "h1": ["이미 작동하는 것을 저장합니다."],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1456,9 +1282,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "프로젝트 대시보드"
-      ],
+      "h1": ["프로젝트 대시보드"],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1472,9 +1296,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "레포지토리로 시작하세요."
-      ],
+      "h1": ["레포지토리로 시작하세요."],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"
@@ -1488,9 +1310,7 @@
       "blank": false,
       "errorOverlay": false,
       "errorText": false,
-      "h1": [
-        "로그인."
-      ],
+      "h1": ["로그인."],
       "mainCount": 1,
       "overflow": false,
       "theme": "light"

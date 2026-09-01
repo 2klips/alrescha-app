@@ -5,7 +5,7 @@ import {
 
 export type DemoCommitState = "busy" | "empty";
 
-const REPOSITORY = "2klips/arr-app";
+const REPOSITORY = "2klips/alrescha-app";
 
 /**
  * Demo data covering every card status at once — the shape a workspace shows

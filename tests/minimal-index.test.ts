@@ -13,9 +13,9 @@ describe("minimal agent index", () => {
       "",
       "Keep this exact prefix.",
       "",
-      "<!-- ARR:BEGIN (managed — do not edit inside) -->",
+      "<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->",
       "old managed bytes",
-      "<!-- ARR:END -->",
+      "<!-- ALRESCHA:END -->",
       "",
       "Keep this exact suffix.",
       "",
@@ -38,7 +38,6 @@ describe("minimal agent index", () => {
     expect(once).toContain("call MCP tool `request_context_pack`");
     expect(once).toContain("Project context via Alrescha");
     expect(once).toContain("<!-- ALRESCHA:BEGIN");
-    expect(once).not.toContain("<!-- ARR:BEGIN");
     expect(once).toContain("Once per completed task unit");
   });
 
@@ -94,7 +93,7 @@ describe("minimal agent index", () => {
     });
 
     expect(() =>
-      applyManagedIndex("prefix\n<!-- ARR:END -->\n", section),
+      applyManagedIndex("prefix\n<!-- ALRESCHA:END -->\n", section),
     ).toThrow("exactly one complete");
     expect(() =>
       applyManagedIndex(`${section}\n${section}\n`, section),

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { edgeSchema } from "../packages/core/src/data/schemas";
-import { loadMigrations } from "../scripts/migrate";
+import { getMigrationIdentity, loadMigrations } from "../scripts/migrate";
 import {
   AUTH_TENANCY_MIGRATION,
   EVIDENCE_GRAPH_MIGRATION,
@@ -131,6 +131,18 @@ describe("typed evidence-graph domain and migrations", () => {
     expect(
       migrations.every(({ checksum }) => /^[0-9a-f]{64}$/.test(checksum)),
     ).toBe(true);
+  });
+
+  it("maps migration filenames to the Supabase ledger identity", () => {
+    expect(
+      getMigrationIdentity("202609010001_alrescha_repository_identity.sql"),
+    ).toEqual({
+      migrationName: "alrescha_repository_identity",
+      version: "202609010001",
+    });
+    expect(() => getMigrationIdentity("alrescha.sql")).toThrow(
+      "Invalid migration filename: alrescha.sql",
+    );
   });
 
   it("creates the full tenant-scoped schema with RLS, indexes, and foreign keys", async () => {

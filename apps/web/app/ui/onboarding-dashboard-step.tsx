@@ -20,7 +20,7 @@ export function OnboardingDashboardStep({
     <DashboardScreen
       model={buildDashboardViewModel(
         "scanned",
-        seededDemo ? "alrescha/drifted-demo" : "2klips/arr-app",
+        seededDemo ? "alrescha/drifted-demo" : "2klips/alrescha-app",
       )}
     />
   );

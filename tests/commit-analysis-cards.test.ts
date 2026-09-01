@@ -10,7 +10,7 @@ const RUN: AnalysisRunInput = {
   commitSha: "a".repeat(40),
   createdAt: "2026-08-17T09:00:00.000Z",
   id: "run-1",
-  repository: "2klips/arr-app",
+  repository: "2klips/alrescha-app",
   triggerKind: "push",
 };
 

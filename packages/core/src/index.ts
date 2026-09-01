@@ -168,12 +168,10 @@ export {
 export {
   RECEIPT_PREDICATE_TYPE,
   RECEIPT_TOOL,
-  LEGACY_RECEIPT_TOOL_NAME,
   alreschaReceiptPredicateSchema,
   digestInTotoStatement,
   inTotoStatementSchema,
   inTotoSubjectSchema,
-  arrReceiptPredicateSchema,
   verifyInTotoStatement,
 } from "./assurance/receipts";
 export type {
@@ -264,10 +262,6 @@ export {
   PROGRESS_LOGGING_INSTRUCTION,
   ALRESCHA_INDEX_BEGIN,
   ALRESCHA_INDEX_END,
-  LEGACY_ARR_INDEX_BEGIN,
-  LEGACY_ARR_INDEX_END,
-  ARR_INDEX_BEGIN,
-  ARR_INDEX_END,
   applyManagedIndex,
   buildMinimalIndexProposalFiles,
   renderManagedIndex,
@@ -372,8 +366,6 @@ export type {
 export {
   LOCAL_PROMPT_LOG_GITIGNORE_ENTRY,
   LOCAL_PROMPT_LOG_PATH,
-  LEGACY_LOCAL_PROMPT_LOG_GITIGNORE_ENTRY,
-  LEGACY_LOCAL_PROMPT_LOG_PATH,
   localPromptRecordSchema,
   parseLocalPromptLog,
   serializeLocalPromptLog,

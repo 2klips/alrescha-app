@@ -3,7 +3,6 @@
  * `alrescha` — local ingest CLI entry point (Phase 2B todo 3, ADR-013).
  * Command surface: `alrescha push [directory] --repo <owner/name> --server <url>
  * --token <token>`. Scan runs locally; only metadata leaves the machine.
- * The legacy `arr` binary remains an alias during the compatibility window.
  */
 
 import { basename, resolve } from "node:path";

@@ -153,8 +153,7 @@ describe("MVP scope fidelity", () => {
         "packages/cli/package.json": `{
           "name": "@alrescha/cli",
           "bin": {
-            "alrescha": "./dist/push.js",
-            "arr": "./dist/push.js"
+            "alrescha": "./dist/push.js"
           }
         }`,
         "packages/cli/src/push.ts": `#!/usr/bin/env node

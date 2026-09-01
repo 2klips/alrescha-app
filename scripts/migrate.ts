@@ -11,11 +11,28 @@ export interface MigrationFile {
   readonly sql: string;
 }
 
+interface MigrationIdentity {
+  readonly migrationName: string;
+  readonly version: string;
+}
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 export const DEFAULT_MIGRATIONS_DIRECTORY = resolve(
   ROOT,
   "supabase/migrations",
 );
+
+export function getMigrationIdentity(name: string): MigrationIdentity {
+  const match = /^(\d{12})_([a-z0-9_]+)\.sql$/.exec(name);
+  if (!match) {
+    throw new Error(`Invalid migration filename: ${name}`);
+  }
+
+  return {
+    migrationName: match[2]!,
+    version: match[1]!,
+  };
+}
 
 export async function loadMigrations(
   directory = DEFAULT_MIGRATIONS_DIRECTORY,
@@ -43,7 +60,9 @@ export async function runMigrations(
   const applied: string[] = [];
 
   try {
-    await sql.unsafe("select pg_advisory_lock(hashtext('arr_migrations'))");
+    await sql.unsafe(
+      "select pg_advisory_lock(hashtext('alrescha_migrations'))",
+    );
     await sql.unsafe("create schema if not exists private_migrations");
     await sql.unsafe(`
       create table if not exists private_migrations.schema_migrations (
@@ -52,8 +71,15 @@ export async function runMigrations(
         applied_at timestamptz not null default now()
       )
     `);
+    const standardLedger = await sql<{ table_name: string | null }[]>`
+      select to_regclass(
+        'supabase_migrations.schema_migrations'
+      )::text as table_name
+    `;
+    const hasStandardLedger = Boolean(standardLedger[0]?.table_name);
 
     for (const migration of await loadMigrations()) {
+      const identity = getMigrationIdentity(migration.name);
       const existing = await sql<{ checksum: string }[]>`
         select checksum
         from private_migrations.schema_migrations
@@ -69,12 +95,47 @@ export async function runMigrations(
         continue;
       }
 
+      if (hasStandardLedger) {
+        const standard = await sql<{ name: string | null }[]>`
+          select name
+          from supabase_migrations.schema_migrations
+          where version = ${identity.version}
+        `;
+
+        if (standard[0]) {
+          if (standard[0].name && standard[0].name !== identity.migrationName) {
+            throw new Error(
+              `Supabase migration name changed: ${migration.name}`,
+            );
+          }
+          await sql`
+            insert into private_migrations.schema_migrations (name, checksum)
+            values (${migration.name}, ${migration.checksum})
+          `;
+          continue;
+        }
+      }
+
       await sql.begin(async (transaction) => {
         await transaction.unsafe(migration.sql);
         await transaction`
           insert into private_migrations.schema_migrations (name, checksum)
           values (${migration.name}, ${migration.checksum})
         `;
+        if (hasStandardLedger) {
+          await transaction`
+            insert into supabase_migrations.schema_migrations (
+              version,
+              statements,
+              name
+            )
+            values (
+              ${identity.version},
+              ${transaction.array([migration.sql])},
+              ${identity.migrationName}
+            )
+          `;
+        }
       });
       applied.push(migration.name);
     }
@@ -82,7 +143,9 @@ export async function runMigrations(
     return applied;
   } finally {
     try {
-      await sql.unsafe("select pg_advisory_unlock(hashtext('arr_migrations'))");
+      await sql.unsafe(
+        "select pg_advisory_unlock(hashtext('alrescha_migrations'))",
+      );
     } finally {
       await sql.end();
     }

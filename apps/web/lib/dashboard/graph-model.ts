@@ -626,7 +626,7 @@ export interface DashboardViewModel {
 
 export function buildDashboardViewModel(
   state: DashboardState,
-  repo = "2klips/arr-app",
+  repo = "2klips/alrescha-app",
 ): DashboardViewModel {
   const source = createFixtureGraph(
     state === "large" ? 500 : BASE_NODES.length,

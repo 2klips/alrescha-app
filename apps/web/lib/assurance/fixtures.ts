@@ -308,14 +308,14 @@ const CURRENT_STATEMENT: InTotoStatement = {
     coverage: { implVerified: 3, requirements: 5, testVerified: 2 },
     evidence: { inferred: 1, verified: 3 },
     previousReceiptDigest: "9".repeat(64),
-    repository: "2klips/arr-app",
+    repository: "2klips/alrescha-app",
     runId: "run-bad0551",
     tool: { name: "alrescha", version: "0.1.0" },
   },
   predicateType: "https://arr-app-web.vercel.app/receipt/v1",
   subject: [
     { digest: { sha1: "b".repeat(40) }, name: "git:commit" },
-    { digest: { sha256: "a".repeat(64) }, name: "2klips/arr-app" },
+    { digest: { sha256: "a".repeat(64) }, name: "2klips/alrescha-app" },
   ],
 };
 
@@ -332,7 +332,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-10T13:42:00.000Z",
     expectedDigest:
-      "8d88908564608da6546ad9eb8ff492e81eb0c7372961ec4e748b237a903058a6",
+      "379cea0b91a9ce2a9f5e2d18035d705908185b0a96bd41978c702d1bfb3e4f2b",
     id: "receipt-current",
     label: "bad0551 · deterministic analysis",
     stale: false,
@@ -341,7 +341,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-09T17:08:00.000Z",
     expectedDigest:
-      "8d88908564608da6546ad9eb8ff492e81eb0c7372961ec4e748b237a903058a6",
+      "379cea0b91a9ce2a9f5e2d18035d705908185b0a96bd41978c702d1bfb3e4f2b",
     id: "receipt-tampered",
     label: "bad0551 · tampered fixture",
     stale: false,
@@ -356,7 +356,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-08T09:12:00.000Z",
     expectedDigest:
-      "04720cc26e4d8d8f49e317fa99100be849d0643b7d9084f71dbce06c364f880b",
+      "ecd00473f7d0d9cb1725a38e90f8b4fa2964b7232fbbc19dd7534aabaece5ed2",
     id: "receipt-previous",
     label: "e9101b5 · previous analysis",
     stale: true,

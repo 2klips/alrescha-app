@@ -7,7 +7,6 @@ import { describe, expect, test } from "vitest";
 
 import {
   DEFAULT_THEME,
-  LEGACY_THEME_STORAGE_KEY,
   THEME_ATTRIBUTE,
   THEME_INIT_SCRIPT,
   THEME_STORAGE_KEY,
@@ -42,7 +41,6 @@ function fakeElement() {
  * so the assertions cover the string that actually ships in <head>.
  */
 function runInitScript(options: {
-  legacyStored?: string | null;
   stored?: string | null;
   prefersLight?: boolean;
   throwOnStorage?: boolean;
@@ -56,8 +54,6 @@ function runInitScript(options: {
         getItem: (key: string) => {
           if (options.throwOnStorage) throw new Error("storage disabled");
           if (key === THEME_STORAGE_KEY) return options.stored ?? null;
-          if (key === LEGACY_THEME_STORAGE_KEY)
-            return options.legacyStored ?? null;
           return null;
         },
       },
@@ -178,13 +174,6 @@ describe("no flash of the wrong theme", () => {
   test("the boot script paints the stored theme before hydration", () => {
     expect(runInitScript({ stored: "light" }).theme).toBe("light");
     expect(runInitScript({ stored: "dark", prefersLight: true }).theme).toBe(
-      "dark",
-    );
-  });
-
-  test("the boot script reads the legacy Arr key only as a fallback", () => {
-    expect(runInitScript({ legacyStored: "light" }).theme).toBe("light");
-    expect(runInitScript({ legacyStored: "light", stored: "dark" }).theme).toBe(
       "dark",
     );
   });

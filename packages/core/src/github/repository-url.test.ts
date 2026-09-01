@@ -3,23 +3,26 @@ import { describe, expect, it } from "vitest";
 import { parseGitHubRepositoryUrl } from "./repository-url";
 
 const ACCEPTED: ReadonlyArray<readonly [string, string]> = [
-  ["https://github.com/2klips/arr-app", "2klips/arr-app"],
-  ["https://github.com/2klips/arr-app.git", "2klips/arr-app"],
-  ["https://github.com/2klips/arr-app/", "2klips/arr-app"],
-  ["https://github.com/2klips/arr-app/tree/main/apps/web", "2klips/arr-app"],
+  ["https://github.com/2klips/alrescha-app", "2klips/alrescha-app"],
+  ["https://github.com/2klips/alrescha-app.git", "2klips/alrescha-app"],
+  ["https://github.com/2klips/alrescha-app/", "2klips/alrescha-app"],
   [
-    "https://github.com/2klips/arr-app?tab=readme-ov-file#readme",
-    "2klips/arr-app",
+    "https://github.com/2klips/alrescha-app/tree/main/apps/web",
+    "2klips/alrescha-app",
   ],
-  ["http://github.com/2klips/arr-app", "2klips/arr-app"],
-  ["https://www.github.com/2klips/arr-app", "2klips/arr-app"],
-  ["github.com/2klips/arr-app", "2klips/arr-app"],
-  ["www.github.com/2klips/arr-app", "2klips/arr-app"],
-  ["git@github.com:2klips/arr-app.git", "2klips/arr-app"],
-  ["git@github.com:2klips/arr-app", "2klips/arr-app"],
-  ["ssh://git@github.com/2klips/arr-app.git", "2klips/arr-app"],
-  ["2klips/arr-app", "2klips/arr-app"],
-  ["  2klips/arr-app  ", "2klips/arr-app"],
+  [
+    "https://github.com/2klips/alrescha-app?tab=readme-ov-file#readme",
+    "2klips/alrescha-app",
+  ],
+  ["http://github.com/2klips/alrescha-app", "2klips/alrescha-app"],
+  ["https://www.github.com/2klips/alrescha-app", "2klips/alrescha-app"],
+  ["github.com/2klips/alrescha-app", "2klips/alrescha-app"],
+  ["www.github.com/2klips/alrescha-app", "2klips/alrescha-app"],
+  ["git@github.com:2klips/alrescha-app.git", "2klips/alrescha-app"],
+  ["git@github.com:2klips/alrescha-app", "2klips/alrescha-app"],
+  ["ssh://git@github.com/2klips/alrescha-app.git", "2klips/alrescha-app"],
+  ["2klips/alrescha-app", "2klips/alrescha-app"],
+  ["  2klips/alrescha-app  ", "2klips/alrescha-app"],
   ["owner-with-dash/repo.name_mix-1", "owner-with-dash/repo.name_mix-1"],
 ];
 

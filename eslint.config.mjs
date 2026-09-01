@@ -50,11 +50,7 @@ export default tseslint.config(
   {
     // Ink & Seal (ADR-009-3): colours live only in app/styles/tokens.css.
     files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
-    plugins: {
-      alrescha: alreschaPlugin,
-      // One-release alias for local configs copied before the rename.
-      arr: alreschaPlugin,
-    },
+    plugins: { alrescha: alreschaPlugin },
     rules: {
       "alrescha/no-hardcoded-hex": "error",
       // Design roadmap step 3 (P7): inline styles must use the scale tokens.

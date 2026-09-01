@@ -214,7 +214,7 @@ describe("pilot stats dashboard", () => {
     expect(html).toContain("deterministic per-document estimates");
     expect(html).toContain('href="/api/stats/export"');
     expect(html).toContain(
-      'href="https://github.com/2klips/arr-app/blob/main/benchmarks/databrain/results.real.md"',
+      'href="https://github.com/2klips/alrescha-app/blob/main/benchmarks/databrain/results.real.md"',
     );
   });
 

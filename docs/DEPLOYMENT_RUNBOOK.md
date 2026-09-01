@@ -2,7 +2,7 @@
 
 > **이 문서를 받는 에이전트에게:** 이 작업은 코드 작성보다 **외부 서비스 연동**이 중심이다.
 > 레포 규약은 `AGENTS.md`를 먼저 읽고, 하드룰(원본 코드 비저장·verified는 실행 증거만·측정 없는 수치 금지·테스트 약화 금지)은 배포 작업 중에도 그대로 적용된다.
-> 작성 시점 2026-08-26 · 마지막 커밋 `5c43f54` (푸시됨, `2klips/arr-app` main).
+> 작성 시점 2026-08-26 · 마지막 커밋 `5c43f54` (푸시됨, `2klips/alrescha-app` main).
 
 ---
 
@@ -64,7 +64,7 @@
 **픽스처 다이제스트 재계산** (레포 루트에서 실행):
 
 ```bash
-npx tsx -e "import('./packages/core/src/assurance/receipts.ts').then(async (m)=>{const s={_type:'https://in-toto.io/Statement/v1',predicate:{analyzedAt:'2026-08-10T13:42:00.000Z',commitSha:'b'.repeat(40),coverage:{implVerified:3,requirements:5,testVerified:2},evidence:{inferred:1,verified:3},previousReceiptDigest:'9'.repeat(64),repository:'2klips/arr-app',runId:'run-bad0551',tool:{name:'alrescha',version:'0.1.0'}},predicateType:'https://arr-app-web.vercel.app/receipt/v1',subject:[{digest:{sha1:'b'.repeat(40)},name:'git:commit'},{digest:{sha256:'a'.repeat(64)},name:'2klips/arr-app'}]};console.log('current:',await m.digestInTotoStatement(s));const p={...s,predicate:{...s.predicate,commitSha:'e'.repeat(40),evidence:{inferred:2,verified:2},previousReceiptDigest:null,runId:'run-e9101b5'}};console.log('previous:',await m.digestInTotoStatement(p));})"
+npx tsx -e "import('./packages/core/src/assurance/receipts.ts').then(async (m)=>{const s={_type:'https://in-toto.io/Statement/v1',predicate:{analyzedAt:'2026-08-10T13:42:00.000Z',commitSha:'b'.repeat(40),coverage:{implVerified:3,requirements:5,testVerified:2},evidence:{inferred:1,verified:3},previousReceiptDigest:'9'.repeat(64),repository:'2klips/alrescha-app',runId:'run-bad0551',tool:{name:'alrescha',version:'0.1.0'}},predicateType:'https://arr-app-web.vercel.app/receipt/v1',subject:[{digest:{sha1:'b'.repeat(40)},name:'git:commit'},{digest:{sha256:'a'.repeat(64)},name:'2klips/alrescha-app'}]};console.log('current:',await m.digestInTotoStatement(s));const p={...s,predicate:{...s.predicate,commitSha:'e'.repeat(40),evidence:{inferred:2,verified:2},previousReceiptDigest:null,runId:'run-e9101b5'}};console.log('previous:',await m.digestInTotoStatement(p));})"
 ```
 
 출력된 두 값을 `apps/web/lib/assurance/fixtures.ts`의 `expectedDigest` 자리(현재 `52341865…` / `176b9f63…`)에 넣는다.
@@ -98,7 +98,7 @@ GitHub → Settings → Developer settings → **OAuth Apps** → New:
 
 GitHub이 연결된 원래 계정에서:
 
-1. Import `2klips/arr-app` → **Root Directory = `apps/web`**, Framework = Next.js.
+1. Import `2klips/alrescha-app` → **Root Directory = `apps/web`**, Framework = Next.js.
 2. 환경 변수 (Production) — **실측 전량 목록**:
 
 | 변수                                                | 값                                       | 필수 |

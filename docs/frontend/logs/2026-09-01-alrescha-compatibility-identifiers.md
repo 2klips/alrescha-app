@@ -1,5 +1,7 @@
 # Alrescha compatibility identifier migration
 
+> Superseded by the canonical-only cleanup recorded in `2026-09-01-alrescha-legacy-removal.md`.
+
 **Date:** 2026-09-01
 
 **Agent:** Codex

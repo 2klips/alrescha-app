@@ -3,13 +3,11 @@ import { describe, expect, it } from "vitest";
 import { resolveCliEnvironment } from "./environment";
 
 describe("resolveCliEnvironment", () => {
-  it("prefers canonical Alrescha variables", () => {
+  it("reads canonical Alrescha variables", () => {
     expect(
       resolveCliEnvironment({
         ALRESCHA_SERVER_URL: "https://alrescha.example",
         ALRESCHA_TOKEN: "canonical",
-        ARR_SERVER_URL: "https://arr.example",
-        ARR_TOKEN: "legacy",
       }),
     ).toEqual({
       server: "https://alrescha.example",
@@ -17,15 +15,15 @@ describe("resolveCliEnvironment", () => {
     });
   });
 
-  it("accepts legacy Arr variables during migration", () => {
+  it("ignores removed Arr variables", () => {
     expect(
       resolveCliEnvironment({
         ARR_SERVER_URL: "https://arr.example",
         ARR_TOKEN: "legacy",
       }),
     ).toEqual({
-      server: "https://arr.example",
-      token: "legacy",
+      server: null,
+      token: null,
     });
   });
 });

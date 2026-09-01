@@ -71,7 +71,7 @@ describe("buildWorkspaceCommitCards", () => {
           },
         },
       ],
-      repositories: [{ full_name: "2klips/arr-app", id: "repo-1" }],
+      repositories: [{ full_name: "2klips/alrescha-app", id: "repo-1" }],
       runs: [
         {
           commit_sha: "a".repeat(40),
@@ -94,7 +94,7 @@ describe("buildWorkspaceCommitCards", () => {
     expect(cards[0]).toMatchObject({
       findingsDelta: { opened: 1, openTotal: 4, resolved: 0 },
       receiptId: "receipt-9",
-      repository: "2klips/arr-app",
+      repository: "2klips/alrescha-app",
       status: "pending",
     });
     expect(cards[1]).toMatchObject({

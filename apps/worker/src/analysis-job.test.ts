@@ -76,7 +76,7 @@ function fakeStore(options: { openFingerprints?: readonly string[] } = {}) {
       recorded.statement = statement;
       return "receipt-1";
     },
-    repositoryFullName: async () => "2klips/arr-app",
+    repositoryFullName: async () => "2klips/alrescha-app",
     reconcileFindings: async ({ findings }) => {
       recorded.findings = findings;
       const fingerprints = findings.map(({ fingerprint }) => fingerprint);
@@ -165,7 +165,7 @@ describe("analyze job", () => {
     const statement = recorded.statement!;
 
     expect(statement.predicate.commitSha).toBe(COMMIT);
-    expect(statement.predicate.repository).toBe("2klips/arr-app");
+    expect(statement.predicate.repository).toBe("2klips/alrescha-app");
     expect(statement.predicate.runId).toBe("run-1");
     expect(statement.predicate.previousReceiptDigest).toBeNull();
     // The production predicate carries the WORK_SPEC §13 reserved fields.

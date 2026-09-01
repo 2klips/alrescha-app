@@ -6,7 +6,7 @@
 export const ASSURANCE = {
   header: {
     /** `<repo> · <state>` */
-    repoLine: "2klips/arr-app · bad0551",
+    repoLine: "2klips/alrescha-app · bad0551",
     commitChip: "main · 스캔 완료",
   },
 

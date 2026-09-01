@@ -1,10 +1,10 @@
 # Alrescha naming migration inventory
 
-**Status:** Alrescha user-facing + compatibility identifier migration complete; legacy removal deferred
+**Status:** Alrescha canonical-only migration complete; historical/external deployment IDs documented
 
 **Baseline snapshot:** 2026-08-31 at commit `68269d9`
 
-> Sections 1–5 retain the F5 inventory and decision history. Current canonical/legacy policy is in §6.
+> Sections 1–6 retain migration decision history. Current canonical-only policy is in §7.
 
 ## 1. Exact-name inventory
 
@@ -102,3 +102,11 @@ rg -n "@arr|ARR_|arr://|https://arr\.dev|arr-theme|\.arr/" apps packages tests s
 - Historical ADR/spec/reports and `.arr-*` CSS hooks remain unchanged. CSS hooks are private selectors, not interoperability identifiers.
 - Legacy alias removal is a separate future release. Do not remove aliases until external consumers and stored local state are measured as migrated.
 - Detailed evidence: [`logs/2026-09-01-alrescha-compatibility-identifiers.md`](./logs/2026-09-01-alrescha-compatibility-identifiers.md).
+
+## 7. Legacy removal result — 2026-09-01
+
+- Removed CLI `arr` bin, `ARR_*` env fallbacks, legacy browser-storage keys, `.arr/` prompt-log constants, managed-index aliases, receipt schema/export aliases, and ESLint plugin alias.
+- Configured production DB measured before removal: 0 total receipts, 0 legacy `arr` receipts, 0 legacy/canonical implementation-repository rows.
+- Canonical implementation repository: `2klips/alrescha-app`. Database migration updates any older `2klips/arr-app` repository address without changing repository IDs.
+- Retained IDs are not aliases: Vercel `arr-app-web.vercel.app`, Fly `arr-worker`, immutable receipt predicate URI, applied historical migration filenames, archived docs, and private `.arr-*` CSS selectors.
+- Detailed evidence: [`logs/2026-09-01-alrescha-legacy-removal.md`](./logs/2026-09-01-alrescha-legacy-removal.md).

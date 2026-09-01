@@ -21,7 +21,7 @@ describe("context and index settings", () => {
             },
           ],
           missingPermission: "pull_requests:write",
-          repository: "2klips/arr-app",
+          repository: "2klips/alrescha-app",
           status: "permission_required",
           url: null,
         },

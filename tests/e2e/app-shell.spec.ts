@@ -5,7 +5,7 @@ import { BRAND, DASHBOARD, NOT_FOUND } from "../../apps/web/lib/strings";
 test("opens the Alrescha repository shell", async ({ page }) => {
   await page.goto("/map");
 
-  await expect(page.getByText("2klips/arr-app").first()).toBeVisible();
+  await expect(page.getByText("2klips/alrescha-app").first()).toBeVisible();
   await expect(page.getByRole("link", { name: BRAND.homeLabel })).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 1, name: DASHBOARD.title }),

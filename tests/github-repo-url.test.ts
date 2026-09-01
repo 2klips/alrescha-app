@@ -45,7 +45,7 @@ describe("URL onboarding decision", () => {
   it("reports a repository that is already connected to the workspace", async () => {
     const outcome = await decideUrlConnect(
       {
-        repositoryUrl: "https://github.com/2klips/arr-app",
+        repositoryUrl: "https://github.com/2klips/alrescha-app",
         workspaceId: WORKSPACE_ID,
       },
       dependencies({
@@ -54,7 +54,7 @@ describe("URL onboarding decision", () => {
     );
 
     expect(outcome).toEqual({
-      fullName: "2klips/arr-app",
+      fullName: "2klips/alrescha-app",
       kind: "already_connected",
     });
   });
@@ -65,7 +65,7 @@ describe("URL onboarding decision", () => {
       .mockResolvedValue("01J000000000000000000000RE");
     const outcome = await decideUrlConnect(
       {
-        repositoryUrl: "git@github.com:2klips/arr-app.git",
+        repositoryUrl: "git@github.com:2klips/alrescha-app.git",
         workspaceId: WORKSPACE_ID,
       },
       dependencies({
@@ -75,7 +75,7 @@ describe("URL onboarding decision", () => {
     );
 
     expect(outcome).toEqual({
-      fullName: "2klips/arr-app",
+      fullName: "2klips/alrescha-app",
       kind: "connected",
       repositoryId: "01J000000000000000000000RE",
     });

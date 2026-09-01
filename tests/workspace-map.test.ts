@@ -139,7 +139,7 @@ function fixtureRows(): WorkspaceMapRows {
     ],
     repositories: [
       {
-        full_name: "2klips/arr-app",
+        full_name: "2klips/alrescha-app",
         id: "repo-1",
         last_scanned_commit_sha: SHA,
       },
@@ -260,7 +260,7 @@ describe("workspace map builder (Phase 3 Wave A todo 1)", () => {
       rationales: 1,
       requirements: 1,
     });
-    expect(model.repoFullName).toBe("2klips/arr-app");
+    expect(model.repoFullName).toBe("2klips/alrescha-app");
     expect(model.lastScannedCommitSha).toBe(SHA);
     expect(model.revokedTokenIds).toEqual(["token-dead"]);
   });

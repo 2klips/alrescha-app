@@ -34,12 +34,12 @@ describe("Alrescha naming migration", () => {
     },
   );
 
-  it("uses canonical identifiers and keeps explicit legacy read aliases", () => {
+  it("uses canonical identifiers without Arr aliases", () => {
     const instructions = source("apps/web/lib/mcp/instruction-blocks.ts");
     const index = source("packages/core/src/context/minimal-index.ts");
     const proposal = source("packages/core/src/context/index-pr-proposal.ts");
     const cliEnvironment = source("packages/cli/src/environment.ts");
-    const theme = source("apps/web/lib/theme/theme-preference.ts");
+    const mcpEnvironment = source("apps/web/lib/mcp/environment.ts");
     const cliPackage = JSON.parse(source("packages/cli/package.json")) as {
       bin: Record<string, string>;
     };
@@ -47,14 +47,13 @@ describe("Alrescha naming migration", () => {
     expect(instructions).toContain("MCP server: alrescha");
     expect(instructions).toContain("<ALRESCHA_MCP_TOKEN>");
     expect(index).toContain("ALRESCHA_INDEX_BEGIN");
-    expect(index).toContain("LEGACY_ARR_INDEX_BEGIN");
+    expect(index).not.toContain("ARR_INDEX");
     expect(proposal).toContain("alrescha/minimal-index-");
-    expect(cliEnvironment).toContain('environment["ARR_SERVER_URL"]');
-    expect(cliEnvironment).toContain('environment["ARR_TOKEN"]');
-    expect(theme).toContain('LEGACY_THEME_STORAGE_KEY = "arr-theme"');
+    expect(cliEnvironment).not.toContain("ARR_SERVER_URL");
+    expect(cliEnvironment).not.toContain("ARR_TOKEN");
+    expect(mcpEnvironment).not.toContain("ARR_MCP_URL");
     expect(cliPackage.bin).toEqual({
       alrescha: "./dist/alrescha.js",
-      arr: "./dist/alrescha.js",
     });
   });
 });

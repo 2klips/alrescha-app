@@ -6,7 +6,7 @@
 
 export const INSPECTION = {
   header: {
-    repoLine: "2klips/arr-app · 프로젝트 점검",
+    repoLine: "2klips/alrescha-app · 프로젝트 점검",
     commitChip: "main · 출처 있는 점검",
   },
   kicker: "프로젝트 점검",

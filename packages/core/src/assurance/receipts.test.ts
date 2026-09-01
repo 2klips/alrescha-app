@@ -16,29 +16,29 @@ const statement: InTotoStatement = {
     coverage: { implVerified: 2, requirements: 4, testVerified: 1 },
     evidence: { inferred: 1, verified: 3 },
     previousReceiptDigest: null,
-    repository: "2klips/arr-app",
+    repository: "2klips/alrescha-app",
     runId: "run-fixture-12",
-    tool: { name: "arr", version: "0.1.0" },
+    tool: RECEIPT_TOOL,
   },
   predicateType: "https://arr-app-web.vercel.app/receipt/v1",
   subject: [
     { digest: { sha1: "b".repeat(40) }, name: "git:commit" },
-    { digest: { sha256: "a".repeat(64) }, name: "2klips/arr-app" },
+    { digest: { sha256: "a".repeat(64) }, name: "2klips/alrescha-app" },
   ],
 };
 
 describe("in-toto-shaped assurance receipts", () => {
   test("validates the locked Statement v1 shape", () => {
-    const canonicalStatement: InTotoStatement = {
-      ...statement,
-      predicate: { ...statement.predicate, tool: RECEIPT_TOOL },
-    };
-
-    expect(inTotoStatementSchema.parse(canonicalStatement)).toEqual(
-      canonicalStatement,
-    );
-    // Stored receipts issued before the rename remain verifiable.
     expect(inTotoStatementSchema.parse(statement)).toEqual(statement);
+    expect(() =>
+      inTotoStatementSchema.parse({
+        ...statement,
+        predicate: {
+          ...statement.predicate,
+          tool: { name: "arr", version: "0.1.0" },
+        },
+      }),
+    ).toThrow();
     expect(() =>
       inTotoStatementSchema.parse({ ...statement, _type: "custom" }),
     ).toThrow();

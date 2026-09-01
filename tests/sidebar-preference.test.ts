@@ -3,14 +3,13 @@ import { createContext, runInContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 
 import {
-  LEGACY_SIDEBAR_STORAGE_KEY,
   SIDEBAR_ATTRIBUTE,
   SIDEBAR_INIT_SCRIPT,
   SIDEBAR_STORAGE_KEY,
   applySidebarState,
 } from "../apps/web/lib/shell/sidebar-preference";
 
-function runBoot(canonical: string | null, legacy: string | null) {
+function runBoot(stored: string | null) {
   const attributes = new Map<string, string>();
   runInContext(
     SIDEBAR_INIT_SCRIPT,
@@ -24,11 +23,7 @@ function runBoot(canonical: string | null, legacy: string | null) {
       window: {
         localStorage: {
           getItem: (key: string) =>
-            key === SIDEBAR_STORAGE_KEY
-              ? canonical
-              : key === LEGACY_SIDEBAR_STORAGE_KEY
-                ? legacy
-                : null,
+            key === SIDEBAR_STORAGE_KEY ? stored : null,
         },
       },
     }),
@@ -36,11 +31,11 @@ function runBoot(canonical: string | null, legacy: string | null) {
   return attributes.get(SIDEBAR_ATTRIBUTE) ?? null;
 }
 
-describe("sidebar preference compatibility", () => {
-  it("reads the legacy key only when the canonical key is absent", () => {
-    expect(runBoot(null, "rail")).toBe("rail");
-    expect(runBoot("expanded", "rail")).toBeNull();
-    expect(runBoot("rail", "expanded")).toBe("rail");
+describe("sidebar preference", () => {
+  it("reads only the canonical key", () => {
+    expect(runBoot(null)).toBeNull();
+    expect(runBoot("expanded")).toBeNull();
+    expect(runBoot("rail")).toBe("rail");
   });
 
   it("writes only the canonical Alrescha key", () => {

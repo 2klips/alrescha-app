@@ -27,7 +27,7 @@ function pushBody(commits: unknown[]): string {
     after: SHA,
     commits,
     installation: { id: 77 },
-    repository: { full_name: "2klips/arr-app", id: 1234 },
+    repository: { full_name: "2klips/alrescha-app", id: 1234 },
   });
 }
 
@@ -78,7 +78,7 @@ describe("push webhook co-change normalization (Wave B todo 4)", () => {
         action: "completed",
         check_run: { conclusion: "success", head_sha: SHA },
         installation: { id: 77 },
-        repository: { full_name: "2klips/arr-app", id: 1234 },
+        repository: { full_name: "2klips/alrescha-app", id: 1234 },
       }),
     );
     expect(event?.commitFiles).toEqual([]);

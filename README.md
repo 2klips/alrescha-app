@@ -1,6 +1,6 @@
 # Alrescha
 
-**Alrescha 애플리케이션 구현 레포.** 내부 식별자는 `alrescha`·`@alrescha/*`·`ALRESCHA_*`가 기준입니다. 기존 CLI/env/local-state/receipt 입력의 `arr` 별칭은 한 번의 전환 릴리스 동안 읽기 호환됩니다. 실제 GitHub 레포·Vercel/Fly 배포·receipt predicate처럼 이미 발급된 외부 주소는 그대로 유지합니다. 기획·홍보 레포는 [2klips/arr](https://github.com/2klips/arr), 소개 사이트는 https://2klips.github.io/arr/ 입니다.
+**Alrescha 애플리케이션 구현 레포.** 제품·패키지·CLI·env·protocol·local-state 식별자는 `alrescha`·`@alrescha/*`·`ALRESCHA_*`만 사용합니다. 구현 레포는 [2klips/alrescha-app](https://github.com/2klips/alrescha-app)입니다. 기존 Vercel/Fly 주소와 receipt predicate는 배포 호환성을 위해 유지합니다. 기획·홍보 레포는 [2klips/arr](https://github.com/2klips/arr), 소개 사이트는 https://2klips.github.io/arr/ 입니다.
 
 > Alrescha: GitHub에 푸시하면 기획(스펙·ADR·에이전트 지시문)이 실제 코드와 테스트로 증명됐는지 자동 검증하는 AI 개발 보증 SaaS. 메인 대시보드는 살아있는 증거 그래프이며, 코어는 Data Brain(증거 그래프 DB + LLM Wiki + 색인 + 주문형 MCP 서빙)입니다.
 

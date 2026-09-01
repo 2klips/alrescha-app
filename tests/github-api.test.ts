@@ -12,13 +12,13 @@ describe("GitHub repository installation lookup", () => {
 
     await expect(
       lookupGitHubRepositoryInstallation(
-        "2klips/arr-app",
+        "2klips/alrescha-app",
         "app-jwt",
         fetchImplementation,
       ),
     ).resolves.toEqual({ githubInstallationId: 154_681_535 });
     expect(fetchImplementation).toHaveBeenCalledWith(
-      "https://api.github.com/repos/2klips/arr-app/installation",
+      "https://api.github.com/repos/2klips/alrescha-app/installation",
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: "Bearer app-jwt" }),
       }),
@@ -32,7 +32,7 @@ describe("GitHub repository installation lookup", () => {
 
     await expect(
       lookupGitHubRepositoryInstallation(
-        "2klips/arr-app",
+        "2klips/alrescha-app",
         "app-jwt",
         fetchImplementation,
       ),

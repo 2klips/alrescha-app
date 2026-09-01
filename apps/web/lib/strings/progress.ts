@@ -6,7 +6,7 @@
 
 export const PROGRESS = {
   header: {
-    repoLine: "2klips/arr-app · 진행 원장",
+    repoLine: "2klips/alrescha-app · 진행 원장",
     commitChip: "main · 출처 있는 상태",
   },
   kicker: "레포 진행 원장",

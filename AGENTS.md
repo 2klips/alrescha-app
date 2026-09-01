@@ -5,8 +5,8 @@ This repository implements Alrescha (formerly Arr; AI development assurance SaaS
 ## Active frontend track
 
 - Product name is `Alrescha`. Treat `Arr`, `SpecProof`, and `Alresca` as legacy names to migrate deliberately.
-- Canonical compatibility IDs: `alrescha`, `@alrescha/*`, `ALRESCHA_*`, `alrescha://`, `.alrescha/`. Keep explicit legacy `arr` read aliases during the current compatibility window; do not create new `arr` identifiers.
-- Real external infrastructure IDs remain unchanged until the resource itself is renamed: `2klips/arr-app`, `arr-app-web.vercel.app`, `arr-worker`, and the production receipt predicate URI.
+- Canonical IDs: `alrescha`, `@alrescha/*`, `ALRESCHA_*`, `alrescha://`, `.alrescha/`. Legacy `arr` aliases are removed; do not add new ones.
+- Implementation repository: `2klips/alrescha-app`. Retained deployment IDs: `arr-app-web.vercel.app`, `arr-worker`, and the production receipt predicate URI.
 - Before frontend work, read `docs/frontend/README.md` and its linked active plan.
 - Desktop web only for this track. Mobile-specific design and acceptance work is deferred.
 - Record every frontend task in `docs/frontend/logs/` and update `docs/frontend/WORKLOG.md`.

@@ -68,7 +68,7 @@ function mcpWorkspaceFixture(): McpWorkspaceData {
         edges: [],
         evidence: [],
         findings: [],
-        fullName: "2klips/arr-app",
+        fullName: "2klips/alrescha-app",
         id: REPOSITORY_ID,
         indexEntries: [
           {
@@ -170,7 +170,7 @@ async function exerciseJudgmentCreditsAndConsent() {
         )
       ).rows[0]?.id ?? "";
     await database.query(
-      "insert into public.repositories (id, workspace_id, full_name) values ($1, $2, '2klips/arr-app')",
+      "insert into public.repositories (id, workspace_id, full_name) values ($1, $2, '2klips/alrescha-app')",
       [repositoryId, workspaceId],
     );
     await database.query(

@@ -15,9 +15,6 @@ import { z } from "zod";
 export const LOCAL_PROMPT_LOG_PATH = ".alrescha/prompt-log.jsonl";
 /** The directory to gitignore so the log never reaches the remote. */
 export const LOCAL_PROMPT_LOG_GITIGNORE_ENTRY = ".alrescha/";
-/** Read-only migration sources for repositories created before Alrescha. */
-export const LEGACY_LOCAL_PROMPT_LOG_PATH = ".arr/prompt-log.jsonl";
-export const LEGACY_LOCAL_PROMPT_LOG_GITIGNORE_ENTRY = ".arr/";
 
 export const localPromptRecordSchema = z.strictObject({
   occurredAt: z.iso.datetime({ offset: true }),

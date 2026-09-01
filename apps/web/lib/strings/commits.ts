@@ -6,7 +6,7 @@
 
 export const COMMITS = {
   header: {
-    repoLine: "2klips/arr-app · commit 분석",
+    repoLine: "2klips/alrescha-app · commit 분석",
     commitChip: "main · push 자동 분석",
   },
   kicker: "push 자동 분석",

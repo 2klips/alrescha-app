@@ -56,7 +56,7 @@ export const ONBOARDING = {
       "이 번들 공개 픽스처는 GitHub token, 비공개 레포지토리 권한, credit이 필요 없습니다.",
     bodyDefault: "설치 token은 일시적으로만 유지되며 저장되지 않습니다.",
     demoRepo: "alrescha/drifted-demo",
-    defaultRepo: "2klips/arr-app",
+    defaultRepo: "2klips/alrescha-app",
     demoMeta: "fixtures/drifted-demo · 시드된 예상 Findings",
     defaultMeta: "TypeScript · main · 방금 업데이트",
     url: {
