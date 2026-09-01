@@ -48,7 +48,7 @@ export const INSPECTION = {
 
   dependencyAudit: {
     title: "의존성 감사",
-    note: "Arr는 코드를 스캔하지 않습니다 — npm audit 결과를 수집해 보여줄 뿐입니다.",
+    note: "Alrescha는 코드를 스캔하지 않습니다 — npm audit 결과를 수집해 보여줄 뿐입니다.",
     /** `취약점 <n>건` */
     total: (count: number) => `취약점 ${count}건`,
     none: "보고된 취약점 없음",

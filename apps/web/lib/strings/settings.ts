@@ -177,7 +177,7 @@ export const SETTINGS = {
     stored: {
       eyebrow: "저장됨",
       title: "메타데이터 전용 저장",
-      body: "Arr는 레포 식별 정보, 파일 경로, 콘텐츠 digest, 소스 span, 추출된 요구사항, 증거 엣지, Findings, 테스트 리포트, Receipts, 작업 상태, 최소한의 감사 이벤트를 저장합니다.",
+      body: "Alrescha는 레포 식별 정보, 파일 경로, 콘텐츠 digest, 소스 span, 추출된 요구사항, 증거 엣지, Findings, 테스트 리포트, Receipts, 작업 상태, 최소한의 감사 이벤트를 저장합니다.",
     },
     transient: {
       eyebrow: "저장되지 않음",
@@ -239,7 +239,7 @@ export const SETTINGS = {
         },
       },
       storageNote:
-        "원본 소스와 설치 token은 저장되지 않습니다. Arr는 메타데이터, digest, span, Findings, Receipts를 저장합니다. 접근 이벤트는 파일럿 기간 동안 30일 보관됩니다.",
+        "원본 소스와 설치 token은 저장되지 않습니다. Alrescha는 메타데이터, digest, span, Findings, Receipts를 저장합니다. 접근 이벤트는 파일럿 기간 동안 30일 보관됩니다.",
       install: "GitHub App 설치",
       urlConnect: {
         legend: "레포 주소로 바로 연결",

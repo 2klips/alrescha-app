@@ -351,6 +351,7 @@ describe("instruction blocks (todo 11)", () => {
       const block = buildInstructionBlock(target);
       expect(block.snippet).toContain("arr:instructions:start");
       expect(block.snippet).toContain("arr:instructions:end");
+      expect(block.snippet).toContain("Alrescha knowledge graph");
       expect(block.snippet).toContain("get_graph_schema");
       expect(block.snippet).toContain("memory_write");
       expect(block.snippet).toContain("assert_link");

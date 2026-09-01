@@ -1,7 +1,7 @@
 /**
  * The enrich pass, part ① — prose file summaries (Phase 3 Wave C todo 6).
  *
- * A summary is the only shape of source knowledge Arr is allowed to persist:
+ * A summary is the only shape of source knowledge Alrescha is allowed to persist:
  * prose about the file, never the file. The validator enforces that boundary
  * deterministically — a summary that quotes a source line verbatim or smuggles
  * a code block is rejected as `schema_invalid`, which the worker's billing

@@ -58,7 +58,7 @@ describe("advisory minimal-index pull request", () => {
       base: "main",
       body: expect.stringContaining("advisory-only"),
       head: "arr/minimal-index-111111111111",
-      title: "docs(agent): add Arr minimal context index",
+      title: "docs(agent): add Alrescha minimal context index",
     });
   });
 

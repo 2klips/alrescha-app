@@ -21,7 +21,7 @@ export interface InstructionBlock {
   readonly target: AgentInstructionTarget;
 }
 
-const BODY = `## Arr knowledge graph (MCP server: arr)
+const BODY = `## Alrescha knowledge graph (MCP server: arr)
 
 Before grepping or reading files broadly:
 
@@ -54,7 +54,7 @@ export function buildInstructionBlock(
     case "cursor":
       return {
         filename: ".cursor/rules/arr.mdc",
-        snippet: `---\ndescription: Arr knowledge graph tools\nalwaysApply: true\n---\n\n${markdownSnippet()}`,
+        snippet: `---\ndescription: Alrescha knowledge graph tools\nalwaysApply: true\n---\n\n${markdownSnippet()}`,
         target,
       };
     case "generic":

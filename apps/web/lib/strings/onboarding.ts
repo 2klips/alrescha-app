@@ -17,7 +17,7 @@ export const ONBOARDING = {
   identity: {
     kicker: "01 · 신원 확인",
     title: "레포지토리로 시작하세요.",
-    body: "한 번만 로그인하세요. 공개 레포지토리도 Arr가 비공개 단독 워크스페이스를 만듭니다.",
+    body: "한 번만 로그인하세요. 공개 레포지토리도 Alrescha가 비공개 단독 워크스페이스를 만듭니다.",
     cta: "GitHub로 계속하기",
     demoCta: "샘플 데모로 시작",
     note: "설치 없이 시작. 레포지토리 쓰기 없음. Git 없이 시작하려면 로컬 인제스트 CLI(메타데이터만 업로드)도 있습니다.",
@@ -26,7 +26,7 @@ export const ONBOARDING = {
   permission: {
     kicker: "02 · GitHub App",
     title: "읽기 전용. 증거 전용.",
-    body: "GitHub에서 레포지토리를 선택하세요. 접근 권한은 선택한 범위로 제한됩니다. 소스 파일은 일시적으로만 가져오고, Arr는 메타데이터·digest·스팬·Findings·Receipts만 저장합니다.",
+    body: "GitHub에서 레포지토리를 선택하세요. 접근 권한은 선택한 범위로 제한됩니다. 소스 파일은 일시적으로만 가져오고, Alrescha는 메타데이터·digest·스팬·Findings·Receipts만 저장합니다.",
     error: {
       title: "설치에 `contents:read` 권한이 없습니다",
       body: "필요한 읽기 권한을 부여한 뒤 다시 시도하세요. 아무것도 가져오지 않았습니다.",

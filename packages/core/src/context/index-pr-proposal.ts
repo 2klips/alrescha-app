@@ -47,9 +47,9 @@ export type IndexPrProposalResult =
       readonly status: "up_to_date";
     };
 
-const PROPOSAL_TITLE = "docs(agent): add Arr minimal context index";
+const PROPOSAL_TITLE = "docs(agent): add Alrescha minimal context index";
 const PROPOSAL_BODY = [
-  "Arr generated this advisory-only proposal.",
+  "Alrescha generated this advisory-only proposal.",
   "",
   "It adds or refreshes only the bounded managed index and optional CLAUDE.md wrapper.",
   "Review and merge this pull request through the normal repository workflow.",

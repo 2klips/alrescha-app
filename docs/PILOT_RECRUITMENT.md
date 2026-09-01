@@ -2,7 +2,7 @@
 
 ## Invitation
 
-> We are piloting Arr, a metadata-only project-assurance workspace that links requirements, code, CI evidence, and receipts. The GitHub App is read-only by default and can be limited to selected repositories. Raw source is fetched transiently, access events are retained 30 days, and AI judgment is optional. Would you try one real maintenance task and let us compare your own baseline with your own observed workflow?
+> We are piloting Alrescha, a metadata-only project-assurance workspace that links requirements, code, CI evidence, and receipts. The GitHub App is read-only by default and can be limited to selected repositories. Raw source is fetched transiently, access events are retained 30 days, and AI judgment is optional. Would you try one real maintenance task and let us compare your own baseline with your own observed workflow?
 
 Do not promise time, token, cost, accuracy, or quality savings. Any later statement must link to that user's sufficient opt-in observations at `/app/stats` and its JSON export.
 

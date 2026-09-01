@@ -44,7 +44,7 @@ export function renderManagedIndex(input: RenderManagedIndexInput): string {
 
   return [
     ARR_INDEX_BEGIN,
-    "## Project context via Arr",
+    "## Project context via Alrescha",
     "- Before coding, call MCP tool `request_context_pack` with your task description.",
     `- MCP endpoint: ${mcpEndpoint} (token: see project settings)`,
     `- Findings & receipts: ${dashboardUrl}`,
@@ -65,11 +65,11 @@ export function applyManagedIndex(
     !section.startsWith(ARR_INDEX_BEGIN) ||
     !section.endsWith(ARR_INDEX_END)
   ) {
-    throw new TypeError("section must be a complete Arr managed index.");
+    throw new TypeError("section must be a complete Alrescha managed index.");
   }
 
   if (section.split("\n").length > 30) {
-    throw new RangeError("Arr managed index must not exceed 30 lines.");
+    throw new RangeError("Alrescha managed index must not exceed 30 lines.");
   }
 
   if (existing === undefined || existing.length === 0) {
@@ -90,7 +90,7 @@ export function applyManagedIndex(
 
   if (beginCount !== 1 || endCount !== 1) {
     throw new TypeError(
-      "AGENTS.md must contain exactly one complete Arr managed index.",
+      "AGENTS.md must contain exactly one complete Alrescha managed index.",
     );
   }
 
@@ -98,7 +98,7 @@ export function applyManagedIndex(
   const end = existing.indexOf(ARR_INDEX_END, start) + ARR_INDEX_END.length;
 
   if (end < start + ARR_INDEX_END.length) {
-    throw new TypeError("Arr managed index markers are out of order.");
+    throw new TypeError("Alrescha managed index markers are out of order.");
   }
 
   return `${existing.slice(0, start)}${section}${existing.slice(end)}`;

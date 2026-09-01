@@ -15,8 +15,8 @@
 | F2 — App shell/navigation  | Complete | [`logs/2026-09-01-f2-app-shell-navigation.md`](./logs/2026-09-01-f2-app-shell-navigation.md)         |
 | F3 — Evidence graph        | Complete | [`logs/2026-09-01-f3-evidence-graph-workspace.md`](./logs/2026-09-01-f3-evidence-graph-workspace.md) |
 | F4 — Core screens          | Complete | [`logs/2026-09-01-f4-core-product-screens.md`](./logs/2026-09-01-f4-core-product-screens.md)         |
-| F5 — Naming migration      | Pending  | User-facing residuals and compatibility review remain                                                |
-| F6 — Verification/handoff  | Pending  | Full desktop comparison and handoff remain                                                           |
+| F5 — Naming migration      | Complete | [`logs/2026-09-01-f5-naming-migration.md`](./logs/2026-09-01-f5-naming-migration.md)                 |
+| F6 — Verification/handoff  | Next     | Full desktop comparison and handoff remain                                                           |
 
 ## 1. Locked decisions
 
@@ -141,6 +141,8 @@ Delivered 2026-09-01: shared page/header/section/empty-state primitives, canonic
 
 Exit: user-facing name audit is clean; retained technical legacy names are documented.
 
+Delivered 2026-09-01: active UI/state/help copy, metadata, current public and operational documents, generated agent instructions, managed-index text, and advisory proposal copy now use `Alrescha`. Compatibility-sensitive `arr` package, protocol, environment, storage, marker, repository, and branch identifiers remain unchanged and are guarded by tests.
+
 ### F6 — Second-pass verification and handoff
 
 - Run lint, typecheck, unit/integration tests, production build, desktop Playwright suite, accessibility checks, theme screenshots, and graph performance checks.
@@ -188,5 +190,4 @@ Never overwrite another agent's uncommitted work. Do not claim a baseline file a
 
 ## 9. Remaining work
 
-1. **F5 — Next:** finish the user-facing `Arr` → `Alrescha` audit, review metadata and legacy `Alresca` assets, and retain package/env/schema/URI identifiers until a compatibility migration is approved.
-2. **F6 — Pending:** run the complete desktop Playwright/axe matrix, compare before/after evidence at all three widths and both themes, close remaining regressions, document mobile deferral, and create the final Claude Code handoff.
+1. **F6 — Next:** run the complete desktop browser/axe matrix, compare before/after evidence at all three widths and both themes, close remaining regressions, document mobile deferral, and create the final Claude Code handoff.

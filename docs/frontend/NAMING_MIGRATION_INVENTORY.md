@@ -1,6 +1,6 @@
 # Alrescha naming migration inventory
 
-**Status:** Inventory complete; migration not started
+**Status:** F5 user-facing migration complete; compatibility migration deferred
 
 **Snapshot:** 2026-08-31 at commit `68269d9`
 
@@ -81,3 +81,11 @@ Use exact-word searches; plain `Arr` also matches `Array`.
 rg -n "\bArr\b|\bSpecProof\b|\bAlresca\b" apps/web README.md docs
 rg -n "@arr|ARR_|arr://|https://arr\.dev|arr-theme|\.arr/" apps packages tests scripts
 ```
+
+## 5. F5 result — 2026-09-01
+
+- Active UI copy, metadata, current README/operations/privacy/pilot documentation, generated MCP instructions, managed-index copy, and advisory proposal copy now use `Alrescha`.
+- `tests/alrescha-naming.test.ts` prevents `Arr`, `Alresca`, and `SpecProof` from returning to the selected active product surfaces.
+- `@arr/*`, `ARR_*`, `arr://`, `arr-theme`, `.arr/`, MCP server key `arr`, managed markers, proposal branch names, real repository names, and schema/deployment identities remain unchanged.
+- Historical records and the user-owned untracked `docs/brand/ALRESCA_*` exploration remain outside this migration.
+- Detailed evidence: [`logs/2026-09-01-f5-naming-migration.md`](./logs/2026-09-01-f5-naming-migration.md).

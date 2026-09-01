@@ -36,6 +36,7 @@ describe("minimal agent index", () => {
     expect(section.split("\n")).toHaveLength(9);
     expect(section.split("\n").length).toBeLessThanOrEqual(30);
     expect(once).toContain("call MCP tool `request_context_pack`");
+    expect(once).toContain("Project context via Alrescha");
     expect(once).toContain("Once per completed task unit");
   });
 

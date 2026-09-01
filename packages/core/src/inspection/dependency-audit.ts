@@ -1,7 +1,7 @@
 /**
  * Dependency audit ingestion (Phase 2B todo 8, ADR-009-4).
  *
- * Arr does not scan code for vulnerabilities — that boundary is machine-
+ * Alrescha does not scan code for vulnerabilities — that boundary is machine-
  * enforced (`skill-security-scanning`, WORK_SPEC §16). What it does is
  * COLLECT: this module parses the JSON that `npm audit --json` (report
  * version 2, npm 7+) already produced, uploaded by the user or a CI

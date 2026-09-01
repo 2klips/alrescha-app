@@ -79,7 +79,7 @@ dots, rings, tints and borders** — and for text in the dark theme.
 
 | token        | dark      | light     | meaning                                |
 | ------------ | --------- | --------- | -------------------------------------- |
-| `--brand`    | `#FF5A45` | `#D6402E` | Arr vermilion; also `danger`           |
+| `--brand`    | `#FF5A45` | `#D6402E` | Alrescha vermilion; also `danger`      |
 | `--verified` | `#3DDC97` | `#1E8A5E` | execution-backed evidence              |
 | `--inferred` | `#F5B84A` | `#B07A14` | AI-inferred evidence                   |
 | `--info`     | `#6C9EFF` | `#3B6FDB` | information, graph blue; also `accent` |
