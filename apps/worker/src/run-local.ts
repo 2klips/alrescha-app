@@ -22,7 +22,7 @@
 import { createSign } from "node:crypto";
 import { existsSync } from "node:fs";
 
-import { requestInstallationToken } from "@arr/core";
+import { requestInstallationToken } from "@alrescha/core";
 import postgres from "postgres";
 
 import { createAnalysisJobHandler } from "./analysis-job";
@@ -69,8 +69,8 @@ function workerConcurrency(): number {
 
 /**
  * App JWT. This duplicates `apps/web/lib/github/api.ts` — the signer lives in
- * the web app and @arr/core exposes none, so the worker cannot share it. When
- * the worker is productionised the signer should move into @arr/core and both
+ * the web app and @alrescha/core exposes none, so the worker cannot share it. When
+ * the worker is productionised the signer should move into @alrescha/core and both
  * callers should use that one.
  */
 function appJwt(appId: string, privateKey: string, now = Date.now()): string {

@@ -140,7 +140,7 @@ const TECHNICAL_TOKENS = [
   // Identifiers the product shows verbatim: fixture repositories, route paths,
   // requirement codes and environment variable names. These are addresses, not
   // sentences — translating one would break the thing it names.
-  "arr/drifted-demo",
+  "alrescha/drifted-demo",
   "drifted-demo",
   "fixtures",
   "api",

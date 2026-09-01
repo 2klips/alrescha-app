@@ -519,7 +519,7 @@ describe("scale adoption ratchet (design roadmap step 3)", () => {
   });
 });
 
-describe("arr/no-adhoc-font-size + arr/no-adhoc-radius eslint rules", () => {
+describe("alrescha/no-adhoc-font-size + alrescha/no-adhoc-radius eslint rules", () => {
   const ruleTester = new RuleTester({
     languageOptions: {
       ecmaVersion: 2022,
@@ -588,7 +588,7 @@ describe("hardcoded colour gate", () => {
   });
 });
 
-describe("arr/no-hardcoded-hex eslint rule", () => {
+describe("alrescha/no-hardcoded-hex eslint rule", () => {
   const ruleTester = new RuleTester({
     languageOptions: { ecmaVersion: 2022, sourceType: "module" },
   });

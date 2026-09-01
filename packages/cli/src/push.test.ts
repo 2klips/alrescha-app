@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { localIngestPayloadSchema } from "@arr/core";
+import { localIngestPayloadSchema } from "@alrescha/core";
 
 import { pushLocalProject } from "./push";
 
@@ -66,7 +66,7 @@ function fakeServer(options?: { previous?: unknown; uploadStatus?: number }): {
 }
 
 const PUSH_DEFAULTS = {
-  baseUrl: "https://arr.example.test",
+  baseUrl: "https://alrescha.example.test",
   repositoryFullName: "local/demo",
   token: "sp_mcp_test-token",
 };
@@ -131,7 +131,7 @@ describe("pushLocalProject", () => {
   it("reports offline when the server is unreachable, uploading nothing", async () => {
     const root = await fixture();
     const failing = (async () => {
-      throw new Error("getaddrinfo ENOTFOUND arr.example.test");
+      throw new Error("getaddrinfo ENOTFOUND alrescha.example.test");
     }) as unknown as typeof fetch;
 
     const outcome = await pushLocalProject({
@@ -140,7 +140,7 @@ describe("pushLocalProject", () => {
       rootDir: root,
     });
     expect(outcome).toEqual({
-      detail: "getaddrinfo ENOTFOUND arr.example.test",
+      detail: "getaddrinfo ENOTFOUND alrescha.example.test",
       status: "offline",
     });
   });

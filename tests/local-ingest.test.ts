@@ -154,7 +154,10 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
       workspaceA,
       "local/drifted-demo",
     );
-    const repositoryB = await ensureRepository(workspaceB, "arr/drifted-demo");
+    const repositoryB = await ensureRepository(
+      workspaceB,
+      "alrescha/drifted-demo",
+    );
     await applyPlan(workspaceA, repositoryA, localPlan);
     await applyPlan(workspaceB, repositoryB, githubPlan);
 

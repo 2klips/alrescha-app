@@ -1,4 +1,4 @@
-export const CORE_PACKAGE_NAME = "@arr/core";
+export const CORE_PACKAGE_NAME = "@alrescha/core";
 
 export {
   accessEventSchema,
@@ -168,6 +168,8 @@ export {
 export {
   RECEIPT_PREDICATE_TYPE,
   RECEIPT_TOOL,
+  LEGACY_RECEIPT_TOOL_NAME,
+  alreschaReceiptPredicateSchema,
   digestInTotoStatement,
   inTotoStatementSchema,
   inTotoSubjectSchema,
@@ -260,6 +262,10 @@ export type {
 
 export {
   PROGRESS_LOGGING_INSTRUCTION,
+  ALRESCHA_INDEX_BEGIN,
+  ALRESCHA_INDEX_END,
+  LEGACY_ARR_INDEX_BEGIN,
+  LEGACY_ARR_INDEX_END,
   ARR_INDEX_BEGIN,
   ARR_INDEX_END,
   applyManagedIndex,
@@ -366,6 +372,8 @@ export type {
 export {
   LOCAL_PROMPT_LOG_GITIGNORE_ENTRY,
   LOCAL_PROMPT_LOG_PATH,
+  LEGACY_LOCAL_PROMPT_LOG_GITIGNORE_ENTRY,
+  LEGACY_LOCAL_PROMPT_LOG_PATH,
   localPromptRecordSchema,
   parseLocalPromptLog,
   serializeLocalPromptLog,

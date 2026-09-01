@@ -3,7 +3,7 @@ import {
   GITHUB_READ_ONLY_PERMISSIONS,
   requestInstallationToken,
   selectGitHubRepository,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import { createGitHubAppJwt } from "./api";
 import { githubAppEnvironment } from "./env";

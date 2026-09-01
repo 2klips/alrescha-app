@@ -1,5 +1,5 @@
 /**
- * `arr push` — scan locally, upload metadata only (Phase 2B todo 3, ADR-013).
+ * `alrescha push` — scan locally, upload metadata only (Phase 2B todo 3, ADR-013).
  *
  * The pipeline is the GitHub path's own: the server hands back the previous
  * scan state, `scanRepository` (the shared deterministic scanner) computes the
@@ -11,7 +11,7 @@ import {
   localIngestPayloadSchema,
   scanRepository,
   type PreviousScannedArtifact,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import { createLocalRepositorySource } from "./local-source";
 

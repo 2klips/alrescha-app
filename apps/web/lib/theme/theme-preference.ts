@@ -12,7 +12,8 @@
 
 import { THEMES, type Theme } from "./tokens";
 
-export const THEME_STORAGE_KEY = "arr-theme";
+export const THEME_STORAGE_KEY = "alrescha-theme";
+export const LEGACY_THEME_STORAGE_KEY = "arr-theme";
 export const THEME_ATTRIBUTE = "data-theme";
 export const DEFAULT_THEME: Theme = "dark";
 
@@ -70,7 +71,9 @@ export function applyTheme(theme: Theme, root?: Element | null): void {
  */
 export const THEME_INIT_SCRIPT = `(function(){try{var s=window.localStorage.getItem(${JSON.stringify(
   THEME_STORAGE_KEY,
-)});var t=(s===${JSON.stringify("dark")}||s===${JSON.stringify(
+)});if(s===null){s=window.localStorage.getItem(${JSON.stringify(
+  LEGACY_THEME_STORAGE_KEY,
+)});}var t=(s===${JSON.stringify("dark")}||s===${JSON.stringify(
   "light",
 )})?s:(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches?"light":${JSON.stringify(
   DEFAULT_THEME,

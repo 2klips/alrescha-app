@@ -3,7 +3,7 @@ import {
   moduleClusterOf,
   moduleMemberDigest,
   type ModuleCluster,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import type {
   McpModuleSummaryData,

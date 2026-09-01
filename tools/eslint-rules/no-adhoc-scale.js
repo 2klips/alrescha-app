@@ -1,5 +1,5 @@
 /**
- * arr/no-adhoc-font-size + arr/no-adhoc-radius — design roadmap step 3 (P7:
+ * alrescha/no-adhoc-font-size + alrescha/no-adhoc-radius — design roadmap step 3 (P7:
  * a scale that is not machine-enforced drifts back to ad hoc within months).
  *
  * Inside a JSX `style={{ … }}` attribute, `fontSize` must come from the type

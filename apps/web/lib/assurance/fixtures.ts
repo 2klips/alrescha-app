@@ -1,4 +1,4 @@
-import type { InTotoStatement } from "@arr/core/receipts";
+import type { InTotoStatement } from "@alrescha/core/receipts";
 
 import type { EvidenceGrade } from "../dashboard/graph-model";
 
@@ -310,7 +310,7 @@ const CURRENT_STATEMENT: InTotoStatement = {
     previousReceiptDigest: "9".repeat(64),
     repository: "2klips/arr-app",
     runId: "run-bad0551",
-    tool: { name: "arr", version: "0.1.0" },
+    tool: { name: "alrescha", version: "0.1.0" },
   },
   predicateType: "https://arr-app-web.vercel.app/receipt/v1",
   subject: [
@@ -332,7 +332,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-10T13:42:00.000Z",
     expectedDigest:
-      "523418655e9609743cb75e592cf28a512c667e1b49253854f175cf93c3ac476d",
+      "8d88908564608da6546ad9eb8ff492e81eb0c7372961ec4e748b237a903058a6",
     id: "receipt-current",
     label: "bad0551 · deterministic analysis",
     stale: false,
@@ -341,7 +341,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-09T17:08:00.000Z",
     expectedDigest:
-      "523418655e9609743cb75e592cf28a512c667e1b49253854f175cf93c3ac476d",
+      "8d88908564608da6546ad9eb8ff492e81eb0c7372961ec4e748b237a903058a6",
     id: "receipt-tampered",
     label: "bad0551 · tampered fixture",
     stale: false,
@@ -356,7 +356,7 @@ export const RECEIPTS: readonly ReceiptFixture[] = [
   {
     createdAt: "2026-08-08T09:12:00.000Z",
     expectedDigest:
-      "176b9f63b6c185d2a29e33c921147c320a6135d921e165e922229d18c79ab4fe",
+      "04720cc26e4d8d8f49e317fa99100be849d0643b7d9084f71dbce06c364f880b",
     id: "receipt-previous",
     label: "e9101b5 · previous analysis",
     stale: true,

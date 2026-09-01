@@ -1,5 +1,5 @@
 {
-  "name": "@arr/web",
+  "name": "@alrescha/web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@arr/core": "workspace:*",
-    "@arr/mcp": "workspace:^",
+    "@alrescha/core": "workspace:*",
+    "@alrescha/mcp": "workspace:^",
     "@supabase/ssr": "0.12.4",
     "@supabase/supabase-js": "2.112.2",
     "d3-force": "3.0.0",

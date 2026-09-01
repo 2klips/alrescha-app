@@ -1,4 +1,4 @@
-import { GITHUB_API_VERSION } from "@arr/core";
+import { GITHUB_API_VERSION } from "@alrescha/core";
 
 function repositoryApiPath(fullName: string): string {
   const parts = fullName.split("/");

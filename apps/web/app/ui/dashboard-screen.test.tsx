@@ -7,7 +7,7 @@ import {
   buildDashboardViewModel,
   graphNodeArea,
 } from "../../lib/dashboard/graph-model";
-import { BRAIN_AREAS } from "@arr/core/artifact-facets";
+import { BRAIN_AREAS } from "@alrescha/core/artifact-facets";
 import { BRAND, DASHBOARD } from "../../lib/strings";
 import { DashboardScreen } from "./dashboard-screen";
 import { GraphTableView } from "./graph-table-view";

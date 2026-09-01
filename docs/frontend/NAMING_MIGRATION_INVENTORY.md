@@ -1,8 +1,10 @@
 # Alrescha naming migration inventory
 
-**Status:** F5 user-facing migration complete; compatibility migration deferred
+**Status:** Alrescha user-facing + compatibility identifier migration complete; legacy removal deferred
 
-**Snapshot:** 2026-08-31 at commit `68269d9`
+**Baseline snapshot:** 2026-08-31 at commit `68269d9`
+
+> Sections 1–5 retain the F5 inventory and decision history. Current canonical/legacy policy is in §6.
 
 ## 1. Exact-name inventory
 
@@ -89,3 +91,14 @@ rg -n "@arr|ARR_|arr://|https://arr\.dev|arr-theme|\.arr/" apps packages tests s
 - `@arr/*`, `ARR_*`, `arr://`, `arr-theme`, `.arr/`, MCP server key `arr`, managed markers, proposal branch names, real repository names, and schema/deployment identities remain unchanged.
 - Historical records and the user-owned untracked `docs/brand/ALRESCA_*` exploration remain outside this migration.
 - Detailed evidence: [`logs/2026-09-01-f5-naming-migration.md`](./logs/2026-09-01-f5-naming-migration.md).
+
+## 6. Compatibility identifier result — 2026-09-01
+
+- Canonical: `alrescha`, `@alrescha/*`, `ALRESCHA_*`, `alrescha://`, `.alrescha/`, `ALRESCHA:BEGIN/END`, and `alrescha/minimal-index-*`.
+- Read compatibility: CLI binary `arr`; `ARR_SERVER_URL`, `ARR_TOKEN`, `ARR_MCP_URL`; legacy local-storage keys; legacy managed-index blocks; stored receipt tool name `arr`; deprecated exported marker/schema aliases.
+- New writes and generated output use only canonical identifiers.
+- Demo identity migrated to `alrescha/drifted-demo`; recording HMACs and artifact digest were regenerated from the changed fixture bytes.
+- Immutable/real external IDs retained: `2klips/arr-app`, `arr-app-web.vercel.app`, `arr-worker`, production receipt predicate URI, applied migration names, and the shared `arr_migrations` advisory lock.
+- Historical ADR/spec/reports and `.arr-*` CSS hooks remain unchanged. CSS hooks are private selectors, not interoperability identifiers.
+- Legacy alias removal is a separate future release. Do not remove aliases until external consumers and stored local state are measured as migrated.
+- Detailed evidence: [`logs/2026-09-01-alrescha-compatibility-identifiers.md`](./logs/2026-09-01-alrescha-compatibility-identifiers.md).

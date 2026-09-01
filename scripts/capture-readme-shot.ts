@@ -8,7 +8,7 @@
  * caught mid-layout and the picture is a pile of dots at the origin.
  *
  * Usage:
- *   pnpm --filter @arr/web build
+ *   pnpm --filter @alrescha/web build
  *   node --import tsx scripts/capture-readme-shot.ts
  */
 
@@ -76,7 +76,8 @@ async function main(): Promise<void> {
         });
         const page = await context.newPage();
         await page.addInitScript(
-          (value: string) => window.localStorage.setItem("arr-theme", value),
+          (value: string) =>
+            window.localStorage.setItem("alrescha-theme", value),
           theme,
         );
         await page.goto(origin, { waitUntil: "load" });

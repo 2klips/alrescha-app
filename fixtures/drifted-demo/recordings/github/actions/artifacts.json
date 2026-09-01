@@ -5,8 +5,8 @@
       "id": 7001,
       "name": "junit-results",
       "size_in_bytes": 512,
-      "url": "https://api.github.com/repos/arr/drifted-demo/actions/artifacts/7001",
-      "archive_download_url": "https://api.github.com/repos/arr/drifted-demo/actions/artifacts/7001/zip",
+      "url": "https://api.github.com/repos/alrescha/drifted-demo/actions/artifacts/7001",
+      "archive_download_url": "https://api.github.com/repos/alrescha/drifted-demo/actions/artifacts/7001/zip",
       "expired": false,
       "workflow_run": {
         "id": 8801,
@@ -17,8 +17,8 @@
       "id": 7002,
       "name": "vitest-results",
       "size_in_bytes": 768,
-      "url": "https://api.github.com/repos/arr/drifted-demo/actions/artifacts/7002",
-      "archive_download_url": "https://api.github.com/repos/arr/drifted-demo/actions/artifacts/7002/zip",
+      "url": "https://api.github.com/repos/alrescha/drifted-demo/actions/artifacts/7002",
+      "archive_download_url": "https://api.github.com/repos/alrescha/drifted-demo/actions/artifacts/7002/zip",
       "expired": false,
       "workflow_run": {
         "id": 8801,

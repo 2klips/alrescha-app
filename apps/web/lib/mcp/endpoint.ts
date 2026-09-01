@@ -1,4 +1,4 @@
-import { createHostedMcpEndpoint, type HostedMcpEndpoint } from "@arr/mcp";
+import { createHostedMcpEndpoint, type HostedMcpEndpoint } from "@alrescha/mcp";
 import { after } from "next/server";
 
 import { createAdminClient } from "../supabase/admin";

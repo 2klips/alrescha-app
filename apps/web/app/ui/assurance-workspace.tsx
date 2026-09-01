@@ -3,7 +3,7 @@
 import {
   verifyInTotoStatement,
   type ReceiptVerification,
-} from "@arr/core/receipts";
+} from "@alrescha/core/receipts";
 import {
   AlertTriangle,
   ArrowRight,

@@ -8,7 +8,7 @@ import {
   type AnalysisTriggerKind,
   type CommitAnalysisCard,
   type CommitFindingsDelta,
-} from "@arr/core";
+} from "@alrescha/core";
 
 /** Raw rows as Supabase returns them (snake_case). */
 export interface CommitCardRunRow {

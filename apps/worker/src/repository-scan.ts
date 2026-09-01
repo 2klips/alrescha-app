@@ -1,4 +1,4 @@
-import { scanRepository, type RepositorySource } from "@arr/core";
+import { scanRepository, type RepositorySource } from "@alrescha/core";
 
 import type { RepositoryScanStore } from "./repository-scan-store";
 

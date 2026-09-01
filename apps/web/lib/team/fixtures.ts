@@ -7,7 +7,7 @@ import {
   type PromptRubric,
   type VibeGateResults,
   type VibeIndex,
-} from "@arr/core";
+} from "@alrescha/core";
 
 export type DemoTeamState = "team" | "solo";
 

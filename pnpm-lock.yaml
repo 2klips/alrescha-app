@@ -74,10 +74,10 @@ importers:
 
   apps/web:
     dependencies:
-      '@arr/core':
+      '@alrescha/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@arr/mcp':
+      '@alrescha/mcp':
         specifier: workspace:^
         version: link:../../packages/mcp
       '@supabase/ssr':
@@ -129,7 +129,7 @@ importers:
 
   apps/worker:
     dependencies:
-      '@arr/core':
+      '@alrescha/core':
         specifier: workspace:*
         version: link:../../packages/core
       fflate:
@@ -160,7 +160,7 @@ importers:
 
   packages/cli:
     dependencies:
-      '@arr/core':
+      '@alrescha/core':
         specifier: workspace:*
         version: link:../core
       zod:
@@ -231,7 +231,7 @@ importers:
 
   packages/mcp:
     dependencies:
-      '@arr/core':
+      '@alrescha/core':
         specifier: workspace:^
         version: link:../core
       '@modelcontextprotocol/server':

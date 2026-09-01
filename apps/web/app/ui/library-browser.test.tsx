@@ -1,4 +1,4 @@
-import { createLibrarySnapshot, type LibraryItem } from "@arr/core";
+import { createLibrarySnapshot, type LibraryItem } from "@alrescha/core";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -15,7 +15,7 @@ const AUTH_ITEM: LibraryItem = {
     source: {
       commitSha: "1".repeat(40),
       path: ".agents/skills/review-auth/SKILL.md",
-      repository: "arr/drifted-demo",
+      repository: "alrescha/drifted-demo",
     },
     tags: ["auth", "review"],
     type: "skill",
@@ -54,7 +54,7 @@ describe("personal library UI", () => {
     expect(html).toContain('value="oauth"');
     expect(html).toContain("Review auth");
     expect(html).not.toContain("Database rules");
-    expect(html).toContain("arr/drifted-demo");
+    expect(html).toContain("alrescha/drifted-demo");
     expect(html).toContain(".agents/skills/review-auth/SKILL.md");
     expect(html).toContain("1".repeat(40));
     expect(html).toContain("sha256:");
@@ -78,7 +78,7 @@ describe("personal library UI", () => {
     const combined = `${libraryHtml}${harnessHtml}`;
 
     expect(harnessHtml).toContain(HARNESS.card.save);
-    expect(harnessHtml).toContain("arr/drifted-demo");
+    expect(harnessHtml).toContain("alrescha/drifted-demo");
     expect(harnessHtml).toContain("1".repeat(40));
     expect(combined).not.toMatch(
       /import into project|프로젝트로 가져오기|프로젝트에 추가/i,

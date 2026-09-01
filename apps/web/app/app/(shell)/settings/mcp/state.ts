@@ -1,5 +1,5 @@
-import type { MinimalIndexProposalFile } from "@arr/core";
-import type { SelectedContextPack } from "@arr/mcp";
+import type { MinimalIndexProposalFile } from "@alrescha/core";
+import type { SelectedContextPack } from "@alrescha/mcp";
 
 export interface IssueMcpTokenState {
   error: string | null;

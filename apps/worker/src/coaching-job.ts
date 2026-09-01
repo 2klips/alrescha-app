@@ -7,7 +7,7 @@ import {
   validateCoachingOutput,
   type PromptCoachingOutput,
   type PromptSignals,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import type { JobHandler } from "./worker";
 

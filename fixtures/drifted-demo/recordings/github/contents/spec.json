@@ -6,9 +6,9 @@
   "path": "spec.md",
   "content": "IyBEcmlmdGVkIERlbW8gU3BlY2lmaWNhdGlvbgoKIyMgQXV0aGVudGljYXRpb24KCi0gWyBdIFJFUS1BVVRILTAwMTogVGhlIGFwcCBNVVNUIGltcGxlbWVudCBHaXRIdWIgT0F1dGggbG9naW4gdGhyb3VnaCBgbG9naW5XaXRoR2l0SHViYC4KLSBbeF0gUkVRLUFVVEgtMDAyOiBUaGUgYXBwIE1VU1QgZXhwaXJlIHNlc3Npb25zIGFmdGVyIDMwIG1pbnV0ZXMuCi0gW3hdIFJFUS1BVVRILTAwMzogVGhlIGFwcCBNVVNUIHJlY29yZCBhbiBhdWRpdCBldmVudCBhZnRlciBldmVyeSBzdWNjZXNzZnVsIGxvZ2luLgoKIyMgUHJvZHVjdCBjbGFpbXMKClRoZSBzZXJ2aWNlIHN1cHBvcnRzIGF1dG9tYXRpYyBwYXNzd29yZCByZXNldCBmb3IgZXZlcnkgYWNjb3VudC4KCiMjIFJldGlyZWQgaW50ZWdyYXRpb24KCmBzcmMvbGVnYWN5LWJpbGxpbmcudHMjbGVnYWN5Q2hhcmdlYCBpbXBsZW1lbnRzIHN1YnNjcmlwdGlvbiBiaWxsaW5nLgoK",
   "sha": "2c21df516c98fbe15507a60b3d0d7e91008dd80e",
-  "url": "https://api.github.com/repos/arr/drifted-demo/contents/spec.md?ref=1111111111111111111111111111111111111111",
-  "git_url": "https://api.github.com/repos/arr/drifted-demo/git/blobs/2c21df516c98fbe15507a60b3d0d7e91008dd80e",
-  "html_url": "https://github.com/arr/drifted-demo/blob/1111111111111111111111111111111111111111/spec.md",
-  "download_url": "https://raw.githubusercontent.com/arr/drifted-demo/1111111111111111111111111111111111111111/spec.md"
+  "url": "https://api.github.com/repos/alrescha/drifted-demo/contents/spec.md?ref=1111111111111111111111111111111111111111",
+  "git_url": "https://api.github.com/repos/alrescha/drifted-demo/git/blobs/2c21df516c98fbe15507a60b3d0d7e91008dd80e",
+  "html_url": "https://github.com/alrescha/drifted-demo/blob/1111111111111111111111111111111111111111/spec.md",
+  "download_url": "https://raw.githubusercontent.com/alrescha/drifted-demo/1111111111111111111111111111111111111111/spec.md"
 }
 

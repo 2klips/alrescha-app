@@ -1,4 +1,4 @@
-export const MCP_PACKAGE_NAME = "@arr/mcp";
+export const MCP_PACKAGE_NAME = "@alrescha/mcp";
 
 export { createHostedMcpEndpoint } from "./hosted";
 export {

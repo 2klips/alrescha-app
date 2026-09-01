@@ -12,7 +12,7 @@ import {
   validateProseSummary,
   type FileSummaryInput,
   type SynthesizedConcept,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import type { EnrichProvider } from "./ai-providers";
 import type { JobHandler } from "./worker";

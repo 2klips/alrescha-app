@@ -8,7 +8,7 @@ import {
   noAdhocRadius,
 } from "./tools/eslint-rules/no-adhoc-scale.js";
 
-const arrPlugin = {
+const alreschaPlugin = {
   rules: {
     "no-hardcoded-hex": noHardcodedHex,
     "no-adhoc-font-size": noAdhocFontSize,
@@ -50,12 +50,16 @@ export default tseslint.config(
   {
     // Ink & Seal (ADR-009-3): colours live only in app/styles/tokens.css.
     files: ["apps/**/*.{ts,tsx}", "packages/**/*.{ts,tsx}"],
-    plugins: { arr: arrPlugin },
+    plugins: {
+      alrescha: alreschaPlugin,
+      // One-release alias for local configs copied before the rename.
+      arr: alreschaPlugin,
+    },
     rules: {
-      "arr/no-hardcoded-hex": "error",
+      "alrescha/no-hardcoded-hex": "error",
       // Design roadmap step 3 (P7): inline styles must use the scale tokens.
-      "arr/no-adhoc-font-size": "error",
-      "arr/no-adhoc-radius": "error",
+      "alrescha/no-adhoc-font-size": "error",
+      "alrescha/no-adhoc-radius": "error",
     },
   },
 );

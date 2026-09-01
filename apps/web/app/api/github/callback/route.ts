@@ -1,4 +1,4 @@
-import { prepareGitHubOnboarding } from "@arr/core";
+import { prepareGitHubOnboarding } from "@alrescha/core";
 import { NextResponse } from "next/server";
 
 import {

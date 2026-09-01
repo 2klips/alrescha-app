@@ -1,6 +1,13 @@
-export const ARR_INDEX_BEGIN =
+export const ALRESCHA_INDEX_BEGIN =
+  "<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->";
+export const ALRESCHA_INDEX_END = "<!-- ALRESCHA:END -->";
+export const LEGACY_ARR_INDEX_BEGIN =
   "<!-- ARR:BEGIN (managed — do not edit inside) -->";
-export const ARR_INDEX_END = "<!-- ARR:END -->";
+export const LEGACY_ARR_INDEX_END = "<!-- ARR:END -->";
+/** @deprecated Use ALRESCHA_INDEX_BEGIN. */
+export const ARR_INDEX_BEGIN = ALRESCHA_INDEX_BEGIN;
+/** @deprecated Use ALRESCHA_INDEX_END. */
+export const ARR_INDEX_END = ALRESCHA_INDEX_END;
 export const PROGRESS_LOGGING_INSTRUCTION = [
   "- Once per completed task unit, call `log_progress`:",
   '  `{"task":"<todo id/title>","status":"done","summary":"<verified result; max 200 chars>","refs":["<path/commit>"]}`',
@@ -43,13 +50,13 @@ export function renderManagedIndex(input: RenderManagedIndexInput): string {
   const mcpEndpoint = safeHttpsUrl(input.mcpEndpoint, "mcpEndpoint");
 
   return [
-    ARR_INDEX_BEGIN,
+    ALRESCHA_INDEX_BEGIN,
     "## Project context via Alrescha",
     "- Before coding, call MCP tool `request_context_pack` with your task description.",
     `- MCP endpoint: ${mcpEndpoint} (token: see project settings)`,
     `- Findings & receipts: ${dashboardUrl}`,
     ...PROGRESS_LOGGING_INSTRUCTION.split("\n"),
-    ARR_INDEX_END,
+    ALRESCHA_INDEX_END,
   ].join("\n");
 }
 
@@ -62,8 +69,8 @@ export function applyManagedIndex(
   section: string,
 ): string {
   if (
-    !section.startsWith(ARR_INDEX_BEGIN) ||
-    !section.endsWith(ARR_INDEX_END)
+    !section.startsWith(ALRESCHA_INDEX_BEGIN) ||
+    !section.endsWith(ALRESCHA_INDEX_END)
   ) {
     throw new TypeError("section must be a complete Alrescha managed index.");
   }
@@ -76,10 +83,17 @@ export function applyManagedIndex(
     return `${section}\n`;
   }
 
-  const beginCount = occurrences(existing, ARR_INDEX_BEGIN);
-  const endCount = occurrences(existing, ARR_INDEX_END);
+  const canonicalBeginCount = occurrences(existing, ALRESCHA_INDEX_BEGIN);
+  const canonicalEndCount = occurrences(existing, ALRESCHA_INDEX_END);
+  const legacyBeginCount = occurrences(existing, LEGACY_ARR_INDEX_BEGIN);
+  const legacyEndCount = occurrences(existing, LEGACY_ARR_INDEX_END);
 
-  if (beginCount === 0 && endCount === 0) {
+  if (
+    canonicalBeginCount === 0 &&
+    canonicalEndCount === 0 &&
+    legacyBeginCount === 0 &&
+    legacyEndCount === 0
+  ) {
     const separator = existing.endsWith("\n\n")
       ? ""
       : existing.endsWith("\n")
@@ -88,16 +102,33 @@ export function applyManagedIndex(
     return `${existing}${separator}${section}\n`;
   }
 
-  if (beginCount !== 1 || endCount !== 1) {
+  const hasCanonicalPair =
+    canonicalBeginCount === 1 &&
+    canonicalEndCount === 1 &&
+    legacyBeginCount === 0 &&
+    legacyEndCount === 0;
+  const hasLegacyPair =
+    legacyBeginCount === 1 &&
+    legacyEndCount === 1 &&
+    canonicalBeginCount === 0 &&
+    canonicalEndCount === 0;
+
+  if (!hasCanonicalPair && !hasLegacyPair) {
     throw new TypeError(
       "AGENTS.md must contain exactly one complete Alrescha managed index.",
     );
   }
 
-  const start = existing.indexOf(ARR_INDEX_BEGIN);
-  const end = existing.indexOf(ARR_INDEX_END, start) + ARR_INDEX_END.length;
+  const beginMarker = hasCanonicalPair
+    ? ALRESCHA_INDEX_BEGIN
+    : LEGACY_ARR_INDEX_BEGIN;
+  const endMarker = hasCanonicalPair
+    ? ALRESCHA_INDEX_END
+    : LEGACY_ARR_INDEX_END;
+  const start = existing.indexOf(beginMarker);
+  const end = existing.indexOf(endMarker, start) + endMarker.length;
 
-  if (end < start + ARR_INDEX_END.length) {
+  if (end < start + endMarker.length) {
     throw new TypeError("Alrescha managed index markers are out of order.");
   }
 

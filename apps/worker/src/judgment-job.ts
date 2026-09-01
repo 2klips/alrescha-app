@@ -9,7 +9,7 @@ import {
   type JudgmentProvider,
   type JudgmentKind,
   type JudgmentTargetState,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import type { JobHandler } from "./worker";
 

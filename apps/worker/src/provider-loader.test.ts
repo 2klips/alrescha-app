@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import { encryptByokKey } from "@arr/core/byok";
+import { encryptByokKey } from "@alrescha/core/byok";
 import { describe, expect, it, vi } from "vitest";
 
 import { JudgmentProviderLoader } from "./provider-loader";

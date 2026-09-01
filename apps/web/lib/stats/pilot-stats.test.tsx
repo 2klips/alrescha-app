@@ -1,4 +1,4 @@
-import { computePilotStats } from "@arr/core/stats";
+import { computePilotStats } from "@alrescha/core/stats";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
@@ -107,11 +107,11 @@ describe("pilot stats JSON export", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-disposition")).toContain(
-      "arr-pilot-stats.json",
+      "alrescha-pilot-stats.json",
     );
     await expect(response.json()).resolves.toEqual({
       report,
-      schemaVersion: "arr.pilot-stats.v1",
+      schemaVersion: "alrescha.pilot-stats.v1",
       workspaceId: "workspace-owner",
     });
   });

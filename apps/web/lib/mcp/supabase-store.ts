@@ -22,7 +22,7 @@ import {
   type McpStore,
   type McpWorkspaceData,
   type PublicMcpTokenRecord,
-} from "@arr/mcp";
+} from "@alrescha/mcp";
 
 type Row = Record<string, unknown>;
 

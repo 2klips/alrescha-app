@@ -5,7 +5,7 @@ import {
   type ContextDocumentKind,
   type ContextTargetAgent,
   type PageRankEdge,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import type {
   McpArtifactData,

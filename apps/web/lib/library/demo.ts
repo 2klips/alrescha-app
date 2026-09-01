@@ -1,4 +1,4 @@
-import { createLibrarySnapshot, type LibraryItem } from "@arr/core";
+import { createLibrarySnapshot, type LibraryItem } from "@alrescha/core";
 
 const REVIEW_AUTH_CONTENT = `---
 name: review-auth
@@ -20,7 +20,7 @@ export const DEMO_LIBRARY_ITEM: LibraryItem = {
     source: {
       commitSha: "1".repeat(40),
       path: ".agents/skills/review-auth/SKILL.md",
-      repository: "arr/drifted-demo",
+      repository: "alrescha/drifted-demo",
     },
     tags: ["auth", "review"],
     type: "skill",

@@ -21,8 +21,8 @@ describe("minimal agent index", () => {
       "",
     ].join("\n");
     const section = renderManagedIndex({
-      dashboardUrl: "https://app.arr.test/workspaces/ws_demo",
-      mcpEndpoint: "https://mcp.arr.test",
+      dashboardUrl: "https://app.alrescha.test/workspaces/ws_demo",
+      mcpEndpoint: "https://mcp.alrescha.test",
     });
 
     const once = applyManagedIndex(existing, section);
@@ -37,6 +37,8 @@ describe("minimal agent index", () => {
     expect(section.split("\n").length).toBeLessThanOrEqual(30);
     expect(once).toContain("call MCP tool `request_context_pack`");
     expect(once).toContain("Project context via Alrescha");
+    expect(once).toContain("<!-- ALRESCHA:BEGIN");
+    expect(once).not.toContain("<!-- ARR:BEGIN");
     expect(once).toContain("Once per completed task unit");
   });
 
@@ -55,8 +57,8 @@ describe("minimal agent index", () => {
     const proposal = buildMinimalIndexProposalFiles({
       agentsContent: null,
       claudeContent: null,
-      dashboardUrl: "https://app.arr.test/workspaces/ws_demo",
-      mcpEndpoint: "https://mcp.arr.test",
+      dashboardUrl: "https://app.alrescha.test/workspaces/ws_demo",
+      mcpEndpoint: "https://mcp.alrescha.test",
     });
 
     expect(proposal.files).toEqual([
@@ -77,8 +79,8 @@ describe("minimal agent index", () => {
     const regenerated = buildMinimalIndexProposalFiles({
       agentsContent: proposal.files[0]?.after ?? null,
       claudeContent: proposal.files[1]?.after ?? null,
-      dashboardUrl: "https://app.arr.test/workspaces/ws_demo",
-      mcpEndpoint: "https://mcp.arr.test",
+      dashboardUrl: "https://app.alrescha.test/workspaces/ws_demo",
+      mcpEndpoint: "https://mcp.alrescha.test",
     });
 
     expect(regenerated.files).toEqual([]);
@@ -87,8 +89,8 @@ describe("minimal agent index", () => {
 
   it("fails closed on incomplete or duplicate managed markers", () => {
     const section = renderManagedIndex({
-      dashboardUrl: "https://app.arr.test/workspaces/ws_demo",
-      mcpEndpoint: "https://mcp.arr.test",
+      dashboardUrl: "https://app.alrescha.test/workspaces/ws_demo",
+      mcpEndpoint: "https://mcp.alrescha.test",
     });
 
     expect(() =>

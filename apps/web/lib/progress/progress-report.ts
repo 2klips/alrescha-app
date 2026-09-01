@@ -2,7 +2,7 @@ import {
   buildProgressDashboard,
   type ProgressDashboard,
   type ProgressTodo,
-} from "@arr/core";
+} from "@alrescha/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface RequirementRow {

@@ -1,4 +1,4 @@
-import type { RepositoryScanPlan } from "@arr/core";
+import type { RepositoryScanPlan } from "@alrescha/core";
 import type postgres from "postgres";
 import { describe, expect, it } from "vitest";
 

@@ -24,13 +24,14 @@ export async function createPilotStatsExportResponse(
   return Response.json(
     {
       report,
-      schemaVersion: "arr.pilot-stats.v1",
+      schemaVersion: "alrescha.pilot-stats.v1",
       workspaceId,
     },
     {
       headers: {
         "Cache-Control": "private, no-store",
-        "Content-Disposition": 'attachment; filename="arr-pilot-stats.json"',
+        "Content-Disposition":
+          'attachment; filename="alrescha-pilot-stats.json"',
       },
     },
   );

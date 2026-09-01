@@ -1,4 +1,4 @@
-import { personalizedPageRank, type PageRankEdge } from "@arr/core";
+import { personalizedPageRank, type PageRankEdge } from "@alrescha/core";
 
 import type { McpNodeType, McpWorkspaceData } from "./store";
 

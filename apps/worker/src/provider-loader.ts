@@ -1,5 +1,5 @@
-import { decryptByokKey, type ByokKeyEnvelope } from "@arr/core/byok";
-import type { JudgmentProvider } from "@arr/core";
+import { decryptByokKey, type ByokKeyEnvelope } from "@alrescha/core/byok";
+import type { JudgmentProvider } from "@alrescha/core";
 
 import {
   AnthropicCoachingProvider,

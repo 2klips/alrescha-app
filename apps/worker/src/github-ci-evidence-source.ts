@@ -3,7 +3,7 @@ import {
   type CiCheckRun,
   type CiReportArtifact,
   type CiReportFormat,
-} from "@arr/core";
+} from "@alrescha/core";
 import { unzipSync } from "fflate";
 
 type JsonRecord = Record<string, unknown>;

@@ -1,7 +1,7 @@
 /**
  * The `analyze` job: stored artifacts → findings → receipt.
  *
- * The rules engine has been in @arr/core since Phase 2B and the queue has been
+ * The rules engine has been in @alrescha/core since Phase 2B and the queue has been
  * enqueuing `analyze` jobs since the first webhook, but nothing joined the two
  * — and nothing anywhere wrote a receipt row. This is that join.
  *
@@ -30,7 +30,7 @@ import {
   type AssuranceFinding,
   type AssuranceSourceFile,
   type InTotoStatement,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import type { ClaimedJob } from "./queue";
 import type { JobHandler } from "./worker";

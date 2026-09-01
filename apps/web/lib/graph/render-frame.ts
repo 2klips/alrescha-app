@@ -8,7 +8,7 @@
  * module never names a colour.
  */
 
-import { personalizedPageRank } from "@arr/core";
+import { personalizedPageRank } from "@alrescha/core";
 
 import type {
   EvidenceGrade,

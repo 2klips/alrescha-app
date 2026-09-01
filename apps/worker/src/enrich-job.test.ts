@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { isNonBillableAiError } from "@arr/core";
+import { isNonBillableAiError } from "@alrescha/core";
 
 import type { EnrichProvider } from "./ai-providers";
 import {
@@ -303,7 +303,7 @@ describe("enrich job concept pass (todo 7)", () => {
     const synthesize = vi.fn();
     const enrichStore = store(provider(undefined, synthesize), [], SUMMARIZED);
     // Answer the same digest the handler will compute.
-    const { conceptSynthesisDigest } = await import("@arr/core");
+    const { conceptSynthesisDigest } = await import("@alrescha/core");
     enrichStore.loadConceptDigest.mockResolvedValue(
       conceptSynthesisDigest(SUMMARIZED),
     );

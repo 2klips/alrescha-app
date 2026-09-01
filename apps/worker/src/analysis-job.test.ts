@@ -2,7 +2,7 @@ import {
   digestInTotoStatement,
   verifyInTotoStatement,
   type InTotoStatement,
-} from "@arr/core";
+} from "@alrescha/core";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -172,7 +172,10 @@ describe("analyze job", () => {
     expect(statement.predicateType).toBe(
       "https://arr-app-web.vercel.app/receipt/v1",
     );
-    expect(statement.predicate.tool).toEqual({ name: "arr", version: "0.1.0" });
+    expect(statement.predicate.tool).toEqual({
+      name: "alrescha",
+      version: "0.1.0",
+    });
     expect(Date.parse(statement.predicate.analyzedAt)).not.toBeNaN();
     expect(statement.predicate.coverage).toMatchObject({
       implVerified: expect.any(Number),

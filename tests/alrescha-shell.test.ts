@@ -5,10 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 import { BRAND } from "../apps/web/lib/strings/common";
-import {
-  isShellNavActive,
-  shellTabs,
-} from "../apps/web/app/ui/shell-nav-data";
+import { isShellNavActive, shellTabs } from "../apps/web/app/ui/shell-nav-data";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
@@ -42,9 +39,9 @@ describe("Alrescha F2 repository shell", () => {
     expect(shellTabs("workspace").map(({ href }) => href)).toContain(
       "/app/settings",
     );
-    expect(isShellNavActive("/app/settings/ai", "/app/settings", "workspace")).toBe(
-      true,
-    );
+    expect(
+      isShellNavActive("/app/settings/ai", "/app/settings", "workspace"),
+    ).toBe(true);
     expect(isShellNavActive("/app/map", "/app", "workspace")).toBe(false);
   });
 
@@ -59,20 +56,18 @@ describe("Alrescha F2 repository shell", () => {
   });
 
   test("exposes route-local settings navigation", () => {
-    const layout = source(
-      "apps/web/app/app/(shell)/settings/layout.tsx",
-    );
+    const layout = source("apps/web/app/app/(shell)/settings/layout.tsx");
     expect(layout).toContain("<SettingsLocalNav />");
     expect(layout).toContain("settings-route-layout");
   });
 
-  test("migrates current shell identity without renaming protocol identifiers", () => {
+  test("uses the canonical product and storage identity", () => {
     expect(BRAND.name).toBe("Alrescha");
     expect(source("apps/web/app/layout.tsx")).toContain(
       "Alrescha · 살아있는 증거 그래프",
     );
     expect(source("apps/web/lib/theme/theme-preference.ts")).toContain(
-      'THEME_STORAGE_KEY = "arr-theme"',
+      'THEME_STORAGE_KEY = "alrescha-theme"',
     );
   });
 });

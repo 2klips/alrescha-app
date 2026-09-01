@@ -75,7 +75,7 @@ function repository(): McpRepositoryData {
     ],
     evidence: [],
     findings: [],
-    fullName: "arr/drifted-demo",
+    fullName: "alrescha/drifted-demo",
     id: "01K200000000000000000000R1",
     indexEntries: [
       {

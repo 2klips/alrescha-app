@@ -169,7 +169,7 @@ export function logAccessEventFireAndForget(
   });
 }
 
-export const DEMO_WORKSPACE_ID = "workspace-arr-demo";
+export const DEMO_WORKSPACE_ID = "workspace-alrescha-demo";
 export const DEMO_REVOKED_TOKEN_ID = "token-revoked";
 
 export function createDemoAccessEvents(startedAt: number): GraphAccessEvent[] {

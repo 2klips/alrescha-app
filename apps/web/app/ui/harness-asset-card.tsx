@@ -1,6 +1,6 @@
 "use client";
 
-import type { LibraryItemSource, LibraryItemType } from "@arr/core";
+import type { LibraryItemSource, LibraryItemType } from "@alrescha/core";
 import {
   BookmarkPlus,
   CheckCircle2,

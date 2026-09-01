@@ -1,7 +1,7 @@
 import {
   parseGitHubRepositoryUrl,
   type GitHubRepositoryUrlFailure,
-} from "@arr/core";
+} from "@alrescha/core";
 
 /**
  * Decides what happens when a user pastes a repository URL during

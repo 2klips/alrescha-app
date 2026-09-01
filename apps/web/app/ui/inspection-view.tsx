@@ -2,7 +2,7 @@ import type {
   DependencyAdvisory,
   InspectionDashboard,
   InspectionFindingInput,
-} from "@arr/core";
+} from "@alrescha/core";
 import {
   Ban,
   FileText,

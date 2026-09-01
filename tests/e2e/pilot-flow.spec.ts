@@ -113,7 +113,7 @@ async function exerciseHostedMcp() {
     { versionNegotiation: { mode: { pin: "2026-07-28" } } },
   );
   const transport = new StreamableHTTPClientTransport(
-    new URL("https://mcp.arr.test/mcp"),
+    new URL("https://mcp.alrescha.test/mcp"),
     {
       authProvider: { token: async () => issued.secret },
       fetch: endpoint.fetch,
@@ -351,8 +351,8 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
     const proposalFiles = buildMinimalIndexProposalFiles({
       agentsContent: "# Team rules\n",
       claudeContent: null,
-      dashboardUrl: "https://arr.test/project/demo",
-      mcpEndpoint: "https://mcp.arr.test",
+      dashboardUrl: "https://alrescha.test/project/demo",
+      mcpEndpoint: "https://mcp.alrescha.test",
     }).files;
     const calls: string[] = [];
     const proposal = await proposeMinimalIndexPullRequest({

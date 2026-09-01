@@ -4,7 +4,7 @@ import {
   type JudgmentProvider,
   type JudgmentRequest,
   type PromptSignals,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import type { CoachingProvider } from "./coaching-job";
 
@@ -130,7 +130,7 @@ export class OpenAiJudgmentProvider implements JudgmentProvider {
         store: false,
         text: {
           format: {
-            name: "arr_judgment",
+            name: "alrescha_judgment",
             schema: JUDGMENT_JSON_SCHEMA,
             strict: true,
             type: "json_schema",
@@ -300,7 +300,7 @@ export class OpenAiEnrichProvider implements EnrichProvider {
         store: false,
         text: {
           format: {
-            name: "arr_enrich_summary",
+            name: "alrescha_enrich_summary",
             schema: ENRICH_JSON_SCHEMA,
             strict: true,
             type: "json_schema",
@@ -335,7 +335,7 @@ export class OpenAiEnrichProvider implements EnrichProvider {
         store: false,
         text: {
           format: {
-            name: "arr_concept_graph",
+            name: "alrescha_concept_graph",
             schema: CONCEPT_SYNTHESIS_JSON_SCHEMA,
             strict: true,
             type: "json_schema",
@@ -371,7 +371,7 @@ export class OpenAiEnrichProvider implements EnrichProvider {
         store: false,
         text: {
           format: {
-            name: "arr_module_summary",
+            name: "alrescha_module_summary",
             schema: ENRICH_JSON_SCHEMA,
             strict: true,
             type: "json_schema",
@@ -519,7 +519,7 @@ export class AnthropicEnrichProvider implements EnrichProvider {
  * Concept synthesis (Wave C todo 7) — summaries in, a concept layer out.
  * Anthropic runs a forced tool call against the strict schema; OpenAI runs
  * the strict json_schema response format. Both shapes are validated again by
- * the deterministic clean pass in @arr/core before anything persists.
+ * the deterministic clean pass in @alrescha/core before anything persists.
  */
 
 const CONCEPT_SYSTEM_PROMPT = [
@@ -657,7 +657,7 @@ export class OpenAiCoachingProvider implements CoachingProvider {
         store: false,
         text: {
           format: {
-            name: "arr_prompt_coaching",
+            name: "alrescha_prompt_coaching",
             schema: COACHING_JSON_SCHEMA,
             strict: true,
             type: "json_schema",
@@ -701,9 +701,10 @@ export class AnthropicCoachingProvider implements CoachingProvider {
         max_tokens: 800,
         messages: [{ content: coachingPrompt(request), role: "user" }],
         model: this.model,
-        system: [COACHING_SYSTEM_PROMPT, JSON.stringify(COACHING_JSON_SCHEMA)].join(
-          "\n",
-        ),
+        system: [
+          COACHING_SYSTEM_PROMPT,
+          JSON.stringify(COACHING_JSON_SCHEMA),
+        ].join("\n"),
       }),
       headers: {
         "anthropic-version": "2023-06-01",

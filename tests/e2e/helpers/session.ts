@@ -57,7 +57,7 @@ function required(name: string): string {
 }
 
 export interface SignedInUser {
-  /** Bearer token for API calls made outside the browser (`arr push`). */
+  /** Bearer token for API calls made outside the browser (`alrescha push`). */
   readonly accessToken: string;
   readonly email: string;
   readonly userId: string;
@@ -88,7 +88,7 @@ export async function createWorkspaceUser(label: string): Promise<{
   workspaceId: string;
 }> {
   const admin = adminClient();
-  const email = `${label}-${process.pid}-${Date.now()}@arr.test`;
+  const email = `${label}-${process.pid}-${Date.now()}@alrescha.test`;
   const created = await admin.auth.admin.createUser({
     email,
     email_confirm: true,

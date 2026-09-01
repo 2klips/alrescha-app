@@ -13,7 +13,8 @@ import {
   type ForceConfig,
 } from "./simulation-protocol";
 
-export const GRAPH_PANEL_STORAGE_KEY = "arr-graph-panel";
+export const GRAPH_PANEL_STORAGE_KEY = "alrescha-graph-panel";
+export const LEGACY_GRAPH_PANEL_STORAGE_KEY = "arr-graph-panel";
 
 export interface GraphPanelSettings extends ForceConfig {
   /** HUD card collapsed state — also persisted, it is part of the workspace. */
@@ -69,8 +70,10 @@ export function forceConfigOf(settings: GraphPanelSettings): ForceConfig {
 
 export function loadPanelSettings(): GraphPanelSettings {
   try {
+    const storage = globalThis.localStorage;
+    const canonical = storage?.getItem(GRAPH_PANEL_STORAGE_KEY) ?? null;
     return parsePanelSettings(
-      globalThis.localStorage?.getItem(GRAPH_PANEL_STORAGE_KEY) ?? null,
+      canonical ?? storage?.getItem(LEGACY_GRAPH_PANEL_STORAGE_KEY) ?? null,
     );
   } catch {
     return { ...DEFAULT_PANEL_SETTINGS };

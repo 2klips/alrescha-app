@@ -14,7 +14,7 @@ import {
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
-import { parseGitHubRepositoryUrl } from "@arr/core/repository-url";
+import { parseGitHubRepositoryUrl } from "@alrescha/core/repository-url";
 
 import { BRAND, ONBOARDING } from "../../lib/strings";
 

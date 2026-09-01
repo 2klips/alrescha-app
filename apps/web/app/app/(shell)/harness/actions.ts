@@ -5,7 +5,7 @@ import {
   createLibrarySnapshot,
   requestInstallationToken,
   type LibraryItemType,
-} from "@arr/core";
+} from "@alrescha/core";
 import { revalidatePath } from "next/cache";
 import { unstable_rethrow } from "next/navigation";
 

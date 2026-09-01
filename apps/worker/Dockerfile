@@ -1,4 +1,4 @@
-# Arr worker — the job drain loop (scan → analyze → enrich → judge/coach).
+# Alrescha worker — the job drain loop (scan → analyze → enrich → judge/coach).
 # The web app and hosted MCP live on Vercel; this container is ONLY the
 # long-running queue consumer, so it exposes no port.
 #
@@ -19,7 +19,7 @@ COPY apps/web/package.json apps/web/
 COPY packages/core/package.json packages/core/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/cli/package.json packages/cli/
-RUN pnpm install --frozen-lockfile --filter @arr/worker...
+RUN pnpm install --frozen-lockfile --filter @alrescha/worker...
 
 # The worker runs TypeScript directly through tsx (same as run-local),
 # so source is all it needs — no build step, no bundling drift.

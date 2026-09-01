@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicMcpTokenRecord } from "@arr/mcp";
+import type { PublicMcpTokenRecord } from "@alrescha/mcp";
 import { useActionState } from "react";
 
 import { SETTINGS } from "../../../../../lib/strings";

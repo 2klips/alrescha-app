@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { isNonBillableAiError } from "@arr/core";
+import { isNonBillableAiError } from "@alrescha/core";
 
 import {
   createCoachingJobHandler,

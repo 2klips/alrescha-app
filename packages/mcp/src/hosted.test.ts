@@ -147,7 +147,7 @@ function createSdkClient(fetch: typeof globalThis.fetch, token: string) {
     },
   );
   const transport = new StreamableHTTPClientTransport(
-    new URL("https://mcp.arr.test/mcp"),
+    new URL("https://mcp.alrescha.test/mcp"),
     {
       authProvider: { token: async () => token },
       fetch,
@@ -198,7 +198,7 @@ describe("hosted MCP contract", () => {
 
     expect(client.getProtocolEra()).toBe("modern");
     expect(client.getServerVersion()).toEqual({
-      name: "arr",
+      name: "alrescha",
       version: "0.1.0",
     });
     expect(client.getDiscoverResult()).toMatchObject({
@@ -266,7 +266,7 @@ describe("hosted MCP contract", () => {
     expect(listed.resources).toHaveLength(5);
     expect(
       listed.resources.every((resource) =>
-        resource.uri.startsWith(`arr://workspace/${WORKSPACE_ID}/`),
+        resource.uri.startsWith(`alrescha://workspace/${WORKSPACE_ID}/`),
       ),
     ).toBe(true);
     expect(
@@ -276,7 +276,7 @@ describe("hosted MCP contract", () => {
     ).toBe(false);
     await expect(
       client.readResource({
-        uri: `arr://workspace/${otherWorkspaceId}/overview`,
+        uri: `alrescha://workspace/${otherWorkspaceId}/overview`,
       }),
     ).rejects.toBeInstanceOf(ProtocolError);
   });
@@ -302,28 +302,28 @@ describe("hosted MCP contract", () => {
     expect(listed.resources.map(({ name, uri }) => ({ name, uri }))).toEqual([
       {
         name: "overview",
-        uri: `arr://workspace/${WORKSPACE_ID}/overview`,
+        uri: `alrescha://workspace/${WORKSPACE_ID}/overview`,
       },
       {
         name: "artifacts",
-        uri: `arr://workspace/${WORKSPACE_ID}/artifacts`,
+        uri: `alrescha://workspace/${WORKSPACE_ID}/artifacts`,
       },
       {
         name: "findings",
-        uri: `arr://workspace/${WORKSPACE_ID}/findings`,
+        uri: `alrescha://workspace/${WORKSPACE_ID}/findings`,
       },
       {
         name: "receipts-summary",
-        uri: `arr://workspace/${WORKSPACE_ID}/receipts-summary`,
+        uri: `alrescha://workspace/${WORKSPACE_ID}/receipts-summary`,
       },
       {
         name: "context-packs",
-        uri: `arr://workspace/${WORKSPACE_ID}/context-packs`,
+        uri: `alrescha://workspace/${WORKSPACE_ID}/context-packs`,
       },
     ]);
 
     const result = await client.readResource({
-      uri: `arr://workspace/${WORKSPACE_ID}/findings`,
+      uri: `alrescha://workspace/${WORKSPACE_ID}/findings`,
     });
     expect(result).toMatchObject({ cacheScope: "private", ttlMs: 60_000 });
     const content = result.contents[0];
@@ -891,7 +891,7 @@ describe("hosted MCP contract", () => {
         },
       );
       const transport = new StreamableHTTPClientTransport(
-        new URL("https://mcp.arr.test/mcp"),
+        new URL("https://mcp.alrescha.test/mcp"),
         {
           authProvider: { token: async () => token },
           fetch,

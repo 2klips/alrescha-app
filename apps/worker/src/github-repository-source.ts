@@ -3,7 +3,7 @@ import {
   type RepositorySource,
   type RepositoryTree,
   type RepositoryTreeEntry,
-} from "@arr/core";
+} from "@alrescha/core";
 
 /**
  * A GitHub API failure that keeps the HTTP status, so callers can tell "this

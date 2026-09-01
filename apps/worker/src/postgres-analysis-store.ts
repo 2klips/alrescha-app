@@ -15,7 +15,7 @@ import type {
   PersistedFinding,
   StoredArtifact,
 } from "./analysis-job";
-import type { InTotoStatement } from "@arr/core";
+import type { InTotoStatement } from "@alrescha/core";
 
 interface ArtifactRow {
   readonly classification: StoredArtifact["classification"];

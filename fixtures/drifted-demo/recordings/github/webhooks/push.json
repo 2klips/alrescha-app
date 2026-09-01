@@ -3,7 +3,7 @@
     "content-type": "application/json",
     "x-github-delivery": "00000000-0000-4000-8000-000000000001",
     "x-github-event": "push",
-    "x-hub-signature-256": "sha256=c9b1c6db93c4c496cf0080a8449b97313c94a6b716d519d6c8546e920a8c2c0a"
+    "x-hub-signature-256": "sha256=1a8a00734aa364e0c85ee10884427ea2cd48db4ef6116a9739f36df80aa7e017"
   },
   "body": {
     "ref": "refs/heads/main",
@@ -11,7 +11,7 @@
     "after": "1111111111111111111111111111111111111111",
     "repository": {
       "id": 424242,
-      "full_name": "arr/drifted-demo",
+      "full_name": "alrescha/drifted-demo",
       "default_branch": "main",
       "private": true
     },

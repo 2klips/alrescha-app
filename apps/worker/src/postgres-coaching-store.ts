@@ -1,6 +1,6 @@
 import type postgres from "postgres";
 
-import type { PromptCoachingOutput } from "@arr/core";
+import type { PromptCoachingOutput } from "@alrescha/core";
 
 import type { CoachingJobStore, CoachingProvider } from "./coaching-job";
 import { PostgresByokKeyStore } from "./postgres-judgment-store";

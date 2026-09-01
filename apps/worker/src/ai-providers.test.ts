@@ -62,7 +62,7 @@ describe("AI judgment provider adapters", () => {
       store: false,
       text: {
         format: {
-          name: "arr_judgment",
+          name: "alrescha_judgment",
           strict: true,
           type: "json_schema",
         },

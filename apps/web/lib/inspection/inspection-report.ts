@@ -6,7 +6,7 @@ import {
   type InspectionDocumentInput,
   type InspectionFindingInput,
   type RuledOutAttemptInput,
-} from "@arr/core";
+} from "@alrescha/core";
 
 /**
  * `/inspection` from stored evidence (Phase 2C todo 1).

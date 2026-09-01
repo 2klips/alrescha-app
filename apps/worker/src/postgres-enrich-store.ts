@@ -1,6 +1,6 @@
 import type postgres from "postgres";
 
-import type { FileSummaryInput, SynthesizedConcept } from "@arr/core";
+import type { FileSummaryInput, SynthesizedConcept } from "@alrescha/core";
 
 import type { EnrichProvider } from "./ai-providers";
 import type {

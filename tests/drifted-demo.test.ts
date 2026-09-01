@@ -128,7 +128,9 @@ describe("recorded GitHub fixture replay", () => {
       webhooks.every(({ commitSha }) => commitSha === "1".repeat(40)),
     ).toBe(true);
     expect(
-      webhooks.every(({ repository }) => repository === "arr/drifted-demo"),
+      webhooks.every(
+        ({ repository }) => repository === "alrescha/drifted-demo",
+      ),
     ).toBe(true);
     expect(artifacts.map(({ name }) => name)).toEqual([
       "junit-results",

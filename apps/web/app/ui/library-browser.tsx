@@ -1,4 +1,4 @@
-import { filterLibraryItems, type LibraryItem } from "@arr/core";
+import { filterLibraryItems, type LibraryItem } from "@alrescha/core";
 import {
   Archive,
   ExternalLink,

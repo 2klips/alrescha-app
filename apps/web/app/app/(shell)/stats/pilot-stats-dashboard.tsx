@@ -1,4 +1,4 @@
-import type { PilotStatsReport } from "@arr/core/stats";
+import type { PilotStatsReport } from "@alrescha/core/stats";
 
 import { STATS } from "../../../../lib/strings";
 import { setPilotInstrumentation } from "./actions";

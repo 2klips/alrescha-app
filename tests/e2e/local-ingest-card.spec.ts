@@ -13,7 +13,7 @@ import {
 } from "./helpers/session";
 
 /**
- * `arr push` → live Supabase → a graph-only card (Phase 2C todo 5, ADR-015).
+ * `alrescha push` → live Supabase → a graph-only card (Phase 2C todo 5, ADR-015).
  *
  * `tests/local-ingest.test.ts` already proves the card at the database level.
  * What it cannot prove is the seam: a real HTTP request, a real MCP token
@@ -47,7 +47,7 @@ const TODO = `# 진행
 - [ ] 실기 파일럿
 `;
 
-test("arr push renders a graph-only card on the workspace board", async ({
+test("alrescha push renders a graph-only card on the workspace board", async ({
   context,
   page,
 }) => {
@@ -81,7 +81,7 @@ test("arr push renders a graph-only card on the workspace board", async ({
       rootDir: projectDir,
       token: secret,
     });
-    expect(outcome, "arr push did not upload").toMatchObject({
+    expect(outcome, "alrescha push did not upload").toMatchObject({
       status: "uploaded",
     });
     if (outcome.status !== "uploaded") return;

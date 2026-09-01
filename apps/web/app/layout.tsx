@@ -24,7 +24,7 @@ export default function RootLayout({
             default would flash on a light-theme reload (Phase 2A todo 2). */}
         <script
           dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
-          id="arr-theme-init"
+          id="alrescha-theme-init"
         />
       </head>
       <body>{children}</body>

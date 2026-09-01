@@ -1,5 +1,5 @@
 /**
- * arr/no-hardcoded-hex — Phase 2A (ADR-009-3).
+ * alrescha/no-hardcoded-hex — Phase 2A (ADR-009-3).
  *
  * Colours may only be declared in the Ink & Seal tokens stylesheet
  * (`apps/web/app/styles/tokens.css`). Components must reference `var(--token)`

@@ -5,7 +5,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { vibeGateResultsSchema } from "@arr/core";
+import { vibeGateResultsSchema } from "@alrescha/core";
 
 import { buildDemoTeam } from "../../lib/team/fixtures";
 import { GRADE, TEAM } from "../../lib/strings";

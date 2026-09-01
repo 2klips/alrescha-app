@@ -7,6 +7,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   DEFAULT_THEME,
+  LEGACY_THEME_STORAGE_KEY,
   THEME_ATTRIBUTE,
   THEME_INIT_SCRIPT,
   THEME_STORAGE_KEY,
@@ -41,6 +42,7 @@ function fakeElement() {
  * so the assertions cover the string that actually ships in <head>.
  */
 function runInitScript(options: {
+  legacyStored?: string | null;
   stored?: string | null;
   prefersLight?: boolean;
   throwOnStorage?: boolean;
@@ -51,9 +53,12 @@ function runInitScript(options: {
     document: { documentElement: html },
     window: {
       localStorage: {
-        getItem: () => {
+        getItem: (key: string) => {
           if (options.throwOnStorage) throw new Error("storage disabled");
-          return options.stored ?? null;
+          if (key === THEME_STORAGE_KEY) return options.stored ?? null;
+          if (key === LEGACY_THEME_STORAGE_KEY)
+            return options.legacyStored ?? null;
+          return null;
         },
       },
       matchMedia: (query: string) => {
@@ -177,6 +182,13 @@ describe("no flash of the wrong theme", () => {
     );
   });
 
+  test("the boot script reads the legacy Arr key only as a fallback", () => {
+    expect(runInitScript({ legacyStored: "light" }).theme).toBe("light");
+    expect(runInitScript({ legacyStored: "light", stored: "dark" }).theme).toBe(
+      "dark",
+    );
+  });
+
   test("the boot script consults prefers-color-scheme on a first visit", () => {
     const result = runInitScript({ stored: null, prefersLight: true });
     expect(result.theme).toBe("light");
@@ -193,9 +205,9 @@ describe("no flash of the wrong theme", () => {
   test("the script is inlined in <head>, ahead of <body>", () => {
     const layout = readSource("apps/web/app/layout.tsx");
     expect(layout).toContain("THEME_INIT_SCRIPT");
-    expect(layout).toContain('id="arr-theme-init"');
+    expect(layout).toContain('id="alrescha-theme-init"');
     expect(layout.indexOf("<head>")).toBeLessThan(layout.indexOf("<body>"));
-    expect(layout.indexOf("arr-theme-init")).toBeLessThan(
+    expect(layout.indexOf("alrescha-theme-init")).toBeLessThan(
       layout.indexOf("<body>"),
     );
   });

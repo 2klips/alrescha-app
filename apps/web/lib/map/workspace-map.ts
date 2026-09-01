@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { deriveBrainArea } from "@arr/core/artifact-facets";
-import type { ArtifactClassification } from "@arr/core";
+import { deriveBrainArea } from "@alrescha/core/artifact-facets";
+import type { ArtifactClassification } from "@alrescha/core";
 
 import {
   clusterGraph,

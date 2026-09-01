@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import type { McpAccessEvent } from "@arr/mcp";
+import type { McpAccessEvent } from "@alrescha/mcp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SupabaseMcpStore } from "./supabase-store";

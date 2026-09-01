@@ -60,7 +60,7 @@ function fakeStore(): { calls: FakeCall[]; store: LocalIngestStore } {
 }
 
 function postRequest(body: unknown, token = VALID_TOKEN): Request {
-  return new Request("https://arr.example.test/api/ingest/local", {
+  return new Request("https://alrescha.example.test/api/ingest/local", {
     body: JSON.stringify(body),
     headers: {
       authorization: `Bearer ${token}`,
@@ -74,7 +74,7 @@ describe("local ingest route handlers", () => {
   it("rejects requests without a bearer token", async () => {
     const { store } = fakeStore();
     const response = await handleLocalIngestUpload(
-      new Request("https://arr.example.test/api/ingest/local", {
+      new Request("https://alrescha.example.test/api/ingest/local", {
         body: "{}",
         method: "POST",
       }),
@@ -191,7 +191,7 @@ describe("local ingest route handlers", () => {
   it("rejects unparseable json", async () => {
     const { store } = fakeStore();
     const response = await handleLocalIngestUpload(
-      new Request("https://arr.example.test/api/ingest/local", {
+      new Request("https://alrescha.example.test/api/ingest/local", {
         body: "not-json",
         headers: { authorization: `Bearer ${VALID_TOKEN}` },
         method: "POST",
@@ -206,7 +206,7 @@ describe("local ingest route handlers", () => {
     const { store } = fakeStore();
     const response = await handleLocalIngestPreviousState(
       new Request(
-        "https://arr.example.test/api/ingest/local?repository=local/known",
+        "https://alrescha.example.test/api/ingest/local?repository=local/known",
         { headers: { authorization: `Bearer ${READONLY_TOKEN}` } },
       ),
       store,
@@ -221,7 +221,7 @@ describe("local ingest route handlers", () => {
     const { store } = fakeStore();
     const response = await handleLocalIngestPreviousState(
       new Request(
-        "https://arr.example.test/api/ingest/local?repository=local/new",
+        "https://alrescha.example.test/api/ingest/local?repository=local/new",
         { headers: { authorization: `Bearer ${VALID_TOKEN}` } },
       ),
       store,
@@ -235,7 +235,7 @@ describe("local ingest route handlers", () => {
     const { store } = fakeStore();
     const response = await handleLocalIngestPreviousState(
       new Request(
-        "https://arr.example.test/api/ingest/local?repository=not-a-repo",
+        "https://alrescha.example.test/api/ingest/local?repository=not-a-repo",
         { headers: { authorization: `Bearer ${VALID_TOKEN}` } },
       ),
       store,

@@ -1,7 +1,7 @@
 import {
   handleLocalIngestPreviousState,
   handleLocalIngestUpload,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import { SupabaseLocalIngestStore } from "../../../../lib/ingest/supabase-local-ingest-store";
 import { createAdminClient } from "../../../../lib/supabase/admin";

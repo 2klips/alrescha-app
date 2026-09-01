@@ -1,5 +1,5 @@
 import type { ClaimedJob, JobKind, WorkerQueue } from "./queue";
-import { isNonBillableAiError } from "@arr/core";
+import { isNonBillableAiError } from "@alrescha/core";
 
 export interface JobContext {
   readonly heartbeat: () => Promise<boolean>;

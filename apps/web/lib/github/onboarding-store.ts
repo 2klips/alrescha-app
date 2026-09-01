@@ -1,4 +1,7 @@
-import type { GitHubOnboardingStore, GitHubRepositoryChoice } from "@arr/core";
+import type {
+  GitHubOnboardingStore,
+  GitHubRepositoryChoice,
+} from "@alrescha/core";
 
 import { createAdminClient } from "../supabase/admin";
 import { recordSecurityAuditEvent } from "../security/audit";

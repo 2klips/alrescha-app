@@ -1,4 +1,4 @@
-import type { LibraryItem, LibrarySnapshot } from "@arr/core";
+import type { LibraryItem, LibrarySnapshot } from "@alrescha/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Row = Record<string, unknown>;

@@ -3,7 +3,7 @@ import type {
   LocalIngestPreviousState,
   LocalIngestPrincipal,
   LocalIngestStore,
-} from "@arr/core";
+} from "@alrescha/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SupabaseMcpStore } from "../mcp/supabase-store";

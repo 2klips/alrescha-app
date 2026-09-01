@@ -1,4 +1,4 @@
-import type { LibraryItemType } from "@arr/core";
+import type { LibraryItemType } from "@alrescha/core";
 import { redirect } from "next/navigation";
 
 import { HarnessAssetCard } from "../../../ui/harness-asset-card";

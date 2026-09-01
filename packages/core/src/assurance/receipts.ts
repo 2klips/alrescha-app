@@ -16,7 +16,8 @@ export const RECEIPT_PREDICATE_TYPE =
   "https://arr-app-web.vercel.app/receipt/v1" as const;
 
 /** The issuing tool identity recorded in every receipt. */
-export const RECEIPT_TOOL = { name: "arr", version: "0.1.0" } as const;
+export const RECEIPT_TOOL = { name: "alrescha", version: "0.1.0" } as const;
+export const LEGACY_RECEIPT_TOOL_NAME = "arr" as const;
 
 /**
  * File subjects carry the scan's sha256 blob digests; the analyzed commit
@@ -34,7 +35,7 @@ export const inTotoSubjectSchema = z.union([
   }),
 ]);
 
-export const arrReceiptPredicateSchema = z.strictObject({
+export const alreschaReceiptPredicateSchema = z.strictObject({
   analyzedAt: z.iso.datetime(),
   commitSha: z.string().regex(/^[0-9a-f]{40}$/),
   coverage: z.strictObject({
@@ -50,19 +51,22 @@ export const arrReceiptPredicateSchema = z.strictObject({
   repository: z.string().regex(/^[^/]+\/[^/]+$/),
   runId: z.string().min(1),
   tool: z.strictObject({
-    name: z.literal(RECEIPT_TOOL.name),
+    name: z.enum([RECEIPT_TOOL.name, LEGACY_RECEIPT_TOOL_NAME]),
     version: z.string().min(1),
   }),
 });
 
 export const inTotoStatementSchema = z.strictObject({
   _type: z.literal("https://in-toto.io/Statement/v1"),
-  predicate: arrReceiptPredicateSchema,
+  predicate: alreschaReceiptPredicateSchema,
   predicateType: z.literal(RECEIPT_PREDICATE_TYPE),
   subject: z.array(inTotoSubjectSchema).min(1),
 });
 
 export type InTotoStatement = z.infer<typeof inTotoStatementSchema>;
+
+/** @deprecated Use alreschaReceiptPredicateSchema. */
+export const arrReceiptPredicateSchema = alreschaReceiptPredicateSchema;
 
 function canonicalize(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);

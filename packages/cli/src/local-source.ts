@@ -1,7 +1,7 @@
 /**
  * A `RepositorySource` over the local filesystem (Phase 2B todo 3, ADR-013).
  *
- * The scan itself is `scanRepository` from @arr/core — the same deterministic
+ * The scan itself is `scanRepository` from @alrescha/core — the same deterministic
  * pipeline the GitHub webhook path runs. This module only supplies the
  * transport: a git-shaped tree (blob sha1s, modes, sizes) and transient
  * content reads. Nothing here uploads or stores anything.
@@ -15,7 +15,7 @@ import type {
   RepositorySource,
   RepositoryTree,
   RepositoryTreeEntry,
-} from "@arr/core";
+} from "@alrescha/core";
 
 /** Build outputs and VCS internals that a git tree would not contain. */
 const IGNORED_SEGMENTS = new Set([

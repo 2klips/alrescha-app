@@ -8,7 +8,7 @@ import {
   type PromptRubric,
   type VibeGateResults,
   type VibeIndex,
-} from "@arr/core";
+} from "@alrescha/core";
 
 /**
  * `/team` from stored rows (Phase 2C todo 3).
@@ -252,38 +252,39 @@ export async function loadWorkspaceTeamReport(
   }
   const workspaceId = String(workspaceResult.data.id);
 
-  const [members, settings, consent, prompts, ownPromptRows] = await Promise.all([
-    client
-      .from("workspace_members")
-      .select("user_id,role,status")
-      .eq("workspace_id", workspaceId),
-    client
-      .from("prompt_capture_settings")
-      .select("enabled")
-      .eq("workspace_id", workspaceId)
-      .maybeSingle(),
-    // RLS already restricts this table to the subject; the explicit filter
-    // keeps that true even if a policy is ever loosened by mistake.
-    client
-      .from("prompt_capture_consents")
-      .select("raw_sync_enabled,revoked_at")
-      .eq("workspace_id", workspaceId)
-      .eq("user_id", userId)
-      .maybeSingle(),
-    client
-      .from("prompt_records")
-      .select("user_id,occurred_at,token_count,rubric")
-      .eq("workspace_id", workspaceId),
-    // The viewer's own records only — the single place raw_text may be read,
-    // and only to power their own coaching panel (ADR-011-4).
-    client
-      .from("prompt_records")
-      .select("id,occurred_at,token_count,rubric,raw_text")
-      .eq("workspace_id", workspaceId)
-      .eq("user_id", userId)
-      .order("occurred_at", { ascending: false })
-      .limit(10),
-  ]);
+  const [members, settings, consent, prompts, ownPromptRows] =
+    await Promise.all([
+      client
+        .from("workspace_members")
+        .select("user_id,role,status")
+        .eq("workspace_id", workspaceId),
+      client
+        .from("prompt_capture_settings")
+        .select("enabled")
+        .eq("workspace_id", workspaceId)
+        .maybeSingle(),
+      // RLS already restricts this table to the subject; the explicit filter
+      // keeps that true even if a policy is ever loosened by mistake.
+      client
+        .from("prompt_capture_consents")
+        .select("raw_sync_enabled,revoked_at")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", userId)
+        .maybeSingle(),
+      client
+        .from("prompt_records")
+        .select("user_id,occurred_at,token_count,rubric")
+        .eq("workspace_id", workspaceId),
+      // The viewer's own records only — the single place raw_text may be read,
+      // and only to power their own coaching panel (ADR-011-4).
+      client
+        .from("prompt_records")
+        .select("id,occurred_at,token_count,rubric,raw_text")
+        .eq("workspace_id", workspaceId)
+        .eq("user_id", userId)
+        .order("occurred_at", { ascending: false })
+        .limit(10),
+    ]);
   for (const result of [members, settings, consent, prompts, ownPromptRows]) {
     if (result.error) throw new Error(result.error.message);
   }

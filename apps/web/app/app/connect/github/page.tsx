@@ -1,4 +1,4 @@
-import { githubInstallationUrl } from "@arr/core";
+import { githubInstallationUrl } from "@alrescha/core";
 import { redirect } from "next/navigation";
 
 import { getCurrentUserId } from "../../../../lib/auth/current-user";

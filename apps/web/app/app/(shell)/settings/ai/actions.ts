@@ -1,6 +1,6 @@
 "use server";
 
-import { encryptByokKey } from "@arr/core/byok";
+import { encryptByokKey } from "@alrescha/core/byok";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 

@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 /**
- * `arr` — local ingest CLI entry point (Phase 2B todo 3, ADR-013).
- * Command surface: `arr push [directory] --repo <owner/name> --server <url>
+ * `alrescha` — local ingest CLI entry point (Phase 2B todo 3, ADR-013).
+ * Command surface: `alrescha push [directory] --repo <owner/name> --server <url>
  * --token <token>`. Scan runs locally; only metadata leaves the machine.
+ * The legacy `arr` binary remains an alias during the compatibility window.
  */
 
 import { basename, resolve } from "node:path";
 
+import { resolveCliEnvironment } from "./environment";
 import { CLI_MESSAGES } from "./messages";
 import { pushLocalProject } from "./push";
 
@@ -46,8 +48,9 @@ export async function main(argv: readonly string[]): Promise<number> {
     console.error(CLI_MESSAGES.usage);
     return 1;
   }
-  const server = parsed.server ?? process.env["ARR_SERVER_URL"] ?? null;
-  const token = parsed.token ?? process.env["ARR_TOKEN"] ?? null;
+  const environment = resolveCliEnvironment();
+  const server = parsed.server ?? environment.server;
+  const token = parsed.token ?? environment.token;
   if (!server) {
     console.error(CLI_MESSAGES.missingServer);
     return 1;

@@ -93,7 +93,7 @@ export async function proposeMinimalIndexPullRequest(
     };
   }
 
-  const branch = `arr/minimal-index-${input.baseSha.slice(0, 12)}`;
+  const branch = `alrescha/minimal-index-${input.baseSha.slice(0, 12)}`;
   await input.github.createProposalBranch({ branch, fromSha: input.baseSha });
 
   for (const file of input.files) {

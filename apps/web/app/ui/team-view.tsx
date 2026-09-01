@@ -2,7 +2,7 @@ import {
   VIBE_METRICS,
   type ContributionRow,
   type PromptRubric,
-} from "@arr/core";
+} from "@alrescha/core";
 import { Ban, KeyRound, ShieldCheck, Sparkles, Users } from "lucide-react";
 
 import type { DemoTeam } from "../../lib/team/fixtures";

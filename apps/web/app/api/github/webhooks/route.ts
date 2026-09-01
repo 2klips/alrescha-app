@@ -1,4 +1,4 @@
-import { handleGitHubWebhook } from "@arr/core";
+import { handleGitHubWebhook } from "@alrescha/core";
 
 import { createGitHubWebhookStore } from "../../../../lib/github/webhook-store";
 

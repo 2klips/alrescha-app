@@ -2,8 +2,8 @@ import {
   BRAIN_AREAS,
   deriveBrainArea,
   type BrainArea,
-} from "@arr/core/artifact-facets";
-import type { ArtifactClassification } from "@arr/core";
+} from "@alrescha/core/artifact-facets";
+import type { ArtifactClassification } from "@alrescha/core";
 
 import { DASHBOARD } from "../strings";
 

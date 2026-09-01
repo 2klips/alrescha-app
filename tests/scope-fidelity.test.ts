@@ -151,8 +151,11 @@ describe("MVP scope fidelity", () => {
     await withFixture(
       {
         "packages/cli/package.json": `{
-          "name": "@arr/cli",
-          "bin": { "arr": "./dist/push.js" }
+          "name": "@alrescha/cli",
+          "bin": {
+            "alrescha": "./dist/push.js",
+            "arr": "./dist/push.js"
+          }
         }`,
         "packages/cli/src/push.ts": `#!/usr/bin/env node
         export async function pushProject(client: any, metadata: object) {

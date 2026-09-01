@@ -349,8 +349,8 @@ describe("instruction blocks (todo 11)", () => {
   it("every target gets a delimited snippet naming the graph-first flow", () => {
     for (const target of AGENT_TARGETS) {
       const block = buildInstructionBlock(target);
-      expect(block.snippet).toContain("arr:instructions:start");
-      expect(block.snippet).toContain("arr:instructions:end");
+      expect(block.snippet).toContain("alrescha:instructions:start");
+      expect(block.snippet).toContain("alrescha:instructions:end");
       expect(block.snippet).toContain("Alrescha knowledge graph");
       expect(block.snippet).toContain("get_graph_schema");
       expect(block.snippet).toContain("memory_write");
@@ -359,13 +359,14 @@ describe("instruction blocks (todo 11)", () => {
     expect(buildInstructionBlock("claude").filename).toBe("CLAUDE.md");
     expect(buildInstructionBlock("codex").filename).toBe("AGENTS.md");
     expect(buildInstructionBlock("cursor").filename).toBe(
-      ".cursor/rules/arr.mdc",
+      ".cursor/rules/alrescha.mdc",
     );
   });
 
   it("the MCP config snippet points at this deployment's endpoint", () => {
-    const config = buildMcpConfigSnippet("https://arr.example/");
-    expect(config).toContain('"url": "https://arr.example/api/mcp"');
-    expect(config).toContain("<ARR_MCP_TOKEN>");
+    const config = buildMcpConfigSnippet("https://alrescha.example/");
+    expect(config).toContain('"alrescha": {');
+    expect(config).toContain('"url": "https://alrescha.example/api/mcp"');
+    expect(config).toContain("<ALRESCHA_MCP_TOKEN>");
   });
 });

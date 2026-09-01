@@ -6,6 +6,8 @@ import {
   toServerPromptSync,
   LOCAL_PROMPT_LOG_GITIGNORE_ENTRY,
   LOCAL_PROMPT_LOG_PATH,
+  LEGACY_LOCAL_PROMPT_LOG_GITIGNORE_ENTRY,
+  LEGACY_LOCAL_PROMPT_LOG_PATH,
   type LocalPromptRecord,
 } from "../packages/core/src/index";
 import {
@@ -355,8 +357,10 @@ describe("prompt capture privacy (ADR-011)", () => {
     };
     const serialized = serializeLocalPromptLog([recordEntry]);
     expect(parseLocalPromptLog(serialized)).toEqual([recordEntry]);
-    expect(LOCAL_PROMPT_LOG_PATH.startsWith(".arr/")).toBe(true);
-    expect(LOCAL_PROMPT_LOG_GITIGNORE_ENTRY).toBe(".arr/");
+    expect(LOCAL_PROMPT_LOG_PATH.startsWith(".alrescha/")).toBe(true);
+    expect(LOCAL_PROMPT_LOG_GITIGNORE_ENTRY).toBe(".alrescha/");
+    expect(LEGACY_LOCAL_PROMPT_LOG_PATH).toBe(".arr/prompt-log.jsonl");
+    expect(LEGACY_LOCAL_PROMPT_LOG_GITIGNORE_ENTRY).toBe(".arr/");
 
     // Metadata-first sync boundary: without the switch, the text stays local.
     const withoutRaw = toServerPromptSync(recordEntry, {

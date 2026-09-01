@@ -13,7 +13,7 @@
 - Phase 3 전체(Wave A~F) 완료. 벤치 v3 릴리스 게이트 MET, 사이트 정확도 주장 복원됨.
 - **receipt 포맷 최종화 완료** — `predicateType` + WORK_SPEC §13 예약 필드 4종(git:commit sha1 subject · `tool` · `analyzedAt` · `coverage`)이 이미 구현·테스트됐다. §2에서 도메인 값만 교체하면 된다.
 - **워커 컨테이너 준비 완료** — `apps/worker/Dockerfile` + 레포 루트 `fly.toml`. `fly deploy` 한 번으로 뜬다.
-- 웹 프로덕션 빌드 로컬 통과 확인(`pnpm --filter @arr/web build`) — **빌드 타임에 필요한 환경 변수는 없다**(전부 런타임 주입).
+- 웹 프로덕션 빌드 로컬 통과 확인(`pnpm --filter @alrescha/web build`) — **빌드 타임에 필요한 환경 변수는 없다**(전부 런타임 주입).
 - 게이트 상태: vitest 872 passed / 1 skipped, lint·typecheck 무결점, `scripts/verify-scope-boundaries.ts` PASS(12경계).
 
 **남은 것 = 이 문서의 §1~§7.**
@@ -64,7 +64,7 @@
 **픽스처 다이제스트 재계산** (레포 루트에서 실행):
 
 ```bash
-npx tsx -e "import('./packages/core/src/assurance/receipts.ts').then(async (m)=>{const s={_type:'https://in-toto.io/Statement/v1',predicate:{analyzedAt:'2026-08-10T13:42:00.000Z',commitSha:'b'.repeat(40),coverage:{implVerified:3,requirements:5,testVerified:2},evidence:{inferred:1,verified:3},previousReceiptDigest:'9'.repeat(64),repository:'2klips/arr-app',runId:'run-bad0551',tool:{name:'arr',version:'0.1.0'}},predicateType:'https://arr-app-web.vercel.app/receipt/v1',subject:[{digest:{sha1:'b'.repeat(40)},name:'git:commit'},{digest:{sha256:'a'.repeat(64)},name:'2klips/arr-app'}]};console.log('current:',await m.digestInTotoStatement(s));const p={...s,predicate:{...s.predicate,commitSha:'e'.repeat(40),evidence:{inferred:2,verified:2},previousReceiptDigest:null,runId:'run-e9101b5'}};console.log('previous:',await m.digestInTotoStatement(p));})"
+npx tsx -e "import('./packages/core/src/assurance/receipts.ts').then(async (m)=>{const s={_type:'https://in-toto.io/Statement/v1',predicate:{analyzedAt:'2026-08-10T13:42:00.000Z',commitSha:'b'.repeat(40),coverage:{implVerified:3,requirements:5,testVerified:2},evidence:{inferred:1,verified:3},previousReceiptDigest:'9'.repeat(64),repository:'2klips/arr-app',runId:'run-bad0551',tool:{name:'alrescha',version:'0.1.0'}},predicateType:'https://arr-app-web.vercel.app/receipt/v1',subject:[{digest:{sha1:'b'.repeat(40)},name:'git:commit'},{digest:{sha256:'a'.repeat(64)},name:'2klips/arr-app'}]};console.log('current:',await m.digestInTotoStatement(s));const p={...s,predicate:{...s.predicate,commitSha:'e'.repeat(40),evidence:{inferred:2,verified:2},previousReceiptDigest:null,runId:'run-e9101b5'}};console.log('previous:',await m.digestInTotoStatement(p));})"
 ```
 
 출력된 두 값을 `apps/web/lib/assurance/fixtures.ts`의 `expectedDigest` 자리(현재 `52341865…` / `176b9f63…`)에 넣는다.
@@ -112,11 +112,12 @@ GitHub이 연결된 원래 계정에서:
 | `GITHUB_APP_PRIVATE_KEY`                            | PEM 전문, 줄바꿈은 `\n`                  | ✅   |
 | `GITHUB_INSTALL_STATE_SECRET`                       | 임의 랜덤 문자열                         | ✅   |
 | `GITHUB_WEBHOOK_SECRET`                             | GitHub App 설정과 동일 값                | ✅   |
-| `ARR_MCP_URL`                                       | `https://arr-app-web.vercel.app/api/mcp` | 권장 |
+| `ALRESCHA_MCP_URL`                                  | `https://arr-app-web.vercel.app/api/mcp` | 권장 |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`              | 플랫폼 AI 판단·enrich 제공 시            | 선택 |
 | `BYOK_ENCRYPTION_KEY`                               | BYOK 사용 시                             | 선택 |
 
 3. Domains: 기본 프로덕션 주소 `arr-app-web.vercel.app` 유지. 커스텀 도메인은 추후 alias로 연결한다.
+   - `ARR_MCP_URL`은 현재 전환 릴리스에서만 읽기 alias로 지원한다. 신규 배포에는 `ALRESCHA_MCP_URL`만 설정한다.
 4. Deploy → 빌드 green 확인.
 
 ## 6. Fly.io — 워커 (P3)

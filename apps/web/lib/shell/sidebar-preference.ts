@@ -9,7 +9,8 @@
  * (node_modules/next/dist/docs/01-app/03-api-reference/04-functions/cookies.md).
  */
 
-export const SIDEBAR_STORAGE_KEY = "arr-sidebar";
+export const SIDEBAR_STORAGE_KEY = "alrescha-sidebar";
+export const LEGACY_SIDEBAR_STORAGE_KEY = "arr-sidebar";
 export const SIDEBAR_ATTRIBUTE = "data-sidebar";
 
 export const SIDEBAR_STATES = ["expanded", "rail"] as const;
@@ -59,6 +60,8 @@ export function applySidebarState(
  */
 export const SIDEBAR_INIT_SCRIPT = `(function(){try{var s=window.localStorage.getItem(${JSON.stringify(
   SIDEBAR_STORAGE_KEY,
-)});if(s===${JSON.stringify("rail")}){document.documentElement.setAttribute(${JSON.stringify(
+)});if(s===null){s=window.localStorage.getItem(${JSON.stringify(
+  LEGACY_SIDEBAR_STORAGE_KEY,
+)});}if(s===${JSON.stringify("rail")}){document.documentElement.setAttribute(${JSON.stringify(
   SIDEBAR_ATTRIBUTE,
 )},s);}}catch(e){}})();`;

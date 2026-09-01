@@ -5,8 +5,8 @@ import type {
   JudgmentOutput,
   JudgmentProvider,
   JudgmentTargetState,
-} from "@arr/core";
-import type { ByokKeyEnvelope } from "@arr/core/byok";
+} from "@alrescha/core";
+import type { ByokKeyEnvelope } from "@alrescha/core/byok";
 
 import type { JudgmentJobStore } from "./judgment-job";
 import { JudgmentProviderLoader, type ByokKeyStore } from "./provider-loader";

@@ -21,7 +21,7 @@ export interface InstructionBlock {
   readonly target: AgentInstructionTarget;
 }
 
-const BODY = `## Alrescha knowledge graph (MCP server: arr)
+const BODY = `## Alrescha knowledge graph (MCP server: alrescha)
 
 Before grepping or reading files broadly:
 
@@ -36,8 +36,8 @@ Record what you learn before finishing:
 - \`assert_link\` — a structural insight as a graph edge (part_of, uses, depends_on, produces, configures, validates, implements).
 - \`record_ruled_out\` — hypotheses you tried and eliminated, so the next agent does not retry them.`;
 
-const MARK_START = "<!-- arr:instructions:start -->";
-const MARK_END = "<!-- arr:instructions:end -->";
+const MARK_START = "<!-- alrescha:instructions:start -->";
+const MARK_END = "<!-- alrescha:instructions:end -->";
 
 function markdownSnippet(): string {
   return `${MARK_START}\n\n${BODY}\n\n${MARK_END}\n`;
@@ -53,13 +53,13 @@ export function buildInstructionBlock(
       return { filename: "AGENTS.md", snippet: markdownSnippet(), target };
     case "cursor":
       return {
-        filename: ".cursor/rules/arr.mdc",
+        filename: ".cursor/rules/alrescha.mdc",
         snippet: `---\ndescription: Alrescha knowledge graph tools\nalwaysApply: true\n---\n\n${markdownSnippet()}`,
         target,
       };
     case "generic":
       return {
-        filename: "arr-instructions.md",
+        filename: "alrescha-instructions.md",
         snippet: markdownSnippet(),
         target,
       };
@@ -72,8 +72,8 @@ export function buildMcpConfigSnippet(baseUrl: string): string {
   return JSON.stringify(
     {
       mcpServers: {
-        arr: {
-          headers: { Authorization: "Bearer <ARR_MCP_TOKEN>" },
+        alrescha: {
+          headers: { Authorization: "Bearer <ALRESCHA_MCP_TOKEN>" },
           type: "http",
           url: endpoint,
         },

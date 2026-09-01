@@ -1,4 +1,4 @@
-import { GITHUB_API_VERSION } from "@arr/core";
+import { GITHUB_API_VERSION } from "@alrescha/core";
 
 export interface MinimalIndexSource {
   readonly agentsContent: string | null;

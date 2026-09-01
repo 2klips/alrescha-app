@@ -1,7 +1,7 @@
 import type {
   GitHubWebhookStore,
   PersistedGitHubWebhookEvent,
-} from "@arr/core";
+} from "@alrescha/core";
 
 import { createAdminClient } from "../supabase/admin";
 

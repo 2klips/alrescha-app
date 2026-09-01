@@ -1,4 +1,7 @@
-import { buildCommitAnalysisCards, type CommitAnalysisCard } from "@arr/core";
+import {
+  buildCommitAnalysisCards,
+  type CommitAnalysisCard,
+} from "@alrescha/core";
 
 export type DemoCommitState = "busy" | "empty";
 
@@ -136,7 +139,7 @@ export function buildDemoCommitCards(
         repository: REPOSITORY,
         triggerKind: "push",
       },
-      // `arr push` — metadata only, so no jobs and no receipt (ADR-015).
+      // `alrescha push` — metadata only, so no jobs and no receipt (ADR-015).
       {
         commitSha: "10ca1de5c7b3a92f4e6d1c8b0a5f3e7d2c9b4a61",
         completedAt: "2026-08-17T09:30:06.200Z",

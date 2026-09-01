@@ -26,7 +26,7 @@ export const CLI_MESSAGES = {
   githubNudge:
     "이 프로젝트를 GitHub에 연결하면 push마다 자동으로 분석되고 Findings·Receipt까지 발급됩니다. 온보딩: /onboarding",
   authFailed:
-    "인증 실패 — 워크스페이스 설정(MCP)에서 발급한 토큰을 --token 또는 ARR_TOKEN으로 전달하세요.",
+    "인증 실패 — 워크스페이스 설정(MCP)에서 발급한 토큰을 --token 또는 ALRESCHA_TOKEN으로 전달하세요(ARR_TOKEN도 전환 기간 지원).",
   offline: (detail: string) =>
     `서버에 연결할 수 없습니다 (${detail}). 아무것도 전송되지 않았습니다 — 네트워크 확인 후 다시 시도하세요.`,
   serverError: (httpStatus: number, detail: string) =>
@@ -34,9 +34,9 @@ export const CLI_MESSAGES = {
   invalidPayload: (detail: string) =>
     `페이로드 검증 실패(메타데이터 전용 계약 위반) — ${detail}`,
   missingToken:
-    "토큰이 없습니다. --token <값> 또는 환경변수 ARR_TOKEN을 설정하세요.",
+    "토큰이 없습니다. --token <값> 또는 환경변수 ALRESCHA_TOKEN을 설정하세요(ARR_TOKEN도 전환 기간 지원).",
   missingServer:
-    "서버 주소가 없습니다. --server <url> 또는 환경변수 ARR_SERVER_URL을 설정하세요.",
+    "서버 주소가 없습니다. --server <url> 또는 환경변수 ALRESCHA_SERVER_URL을 설정하세요(ARR_SERVER_URL도 전환 기간 지원).",
   usage:
-    "사용법: arr push [디렉터리] --repo <owner/name> --server <url> --token <토큰>",
+    "사용법: alrescha push [디렉터리] --repo <owner/name> --server <url> --token <토큰>",
 } as const;

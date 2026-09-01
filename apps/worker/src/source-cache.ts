@@ -18,7 +18,7 @@
 
 import { GitHubRequestError } from "./github-repository-source";
 
-import type { RepositorySource } from "@arr/core";
+import type { RepositorySource } from "@alrescha/core";
 
 /** Re-mint this long before expiry so a token never dies mid-job. */
 export const TOKEN_REFRESH_MARGIN_MS = 5 * 60 * 1000;

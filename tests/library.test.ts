@@ -25,7 +25,7 @@ describe("personal library", () => {
       source: {
         commitSha: "1".repeat(40),
         path: ".agents/skills/review-auth/SKILL.md",
-        repository: "arr/drifted-demo",
+        repository: "alrescha/drifted-demo",
       },
       tags: ["Auth", "review", "auth"],
       type: "skill",
@@ -38,7 +38,7 @@ describe("personal library", () => {
       source: {
         commitSha: "1".repeat(40),
         path: ".agents/skills/review-auth/SKILL.md",
-        repository: "arr/drifted-demo",
+        repository: "alrescha/drifted-demo",
       },
       tags: ["auth", "review"],
       type: "skill",
@@ -56,7 +56,7 @@ describe("personal library", () => {
           source: {
             commitSha: "1".repeat(40),
             path: ".agents/skills/review-auth/SKILL.md",
-            repository: "arr/api",
+            repository: "alrescha/api",
           },
           tags: ["auth", "review"],
           type: "skill",
@@ -71,7 +71,7 @@ describe("personal library", () => {
           source: {
             commitSha: "2".repeat(40),
             path: ".cursor/rules/database.mdc",
-            repository: "arr/web",
+            repository: "alrescha/web",
           },
           tags: ["database", "review"],
           type: "rules",

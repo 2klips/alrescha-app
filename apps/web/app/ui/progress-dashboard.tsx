@@ -1,5 +1,5 @@
 import { Icon } from "./ui-icon";
-import type { ProgressDashboard, ProgressTodo } from "@arr/core";
+import type { ProgressDashboard, ProgressTodo } from "@alrescha/core";
 import {
   Activity,
   AlertOctagon,

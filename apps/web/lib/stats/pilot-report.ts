@@ -4,7 +4,7 @@ import {
   type PilotReceiptSnapshot,
   type PilotRunMeasurement,
   type PilotStatsReport,
-} from "@arr/core/stats";
+} from "@alrescha/core/stats";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 interface ReceiptRow {

@@ -1,4 +1,7 @@
-import { buildInspectionDashboard, type InspectionDashboard } from "@arr/core";
+import {
+  buildInspectionDashboard,
+  type InspectionDashboard,
+} from "@alrescha/core";
 
 export type DemoInspectionState = "busy" | "empty";
 

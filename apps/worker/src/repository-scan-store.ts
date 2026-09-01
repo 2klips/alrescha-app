@@ -1,4 +1,7 @@
-import type { PreviousScannedArtifact, RepositoryScanPlan } from "@arr/core";
+import type {
+  PreviousScannedArtifact,
+  RepositoryScanPlan,
+} from "@alrescha/core";
 import type postgres from "postgres";
 
 interface PreviousArtifactRow {

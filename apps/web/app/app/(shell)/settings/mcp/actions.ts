@@ -7,12 +7,12 @@ import {
   proposeMinimalIndexPullRequest,
   requestInstallationToken,
   type ContextTargetAgent,
-} from "@arr/core";
+} from "@alrescha/core";
 import {
   MCP_SCOPES,
   selectWorkspaceContextPack,
   type McpScope,
-} from "@arr/mcp";
+} from "@alrescha/mcp";
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 
@@ -21,6 +21,7 @@ import { createGitHubAppJwt } from "../../../../../lib/github/api";
 import { githubAppEnvironment } from "../../../../../lib/github/env";
 import { readMinimalIndexSource } from "../../../../../lib/github/index-pr/source";
 import { SupabaseMcpStore } from "../../../../../lib/mcp/supabase-store";
+import { resolveMcpUrlEnvironment } from "../../../../../lib/mcp/environment";
 import { recordSecurityAuditEvent } from "../../../../../lib/security/audit";
 import { createClient } from "../../../../../lib/supabase/server";
 import {
@@ -110,7 +111,7 @@ export async function requestContextPackPreview(
 
 function hostedContextUrls(workspaceId: string) {
   const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const configuredMcpEndpoint = process.env.ARR_MCP_URL;
+  const configuredMcpEndpoint = resolveMcpUrlEnvironment();
   const appUrl = (
     configuredAppUrl?.startsWith("https://")
       ? configuredAppUrl

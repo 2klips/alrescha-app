@@ -15,7 +15,7 @@ describe("context and index settings", () => {
           files: [
             {
               after:
-                "<!-- ARR:BEGIN (managed — do not edit inside) -->\nindex\n<!-- ARR:END -->\n",
+                "<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->\nindex\n<!-- ALRESCHA:END -->\n",
               before: null,
               path: "AGENTS.md",
             },

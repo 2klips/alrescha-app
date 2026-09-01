@@ -58,13 +58,13 @@ describe("pilot release hardening", () => {
     await database.query(
       `insert into public.github_installations
         (id, workspace_id, github_installation_id, account_id, account_login)
-       values ($1, $2, 777, 1001, 'arr')`,
+       values ($1, $2, 777, 1001, 'alrescha')`,
       [INSTALLATION_ID, workspaceA],
     );
     await database.query(
       `insert into public.repositories
         (id, workspace_id, full_name, installation_id, github_repository_id, selected_at)
-       values ($1, $2, 'arr/drifted-demo', $3, 424242, now())`,
+       values ($1, $2, 'alrescha/drifted-demo', $3, 424242, now())`,
       [REPOSITORY_ID, workspaceA, INSTALLATION_ID],
     );
     await database.query(

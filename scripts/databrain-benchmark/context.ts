@@ -35,7 +35,7 @@ export interface ArmContext {
 
 /** Fixed instruction preamble — byte-identical across every task. */
 export const STATIC_PREFIX = [
-  "# Arr Data Brain 사용 규약",
+  "# Alrescha Data Brain 사용 규약",
   "",
   "- 색인·그래프에서 찾은 노드 id로 필요한 내용만 요청한다.",
   "- 응답 근거는 노드 경로를 인용한다.",

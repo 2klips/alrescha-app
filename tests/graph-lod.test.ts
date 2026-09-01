@@ -16,8 +16,10 @@ import { runForceLayout } from "../apps/web/lib/graph/force-simulation";
 import {
   DEFAULT_PANEL_SETTINGS,
   GRAPH_PANEL_STORAGE_KEY,
+  LEGACY_GRAPH_PANEL_STORAGE_KEY,
   clampPanelSettings,
   forceConfigOf,
+  loadPanelSettings,
   parsePanelSettings,
   serializePanelSettings,
 } from "../apps/web/lib/graph/graph-panel-settings";
@@ -459,7 +461,8 @@ describe("force panel settings", () => {
   test("defaults are the published force defaults plus the fade slider", () => {
     expect(forceConfigOf(DEFAULT_PANEL_SETTINGS)).toEqual(DEFAULT_FORCE_CONFIG);
     expect(DEFAULT_PANEL_SETTINGS.textFadeThreshold).toBeGreaterThanOrEqual(0);
-    expect(GRAPH_PANEL_STORAGE_KEY).toBe("arr-graph-panel");
+    expect(GRAPH_PANEL_STORAGE_KEY).toBe("alrescha-graph-panel");
+    expect(LEGACY_GRAPH_PANEL_STORAGE_KEY).toBe("arr-graph-panel");
   });
 
   test("values survive a serialize and reload round trip", () => {
@@ -472,6 +475,42 @@ describe("force panel settings", () => {
     expect(parsePanelSettings(serializePanelSettings(settings))).toEqual(
       settings,
     );
+  });
+
+  test("loads legacy settings only when canonical settings are absent", () => {
+    const legacy = serializePanelSettings(
+      clampPanelSettings({ collapsed: true, linkDistance: 180 }),
+    );
+    const canonical = serializePanelSettings(
+      clampPanelSettings({ collapsed: false, linkDistance: 220 }),
+    );
+    const original = globalThis.localStorage;
+    let canonicalValue: string | null = null;
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (key: string) =>
+          key === GRAPH_PANEL_STORAGE_KEY
+            ? canonicalValue
+            : key === LEGACY_GRAPH_PANEL_STORAGE_KEY
+              ? legacy
+              : null,
+      },
+    });
+
+    try {
+      expect(loadPanelSettings().linkDistance).toBe(180);
+      canonicalValue = canonical;
+      expect(loadPanelSettings().linkDistance).toBe(220);
+    } finally {
+      if (original === undefined)
+        Reflect.deleteProperty(globalThis, "localStorage");
+      else
+        Object.defineProperty(globalThis, "localStorage", {
+          configurable: true,
+          value: original,
+        });
+    }
   });
 
   test("out-of-range and corrupt payloads degrade to the defaults", () => {

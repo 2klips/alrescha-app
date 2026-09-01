@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  RECEIPT_TOOL,
   digestInTotoStatement,
   inTotoStatementSchema,
   type InTotoStatement,
@@ -28,6 +29,15 @@ const statement: InTotoStatement = {
 
 describe("in-toto-shaped assurance receipts", () => {
   test("validates the locked Statement v1 shape", () => {
+    const canonicalStatement: InTotoStatement = {
+      ...statement,
+      predicate: { ...statement.predicate, tool: RECEIPT_TOOL },
+    };
+
+    expect(inTotoStatementSchema.parse(canonicalStatement)).toEqual(
+      canonicalStatement,
+    );
+    // Stored receipts issued before the rename remain verifiable.
     expect(inTotoStatementSchema.parse(statement)).toEqual(statement);
     expect(() =>
       inTotoStatementSchema.parse({ ...statement, _type: "custom" }),

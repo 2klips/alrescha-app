@@ -1,4 +1,4 @@
-import type { CommitAnalysisCard, CommitAnalysisStatus } from "@arr/core";
+import type { CommitAnalysisCard, CommitAnalysisStatus } from "@alrescha/core";
 import {
   CheckCircle2,
   ChevronRight,
