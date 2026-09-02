@@ -23,3 +23,10 @@
 ## 배포 (2026-09-02 13:26 UTC)
 
 - 워커 **v11** `deployment-01M1H4QND7TRQWCD2QD8VPY2KS`(롤백 v10 `…M1H28MGB…`). `26de550`의 push가 만든 analyze는 v10이 처리해 요구사항이 아직 0건 — 이 커밋의 push가 v11에서 첫 영속화 analyze를 트리거한다(결과는 아래 실측 절에 추가).
+
+## 프로덕션 실측 (`5cd09bd` analyze, v11, 2026-09-02 13:29 UTC)
+
+- scan 13:28:12 → analyze **13:29:35 succeeded(attempt 1)**. `requirements` **0 → 113 active**(origin: task 99 · normative 9 · adr-decision 5). `graph_nodes`: requirement **0 → 113**(artifact 503·rationale 86). id 전부 `^0[0-9A-HJKMNP-TV-Z]{25}$`.
+- 샘플: ADR 001~003의 결정 절, `fixtures/drifted-demo/.cursor/rules/testing.mdc`의 MUST 문장 등 — 출처 아티팩트 경로·행에 정확히 붙음.
+- 관찰: `fixtures/drifted-demo/**`의 데모 픽스처 문서도 요구사항으로 들어온다 — 스캐너가 그 디렉터리를 아티팩트로 이미 수집하고 있어 요구사항도 따라온 것(아티팩트 수집 범위의 기존 성질, 요구사항 영속화 고유 문제 아님). 픽스처 제외가 필요하면 스캐너 분류 규칙에서 다룰 사안.
+- 이 순간부터 `/app/inspection` 요구사항 판정 패널·`/app/map` 요구사항 레이어·MCP 요구사항 데이터가 실데이터로 동작한다.
