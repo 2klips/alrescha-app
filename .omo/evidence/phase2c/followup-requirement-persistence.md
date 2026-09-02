@@ -19,3 +19,7 @@
 ## 프로덕션 반영 절차
 
 워커 재배포(v11)만 필요 — 마이그레이션 없음. 배포 후 다음 push의 analyze가 `requirements`를 채우고, 그 순간 `/app/inspection` 요구사항 판정 패널·맵 요구사항 레이어·MCP 요구사항 데이터가 동시에 살아난다. 스모크: 패널의 활성 요구사항에 **AI 판정** → `judgments`에 `requirement-disambiguation` 행.
+
+## 배포 (2026-09-02 13:26 UTC)
+
+- 워커 **v11** `deployment-01M1H4QND7TRQWCD2QD8VPY2KS`(롤백 v10 `…M1H28MGB…`). `26de550`의 push가 만든 analyze는 v10이 처리해 요구사항이 아직 0건 — 이 커밋의 push가 v11에서 첫 영속화 analyze를 트리거한다(결과는 아래 실측 절에 추가).
