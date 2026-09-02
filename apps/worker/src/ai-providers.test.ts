@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  AnthropicCoachingProvider,
   AnthropicJudgmentProvider,
   OpenAiJudgmentProvider,
 } from "./ai-providers";
@@ -71,22 +72,26 @@ describe("AI judgment provider adapters", () => {
   });
 
   it("uses the Anthropic Messages API behind the same provider contract", async () => {
+    // Forced tool use: the verdict arrives as the tool call's input, never as
+    // prose that has to reach `end_turn` inside the token cap.
     const fetch = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
           content: [
             {
-              text: JSON.stringify({
+              id: "toolu_1",
+              input: {
                 confidence: 0.8,
                 evidenceGrade: "inferred",
                 explanation: "The requirement remains ambiguous.",
                 severity: "low",
                 verdict: "ambiguous",
-              }),
-              type: "text",
+              },
+              name: "record_judgment",
+              type: "tool_use",
             },
           ],
-          stop_reason: "end_turn",
+          stop_reason: "tool_use",
         }),
         { status: 200 },
       ),
@@ -118,6 +123,98 @@ describe("AI judgment provider adapters", () => {
     });
     expect(JSON.parse(String(init.body))).toMatchObject({
       model: "test-anthropic-model",
+      tool_choice: { name: "record_judgment", type: "tool" },
+    });
+  });
+
+  it("names a truncated Anthropic judgment instead of failing on the schema", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          content: [
+            { id: "toolu_1", input: {}, name: "record_judgment", type: "tool_use" },
+          ],
+          stop_reason: "max_tokens",
+        }),
+        { status: 200 },
+      ),
+    );
+    const provider = new AnthropicJudgmentProvider({
+      apiKey: "k",
+      fetch,
+      model: "m",
+    });
+    await expect(
+      provider.run({
+        context: ["x"],
+        currentConfidence: 0.5,
+        currentSeverity: "low",
+        kind: "drift-verdict-confirmation",
+        targetId: "finding-1",
+      }),
+    ).rejects.toThrow(/max_tokens/);
+  });
+});
+
+describe("AI coaching provider adapters", () => {
+  it("forces the Anthropic coaching tool and carries the axis ceilings", async () => {
+    const rubric = {
+      batchSize: 1,
+      contextGrounding: 2,
+      noOverInstruction: 2,
+      specificity: 2,
+      stopCondition: 0,
+      verifiability: 2,
+    };
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          content: [
+            {
+              id: "toolu_2",
+              input: {
+                grade: "inferred",
+                rubric,
+                suggestions: ["정지 조건을 넣으세요."],
+              },
+              name: "record_coaching",
+              type: "tool_use",
+            },
+          ],
+          stop_reason: "tool_use",
+        }),
+        { status: 200 },
+      ),
+    );
+    const provider = new AnthropicCoachingProvider({
+      apiKey: "test-anthropic-key",
+      fetch,
+      model: "test-anthropic-model",
+    });
+
+    const output = await provider.run({
+      ceilings: {
+        hasContextReference: true,
+        hasStopCondition: false,
+        hasVerificationSignal: true,
+        wordCount: 24,
+      },
+      promptText: "spec/auth.md의 REQ-3 구현, tests 통과까지",
+      suggestions: ["정지 조건을 넣으세요."],
+    });
+
+    expect(output).toMatchObject({ grade: "inferred", rubric });
+    const [, init] = fetch.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(String(init.body));
+    expect(body).toMatchObject({
+      tool_choice: { name: "record_coaching", type: "tool" },
+    });
+    // The deterministic floor rides along: the model is told the caps.
+    const user = JSON.parse(body.messages[0].content);
+    expect(user.axisCeilings).toMatchObject({
+      contextGrounding: 2,
+      stopCondition: 0,
+      verifiability: 2,
     });
   });
 });

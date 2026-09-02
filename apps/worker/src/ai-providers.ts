@@ -73,23 +73,6 @@ function openAiOutputText(payload: unknown): string {
   throw new Error("OpenAI judgment response did not contain output text.");
 }
 
-function anthropicOutputText(payload: unknown): string {
-  const response = object(payload);
-  if (
-    response?.stop_reason !== "end_turn" ||
-    !Array.isArray(response.content)
-  ) {
-    throw new Error("Anthropic judgment response was incomplete.");
-  }
-  for (const part of response.content) {
-    const content = object(part);
-    if (content?.type === "text" && typeof content.text === "string") {
-      return content.text;
-    }
-  }
-  throw new Error("Anthropic judgment response did not contain output text.");
-}
-
 function parseJson(text: string, provider: string): unknown {
   try {
     return JSON.parse(text) as unknown;
@@ -169,15 +152,24 @@ export class AnthropicJudgmentProvider implements JudgmentProvider {
   }
 
   async run(request: JudgmentRequest): Promise<unknown> {
+    // Forced tool use, like enrich: the prose-JSON contract needed the reply
+    // to end with `end_turn`, and the production smoke saw the model run past
+    // the 800-token cap often enough that judgments only succeeded on retry.
     const response = await this.fetch("https://api.anthropic.com/v1/messages", {
       body: JSON.stringify({
-        max_tokens: 800,
+        max_tokens: 1_000,
         messages: [{ content: judgmentPrompt(request), role: "user" }],
         model: this.model,
-        system: [
-          "Judge only supplied evidence. Return one JSON object matching the schema. Evidence grade must remain inferred; never claim verified execution evidence.",
-          JSON.stringify(JUDGMENT_JSON_SCHEMA),
-        ].join("\n"),
+        system:
+          "Judge only supplied evidence. Record the verdict with the tool. Evidence grade must remain inferred; never claim verified execution evidence.",
+        tool_choice: { name: "record_judgment", type: "tool" },
+        tools: [
+          {
+            description: "Record the judgment for the supplied target.",
+            input_schema: JUDGMENT_JSON_SCHEMA,
+            name: "record_judgment",
+          },
+        ],
       }),
       headers: {
         "anthropic-version": "2023-06-01",
@@ -191,7 +183,7 @@ export class AnthropicJudgmentProvider implements JudgmentProvider {
         `Anthropic judgment request failed with status ${response.status}.`,
       );
     }
-    return parseJson(anthropicOutputText(await response.json()), "Anthropic");
+    return anthropicToolInput(await response.json(), "record_judgment");
   }
 }
 
@@ -696,15 +688,24 @@ export class AnthropicCoachingProvider implements CoachingProvider {
   }
 
   async run(request: CoachingCallRequest): Promise<unknown> {
+    // Forced tool use: the production smoke failed 3/3 with the prose-JSON
+    // contract — Korean suggestions plus the rubric overran the 800-token cap
+    // and the reply never reached `end_turn`. A tool call is bounded by its
+    // schema, and a truncated one fails with the cause named.
     const response = await this.fetch("https://api.anthropic.com/v1/messages", {
       body: JSON.stringify({
-        max_tokens: 800,
+        max_tokens: 1_500,
         messages: [{ content: coachingPrompt(request), role: "user" }],
         model: this.model,
-        system: [
-          COACHING_SYSTEM_PROMPT,
-          JSON.stringify(COACHING_JSON_SCHEMA),
-        ].join("\n"),
+        system: COACHING_SYSTEM_PROMPT,
+        tool_choice: { name: "record_coaching", type: "tool" },
+        tools: [
+          {
+            description: "Record the rubric and suggestions for this prompt.",
+            input_schema: COACHING_JSON_SCHEMA,
+            name: "record_coaching",
+          },
+        ],
       }),
       headers: {
         "anthropic-version": "2023-06-01",
@@ -718,6 +719,6 @@ export class AnthropicCoachingProvider implements CoachingProvider {
         `Anthropic coaching request failed with status ${response.status}.`,
       );
     }
-    return parseJson(anthropicOutputText(await response.json()), "Anthropic");
+    return anthropicToolInput(await response.json(), "record_coaching");
   }
 }

@@ -66,6 +66,7 @@ export async function runDrainLoop(input: DrainLoopInput): Promise<boolean> {
     for (;;) {
       const outcome = await runWorkerOnce({
         handlers: input.handlers,
+        log,
         queue: input.queue,
         workerId: input.workerId,
         workspaceId,

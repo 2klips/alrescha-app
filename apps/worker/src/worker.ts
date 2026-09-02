@@ -16,8 +16,20 @@ export type WorkerOutcome = "failed" | "idle" | "retrying" | "succeeded";
 const CREDIT_UNAVAILABLE =
   /insufficient workspace credits|workspace monthly credit cap exceeded|per-job cap/i;
 
+/**
+ * Lease renewal cadence while a handler runs. `claim_next_job` leases for
+ * 30s and handlers only heartbeat between steps, so a single 100s model call
+ * (the production coaching smoke measured exactly that) outlived its lease
+ * and would have been reaped and re-claimed — a duplicate billable call —
+ * the moment a second loop shared the workspace. Renewing on a timer keeps
+ * the lease honest for the whole call.
+ */
+export const HEARTBEAT_INTERVAL_MS = 10_000;
+
 export async function runWorkerOnce(input: {
   readonly handlers: JobHandlers;
+  /** Sink for failure reasons; the outcome alone never says why a job retried. */
+  readonly log?: (line: string) => void;
   readonly queue: WorkerQueue;
   readonly workerId: string;
   readonly workspaceId: string;
@@ -37,17 +49,23 @@ export async function runWorkerOnce(input: {
     return "failed";
   }
 
+  const heartbeat = () => input.queue.heartbeat(job.id, input.workerId);
+  const renewal = setInterval(() => {
+    void heartbeat().catch(() => undefined);
+  }, HEARTBEAT_INTERVAL_MS);
+
   try {
     if (job.creditCost > 0) {
       await input.queue.reserveCredits(job.id);
     }
-    await input.handlers[job.kind](job, {
-      heartbeat: () => input.queue.heartbeat(job.id, input.workerId),
-    });
+    await input.handlers[job.kind](job, { heartbeat });
     const outcome = await input.queue.finish(job.id, input.workerId, true);
     return outcome === "succeeded" ? "succeeded" : "failed";
   } catch (error) {
     const message = error instanceof Error ? error.message : "job failed";
+    input.log?.(
+      `  ${input.workerId} ${job.kind} ${job.id} attempt ${job.attemptCount} failed: ${message}`,
+    );
     if (job.kind === "judge" && CREDIT_UNAVAILABLE.test(message)) {
       await input.queue.reject(
         job.id,
@@ -69,5 +87,7 @@ export async function runWorkerOnce(input: {
       message,
     );
     return outcome === "retrying" ? "retrying" : "failed";
+  } finally {
+    clearInterval(renewal);
   }
 }

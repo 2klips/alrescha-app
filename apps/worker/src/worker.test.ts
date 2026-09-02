@@ -80,6 +80,71 @@ describe("background worker orchestration", () => {
     );
   });
 
+  it("logs the failure reason, because the outcome alone never says why", async () => {
+    const workerQueue = queue(job({ attemptCount: 2, kind: "coach" }));
+    vi.mocked(workerQueue.finish).mockResolvedValue("retrying");
+    const handler = vi
+      .fn()
+      .mockRejectedValue(new Error("Anthropic coaching request failed with status 529."));
+    const log = vi.fn();
+    await runWorkerOnce({
+      handlers: {
+        analyze: handler,
+        coach: handler,
+        enrich: handler,
+        judge: handler,
+        pack: handler,
+        scan: handler,
+      },
+      log,
+      queue: workerQueue,
+      workerId: "worker-1",
+      workspaceId: job().workspaceId,
+    });
+
+    expect(log).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /worker-1 coach 01J0000000000000000000000A attempt 2 failed: Anthropic coaching request failed with status 529\./,
+      ),
+    );
+  });
+
+  it("renews the lease on a timer while a slow handler runs", async () => {
+    vi.useFakeTimers();
+    try {
+      const workerQueue = queue(job({ creditCost: 1, kind: "coach" }));
+      // A 100s model call — the production coaching smoke measured exactly
+      // that — against a 30s lease; without renewal it would have been reaped.
+      const handler = vi.fn().mockImplementation(
+        () => new Promise<void>((resolve) => setTimeout(resolve, 100_000)),
+      );
+      const running = runWorkerOnce({
+        handlers: {
+          analyze: handler,
+          coach: handler,
+          enrich: handler,
+          judge: handler,
+          pack: handler,
+          scan: handler,
+        },
+        queue: workerQueue,
+        workerId: "worker-1",
+        workspaceId: job().workspaceId,
+      });
+
+      await vi.advanceTimersByTimeAsync(100_000);
+      expect(await running).toBe("succeeded");
+      // Ten seconds apart for a hundred seconds: nine or ten renewals, and
+      // none once the job is finished.
+      expect(vi.mocked(workerQueue.heartbeat).mock.calls.length).toBeGreaterThanOrEqual(9);
+      const renewals = vi.mocked(workerQueue.heartbeat).mock.calls.length;
+      await vi.advanceTimersByTimeAsync(30_000);
+      expect(vi.mocked(workerQueue.heartbeat).mock.calls.length).toBe(renewals);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("terminally rejects schema-invalid judgments so reserved credits refund immediately", async () => {
     const workerQueue = queue(job({ creditCost: 12, kind: "judge" }));
     const handler = vi
