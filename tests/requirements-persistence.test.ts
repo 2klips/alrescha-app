@@ -164,6 +164,40 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
     expect((await rows()).every(({ status }) => status === "active")).toBe(true);
   });
 
+  it("sweeps the requirement node left behind when its source artifact is removed", async () => {
+    await store.reconcileRequirements({
+      repositoryId: repository,
+      requirements: [
+        requirement(REQ_1, "세션은 만료되어야 한다"),
+        requirement(REQ_2, "토큰은 회전되어야 한다"),
+      ],
+      workspaceId: workspace,
+    });
+    // apply_repository_scan removing the spec: the artifact node goes, the
+    // requirement rows cascade with it — but nothing references the
+    // requirement nodes, so they would outlive their rows (seen in production
+    // after the fixture exclusion: 99 rows, 113 nodes).
+    await database.query("delete from public.graph_nodes where id = $1", [
+      artifact,
+    ]);
+    expect(await rows()).toEqual([]);
+    const orphans = () =>
+      database.query<{ id: string }>(
+        `select id from public.graph_nodes
+         where workspace_id = $1 and kind = 'requirement' order by id`,
+        [workspace],
+      );
+    expect((await orphans()).rows.map(({ id }) => id)).toEqual([REQ_1, REQ_2]);
+
+    const swept = await store.reconcileRequirements({
+      repositoryId: repository,
+      requirements: [],
+      workspaceId: workspace,
+    });
+    expect(swept).toMatchObject({ active: 0, superseded: 0 });
+    expect((await orphans()).rows).toEqual([]);
+  });
+
   it("refuses a requirement whose source artifact is not in the repository", async () => {
     await expect(
       store.reconcileRequirements({

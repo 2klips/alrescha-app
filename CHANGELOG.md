@@ -86,7 +86,11 @@ from server-observed evidence only). Per-todo evidence:
   any more — a spec or rule file there describes a sample repository, and the
   first persisting analyze had turned `fixtures/drifted-demo`'s synthetic
   MUST statements into 90+ live requirements. Whole-segment match only;
-  previously stored fixture artifacts fall out on the next scan.
+  previously stored fixture artifacts fall out on the next scan. Verified in
+  production (14 fixture artifacts → 0, 113 → 99 requirements), which exposed
+  that removing an artifact node cascades into the requirement *rows* but
+  leaves their *nodes* orphaned; `reconcileRequirements` now sweeps
+  requirement nodes that have no row.
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the

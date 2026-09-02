@@ -16,3 +16,17 @@
 ## 배포 (2026-09-02 13:58 UTC)
 
 - 워커 **v12** `deployment-01M1H6JAS7SNT66R73JG6GTG0P`(롤백 v11 `…M1H4QND7…`). `fdf9abf`의 scan은 v11이 처리 — 이 커밋의 push가 v12에서 첫 제외 스캔을 트리거한다(결과는 아래 실측 절에 추가).
+
+## 프로덕션 실측 (2026-09-02, push `8fc7c00` → v12 scan 14:00:19 · analyze 14:01:41, 모두 succeeded)
+
+| 항목 | 전 | 후 |
+| --- | ---: | ---: |
+| `artifacts` (`path like 'fixtures/%'`) | 14 | **0** |
+| `artifacts` 전체 | 503 | 489 |
+| `requirements` active | 113 | **99** |
+| `graph_nodes` kind=requirement | 113 | 113 → **결함** |
+| requirement-disambiguation 판정 중 대상 없음 | – | 1 (스모크 판정, 예상대로 잔존) |
+
+- 남은 99건의 출처는 전부 이 저장소 문서(BUILD_PLAN 계열 86 · IMPLEMENTATION_GUIDE 8 · WORK_SPEC 2 · ADR 2 …). 스캔 로그 `scan @8fc7c00 → 17 rows` = 삭제 14 + 변경 3.
+- **발견한 결함**: `requirements.id → graph_nodes` 와 `requirements.source_artifact_id → artifacts` 는 cascade지만 **`graph_nodes` 쪽으로는 아무것도 cascade하지 않아**, 아티팩트 노드 삭제 시 요구사항 행만 사라지고 요구사항 **노드 14건이 고아로 남았다**(그래프 API·맵에서 라벨만 있는 노드로 노출될 수 있음).
+- 수정: `PostgresAnalysisStore.reconcileRequirements` 트랜잭션 끝에 같은 (workspace, repository)의 `kind='requirement'` 노드 중 `requirements` 행이 없는 것을 삭제하는 스윕 추가(엣지는 FK cascade). 마이그레이션 불필요 — 다음 analyze 한 번으로 프로덕션 고아 14건이 정리된다. 테스트 `tests/requirements-persistence.test.ts` +1(아티팩트 노드 삭제 → 고아 재현 → 스윕 확인).

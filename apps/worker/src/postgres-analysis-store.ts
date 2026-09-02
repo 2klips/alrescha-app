@@ -181,6 +181,18 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
         returning id
       `;
 
+      // When a scan removes a spec, its artifact node cascades into the
+      // requirement rows but nothing cascades into the requirement nodes.
+      await tx`
+        delete from public.graph_nodes n
+        where n.workspace_id = ${input.workspaceId}
+          and n.repository_id = ${input.repositoryId}
+          and n.kind = 'requirement'
+          and not exists (
+            select 1 from public.requirements r where r.id = n.id
+          )
+      `;
+
       return { active: ids.length, superseded: superseded.length };
     });
   }
