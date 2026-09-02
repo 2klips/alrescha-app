@@ -27,6 +27,11 @@ Anthropic 판단·코칭 프로바이더가 **prose-JSON 계약**(`max_tokens: 8
 - `worker.ts`: 핸들러 실행 중 **10초 간격 lease 갱신**(`HEARTBEAT_INTERVAL_MS`) + 실패 사유를 `log`로 출력(`<worker> <kind> <job> attempt <n> failed: <message>`); `drain-loop.ts`가 로그 싱크를 전달.
 - 테스트: Anthropic 판단 tool_use 계약·max_tokens 잘림 명명, Anthropic 코칭 tool_use + 상한(axisCeilings) 동봉, 워커 실패 사유 로깅, 100초 핸들러 동안 heartbeat ≥9회·완료 후 0회(fake timers). 워커 패키지 60/60.
 
+## 재스모크 결과 (워커 v9 `deployment-01M1H0JR2M2R4NG2A2DDV6B1AC`, 2026-09-02 12:25 UTC)
+
+- **coach succeeded, attempt 1, 8초**(12:25:39 → 12:25:47; 수정 전 100초 후 실패). 기록 #2 `…0002`의 `prompt_records.rubric` = `{grade: inferred, rubric: 6축 전부 2, suggestions: 한국어 3개}` — 시드 프롬프트가 경로·테스트 기준·정지 조건을 모두 담아 상한이 전부 2였고 검증기가 수용. 원장 reserve −1 → settle(과금). 잔액 29 = 50 − 10 − 10 − 1(환불) − 1.
+- 실패했던 기록 #1의 잡은 그대로 terminal failed(재큐 안 함 — 멱등 키·예약 정합성 쟁점은 위 절차 항목 참조).
+
 ## 재스모크 절차
 
 워커 재배포 후: 시드 재실행(기록 #2 `…0000002` 추가 — 실패한 코칭 잡의 `coaching:<record>` 멱등 키가 재요청을 막고, 재큐는 예약 멱등 키 `reserve:<job>`과 얽혀 과금 정합성이 불명확하므로 새 기록이 깨끗한 경로) → `/app/team`에서 기록 #2 **코칭 요청** → (선택) 세 번째 finding **AI 확정**으로 재시도 없이 1회 성공하는지 확인.
