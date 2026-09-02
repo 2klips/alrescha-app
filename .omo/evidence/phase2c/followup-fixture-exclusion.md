@@ -12,3 +12,7 @@
 
 - `tests/repository-scanner.test.ts` +1: 픽스처 경로 5종 null(rule·spec·AGENTS.md·`__fixtures__`·`testdata` 코드), 유사 이름 2종은 기존 분류 유지.
 - 게이트 수치는 커밋 메시지 참조. 프로덕션 실측은 아래 절에 추가.
+
+## 배포 (2026-09-02 13:58 UTC)
+
+- 워커 **v12** `deployment-01M1H6JAS7SNT66R73JG6GTG0P`(롤백 v11 `…M1H4QND7…`). `fdf9abf`의 scan은 v11이 처리 — 이 커밋의 push가 v12에서 첫 제외 스캔을 트리거한다(결과는 아래 실측 절에 추가).
