@@ -204,3 +204,11 @@
 - 임시 결정: 현행 유지(코드 무변경). 발급은 `"alrescha"`, 검증 경로는 아직 없음.
 - 필요한 결정: ⑴ **읽기 측 스키마 분리** — 발급은 `literal("alrescha")`를 유지하되 `verifyInTotoStatement`는 `enum(["arr","alrescha"])`로 레거시를 수용(§13 "receipt는 계속 검증 가능해야 한다"를 지키는 유일한 길; 별칭 제거 커밋의 검증 테스트 단언을 되살림) ⑵ 12건을 레거시로 표시(`status`)하고 검증 대상에서 제외 — 정직하지만 §13 취지에 어긋남 ⑶ 현행 유지 — 실 receipt 상세 표면을 만들 때 다시 판단.
 - 상태: open. 기본 후보 ⑴ — 실 receipt 상세 라우팅 작업과 한 커밋으로 묶는 것이 자연스럽다.
+
+## OQ-023 — 요구사항이 프로덕션에서 영속화되지 않아 요구사항 표면들이 비어 있다
+
+- 발견: 요구사항 중의성 판단 표면 프로덕션 반영 후 스모크 준비(2026-09-02) / `packages/core/src/assurance/requirements.ts`(`extractRequirements`), `supabase/migrations/202608100002_evidence_graph_domain.sql`(`requirements` 테이블), 프로덕션 실측
+- 내용: `requirements` 테이블과 `graph_nodes.kind = 'requirement'`는 데이터 모델에 있고 읽는 쪽(`/map` 워크스페이스 맵, MCP `supabase-store`, 새 판정 패널)도 있지만, **쓰는 쪽이 없다** — 워커의 scan(`apply_repository_scan`)·analyze(`PostgresAnalysisStore`)·로컬 인제스트 어디도 `public.requirements`에 insert하지 않는다(테스트 시드만). analyze는 `extractRequirements`로 요구사항을 **일시 추출**해 `missing-implementation` 등 finding을 내지만 요구사항 자체는 버린다. 프로덕션 실측: spec 아티팩트 17건·graph_nodes 585건(artifact 499·rationale 86) 중 requirement 노드 0, `requirements` 0행. 결과적으로 요구사항 중의성 판단 표면은 정확히 구현·배포됐으나 대상이 0건이고, 맵의 요구사항 레이어·MCP 요구사항 데이터도 비어 있다.
+- 임시 결정: 표면은 유지(테이블이 채워지는 순간 동작 — DB 테스트로 증명됨). 프로덕션 스모크는 영속화 전까지 불가로 기록.
+- 필요한 결정: ⑴ **analyze에서 추출한 요구사항을 영속화** — `graph_nodes`(kind requirement, provenance span) + `requirements`(statement·source_span·status)에 upsert, 사라진 요구사항은 `superseded`/`withdrawn`으로 전이(하드룰: 모든 노드에 provenance; 문장은 스펙 문서 텍스트라 원본 코드 본문 금지 규칙과 무관) ⑵ scan 단계에서 영속화(spec 아티팩트 파싱 시점) ⑶ 현행 유지(요구사항 표면들을 데모 전용으로 남김) — 비권장.
+- 상태: open. 기본 후보 ⑴ — 추출 로직이 이미 analyze에 있고 finding 생성과 같은 트랜잭션에서 정합성을 맞출 수 있다.
