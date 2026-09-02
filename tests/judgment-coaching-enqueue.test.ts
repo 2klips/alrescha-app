@@ -168,10 +168,16 @@ describe("judgment/coaching enqueue functions (Phase 2C follow-up)", () => {
     const job = await jobRow(queued.rows[0]?.id ?? "");
     expect(job?.kind).toBe("coach");
     expect(job?.credit_cost).toBe(1);
+    // ADR-011: the queue row names the record, never carries the raw prompt
+    // text — the worker reads it at run time, so a revoked consent is honored.
+    expect(Object.keys(job?.payload ?? {}).sort()).toEqual([
+      "billingMode",
+      "promptRecordId",
+      "provider",
+    ]);
     expect(job?.payload).toMatchObject({
       billingMode: "credits",
       promptRecordId: ownRecord,
-      promptText: "spec/auth.md의 REQ-3 구현, tests 통과까지",
       provider: "anthropic",
     });
     const again = await enqueueCoaching(ownRecord, OWNER);
@@ -188,5 +194,83 @@ describe("judgment/coaching enqueue functions (Phase 2C follow-up)", () => {
     await expect(enqueueCoaching(silentRecord, OWNER)).rejects.toThrow(
       /raw prompt text/,
     );
+  });
+
+  async function markTerminal(jobId: string, status: "cancelled" | "failed") {
+    await database.query(
+      `update public.jobs
+       set status = $2, attempt_count = max_attempts, completed_at = now(),
+           last_error = 'terminal for the retry test'
+       where id = $1`,
+      [jobId, status],
+    );
+  }
+
+  async function keyOf(jobId: string): Promise<string> {
+    const rows = await database.query<{ idempotency_key: string }>(
+      "select idempotency_key from public.jobs where id = $1",
+      [jobId],
+    );
+    return rows.rows[0]?.idempotency_key ?? "";
+  }
+
+  it("mints a new generation after a terminal judgment failure, but never redoes a success", async () => {
+    const first = (await enqueueJudgment(contradiction, "credits")).rows[0]?.id ?? "";
+    expect(await keyOf(first)).toBe(`judgment:${contradiction}`);
+
+    // Live attempt: the same job comes back.
+    expect((await enqueueJudgment(contradiction, "credits")).rows[0]?.id).toBe(first);
+
+    await markTerminal(first, "failed");
+    const second = (await enqueueJudgment(contradiction, "credits")).rows[0]?.id ?? "";
+    expect(second).not.toBe(first);
+    expect(await keyOf(second)).toBe(`judgment:${contradiction}:r1`);
+
+    // A second terminal failure counts up, so the key never collides.
+    await markTerminal(second, "cancelled");
+    const third = (await enqueueJudgment(contradiction, "credits")).rows[0]?.id ?? "";
+    expect(await keyOf(third)).toBe(`judgment:${contradiction}:r2`);
+
+    // Success is final: the request resolves to the succeeded job, no new one.
+    await database.query(
+      "update public.jobs set status = 'succeeded', completed_at = now() where id = $1",
+      [third],
+    );
+    expect((await enqueueJudgment(contradiction, "credits")).rows[0]?.id).toBe(third);
+    const total = await database.query<{ n: number }>(
+      "select count(*)::int as n from public.jobs where kind = 'judge'",
+    );
+    expect(total.rows[0]?.n).toBe(3);
+  });
+
+  it("retries coaching after a terminal failure on a fresh job with its own reservation key", async () => {
+    await database.query(
+      `insert into public.credit_ledger (workspace_id, event, amount, idempotency_key)
+       values ($1, 'grant', 20, 'retry-test-grant')`,
+      [workspace],
+    );
+    const first = (await enqueueCoaching(ownRecord, OWNER)).rows[0]?.id ?? "";
+    await markTerminal(first, "failed");
+    const retry = (await enqueueCoaching(ownRecord, OWNER)).rows[0]?.id ?? "";
+    expect(retry).not.toBe(first);
+    expect(await keyOf(retry)).toBe(`coaching:${ownRecord}:r1`);
+    // The ledger keys are derived from the job id, so the retry reserves and
+    // settles under keys the failed attempt never touched.
+    const claimed = await database.query<{ id: string }>(
+      "select id from public.claim_next_job($1, 'worker-retry', 30)",
+      [workspace],
+    );
+    expect(claimed.rows[0]?.id).toBe(retry);
+    const reservation = await database.query<{ reservation_id: string | null }>(
+      "select public.reserve_job_credits($1) as reservation_id",
+      [retry],
+    );
+    expect(reservation.rows[0]?.reservation_id).toBeTruthy();
+    const ledger = await database.query<{ idempotency_key: string }>(
+      "select idempotency_key from public.credit_ledger where event = 'reserve' order by created_at",
+    );
+    expect(ledger.rows.map((row) => row.idempotency_key)).toEqual([
+      `reserve:${retry}`,
+    ]);
   });
 });

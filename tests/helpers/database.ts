@@ -101,6 +101,8 @@ export const JUDGMENT_COACHING_ENQUEUE_MIGRATION =
   "supabase/migrations/202608310002_judgment_coaching_enqueue.sql";
 export const ALRESCHA_REPOSITORY_IDENTITY_MIGRATION =
   "supabase/migrations/202609010001_alrescha_repository_identity.sql";
+export const RETRY_AFTER_TERMINAL_FAILURE_MIGRATION =
+  "supabase/migrations/202609020001_retry_after_terminal_failure.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -142,6 +144,7 @@ export const ALL_MIGRATIONS = [
   PROMPT_COACHING_MIGRATION,
   JUDGMENT_COACHING_ENQUEUE_MIGRATION,
   ALRESCHA_REPOSITORY_IDENTITY_MIGRATION,
+  RETRY_AFTER_TERMINAL_FAILURE_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

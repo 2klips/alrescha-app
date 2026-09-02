@@ -40,6 +40,16 @@ export interface CoachingProvider {
 }
 
 export interface CoachingJobStore {
+  /**
+   * The record's raw text, read at run time (ADR-011): the queue row only
+   * names the record, so a consent revoked between click and claim is
+   * honored — `null` means there is nothing the member still allows us to
+   * coach.
+   */
+  loadPromptText(input: {
+    readonly promptRecordId: string;
+    readonly workspaceId: string;
+  }): Promise<string | null>;
   loadProvider(input: {
     readonly billingMode: "byok" | "credits";
     readonly provider: "anthropic" | "openai";
@@ -91,7 +101,6 @@ export function createCoachingJobHandler(store: CoachingJobStore): JobHandler {
   return async (job, context) => {
     const provider = providerName(job.payload["provider"]);
     const mode = billingMode(job.payload["billingMode"]);
-    const promptText = requiredText(job.payload["promptText"], "promptText");
     const promptRecordId = requiredText(
       job.payload["promptRecordId"],
       "promptRecordId",
@@ -100,6 +109,18 @@ export function createCoachingJobHandler(store: CoachingJobStore): JobHandler {
     // member's own key, so it must not also reserve workspace credits.
     if (mode === "byok" && job.creditCost !== 0) {
       throw new Error("BYOK coaching jobs must bypass credits.");
+    }
+
+    // The text is fetched now, not carried in the queue row: what the member
+    // allowed at click time may have been revoked since (ADR-011).
+    const promptText = await store.loadPromptText({
+      promptRecordId,
+      workspaceId: job.workspaceId,
+    });
+    if (!promptText?.trim()) {
+      throw new Error(
+        `Prompt record ${promptRecordId} has no raw text to coach (raw sync off or revoked).`,
+      );
     }
 
     const model = await store.loadProvider({

@@ -29,7 +29,6 @@ function job(overrides: Record<string, unknown> = {}) {
     payload: {
       billingMode: "credits",
       promptRecordId: "prompt-1",
-      promptText: PROMPT,
       provider: "anthropic",
     },
     repositoryId: "repo-1",
@@ -47,8 +46,10 @@ function provider(output: unknown): CoachingProvider {
   };
 }
 
-function store(model: CoachingProvider) {
+function store(model: CoachingProvider, promptText: string | null = PROMPT) {
   return {
+    // The raw text is read at run time, never carried in the job (ADR-011).
+    loadPromptText: vi.fn().mockResolvedValue(promptText),
     loadProvider: vi.fn().mockResolvedValue(model),
     recordInvalidOutput: vi.fn().mockResolvedValue(undefined),
     saveCoaching: vi.fn().mockResolvedValue(undefined),
@@ -114,14 +115,22 @@ describe("coaching job handler", () => {
         suggestions: [],
       }),
     );
+    vi.mocked(coachingStore.loadPromptText).mockResolvedValue("잘 해줘");
     const handler = createCoachingJobHandler(coachingStore);
 
-    await expect(
-      handler(
-        job({ payload: { ...job().payload, promptText: "잘 해줘" } }),
-        context,
-      ),
-    ).rejects.toSatisfy(isNonBillableAiError);
+    await expect(handler(job(), context)).rejects.toSatisfy(
+      isNonBillableAiError,
+    );
+    expect(coachingStore.saveCoaching).not.toHaveBeenCalled();
+  });
+
+  it("stops before the model when the record's raw text is gone (consent revoked)", async () => {
+    const coachingStore = store(provider({}), null);
+    const handler = createCoachingJobHandler(coachingStore);
+
+    await expect(handler(job(), context)).rejects.toThrow(/no raw text/);
+    // Nothing to coach means nothing to spend: the provider is never loaded.
+    expect(coachingStore.loadProvider).not.toHaveBeenCalled();
     expect(coachingStore.saveCoaching).not.toHaveBeenCalled();
   });
 

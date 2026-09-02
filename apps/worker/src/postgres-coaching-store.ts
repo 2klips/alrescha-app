@@ -33,6 +33,26 @@ export class PostgresCoachingJobStore implements CoachingJobStore {
     });
   }
 
+  async loadPromptText(input: {
+    readonly promptRecordId: string;
+    readonly workspaceId: string;
+  }): Promise<string | null> {
+    // Joined to a live, raw-sync consent: text captured under a consent the
+    // member has since revoked is not ours to coach anymore.
+    const rows = await this.sql<{ raw_text: string | null }[]>`
+      select r.raw_text
+      from public.prompt_records r
+      join public.prompt_capture_consents c
+        on c.workspace_id = r.workspace_id
+       and c.user_id = r.user_id
+       and c.revoked_at is null
+       and c.raw_sync_enabled
+      where r.id = ${input.promptRecordId}
+        and r.workspace_id = ${input.workspaceId}
+    `;
+    return rows[0]?.raw_text ?? null;
+  }
+
   loadProvider(input: {
     readonly billingMode: "byok" | "credits";
     readonly provider: "anthropic" | "openai";

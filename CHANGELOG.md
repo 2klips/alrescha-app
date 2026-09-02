@@ -59,6 +59,14 @@ from server-observed evidence only). Per-todo evidence:
   §14 kind mapping, ADR-011's own-author + raw-consent checks, BYOK-zero /
   credits pricing (10 and 1), and one job per target via idempotency keys —
   proven by seven service-role database tests.
+- **Retry after terminal failure (2026-09-02)**: a repeat request after a
+  `failed`/`cancelled` judgment or coaching job now mints the next key
+  generation (`…:r1`, `…:r2`) — a fresh job with its own reservation and
+  settlement — while live and succeeded attempts still resolve to the
+  existing job. Coaching queue rows carry only the record id: the worker
+  reads the raw prompt text at run time through a live raw-sync consent
+  (ADR-011), and the inspection/team panels show each target's latest job
+  state (처리 중 · 완료 · 이전 시도 실패 — 다시 요청).
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the
