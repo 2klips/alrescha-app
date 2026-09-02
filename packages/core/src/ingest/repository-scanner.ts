@@ -137,11 +137,30 @@ function extension(path: string): string {
   return dot === -1 ? "" : fileName.slice(dot).toLowerCase();
 }
 
+/**
+ * Directories that hold test fixtures by convention. A spec, rule file or
+ * ADR under one of them describes a *sample* repository, not this one — the
+ * production scan of this very repository turned `fixtures/drifted-demo`'s
+ * synthetic MUST statements into 90+ live requirements. Matched as whole
+ * path segments (`fixture-notes/spec.md` is still a spec).
+ */
+const FIXTURE_DIRECTORIES = new Set(["fixtures", "__fixtures__", "testdata"]);
+
+function underFixtureDirectory(lowerPath: string): boolean {
+  const segments = lowerPath.split("/");
+  return segments
+    .slice(0, -1)
+    .some((segment) => FIXTURE_DIRECTORIES.has(segment));
+}
+
 export function classifyArtifactPath(
   inputPath: string,
 ): ArtifactClassification | null {
   const path = inputPath.replaceAll("\\", "/");
   const lower = path.toLowerCase();
+  if (underFixtureDirectory(lower)) {
+    return null;
+  }
   const fileName = lower.slice(lower.lastIndexOf("/") + 1);
   const fileExtension = extension(lower);
 

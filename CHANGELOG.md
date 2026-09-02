@@ -81,6 +81,12 @@ from server-observed evidence only). Per-todo evidence:
   documents stop stating as `superseded` rather than deleting them. This
   fills the map's requirement layer, MCP requirement data and the
   disambiguation panel, all of which were structurally empty in production.
+- **Test-fixture directories excluded from scanning (2026-09-02)**: nothing
+  under a `fixtures/`, `__fixtures__/` or `testdata/` segment is an artifact
+  any more — a spec or rule file there describes a sample repository, and the
+  first persisting analyze had turned `fixtures/drifted-demo`'s synthetic
+  MUST statements into 90+ live requirements. Whole-segment match only;
+  previously stored fixture artifacts fall out on the next scan.
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the

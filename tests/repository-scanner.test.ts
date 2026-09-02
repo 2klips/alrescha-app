@@ -135,6 +135,22 @@ describe("GitHub repository scanner", () => {
     expect(classifyArtifactPath("docs/progress.md")).toBe("todo_progress");
   });
 
+  it("treats nothing under a test-fixture directory as this repository's artifact", () => {
+    // A spec or rule file under fixtures/ describes a sample repository; the
+    // production scan of this repo had turned fixtures/drifted-demo's synthetic
+    // MUST statements into live requirements.
+    expect(
+      classifyArtifactPath("fixtures/drifted-demo/.cursor/rules/testing.mdc"),
+    ).toBeNull();
+    expect(classifyArtifactPath("fixtures/drifted-demo/spec/auth.md")).toBeNull();
+    expect(classifyArtifactPath("fixtures/drifted-demo/AGENTS.md")).toBeNull();
+    expect(classifyArtifactPath("packages/x/__fixtures__/spec.md")).toBeNull();
+    expect(classifyArtifactPath("testdata/src/auth.ts")).toBeNull();
+    // Whole segments only: a directory merely named like one still counts.
+    expect(classifyArtifactPath("fixture-notes/spec.md")).toBe("spec");
+    expect(classifyArtifactPath("spec/fixtures.md")).toBe("spec");
+  });
+
   it("short-circuits an unchanged commit and touches zero rows", async () => {
     const initial = await scanRepository({
       commitSha: COMMIT_SHA,
