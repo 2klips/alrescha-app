@@ -203,7 +203,7 @@
 - 내용: `2615910`(Arr 호환 별칭 제거)이 receipt 스키마의 `tool.name`을 `z.literal("alrescha")`로 좁히고, 테스트에서 "리네임 이전 receipt는 계속 검증 가능"이라는 단언을 삭제하고 **레거시 `"arr"` 문장은 throw한다**는 단언으로 교체했다. 프로덕션에는 `tool.name = "arr"`인 receipt **12건**(2026-08-27~09-01 14:36)과 `"alrescha"` 1건이 있다. 현재 실제 영향은 없다 — 발급 체인은 `digest` 컬럼만 읽고(`latestReceiptDigest`), 라이브 웹·MCP는 저장된 statement를 스키마로 재검증하지 않으며, `verifyInTotoStatement`는 데모 fixture 화면에서만 호출된다. 그러나 커밋 카드의 실 receipt 상세(알려진 후속 과제)가 정본 검증기로 저장 statement를 검증하는 순간, 12건은 `verified`가 아니라 `invalid`("tool.name must be alrescha")로 읽힌다. 데이터 쪽 수정은 불가능하다 — `tool.name`은 canonicalize되는 statement 안에 있어 값을 바꾸면 digest가 어긋나 `tampered`가 된다(WORK_SPEC §13 불변성 그 자체).
 - 임시 결정: 현행 유지(코드 무변경). 발급은 `"alrescha"`, 검증 경로는 아직 없음.
 - 필요한 결정: ⑴ **읽기 측 스키마 분리** — 발급은 `literal("alrescha")`를 유지하되 `verifyInTotoStatement`는 `enum(["arr","alrescha"])`로 레거시를 수용(§13 "receipt는 계속 검증 가능해야 한다"를 지키는 유일한 길; 별칭 제거 커밋의 검증 테스트 단언을 되살림) ⑵ 12건을 레거시로 표시(`status`)하고 검증 대상에서 제외 — 정직하지만 §13 취지에 어긋남 ⑶ 현행 유지 — 실 receipt 상세 표면을 만들 때 다시 판단.
-- 상태: open. 기본 후보 ⑴ — 실 receipt 상세 라우팅 작업과 한 커밋으로 묶는 것이 자연스럽다.
+- 상태: **resolved (2026-09-02 사용자 지시로 ⑴ 구현)**. 발급 스키마(`inTotoStatementSchema`, `literal("alrescha")`)는 불변, 읽기 전용 `storedInTotoStatementSchema`(`RECEIPT_TOOL_NAMES = ["arr","alrescha"]`)를 신설해 `verifyInTotoStatement`가 그것으로 파싱·다이제스트 — 결과에 `toolName` 추가. 프로덕션 receipt 28건(arr 12 · alrescha 16)을 읽기 전용으로 내보내 실제 검증기로 **28/28 verified** 실측. 워커 재배포·마이그레이션 없음. 실 receipt 상세 표면은 별도 작업. 증빙 `.omo/evidence/phase2c/followup-receipt-legacy-read.md`.
 
 ## OQ-023 — 요구사항이 프로덕션에서 영속화되지 않아 요구사항 표면들이 비어 있다
 

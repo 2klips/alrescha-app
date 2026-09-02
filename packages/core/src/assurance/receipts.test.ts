@@ -86,6 +86,49 @@ describe("in-toto-shaped assurance receipts", () => {
     ).resolves.toMatchObject({ state: "tampered" });
   });
 
+  test("reads pre-rename `arr` receipts back as verifiable, without issuing them (OQ-022 ⑴)", async () => {
+    const legacy = {
+      ...statement,
+      predicate: {
+        ...statement.predicate,
+        tool: { name: "arr", version: "0.1.0" },
+      },
+    };
+    // The issuance path stays pinned to the current name …
+    expect(() => inTotoStatementSchema.parse(legacy)).toThrow();
+    await expect(
+      digestInTotoStatement(legacy as InTotoStatement),
+    ).rejects.toThrow();
+    // … while the read path digests the statement exactly as stored: the
+    // tool name is inside the digest, so a legacy receipt verifies against
+    // its own digest and is reported as a legacy issuer.
+    const probe = await verifyInTotoStatement(legacy, "0".repeat(64));
+    expect(probe.state).toBe("tampered");
+    const legacyDigest = (probe as { actualDigest: string }).actualDigest;
+    expect(legacyDigest).not.toBe(await digestInTotoStatement(statement));
+    await expect(verifyInTotoStatement(legacy, legacyDigest)).resolves.toEqual({
+      actualDigest: legacyDigest,
+      state: "verified",
+      toolName: "arr",
+    });
+    await expect(
+      verifyInTotoStatement(statement, await digestInTotoStatement(statement)),
+    ).resolves.toMatchObject({ state: "verified", toolName: "alrescha" });
+    // Only the two known issuer names — anything else is not a receipt.
+    await expect(
+      verifyInTotoStatement(
+        {
+          ...statement,
+          predicate: {
+            ...statement.predicate,
+            tool: { name: "someone-else", version: "0.1.0" },
+          },
+        },
+        legacyDigest,
+      ),
+    ).resolves.toMatchObject({ state: "invalid" });
+  });
+
   test("does not produce a verdict for an invalid statement", async () => {
     await expect(
       verifyInTotoStatement({ predicate: {} }, "0".repeat(64)),

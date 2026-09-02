@@ -91,6 +91,11 @@ from server-observed evidence only). Per-todo evidence:
   that removing an artifact node cascades into the requirement *rows* but
   leaves their *nodes* orphaned; `reconcileRequirements` now sweeps
   requirement nodes that have no row.
+- **Pre-rename receipts verify again (OQ-022 ⑴, 2026-09-02)**: receipts are
+  read back through a stored-shape schema whose `tool.name` accepts the
+  legacy `arr` next to `alrescha`; issuance stays pinned to `alrescha`, and
+  `verifyInTotoStatement` now reports `toolName`. All 28 production receipts
+  (12 legacy) verify against their stored digests.
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the
