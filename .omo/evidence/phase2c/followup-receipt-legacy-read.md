@@ -25,3 +25,7 @@
 ## 남김
 
 - 실 receipt 상세 라우팅(표면)은 별도 작업 — 이 변경으로 그 표면이 레거시 12건을 `toolName`으로 구분 표시할 수 있다.
+
+## 배포 (2026-09-02)
+
+- `774b87b` push에 Vercel이 상태를 게시하지 않아(이전 커밋은 1분 내 success) 빈 커밋 `8cf2ec2`로 재트리거 → Vercel Production **success**(GitHub deployment 6224915026, 14:42 UTC). 웹 코어 번들에만 영향, 워커 재배포 없음(발급 경로 불변).
