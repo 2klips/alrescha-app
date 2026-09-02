@@ -196,3 +196,11 @@
 - 임시 결정: 워커는 `reservedPackHandler`(`apps/worker/src/reserved-jobs.ts`)를 등록한다 — 클레임된 pack 잡은 이 OQ를 가리키며 큰 소리로 실패한다(조용한 스킵 금지). 아무것도 enqueue하지 않으므로 실환경 영향은 없다.
 - 필요한 결정: ⑴ kind 회수 — 새 마이그레이션으로 `enqueue_job` 화이트리스트에서 'pack' 제거(기존 마이그레이션 수정 금지 규칙 준수) ⑵ 생산자 정의 — 예: 커밋 후 워크스페이스 팩 사전계산(§12의 온디맨드 원칙과 충돌하므로 스펙 개정 필요) ⑶ 현행 예약 유지.
 - 상태: open. 기본 후보는 ⑴ — 예약 kind는 미래 요구가 구체화되면 그때 다시 추가하는 편이 정직하다.
+
+## OQ-022 — 리네임 이전에 발급된 프로덕션 receipt 12건이 정본 검증기에서 `invalid`가 된다
+
+- 발견: judge·coach enqueue 표면 프로덕션 반영 후 receipt 검증 경로 점검(2026-09-02) / `packages/core/src/assurance/receipts.ts`(`2615910`), 프로덕션 `receipts.summary.statement` 실측
+- 내용: `2615910`(Arr 호환 별칭 제거)이 receipt 스키마의 `tool.name`을 `z.literal("alrescha")`로 좁히고, 테스트에서 "리네임 이전 receipt는 계속 검증 가능"이라는 단언을 삭제하고 **레거시 `"arr"` 문장은 throw한다**는 단언으로 교체했다. 프로덕션에는 `tool.name = "arr"`인 receipt **12건**(2026-08-27~09-01 14:36)과 `"alrescha"` 1건이 있다. 현재 실제 영향은 없다 — 발급 체인은 `digest` 컬럼만 읽고(`latestReceiptDigest`), 라이브 웹·MCP는 저장된 statement를 스키마로 재검증하지 않으며, `verifyInTotoStatement`는 데모 fixture 화면에서만 호출된다. 그러나 커밋 카드의 실 receipt 상세(알려진 후속 과제)가 정본 검증기로 저장 statement를 검증하는 순간, 12건은 `verified`가 아니라 `invalid`("tool.name must be alrescha")로 읽힌다. 데이터 쪽 수정은 불가능하다 — `tool.name`은 canonicalize되는 statement 안에 있어 값을 바꾸면 digest가 어긋나 `tampered`가 된다(WORK_SPEC §13 불변성 그 자체).
+- 임시 결정: 현행 유지(코드 무변경). 발급은 `"alrescha"`, 검증 경로는 아직 없음.
+- 필요한 결정: ⑴ **읽기 측 스키마 분리** — 발급은 `literal("alrescha")`를 유지하되 `verifyInTotoStatement`는 `enum(["arr","alrescha"])`로 레거시를 수용(§13 "receipt는 계속 검증 가능해야 한다"를 지키는 유일한 길; 별칭 제거 커밋의 검증 테스트 단언을 되살림) ⑵ 12건을 레거시로 표시(`status`)하고 검증 대상에서 제외 — 정직하지만 §13 취지에 어긋남 ⑶ 현행 유지 — 실 receipt 상세 표면을 만들 때 다시 판단.
+- 상태: open. 기본 후보 ⑴ — 실 receipt 상세 라우팅 작업과 한 커밋으로 묶는 것이 자연스럽다.
