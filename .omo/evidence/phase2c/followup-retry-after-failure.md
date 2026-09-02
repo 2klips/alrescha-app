@@ -20,6 +20,14 @@ judge·coach 스모크가 남긴 설계 공백을 사용자 지시로 닫았다.
 - `apps/worker/src/coaching-job.test.ts`: 원문 런타임 조회, 원문 부재(철회) 시 프로바이더 미호출.
 - 로컬 Supabase에 재적용 후 `enqueue_coaching_job` 정의에 `promptText` 부재 확인.
 
+## 프로덕션 실증 (2026-09-02 12:54 UTC, 워커 v10 `deployment-01M1H28MGBSQVYWBZTTQV2H6R0`)
+
+기록 #1(3/3 실패했던 `…0001`)의 패널 버튼이 "이전 시도 실패 — 다시 요청"으로 바뀐 상태에서 클릭:
+
+- 새 잡 `01M1H2Y893…`, 키 **`coaching:01M2SMKEC0ACHPR0MPT0000001:r1`**, `succeeded` attempt 1, 7초(12:54:10 → 12:54:17). 페이로드에 `promptText` **없음**(`payload ? 'promptText' = false`) — 원문은 `loadPromptText`로 런타임 조회.
+- 기록 #1 `prompt_records.rubric` 채움(inferred, 6축, 제안 3개) → 패널은 "채점 완료".
+- 원장: **`reserve:01M1H2Y893…` −1 → `settle:01M1H2Y893…` 0** — 실패 잡 `01M1GZZP57…`의 `reserve/refund` 행은 그대로. 새 세대 잡이 자기 키로 예약·정산했으므로 재큐 방식이 가졌던 "환불된 예약 재사용 → 무료 실행" 구멍이 닫혔음이 실측됨. 잔액 29 → 28.
+
 ## 프로덕션 반영 절차
 
 ① 프로덕션 DB에 `202609020001` 적용(`.env.migrate` 절차) ② push(Vercel — 상태 표시 UI) ③ 워커 재배포(v10 — 런타임 원문 조회). ②·③ 이전에 ①만 적용된 상태에서도 기존 워커(v9)는 페이로드의 `promptText`를 요구하므로 **①→③ 순서 뒤에 코칭 재요청**을 해야 한다. 재스모크: `/app/team`에서 실패한 기록 #1의 **다시 요청** → `coaching:<record>:r1` 잡 성공 확인.
