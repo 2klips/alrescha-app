@@ -74,6 +74,13 @@ from server-observed evidence only). Per-todo evidence:
   with a neutral baseline (0.5 / low), the statement and its source as
   context, and the same retry generations; requirements themselves are never
   rewritten — the judgment row is the deliverable.
+- **Requirements persisted (OQ-023 ⑴, 2026-09-02)**: the analyze job now
+  writes the requirements it extracts as graph rows — a `requirement` node
+  plus a `requirements` row keyed to its spec artifact, with a content-derived
+  ULID-shaped id so re-analysis converges — and marks requirements the
+  documents stop stating as `superseded` rather than deleting them. This
+  fills the map's requirement layer, MCP requirement data and the
+  disambiguation panel, all of which were structurally empty in production.
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the

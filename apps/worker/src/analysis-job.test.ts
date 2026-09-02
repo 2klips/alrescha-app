@@ -10,6 +10,7 @@ import {
   type AnalysisJobStore,
   type FindingsDelta,
   type PersistedFinding,
+  type PersistedRequirement,
   type StoredArtifact,
 } from "./analysis-job";
 import type { ClaimedJob } from "./queue";
@@ -54,6 +55,7 @@ interface Recorded {
   digest: string | null;
   findings: readonly PersistedFinding[];
   read: string[];
+  requirements: readonly PersistedRequirement[];
   statement: InTotoStatement | null;
 }
 
@@ -63,6 +65,7 @@ function fakeStore(options: { openFingerprints?: readonly string[] } = {}) {
     digest: null,
     findings: [],
     read: [],
+    requirements: [],
     statement: null,
   };
   const wasOpen = new Set(options.openFingerprints ?? []);
@@ -86,6 +89,10 @@ function fakeStore(options: { openFingerprints?: readonly string[] } = {}) {
         resolved: [...wasOpen].filter((value) => !fingerprints.includes(value)),
       };
       return delta;
+    },
+    reconcileRequirements: async ({ requirements }) => {
+      recorded.requirements = requirements;
+      return { active: requirements.length, superseded: 0 };
     },
   };
   return { recorded, store };
@@ -211,6 +218,26 @@ describe("analyze job", () => {
     await expect(
       verifyInTotoStatement(tampered, recorded.digest!),
     ).resolves.toMatchObject({ state: "tampered" });
+  });
+
+  it("persists the extracted requirements as graph rows with content-derived ids", async () => {
+    const recorded = await run();
+
+    // The spec's one task is a requirement; it lands keyed to its source
+    // artifact with the REQ code as identity (OQ-023 ⑴).
+    expect(recorded.requirements).toHaveLength(1);
+    const [requirement] = recorded.requirements;
+    expect(requirement).toMatchObject({
+      label: "REQ-AUTH-001",
+      origin: "task",
+      sourceArtifactId: "node-spec",
+      sourceSpan: { endLine: 5, path: "spec/auth.md", startLine: 5 },
+    });
+    expect(requirement!.statement).toContain("REQ-AUTH-001");
+    expect(requirement!.id).toMatch(/^0[0-9A-HJKMNP-TV-Z]{25}$/);
+    // Re-analysis converges: the same document yields the same id.
+    const again = await run();
+    expect(again.requirements[0]?.id).toBe(requirement!.id);
   });
 
   it("refuses to issue a receipt when no artifact has been stored", async () => {

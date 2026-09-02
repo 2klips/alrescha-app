@@ -13,6 +13,8 @@ import type {
   AnalysisJobStore,
   FindingsDelta,
   PersistedFinding,
+  PersistedRequirement,
+  RequirementsDelta,
   StoredArtifact,
 } from "./analysis-job";
 import type { InTotoStatement } from "@alrescha/core";
@@ -126,6 +128,60 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
         opened: fingerprints.filter((fingerprint) => !wasOpen.has(fingerprint)),
         resolved: resolved.map(({ fingerprint }) => fingerprint),
       };
+    });
+  }
+
+  async reconcileRequirements(input: {
+    repositoryId: string;
+    requirements: readonly PersistedRequirement[];
+    workspaceId: string;
+  }): Promise<RequirementsDelta> {
+    const ids = input.requirements.map(({ id }) => id);
+
+    return this.sql.begin(async (tx) => {
+      for (const requirement of input.requirements) {
+        // The node first: `requirements.id` is a foreign key onto it.
+        await tx`
+          insert into public.graph_nodes (id, workspace_id, repository_id, kind, label)
+          values (${requirement.id}, ${input.workspaceId}, ${input.repositoryId},
+                  'requirement', ${requirement.label})
+          on conflict (id) do update
+            set label = excluded.label, updated_at = now()
+        `;
+        await tx`
+          insert into public.requirements (
+            id, workspace_id, repository_id, source_artifact_id, statement,
+            source_span, status
+          ) values (
+            ${requirement.id}, ${input.workspaceId}, ${input.repositoryId},
+            ${requirement.sourceArtifactId}, ${requirement.statement},
+            ${this.sql.json({
+              ...requirement.sourceSpan,
+              origin: requirement.origin,
+            } as never)}::jsonb,
+            'active'
+          )
+          on conflict (id) do update set
+            source_artifact_id = excluded.source_artifact_id,
+            statement = excluded.statement,
+            source_span = excluded.source_span,
+            status = 'active'
+        `;
+      }
+
+      // A requirement the documents no longer state is superseded, not
+      // deleted: judgments and edges that pointed at it keep their target.
+      const superseded = await tx<{ id: string }[]>`
+        update public.requirements
+        set status = 'superseded'
+        where workspace_id = ${input.workspaceId}
+          and repository_id = ${input.repositoryId}
+          and status = 'active'
+          and not (id = any(${ids}::text[]))
+        returning id
+      `;
+
+      return { active: ids.length, superseded: superseded.length };
     });
   }
 

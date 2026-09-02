@@ -32,6 +32,7 @@ import {
   type InTotoStatement,
 } from "@alrescha/core";
 
+import { deterministicUlid } from "./deterministic-id";
 import type { ClaimedJob } from "./queue";
 import type { JobHandler } from "./worker";
 
@@ -60,6 +61,29 @@ export interface FindingsDelta {
   readonly openTotal: number;
   readonly opened: readonly string[];
   readonly resolved: readonly string[];
+}
+
+/**
+ * A requirement the analysis extracted, shaped for the graph (OQ-023 ⑴).
+ * `id` is content-derived so re-analysis converges on the same node; the
+ * statement is spec-document text (graph metadata), never a source body.
+ */
+export interface PersistedRequirement {
+  readonly id: string;
+  readonly label: string;
+  readonly origin: string;
+  readonly sourceArtifactId: string;
+  readonly sourceSpan: {
+    readonly endLine: number;
+    readonly path: string;
+    readonly startLine: number;
+  };
+  readonly statement: string;
+}
+
+export interface RequirementsDelta {
+  readonly active: number;
+  readonly superseded: number;
 }
 
 export interface AnalysisJobStore {
@@ -95,6 +119,15 @@ export interface AnalysisJobStore {
     repositoryId: string;
     workspaceId: string;
   }): Promise<FindingsDelta>;
+  /**
+   * Upsert the requirements this analysis extracted (graph node + row) and
+   * mark the active ones that no longer appear as superseded.
+   */
+  reconcileRequirements(input: {
+    repositoryId: string;
+    requirements: readonly PersistedRequirement[];
+    workspaceId: string;
+  }): Promise<RequirementsDelta>;
 }
 
 export interface AnalysisJobDependencies {
@@ -143,6 +176,51 @@ function persisted(
     sourceNodeId: firstPath ? (nodeByPath.get(firstPath) ?? null) : null,
     title: finding.summary,
   };
+}
+
+const REQUIREMENT_LABEL_LIMIT = 80;
+
+/**
+ * The requirements the prepared contexts extracted, keyed for the graph. The
+ * REQ code is the identity when the document names one; otherwise the
+ * statement itself is, so a reworded sentence supersedes rather than mutates.
+ */
+export function persistedRequirements(
+  prepared: ReturnType<typeof prepareAssuranceContexts>,
+  nodeByPath: ReadonlyMap<string, string>,
+  scope: { readonly repositoryId: string; readonly workspaceId: string },
+): PersistedRequirement[] {
+  const seen = new Set<string>();
+  const requirements: PersistedRequirement[] = [];
+  for (const context of prepared.contexts) {
+    const sourceArtifactId = nodeByPath.get(context.file.path);
+    if (!sourceArtifactId) continue;
+    for (const requirement of context.requirements) {
+      const identity = requirement.id ?? requirement.statement;
+      const id = deterministicUlid(
+        `${scope.workspaceId}|${scope.repositoryId}|${context.file.path}|${identity}`,
+      );
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const label = requirement.id ?? requirement.statement;
+      requirements.push({
+        id,
+        label:
+          label.length > REQUIREMENT_LABEL_LIMIT
+            ? `${label.slice(0, REQUIREMENT_LABEL_LIMIT - 1)}…`
+            : label,
+        origin: requirement.origin,
+        sourceArtifactId,
+        sourceSpan: {
+          endLine: requirement.span.endLine,
+          path: requirement.span.path,
+          startLine: requirement.span.startLine,
+        },
+        statement: requirement.statement,
+      });
+    }
+  }
+  return requirements;
 }
 
 export function createAnalysisJobHandler(
@@ -194,6 +272,17 @@ export function createAnalysisJobHandler(
     // document) independently by default; preparing once here halves that
     // work for the one job that always needs both.
     const prepared = prepareAssuranceContexts(files);
+    // The requirements the rules reason about become graph rows too (OQ-023):
+    // until now they were extracted, used for findings, and dropped, which
+    // left every requirement surface empty in production.
+    await store.reconcileRequirements({
+      repositoryId,
+      requirements: persistedRequirements(prepared, nodeByPath, {
+        repositoryId,
+        workspaceId,
+      }),
+      workspaceId,
+    });
     const findings = analyzeRepositoryAssurance({ files, prepared });
     const delta = await store.reconcileFindings({
       findings: findings.map((finding) => persisted(finding, nodeByPath)),
