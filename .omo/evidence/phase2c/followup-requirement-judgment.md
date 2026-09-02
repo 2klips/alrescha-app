@@ -30,3 +30,10 @@ WORK_SPEC §14의 판단 종류 3종 중 마지막으로 남아 있던 `requirem
 ## 프로덕션 반영 절차
 
 ① 프로덕션 DB에 `202609020002` 적용(`.env.migrate`) ② push(Vercel — 패널). 워커 재배포 불필요. 스모크: 활성 요구사항 하나에 **AI 판정** → `judgments`에 `requirement-disambiguation` 행(verdict·explanation) 생성, 패널에 결과 표시.
+
+## 프로덕션 스모크 (2026-09-02 13:49 UTC — 요구사항 영속화 이후)
+
+- 대상: `0KG2AP1E8WC6VJC800E9TDVVTE` — `fixtures/drifted-demo/.cursor/rules/testing.mdc` "Every test name MUST start with its requirement ID."
+- 잡 `01M1H63G58…`, 키 `requirement-judgment:<id>`, **succeeded attempt 1, 11초**(13:49:28 → 13:49:39). credits 10 → 원장 reserve −10 → settle(과금), 잔액 28 → 18.
+- `judgments` 행: kind `requirement-disambiguation`, provider anthropic / claude-sonnet-5, **verdict `ambiguous`**, confidence 0.55, grade inferred, explanation = "test"의 범위·"requirement ID"의 형식 등 미명세 지점 열거. 요구사항 행은 `active` 그대로(설계대로 무변경) — 패널은 "중의적 — <설명 발췌>"로 표시.
+- 이로써 §14 판단 종류 3종(드리프트 verdict·모순 확정·요구사항 중의성)이 모두 프로덕션에서 end-to-end 실증됨.
