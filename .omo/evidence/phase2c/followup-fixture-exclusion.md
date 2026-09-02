@@ -30,3 +30,5 @@
 - 남은 99건의 출처는 전부 이 저장소 문서(BUILD_PLAN 계열 86 · IMPLEMENTATION_GUIDE 8 · WORK_SPEC 2 · ADR 2 …). 스캔 로그 `scan @8fc7c00 → 17 rows` = 삭제 14 + 변경 3.
 - **발견한 결함**: `requirements.id → graph_nodes` 와 `requirements.source_artifact_id → artifacts` 는 cascade지만 **`graph_nodes` 쪽으로는 아무것도 cascade하지 않아**, 아티팩트 노드 삭제 시 요구사항 행만 사라지고 요구사항 **노드 14건이 고아로 남았다**(그래프 API·맵에서 라벨만 있는 노드로 노출될 수 있음).
 - 수정: `PostgresAnalysisStore.reconcileRequirements` 트랜잭션 끝에 같은 (workspace, repository)의 `kind='requirement'` 노드 중 `requirements` 행이 없는 것을 삭제하는 스윕 추가(엣지는 FK cascade). 마이그레이션 불필요 — 다음 analyze 한 번으로 프로덕션 고아 14건이 정리된다. 테스트 `tests/requirements-persistence.test.ts` +1(아티팩트 노드 삭제 → 고아 재현 → 스윕 확인).
+- 스윕 배포: 워커 **v13** `deployment-01M1H7G6E1AY8DNRX26JVD44HA`(14:14:31 UTC, 롤백 v12 `…M1H6JAS7…`). 주의 — `flyctl deploy`는 **레포 루트**에서(fly.toml 위치); `apps/worker`에서 실행하면 "missing an app name"으로 종료. `9bb3b20` push의 analyze가 v13에서 첫 스윕을 실행한다(결과 아래).
+- **스윕 실측(push `9bb3b20` → v13 scan 14:15:19 · analyze 14:16:43, 모두 succeeded)**: `graph_nodes` kind=requirement **113 → 99** = `requirements` active 99, 고아 요구사항 노드 **0**. 픽스처 제외·요구사항 영속화가 프로덕션에서 행·노드 모두 정합 상태로 종결.
