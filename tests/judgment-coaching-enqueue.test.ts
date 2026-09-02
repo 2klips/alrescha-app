@@ -27,6 +27,9 @@ describe("judgment/coaching enqueue functions (Phase 2C follow-up)", () => {
   const ownRecord = fixedUlid("D");
   const outsiderRecord = fixedUlid("E");
   const silentRecord = fixedUlid("F");
+  const specArtifact = fixedUlid("G");
+  const requirement = fixedUlid("H");
+  const oldRequirement = fixedUlid("J");
 
   beforeEach(async () => {
     database = await createTestDatabase([...ALL_MIGRATIONS]);
@@ -82,6 +85,93 @@ describe("judgment/coaching enqueue functions (Phase 2C follow-up)", () => {
        values ($1, $2, $3, 'client:test')`,
       [silentRecord, workspace, OWNER],
     );
+    // A requirement (graph node → spec artifact → requirement row) for the
+    // disambiguation surface, plus a superseded one that must be refused.
+    await database.query(
+      `insert into public.graph_nodes (id, workspace_id, repository_id, kind, label)
+       values ($1, $3, $4, 'artifact', 'spec/auth.md'),
+              ($2, $3, $4, 'requirement', 'Sessions expire'),
+              ($5, $3, $4, 'requirement', 'Old sessions rule')`,
+      [specArtifact, requirement, workspace, repository, oldRequirement],
+    );
+    await database.query(
+      `insert into public.artifacts
+        (id, workspace_id, repository_id, kind, classification, path, digest, source_commit_sha)
+       values ($1, $2, $3, 'spec', 'spec', 'spec/auth.md', $4, $5)`,
+      [specArtifact, workspace, repository, "b".repeat(64), "2".repeat(40)],
+    );
+    await database.query(
+      `insert into public.requirements
+        (id, workspace_id, repository_id, source_artifact_id, statement, source_span, status)
+       values ($1, $3, $4, $5, '세션은 적절한 시간 뒤에 만료되어야 한다', $6::jsonb, 'active'),
+              ($2, $3, $4, $5, '세션은 영원히 유지된다', $6::jsonb, 'superseded')`,
+      [
+        requirement,
+        oldRequirement,
+        workspace,
+        repository,
+        specArtifact,
+        JSON.stringify({ endLine: 8, path: "spec/auth.md", startLine: 8 }),
+      ],
+    );
+  });
+
+  function enqueueRequirementJudgment(requirementId: string, mode: string) {
+    return asServiceRole(database, (transaction) =>
+      transaction.query<{ id: string }>(
+        "select public.enqueue_requirement_judgment_job($1, $2, 'anthropic', $3) as id",
+        [workspace, requirementId, mode],
+      ),
+    );
+  }
+
+  it("enqueues a requirement disambiguation with the strict payload and a neutral baseline", async () => {
+    const queued = await enqueueRequirementJudgment(requirement, "credits");
+    const job = await jobRow(queued.rows[0]?.id ?? "");
+    expect(job?.kind).toBe("judge");
+    expect(job?.credit_cost).toBe(10);
+    expect(Object.keys(job?.payload ?? {}).sort()).toEqual([
+      "billingMode",
+      "context",
+      "currentConfidence",
+      "currentSeverity",
+      "kind",
+      "provider",
+      "targetId",
+    ]);
+    expect(job?.payload).toMatchObject({
+      currentConfidence: 0.5,
+      currentSeverity: "low",
+      kind: "requirement-disambiguation",
+      targetId: requirement,
+    });
+    // The statement travels as context, tagged with where it came from.
+    const context = job?.payload["context"] as string[];
+    expect(context[0]).toContain("source spec/auth.md");
+    expect(context[1]).toBe("statement: 세션은 적절한 시간 뒤에 만료되어야 한다");
+  });
+
+  it("refuses requirements that are not active", async () => {
+    await expect(
+      enqueueRequirementJudgment(oldRequirement, "credits"),
+    ).rejects.toThrow(/only active requirements/);
+  });
+
+  it("gives requirement judgments their own retry generation", async () => {
+    const first = (await enqueueRequirementJudgment(requirement, "byok")).rows[0]?.id ?? "";
+    expect((await enqueueRequirementJudgment(requirement, "byok")).rows[0]?.id).toBe(first);
+    await database.query(
+      `update public.jobs set status = 'failed', attempt_count = max_attempts,
+         completed_at = now(), last_error = 'terminal' where id = $1`,
+      [first],
+    );
+    const retry = (await enqueueRequirementJudgment(requirement, "byok")).rows[0]?.id ?? "";
+    expect(retry).not.toBe(first);
+    const rows = await database.query<{ idempotency_key: string }>(
+      "select idempotency_key from public.jobs where id = $1",
+      [retry],
+    );
+    expect(rows.rows[0]?.idempotency_key).toBe(`requirement-judgment:${requirement}:r1`);
   });
 
   afterEach(async () => {

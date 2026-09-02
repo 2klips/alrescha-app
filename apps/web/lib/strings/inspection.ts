@@ -85,4 +85,19 @@ export const INSPECTION = {
     empty: "열린 발견이 없습니다 — 판정할 대상이 없습니다.",
     source: "Findings 테이블의 열린 발견",
   },
+
+  requirementJudgment: {
+    title: "요구사항 중의성 판정",
+    note: "활성 요구사항 문장의 중의성을 판단 잡으로 해소합니다 — 결과(판정·설명)는 항상 inferred이고, 요구사항 자체는 바뀌지 않습니다. 성공한 판정만 과금됩니다(BYOK는 크레딧 0).",
+    action: "AI 판정",
+    retry: "이전 시도 실패 — 다시 요청",
+    pending: "처리 중",
+    empty: "활성 요구사항이 없습니다 — 판정할 대상이 없습니다.",
+    source: "활성 요구사항 · 대상별 최근 판정 기록",
+    verdicts: {
+      ambiguous: "중의적",
+      confirmed: "명확",
+      rejected: "요구사항 아님",
+    },
+  },
 } as const;

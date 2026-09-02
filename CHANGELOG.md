@@ -67,6 +67,13 @@ from server-observed evidence only). Per-todo evidence:
   reads the raw prompt text at run time through a live raw-sync consent
   (ADR-011), and the inspection/team panels show each target's latest job
   state (처리 중 · 완료 · 이전 시도 실패 — 다시 요청).
+- **Requirement disambiguation surface (2026-09-02)**: the third §14 judgment
+  kind gets its enqueue path — `/app/inspection` lists active requirements
+  with the latest verdict (중의적 · 명확 · 요구사항 아님 + explanation) and hands
+  each to `enqueue_requirement_judgment_job`, which sends the strict request
+  with a neutral baseline (0.5 / low), the statement and its source as
+  context, and the same retry generations; requirements themselves are never
+  rewritten — the judgment row is the deliverable.
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the

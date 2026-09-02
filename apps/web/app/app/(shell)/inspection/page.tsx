@@ -7,7 +7,7 @@ import { createAdminClient } from "../../../../lib/supabase/admin";
 import { createClient } from "../../../../lib/supabase/server";
 import { Button } from "../../../ui/button";
 import { InspectionView } from "../../../ui/inspection-view";
-import { requestFindingJudgment } from "./actions";
+import { requestFindingJudgment, requestRequirementJudgment } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +18,35 @@ interface OpenFindingRow {
   readonly title: string;
 }
 
+interface ActiveRequirementRow {
+  readonly id: string;
+  readonly repository_id: string;
+  readonly source_artifact_id: string;
+  readonly statement: string;
+}
+
+interface ArtifactPathRow {
+  readonly id: string;
+  readonly path: string;
+}
+
 interface JudgeJobRow {
   readonly payload: { readonly targetId?: string } | null;
   readonly status: string;
 }
 
-/** The latest judgment job per finding — the queue keeps every generation. */
-function latestJudgmentByFinding(
+interface RequirementJudgmentRow {
+  readonly payload: {
+    readonly explanation?: string;
+    readonly verdict?: string;
+  } | null;
+  readonly target_id: string;
+}
+
+type Verdict = keyof typeof INSPECTION.requirementJudgment.verdicts;
+
+/** The latest judgment job per target — the queue keeps every generation. */
+function latestJobByTarget(
   rows: readonly JudgeJobRow[],
 ): ReadonlyMap<string, string> {
   const latest = new Map<string, string>();
@@ -35,17 +57,41 @@ function latestJudgmentByFinding(
   return latest;
 }
 
+function latestJudgmentByTarget(
+  rows: readonly RequirementJudgmentRow[],
+): ReadonlyMap<string, { explanation: string; verdict: Verdict | null }> {
+  const latest = new Map<string, { explanation: string; verdict: Verdict | null }>();
+  for (const row of rows) {
+    if (latest.has(row.target_id)) continue;
+    const verdict = row.payload?.verdict;
+    latest.set(row.target_id, {
+      explanation: row.payload?.explanation ?? "",
+      verdict:
+        verdict && verdict in INSPECTION.requirementJudgment.verdicts
+          ? (verdict as Verdict)
+          : null,
+    });
+  }
+  return latest;
+}
+
+function excerpt(statement: string, limit = 120): string {
+  return statement.length > limit ? `${statement.slice(0, limit)}…` : statement;
+}
+
 /**
  * The workspace's own project check (Phase 2C todo 5).
  *
  * Every widget already knows how to say "증거 부족"; on this route that state is
  * the honest reading of an empty workspace rather than a demo state to switch
- * into, so there is no `?state=` switcher here. The judgment panel below is
- * live-only: it lists open findings with the state of their latest judgment
- * job and hands each to `enqueue_judgment_job`, whose SQL owns the kind
- * mapping, the billing rule, and the retry generation after a terminal
- * failure. Jobs carry no member grant, so their state is read with the admin
- * client after the owner check — the query stays scoped to that workspace.
+ * into, so there is no `?state=` switcher here. The two judgment panels below
+ * are live-only: open findings and active requirements, each with the state
+ * of its latest judgment job, handed to the enqueue functions whose SQL owns
+ * the kind mapping, the billing rule, and the retry generation after a
+ * terminal failure. Jobs and requirements carry no member grant, so they are
+ * read with the admin client after the owner check — every query stays
+ * scoped to that workspace. Judgments are member-readable and come through
+ * the session client.
  */
 export default async function WorkspaceInspectionPage({
   searchParams,
@@ -61,27 +107,61 @@ export default async function WorkspaceInspectionPage({
     client,
     userId,
   );
+  const admin = createAdminClient();
 
-  const openFindings = await client
-    .from("findings")
-    .select("id,kind,severity,title")
-    .eq("workspace_id", workspaceId)
-    .eq("status", "open")
-    .order("created_at", { ascending: false })
-    .limit(8);
-  if (openFindings.error) throw new Error(openFindings.error.message);
+  const [openFindings, judgeJobs, requirements, judgments] = await Promise.all([
+    client
+      .from("findings")
+      .select("id,kind,severity,title")
+      .eq("workspace_id", workspaceId)
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(8),
+    admin
+      .from("jobs")
+      .select("status,payload")
+      .eq("workspace_id", workspaceId)
+      .eq("kind", "judge")
+      .order("created_at", { ascending: false }),
+    admin
+      .from("requirements")
+      .select("id,repository_id,source_artifact_id,statement")
+      .eq("workspace_id", workspaceId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(8),
+    client
+      .from("judgments")
+      .select("target_id,payload")
+      .eq("workspace_id", workspaceId)
+      .eq("kind", "requirement-disambiguation")
+      .order("created_at", { ascending: false }),
+  ]);
+  for (const result of [openFindings, judgeJobs, requirements, judgments]) {
+    if (result.error) throw new Error(result.error.message);
+  }
   const findings = (openFindings.data ?? []) as OpenFindingRow[];
-
-  const judgeJobs = await createAdminClient()
-    .from("jobs")
-    .select("status,payload")
-    .eq("workspace_id", workspaceId)
-    .eq("kind", "judge")
-    .order("created_at", { ascending: false });
-  if (judgeJobs.error) throw new Error(judgeJobs.error.message);
-  const latest = latestJudgmentByFinding(
-    (judgeJobs.data ?? []) as JudgeJobRow[],
+  const latest = latestJobByTarget((judgeJobs.data ?? []) as JudgeJobRow[]);
+  const activeRequirements = (requirements.data ?? []) as ActiveRequirementRow[];
+  const verdicts = latestJudgmentByTarget(
+    (judgments.data ?? []) as RequirementJudgmentRow[],
   );
+
+  const artifactIds = [
+    ...new Set(activeRequirements.map((row) => row.source_artifact_id)),
+  ];
+  const artifactPaths = new Map<string, string>();
+  if (artifactIds.length > 0) {
+    const artifacts = await admin
+      .from("artifacts")
+      .select("id,path")
+      .eq("workspace_id", workspaceId)
+      .in("id", artifactIds);
+    if (artifacts.error) throw new Error(artifacts.error.message);
+    for (const row of (artifacts.data ?? []) as ArtifactPathRow[]) {
+      artifactPaths.set(row.id, row.path);
+    }
+  }
 
   return (
     <>
@@ -137,6 +217,66 @@ export default async function WorkspaceInspectionPage({
           <small className="inspection-source">
             {INSPECTION.sourcePrefix}
             {INSPECTION.judgment.source}
+          </small>
+        </section>
+
+        <section
+          className="inspection-widget"
+          data-testid="inspection-requirement-judgment"
+        >
+          <header>
+            <h2>{INSPECTION.requirementJudgment.title}</h2>
+          </header>
+          <p>{INSPECTION.requirementJudgment.note}</p>
+          {activeRequirements.length === 0 ? (
+            <p>{INSPECTION.requirementJudgment.empty}</p>
+          ) : (
+            <ul className="inspection-list">
+              {activeRequirements.map((requirement) => {
+                const state = latest.get(requirement.id);
+                const verdict = verdicts.get(requirement.id);
+                return (
+                  <li key={requirement.id} className="inspection-finding">
+                    <span>
+                      {artifactPaths.get(requirement.source_artifact_id) ??
+                        requirement.source_artifact_id}
+                    </span>{" "}
+                    <span>{excerpt(requirement.statement)}</span>{" "}
+                    {state === "queued" || state === "running" ? (
+                      <span>{INSPECTION.requirementJudgment.pending}</span>
+                    ) : state === "succeeded" && verdict ? (
+                      <span>
+                        {verdict.verdict
+                          ? INSPECTION.requirementJudgment.verdicts[
+                              verdict.verdict
+                            ]
+                          : INSPECTION.judgment.done}
+                        {verdict.explanation
+                          ? ` — ${excerpt(verdict.explanation, 160)}`
+                          : ""}
+                      </span>
+                    ) : (
+                      <form action={requestRequirementJudgment}>
+                        <input
+                          type="hidden"
+                          name="requirementId"
+                          value={requirement.id}
+                        />
+                        <Button type="submit">
+                          {state === "failed" || state === "cancelled"
+                            ? INSPECTION.requirementJudgment.retry
+                            : INSPECTION.requirementJudgment.action}
+                        </Button>
+                      </form>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <small className="inspection-source">
+            {INSPECTION.sourcePrefix}
+            {INSPECTION.requirementJudgment.source}
           </small>
         </section>
       </section>
