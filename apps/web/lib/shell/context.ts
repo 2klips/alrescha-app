@@ -52,9 +52,7 @@ export const getWorkspaceShellContext = cache(
       sha7: repo?.last_scanned_commit_sha
         ? repo.last_scanned_commit_sha.slice(0, 7)
         : null,
-      // No live receipts surface exists yet; receipts appear as deltas on
-      // /app/commits. Point there until /app/receipts ships.
-      receiptsHref: "/app/commits",
+      receiptsHref: "/app/receipts",
     };
   },
 );

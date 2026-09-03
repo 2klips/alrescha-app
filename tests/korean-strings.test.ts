@@ -84,6 +84,9 @@ const CONVERTED_SCREENS = [
   "apps/web/app/ui/context-strip.tsx",
   "apps/web/app/ui/command-palette.tsx",
   "apps/web/app/app/(shell)/settings/page.tsx",
+  // OQ-022 follow-up — live receipts
+  "apps/web/app/app/(shell)/receipts/page.tsx",
+  "apps/web/app/ui/receipts-board.tsx",
 ];
 
 /**

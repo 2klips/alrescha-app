@@ -16,6 +16,7 @@ export const AUTHENTICATED_SCREENS = [
   ["app-workspace", "/app"],
   ["app-map", "/app/map"],
   ["app-commits", "/app/commits"],
+  ["app-receipts", "/app/receipts"],
   ["app-inspection", "/app/inspection"],
   ["app-team", "/app/team"],
   ["app-progress", "/app/progress"],

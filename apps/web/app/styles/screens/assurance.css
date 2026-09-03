@@ -794,3 +794,57 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* /app/receipts (live): the rail is a list of links, not buttons — the same
+   affordance as the demo rail, selection carried by aria-current. */
+.receipt-list a {
+  align-items: center;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-muted);
+  color: inherit;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: auto 1fr auto;
+  padding: 0.75rem;
+  text-align: left;
+  text-decoration: none;
+}
+
+.receipt-list a:hover,
+.receipt-list a[aria-current="true"] {
+  border-color: var(--border-default);
+}
+
+.receipt-list a[aria-current="true"] {
+  box-shadow: inset 2px 0 var(--accent-fg);
+}
+
+.receipt-list a > svg:first-child {
+  color: var(--accent-fg);
+}
+
+.receipt-list a > span {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.receipt-list a[data-verification="tampered"] > svg:first-child,
+.receipt-list a[data-verification="invalid"] > svg:first-child {
+  color: var(--danger-fg, var(--attention-fg));
+}
+
+.digest-panel small {
+  color: var(--fg-muted);
+  font-size: var(--text-2xs);
+}
+
+.receipt-issues {
+  color: var(--attention-fg);
+  font: var(--text-2xs) var(--font-mono);
+  margin: 0.4rem 0 0;
+  padding-left: 1.1rem;
+}
+
+.receipt-detail .commit-receipt-link {
+  margin-top: 1rem;
+}

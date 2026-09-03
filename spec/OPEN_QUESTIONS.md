@@ -44,7 +44,7 @@
 - 내용: 랜딩은 inferred를 보라(`#5f35c9`), test 노드를 청록(`#068aa6`)으로 구분해 쓰고 있었다. ADR-009-3은 inferred와 test 노드 색을 **둘 다 amber**로 규정하므로, 토큰화하면 두 의미가 같은 색이 된다.
 - 임시 결정: 둘 다 `--arr-amber`(라이트 inferred `#B07A14`)로 매핑했다. ADR이 상위이므로 색은 합치되, 두 요소는 라벨·형태(범례 아이콘 모양, 체인 단계 번호)로 계속 구분된다. 색만으로 정보를 전달하지 않으므로 접근성 회귀는 아니다.
 - 근거: `spec/DECISIONS-ADR.md` ADR-009-3(노드 색 규약), `spec/WORK_SPEC.md` §5.1
-- 상태: open (todo 8 화면 재스타일 때 형태 구분이 충분한지 눈으로 확인 필요)
+- 상태: **resolved(obsolete, 2026-09-02 상태 드리프트 정리)**. 질문의 대상이던 `.arr-home` 랜딩과 `--arr-amber` 매핑은 Phase 2A의 전면 그래프 대시보드(dashboard-screen)와 Alrescha 리브랜딩을 거치며 코드에서 사라졌다(`apps/web/app/globals.css`에 해당 선택자·토큰 없음). 현행 화면은 inferred/test를 색이 아니라 라벨·형태로 구분하며 screens-theme·a11y-contrast 순회를 통과한다(OQ-008·009 참조). 더 이상 판단할 대상이 없어 종료.
 
 ## OQ-005 — todo 5·6의 Playwright 수용 기준이 todo 7보다 먼저 올 수 없음
 
@@ -88,7 +88,7 @@
 - 내용: axe-core 대비 검사에서 `/findings` 라이트 테마가 **22건 violation**을 냈다. 원인의 대부분은 파생 토큰이 아니라 **ADR-009-3이 못 박은 값 자체**다 — 종이 흰색(`#FFFFFF`/`#FAF7F1`/`#F3EFE7`) 위에서 `--verified #1E8A5E`는 3.77~~4.33:1, `--inferred #B07A14`는 3.25~~3.72:1, `--brand #D6402E`는 3.95~~4.53:1, `--info #3B6FDB`는 4.08~~4.68:1이다. 이 색들을 9~11px 모노 뱃지(`.grade-badge`, `.severity-label`, `.commit-chip`)가 텍스트 색으로 쓰기 때문에 AA(4.5:1) 미달이다. 다크 테마의 같은 색들은 전부 4.95:1 이상으로 통과한다.
 - 임시 결정: **ADR 값은 건드리지 않았다**(ADR = WORK_SPEC > 계획). 대신 `tokens.css`에 텍스트 전용 파생 토큰을 추가했다 — `--brand-text #C43A2B`(4.59:1), `--verified-text #177A52`(4.65:1), `--inferred-text #8F6310`(4.62:1), `--info-text #3766CA`(4.68:1). 다크에서는 기본 토큰의 별칭일 뿐이다. 그래프 노드 색·점·링·틴트·테두리는 여전히 ADR 값을 쓰므로 팔레트의 정체성은 그대로고, 텍스트만 어두운 형제 색을 쓴다. 파생 별칭(`--ok-text`, `--warn-text`, `--broken-text`, `--accent-text`)도 같이 뒀다.
 - 근거: `.omo/evidence/phase2a/task-9.md`, `.omo/evidence/phase2a/task-9/axe-contrast-*.json`, `tests/design-tokens.test.ts`(`token contrast` 스위트)
-- 상태: open — ADR-009-3이 "라이트 팔레트는 큰 면적·그래프용, 작은 텍스트는 파생 색"을 명시하도록 개정할지, 아니면 라이트 값 자체를 AA 통과값으로 바꿀지 기획 판단이 필요하다. 마케팅 사이트도 같은 팔레트를 쓰므로 (`docs/design-tokens.md`) 결정이 양쪽에 걸린다.
+- 상태: **resolved(ADR-010 §2, 2026-08-16 — 팔레트 유지 + 텍스트 전용 파생 토큰 채택)**. ADR-009-3 값은 개정하지 않고 텍스트에는 `--*-text` 형제 토큰을 쓴다(마케팅 사이트 교체 시 동일 규칙). 임시 결정이 그대로 확정된 것이라 코드 변경 없음. 상태 드리프트 정리 2026-09-02.
 
 ## OQ-010 — 제품명이 Arr로 바뀐 뒤에도 코드·픽스처·패키지명에 SpecProof가 남아 있음
 
@@ -115,7 +115,7 @@
 - 임시 결정: v2 리포트(`results.real.{json,md}`)와 그 사전등록 매니페스트(`tasks.json`)는 **불변으로 동결**했다. 사후에 판정 규칙을 바꿔 과거 리포트를 다시 채점하지 않는다(ADR-005의 "측정된 그대로 공개"). v3는 별도 사전등록(`tasks.v3.json`, SHA-256은 evidence에 기록)으로 두고, 실제 실행 전까지 F5 감사에서 "pending"으로만 보고한다.
 - 기획 판단이 필요한 것: ⑴ **v2 인용 문구를 그대로 둘 것인가** — 현재 파일럿 통계 화면·리포트는 "정확도 +3.66pp"를 v2 리포트 링크와 함께 인용한다. v3 기준에서 그 수치의 불확실성이 -6.19pp까지 걸친다는 사실을 같이 표기할지, 아니면 v3 실행 결과가 나올 때까지 정확도 주장만 내릴지. ⑵ v3 실행 후 **공개 릴리스를 v3로 교체할지, v2와 병행 게시할지** (F5 감사는 두 릴리스를 모두 검증하도록 확장해 두었다).
 - 근거: `benchmarks/databrain/results.real.json`(v2 원시 시행), `scripts/databrain-benchmark/statistics.ts`(시드 부트스트랩), `.omo/evidence/benchmark-v3.md`
-- 상태: open — v3 실제 실행은 예산 승인 대기(예상 ~8.15M 토큰, 아래 evidence 참조).
+- 상태: **resolved(ADR-012, 2026-08-17 — 정확도 주장 철회·토큰 주장 유지, 구간 병기 필수)**. ⑴ 사이트 헤드라인의 "+3.66pp"는 강등(리포트에는 유지, "v3에서 재검증 중" 표기), ⑵ v2 리포트는 불변 공개·v3는 나란히 게시. 남는 것은 v3 **실행**(예산 승인, 예상 ~8.15M 토큰)이며 이는 판정이 아니라 실행 과제라 RESEARCH_AGENDA 쪽에 남긴다. 상태 드리프트 정리 2026-09-02.
 
 ## OQ-012 — v3 실레포 과제에 test-pass 채점기가 없다
 

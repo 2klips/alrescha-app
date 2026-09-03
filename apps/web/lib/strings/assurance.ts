@@ -122,5 +122,45 @@ export const ASSURANCE = {
       locked: "digest 검증에 성공해야 판정이 열립니다.",
     },
     verifyAction: "Receipt digest 검증",
+
+    /**
+     * /app/receipts — the workspace's own receipts, read from stored rows and
+     * verified on the server against the stored digest (OQ-022 ⑴ made every
+     * production receipt readable again, including the pre-rename issuer).
+     */
+    live: {
+      kicker: "이 워크스페이스의 commit 연결 체인",
+      title: "Receipts",
+      /** `Statement <n>건 · 저장된 digest로 서버가 검증` */
+      summary: (count: number) =>
+        `Statement ${count}건 · 저장된 digest로 서버가 검증`,
+      empty: {
+        title: "발급된 Receipt 없음",
+        body: "레포를 연결하고 push하면 첫 분석이 Receipt를 발급합니다.",
+      },
+      /** `stale: 이 Receipt는 현재 commit <sha7>보다 이전입니다.` */
+      staleBanner: (sha7: string) =>
+        `stale: 이 Receipt는 현재 commit ${sha7}보다 이전입니다.`,
+      fields: {
+        repository: "레포",
+        issuedAt: "발급 시각",
+        issuer: "발급 도구",
+        coverage: "커버리지",
+        findings: "발견 델타",
+      },
+      /** Shown next to a receipt whose statement names the pre-rename tool. */
+      legacyIssuer: "리네임 이전 발급",
+      /** `요구사항 <r> · 구현 verified <i> · 테스트 verified <t>` */
+      coverage: (requirements: number, impl: number, test: number) =>
+        `요구사항 ${requirements} · 구현 verified ${impl} · 테스트 verified ${test}`,
+      /** `+<opened> / -<resolved> · 열린 Findings <n>건` */
+      findingsDelta: (opened: number, resolved: number, openTotal: number) =>
+        `+${opened} / -${resolved} · 열린 Findings ${openTotal}건`,
+      findingsMissing: "스냅샷 없음",
+      digestMissing: "저장된 digest 없음",
+      computedNote: "페이지를 렌더할 때 서버가 Statement를 다시 계산한 digest입니다.",
+      commitAction: "commit 카드 보기",
+      unreadable: "저장된 Statement가 스키마와 맞지 않아 필드를 표시하지 않습니다.",
+    },
   },
 } as const;

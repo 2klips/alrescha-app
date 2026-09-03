@@ -36,6 +36,7 @@ export default async function WorkspaceCommitsPage({
     <CommitAnalysisBoard
       basePath="/app/commits"
       cards={cards}
+      receiptsPath="/app/receipts"
       selectedRunId={selectedRunId}
       stateQuery={null}
     />

@@ -24,8 +24,8 @@ import { NAV } from "../../lib/strings/common";
  * Complete route inventory for command-palette search, grouped by the
  * design direction IA (§2.3). The primary shell uses `*_TABS` below.
  * The workspace tree is canonical; the demo tree is the same IA with
- * fixtures plugged in (its extra Findings/Lint/Receipts/노드 탐색 entries are
- * routes the workspace tree has not shipped yet).
+ * fixtures plugged in (its extra Findings/Lint/노드 탐색 entries are routes
+ * the workspace tree has not shipped yet).
  */
 
 export type ShellTree = "demo" | "workspace";
@@ -94,6 +94,7 @@ const WORKSPACE_GROUPS: readonly ShellNavGroup[] = [
     key: "records",
     items: [
       { href: "/app/progress", icon: ListTodo, label: NAV.progress },
+      { href: "/app/receipts", icon: ReceiptText, label: NAV.receipts },
       { href: "/app/team", icon: Users, label: NAV.team },
       { href: "/app/harness", icon: BookmarkPlus, label: NAV.harness },
       { href: "/app/library", icon: Archive, label: NAV.library },

@@ -26,6 +26,7 @@ const ROUTES = [
   "/app/inspection",
   "/app/library",
   "/app/progress",
+  "/app/receipts",
   "/app/settings/ai",
   "/app/settings/mcp",
   "/app/settings/privacy",

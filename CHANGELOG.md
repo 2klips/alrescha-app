@@ -96,6 +96,12 @@ from server-observed evidence only). Per-todo evidence:
   legacy `arr` next to `alrescha`; issuance stays pinned to `alrescha`, and
   `verifyInTotoStatement` now reports `toolName`. All 28 production receipts
   (12 legacy) verify against their stored digests.
+- **Live receipts surface `/app/receipts` (2026-09-02)**: the workspace's own
+  receipts, read through RLS and re-verified on the server against the stored
+  digest — verified / tampered / invalid shown as computed, pre-rename issuers
+  labelled, unreadable rows kept visible. Commit cards and the shell header now
+  link here instead of the demo chain. OPEN_QUESTIONS status drift cleared
+  (OQ-004 obsolete, OQ-009 → ADR-010, OQ-011 → ADR-012).
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the

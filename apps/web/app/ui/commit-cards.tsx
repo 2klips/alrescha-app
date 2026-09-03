@@ -20,6 +20,8 @@ interface CommitAnalysisBoardProps {
       `/app/commits` for the workspace's own runs. */
   readonly basePath: string;
   readonly cards: readonly CommitAnalysisCard[];
+  /** Where "Receipt 보기" lands — `/receipts` (demo chain) or `/app/receipts`. */
+  readonly receiptsPath?: string;
   readonly selectedRunId: string | null;
   readonly stateQuery: string | null;
 }
@@ -112,7 +114,13 @@ function DeltaValue({ card }: { card: CommitAnalysisCard }) {
   );
 }
 
-function CommitDetail({ card }: { card: CommitAnalysisCard }) {
+function CommitDetail({
+  card,
+  receiptsPath,
+}: {
+  card: CommitAnalysisCard;
+  receiptsPath: string;
+}) {
   return (
     <article className="commit-detail" aria-label={COMMITS.ariaDetail}>
       <header>
@@ -172,7 +180,7 @@ function CommitDetail({ card }: { card: CommitAnalysisCard }) {
             ) : (
               <Link
                 className="commit-receipt-link"
-                href={`/receipts?receipt=${encodeURIComponent(card.receiptId)}`}
+                href={`${receiptsPath}?receipt=${encodeURIComponent(card.receiptId)}`}
               >
                 <Icon icon={ReceiptText} size="xs" />
                 {COMMITS.detail.receiptAction}
@@ -212,6 +220,7 @@ function CommitDetail({ card }: { card: CommitAnalysisCard }) {
 export function CommitAnalysisBoard({
   basePath,
   cards,
+  receiptsPath = "/receipts",
   selectedRunId,
   stateQuery,
 }: CommitAnalysisBoardProps) {
@@ -273,7 +282,7 @@ export function CommitAnalysisBoard({
           <p>{COMMITS.detail.placeholder}</p>
         </aside>
       ) : (
-        <CommitDetail card={selected} />
+        <CommitDetail card={selected} receiptsPath={receiptsPath} />
       )}
     </main>
   );
