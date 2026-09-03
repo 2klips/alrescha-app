@@ -212,3 +212,11 @@
 - 임시 결정: 표면은 유지(테이블이 채워지는 순간 동작 — DB 테스트로 증명됨). 프로덕션 스모크는 영속화 전까지 불가로 기록.
 - 필요한 결정: ⑴ **analyze에서 추출한 요구사항을 영속화** — `graph_nodes`(kind requirement, provenance span) + `requirements`(statement·source_span·status)에 upsert, 사라진 요구사항은 `superseded`/`withdrawn`으로 전이(하드룰: 모든 노드에 provenance; 문장은 스펙 문서 텍스트라 원본 코드 본문 금지 규칙과 무관) ⑵ scan 단계에서 영속화(spec 아티팩트 파싱 시점) ⑶ 현행 유지(요구사항 표면들을 데모 전용으로 남김) — 비권장.
 - 상태: **resolved (2026-09-02 사용자 지시로 ⑴ 구현)**. analyze 핸들러가 `prepareAssuranceContexts`의 추출 결과를 `PostgresAnalysisStore.reconcileRequirements`로 영속화 — `graph_nodes`(kind requirement) + `requirements`(source_artifact_id·statement·source_span{path,startLine,endLine,origin}·status) upsert, 사라진 요구사항은 `superseded`(삭제 금지 — 판정·엣지 대상 보존). 식별자는 `deterministicUlid(ws|repo|경로|REQ코드 ?? 문장)`로 재분석 수렴. 마이그레이션 불필요. 증빙 `.omo/evidence/phase2c/followup-requirement-persistence.md`.
+
+## OQ-024 — MCP 툴 등록의 잔여 요청당 비용을 없애려면 핸들러 인자 타입을 포기해야 한다
+
+- 발견: 성능 리서치 중기 과제 MT-10 구현 중(2026-09-03) / `packages/mcp/src/hosted.ts`, `.omo/evidence/perf/mt-10.md`
+- 내용: `createMcpHandler`는 요청마다 서버 팩토리를 호출한다. MT-10에서 22개 툴 정의와 66개 인라인 `z.object`를 모듈 스코프로 호이스트해 지배적 비용(동일 형태 스키마 44개 생성 실측 7.287ms)을 제거했고, `tools/call` p50 3.242ms → 1.415ms로 측정됐다. 남은 것은 `new McpServer` + `registerTool` × 22 = 실측 약 2.041ms/요청이며 이는 SDK 내부 비용이다. 리서치 보고서의 제안대로 `z.toJSONSchema` 사전 계산 + SDK의 `fromJsonSchema()` 등록으로 이를 없앨 수 있으나, `fromJsonSchema<T = unknown>`이므로 22개 핸들러 전부가 인자 타입을 잃는다(현재는 zod 스키마에서 추론된 타입으로 정적 검사됨).
+- 임시 결정: 호이스트까지만 적용하고 `registerTool` 잔여 비용은 남긴다. 타입 안전성을 조용히 맞바꾸지 않는다.
+- 필요한 결정: ⑴ 현행 유지 — 약 2ms/요청을 정적 타입 검사의 대가로 수용(기본값) ⑵ `fromJsonSchema` 등록으로 전환하되 각 핸들러에 명시적 인자 타입 주석을 달아 검사를 복원 ⑶ 요청당 서버 재구축 자체를 없애는 상류 SDK 변경을 기다린다(팩토리는 SDK 계약이라 이 저장소에서 단독으로 바꿀 수 없음)
+- 상태: open

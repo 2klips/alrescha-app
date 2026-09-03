@@ -122,6 +122,602 @@ function unauthorized(): Response {
   );
 }
 
+const GRAPH_NODE_SCHEMA = z.object({
+  id: z.string(),
+  path: z.string().nullable(),
+  repositoryId: z.string(),
+  type: NODE_TYPE_SCHEMA,
+});
+const GRAPH_EDGE_SCHEMA = z.object({
+  derived: z.boolean(),
+  relation: RELATION_SCHEMA,
+  sourceNodeId: z.string(),
+  targetNodeId: z.string(),
+});
+
+const MEMORY_ENTRY_SCHEMA = z.object({
+  anchorNodeId: z.string().nullable(),
+  anchorPath: z.string().nullable(),
+  entryKey: z.string(),
+  id: z.string(),
+  name: z.enum(MEMORY_BLOCK_NAMES),
+  text: z.string(),
+  updatedAt: z.string(),
+});
+
+/**
+ * Tool definitions, hoisted to module scope (perf research MT-10).
+ *
+ * The SDK calls the server factory once per request, so anything built inside
+ * it is built again for every `initialize`, `tools/list` and `tools/call`.
+ * None of these definitions close over the request — only the handlers below
+ * touch `principal` and `store` — so they are constructed once per process
+ * and the per-request work is the closure binding alone.
+ */
+const ASSERT_LINK_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description:
+    "Assert a concept edge between two nodes (closed relation vocabulary). Bi-temporal: a conflicting assertion on the same pair is superseded, never deleted; an identical one is a noop.",
+  inputSchema: z.object({
+    reason: z.string().trim().min(1).max(500),
+    relation: z.enum(AGENT_ASSERTION_RELATIONS),
+    source_node_id: z.string().trim().min(1),
+    target_node_id: z.string().trim().min(1),
+  }),
+  outputSchema: z.object({
+    assertion: z.object({
+      id: z.string().nullable(),
+      invalidatedId: z.string().nullable(),
+      outcome: z.enum(["added", "noop", "superseded", "unknown_node"]),
+    }),
+    workspaceId: z.string(),
+  }),
+};
+
+const EXPLAIN_MODULE_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "Explain the module (deterministic structure cluster) containing a node. Prose is lazy: 'ready' serves the cached inferred summary, 'pending'/'stale' enqueue one credit-lifecycle enrich job and return the member list now — ask again after the worker runs.",
+  inputSchema: z.object({
+    node_id: z.string().trim().min(1),
+  }),
+  outputSchema: z.object({
+    memberPaths: z.array(z.string()),
+    moduleKey: z.string(),
+    name: z.string(),
+    refreshJobId: z.string().nullable(),
+    state: z.enum(["pending", "ready", "stale"]),
+    summary: z.string().nullable(),
+    summaryGrade: z.literal("inferred"),
+    workspaceId: z.string(),
+  }),
+};
+
+const GET_ARTIFACT_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description: "Read an artifact by path or id with its graph-neighbor summary",
+  inputSchema: z
+    .object({
+      id: z.string().trim().min(1).optional(),
+      path: z.string().trim().min(1).optional(),
+    })
+    .refine(
+      ({ id, path }) => Boolean(id) !== Boolean(path),
+      "Provide exactly one of id or path",
+    ),
+  outputSchema: z.object({
+    artifact: z
+      .object({
+        content: z.string(),
+        id: z.string(),
+        kind: z.string(),
+        path: z.string(),
+        repositoryId: z.string(),
+        status: z.string(),
+        summary: z.string(),
+        title: z.string(),
+      })
+      .nullable(),
+    neighbors: z.array(
+      z.object({
+        direction: z.enum(["incoming", "outgoing"]),
+        id: z.string(),
+        label: z.string(),
+        path: z.string().optional(),
+        relation: RELATION_SCHEMA,
+        type: NODE_TYPE_SCHEMA,
+      }),
+    ),
+    workspaceId: z.string(),
+  }),
+};
+
+const GET_FINDINGS_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description: "Get findings with explicit status, severity, and provenance",
+  inputSchema: z.object({
+    filter: z
+      .object({
+        kind: z.string().optional(),
+        severity: z.string().optional(),
+        status: z.string().optional(),
+      })
+      .optional(),
+  }),
+  outputSchema: z.object({
+    findings: z.array(
+      z.object({
+        confidence: z.number(),
+        evidenceGrade: z.enum(["inferred", "verified"]),
+        id: z.string(),
+        kind: z.string(),
+        provenance: z.unknown(),
+        repositoryId: z.string(),
+        severity: z.string(),
+        sourceNodeId: z.string().nullable(),
+        status: z.string(),
+        title: z.string(),
+      }),
+    ),
+    workspaceId: z.string(),
+  }),
+};
+
+const GET_GRAPH_SCHEMA_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "Call first: this workspace's graph vocabulary — node kinds, edge relations and counts — so queries speak the stored graph instead of guessing one.",
+  inputSchema: z.object({}),
+  outputSchema: z.object({
+    nodeCounts: z.record(z.string(), z.number().int().nonnegative()),
+    relationCounts: z.record(z.string(), z.number().int().nonnegative()),
+    repositories: z.array(
+      z.object({
+        artifactCount: z.number().int().nonnegative(),
+        fullName: z.string(),
+        id: z.string(),
+      }),
+    ),
+    text: z.string(),
+    workspaceId: z.string(),
+  }),
+};
+
+const GET_NEIGHBORS_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "ID-first neighborhood of a node (depth 1-2): node ids, types, paths, and connecting edges. No bodies — fetch content explicitly with get_node_content.",
+  inputSchema: z.object({
+    depth: z.union([z.literal(1), z.literal(2)]).optional(),
+    node_id: z.string().trim().min(1),
+    relations: z.array(RELATION_SCHEMA).max(7).optional(),
+  }),
+  outputSchema: z.object({
+    edges: z.array(GRAPH_EDGE_SCHEMA),
+    found: z.boolean(),
+    nodes: z.array(GRAPH_NODE_SCHEMA),
+    workspaceId: z.string(),
+  }),
+};
+
+const GET_NODE_CONTENT_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "The explicit second step after ID-first traversal: stored content for one node id, or up to four at once via node_ids — batch related nodes into one call instead of one round-trip each (artifacts return their stored summary — raw source bodies are never persisted).",
+  inputSchema: z.object({
+    node_id: z.string().trim().min(1).optional(),
+    node_ids: z
+      .array(z.string().trim().min(1))
+      .min(1)
+      .max(4)
+      .optional()
+      .describe("Batch form: up to 4 node ids fetched in one call"),
+  }),
+  outputSchema: z.object({
+    node: z
+      .object({
+        content: z.string(),
+        id: z.string(),
+        kind: z.string(),
+        path: z.string().nullable(),
+        repositoryId: z.string(),
+        type: NODE_TYPE_SCHEMA,
+      })
+      .nullable(),
+    nodes: z.array(
+      z.object({
+        content: z.string(),
+        id: z.string(),
+        kind: z.string(),
+        path: z.string().nullable(),
+        repositoryId: z.string(),
+        requestedId: z.string(),
+        type: NODE_TYPE_SCHEMA,
+      }),
+    ),
+    workspaceId: z.string(),
+  }),
+};
+
+const IMPACT_OF_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "ID-first impact report for a node: direct dependents (edges into it), direct dependencies (edges out of it), and the depth-limited transitive closure.",
+  inputSchema: z.object({
+    depth: z.union([z.literal(1), z.literal(2)]).optional(),
+    node_id: z.string().trim().min(1),
+  }),
+  outputSchema: z.object({
+    found: z.boolean(),
+    impact: z
+      .object({
+        dependencies: z.object({
+          edges: z.array(GRAPH_EDGE_SCHEMA),
+          nodeIds: z.array(z.string()),
+        }),
+        dependents: z.object({
+          edges: z.array(GRAPH_EDGE_SCHEMA),
+          nodeIds: z.array(z.string()),
+        }),
+        transitiveNodeIds: z.array(z.string()),
+      })
+      .nullable(),
+    workspaceId: z.string(),
+  }),
+};
+
+const LOG_PROGRESS_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description:
+    "Record one compact structured progress update; never writes to the repository",
+  inputSchema: z.object({
+    refs: z.array(z.string().trim().min(1).max(200)).max(10).optional(),
+    status: z.enum(["started", "progress", "done", "blocked"]),
+    summary: z.string().trim().min(1).max(200),
+    task: z.string().trim().min(1).max(120),
+  }),
+  outputSchema: z.object({
+    event: z.object({
+      id: z.string(),
+      refs: z.array(z.string()),
+      status: z.enum(["started", "progress", "done", "blocked"]),
+      summary: z.string(),
+      task: z.string(),
+      todoId: z.string(),
+    }),
+    workspaceId: z.string(),
+  }),
+};
+
+const MEMORY_READ_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "Read the workspace's bounded memory blocks (gotchas / conventions / decisions) — durable notes earlier agents distilled. Filter by block name or anchor node.",
+  inputSchema: z.object({
+    anchor_node_id: z.string().trim().min(1).optional(),
+    name: z.enum(MEMORY_BLOCK_NAMES).optional(),
+  }),
+  outputSchema: z.object({
+    entries: z.array(MEMORY_ENTRY_SCHEMA),
+    workspaceId: z.string(),
+  }),
+};
+
+const MEMORY_WRITE_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description:
+    "Write one bounded memory entry (gotchas / conventions / decisions), keyed for reconciliation: same key + same text is a noop, a new text supersedes the old (never deleted), `remove` invalidates. At most 12 active entries per block — over the cap the write is rejected: distill, don't accumulate.",
+  inputSchema: z.object({
+    anchor_node_id: z.string().trim().min(1).optional(),
+    entry_key: z
+      .string()
+      .trim()
+      .regex(/^[a-z0-9][a-z0-9-]{0,79}$/),
+    name: z.enum(MEMORY_BLOCK_NAMES),
+    remove: z.boolean().optional(),
+    text: z.string().trim().min(1).max(500).optional(),
+  }),
+  outputSchema: z.object({
+    entry: z.object({
+      id: z.string().nullable(),
+      invalidatedId: z.string().nullable(),
+      outcome: z.enum([
+        "added",
+        "invalidated",
+        "noop",
+        "rejected_cap",
+        "unknown_node",
+        "updated",
+      ]),
+    }),
+    workspaceId: z.string(),
+  }),
+};
+
+const QUERY_BRAIN_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "Run a deterministic structured query over graph types, statuses, and relations",
+  inputSchema: z.object({
+    filter: z.object({
+      path: z.string().trim().min(1).optional(),
+      relations: z.array(RELATION_SCHEMA).optional(),
+      statuses: z.array(z.string().trim().min(1)).optional(),
+      types: z.array(NODE_TYPE_SCHEMA).optional(),
+      withoutRelations: z.array(RELATION_SCHEMA).optional(),
+    }),
+  }),
+  outputSchema: z.object({
+    count: z.number().int().nonnegative(),
+    nodes: z.array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        path: z.string().optional(),
+        relations: z.array(RELATION_SCHEMA),
+        repositoryId: z.string(),
+        status: z.string(),
+        type: NODE_TYPE_SCHEMA,
+      }),
+    ),
+    workspaceId: z.string(),
+  }),
+};
+
+const RECORD_NOTE_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description:
+    "Record a private workspace note; never writes to the repository",
+  inputSchema: z.object({
+    target: z.string().trim().min(1).max(200).optional(),
+    text: z.string().trim().min(1).max(2_000),
+  }),
+  outputSchema: z.object({
+    note: z.object({
+      id: z.string(),
+      target: z.string().nullable(),
+      text: z.string(),
+    }),
+    workspaceId: z.string(),
+  }),
+};
+
+const RECORD_PROMPT_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description:
+    "Record one prompt for the authenticated member (ADR-011). Metadata by default; `raw_text` is stored only when the member's separate raw-sync switch is on, and the database rejects the write outright unless the workspace enabled capture AND the member consented.",
+  inputSchema: z.object({
+    raw_text: z.string().trim().min(1).max(20_000).optional(),
+    rubric: z.record(z.string(), z.number().min(0).max(2)).optional(),
+    target_node_ids: z.array(z.string().trim().min(1)).max(50).optional(),
+    token_count: z.number().int().nonnegative().max(10_000_000),
+    tool_name: z.string().trim().min(1).max(120),
+  }),
+  outputSchema: z.object({
+    recordId: z.string(),
+    workspaceId: z.string(),
+  }),
+};
+
+const RECORD_RULED_OUT_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description:
+    "Append one ruled-out attempt to the workspace log: a hypothesis that was tried and what happened. The log is append-only in the database, so a recorded dead end cannot later be edited or removed — that permanence is the point, since the next agent reads it to avoid repeating the attempt.",
+  inputSchema: z.object({
+    hypothesis: z.string().trim().min(1).max(2000),
+    outcome: z.string().trim().min(1).max(2000),
+    refs: z.array(z.string().trim().min(1)).max(50).optional(),
+    repository_id: z.string().trim().min(1).optional(),
+  }),
+  outputSchema: z.object({
+    attemptId: z.string(),
+    workspaceId: z.string(),
+  }),
+};
+
+const REPO_MAP_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "Token-budgeted orientation map: files ranked by personalized PageRank (seeded by focus terms), each line a path plus its exported symbols. Compact text, no bodies.",
+  inputSchema: z.object({
+    focus: z
+      .array(z.string().trim().min(1).max(400))
+      .max(16)
+      .optional()
+      .describe("Paths or symbol names to bias the walk toward"),
+    token_budget: z
+      .number()
+      .int()
+      .min(REPO_MAP_MIN_BUDGET)
+      .max(REPO_MAP_MAX_BUDGET)
+      .optional(),
+  }),
+  outputSchema: z.object({
+    focusMatched: z.array(z.string()),
+    omittedCount: z.number().int().nonnegative(),
+    text: z.string(),
+    tokenBudget: z.number().int().positive(),
+    tokenEstimate: z.number().int().nonnegative(),
+    workspaceId: z.string(),
+  }),
+};
+
+const REPO_OVERVIEW_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "Architecture overview: deterministic module clusters with sizes, plus cached module prose where fresh. Zero model calls — the grep-can't-answer 'what is this repo' entry point.",
+  inputSchema: z.object({}),
+  outputSchema: z.object({
+    repositories: z.array(
+      z.object({
+        artifactCount: z.number().int().nonnegative(),
+        fullName: z.string(),
+        modules: z.array(
+          z.object({
+            key: z.string(),
+            memberCount: z.number().int().positive(),
+            name: z.string(),
+            summary: z.string().nullable(),
+          }),
+        ),
+        repositoryId: z.string(),
+      }),
+    ),
+    text: z.string(),
+    workspaceId: z.string(),
+  }),
+};
+
+const REQUEST_CONTEXT_PACK_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "Select a load-on-demand context pack for a task and token budget",
+  inputSchema: z.object({
+    target_agent: z
+      .enum(["claude-code", "codex", "cursor", "generic"])
+      .optional(),
+    task_description: z.string().trim().min(1).max(1_000),
+    token_budget: z.number().int().min(128).max(32_000).optional(),
+  }),
+  outputSchema: z.object({
+    assumption: z.string(),
+    estimatedTokens: z.number().int().nonnegative(),
+    excluded: z.array(z.object({ path: z.string(), reason: z.string() })),
+    nodeIds: z.array(z.string()),
+    omitted: z.array(
+      z.object({
+        estimatedTokens: z.number().int().positive(),
+        path: z.string(),
+        rank: z.number().int().positive(),
+        reason: z.string(),
+        title: z.string(),
+      }),
+    ),
+    paths: z.array(z.string()),
+    readingOrder: z.array(
+      z.object({
+        estimatedTokens: z.number().int().positive(),
+        id: z.string(),
+        path: z.string(),
+        rank: z.number().int().positive(),
+        reason: z.string(),
+        title: z.string(),
+      }),
+    ),
+    targetAgent: z.enum(["claude-code", "codex", "cursor", "generic"]),
+    text: z.string(),
+    title: z.string(),
+    workspaceId: z.string(),
+  }),
+};
+
+const ROUTE_QUERY_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "Deterministic query routing: simple lookups go to text search, multi-hop or relational questions go to the graph tools. The decision carries its matched signals and a fallback for when the chosen route returns nothing.",
+  inputSchema: z.object({
+    question: z.string().trim().min(1).max(1_000),
+  }),
+  outputSchema: z.object({
+    fallback: z.object({
+      reason: z.string(),
+      route: z.enum(["graph", "search"]),
+      tools: z.array(z.string()),
+    }),
+    matchedSignals: z.array(z.string()),
+    reason: z.string(),
+    recommendedTools: z.array(z.string()),
+    route: z.enum(["graph", "search"]),
+    workspaceId: z.string(),
+  }),
+};
+
+const SEARCH_INDEX_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description: "Search the deterministic Alrescha data index",
+  inputSchema: z.object({
+    query: z.string().trim().min(1),
+    type_filter: NODE_TYPE_SCHEMA.optional(),
+  }),
+  outputSchema: z.object({
+    query: z.string(),
+    results: z.array(
+      z.object({
+        excerpt: z.string(),
+        id: z.string(),
+        neighborIds: z.array(z.string()),
+        nodeId: z.string(),
+        path: z.string(),
+        rank: z.enum([
+          "exact",
+          "title-heading",
+          "path-symbol",
+          "graph-neighbor",
+        ]),
+        repositoryId: z.string(),
+        // Tier score plus the fractional connectivity bonus (todo 5).
+        score: z.number(),
+        title: z.string(),
+        type: NODE_TYPE_SCHEMA,
+      }),
+    ),
+    workspaceId: z.string(),
+  }),
+};
+
+const SEARCH_NODES_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "ID-first node search — the same deterministic ranking as search_index with excerpts stripped: node ids, types, paths, and neighbor ids only. search_index remains the text entry point; this is the graph entry point.",
+  inputSchema: z.object({
+    query: z.string().trim().min(1),
+    type_filter: NODE_TYPE_SCHEMA.optional(),
+    // Phase 2D todo 5 — optional facet filter, derived from the stored
+    // path (deterministic, ADR-013-equivalent). Backward compatible.
+    domain_filter: z
+      .enum(["frontend", "backend", "shared", "unclassified"])
+      .optional(),
+  }),
+  outputSchema: z.object({
+    query: z.string(),
+    results: z.array(
+      z.object({
+        neighborIds: z.array(z.string()),
+        nodeId: z.string(),
+        path: z.string(),
+        rank: z.string(),
+        repositoryId: z.string(),
+        score: z.number(),
+        type: NODE_TYPE_SCHEMA,
+      }),
+    ),
+    workspaceId: z.string(),
+  }),
+};
+
+const TRACE_PATH_TOOL = {
+  annotations: READ_ONLY_TOOL,
+  description:
+    "ID-first shortest evidence path between two nodes (max depth 6), with graphify-style explain lines per hop. Derived edges are marked with *.",
+  inputSchema: z.object({
+    from_node_id: z.string().trim().min(1),
+    max_depth: z.number().int().min(1).max(6).optional(),
+    to_node_id: z.string().trim().min(1),
+  }),
+  outputSchema: z.object({
+    found: z.boolean(),
+    path: z
+      .object({
+        edges: z.array(GRAPH_EDGE_SCHEMA),
+        explain: z.array(z.string()),
+        hops: z.number(),
+        nodeIds: z.array(z.string()),
+      })
+      .nullable(),
+    workspaceId: z.string(),
+  }),
+};
+
 function createServer(
   store: McpStore,
   principal: McpPrincipal,
@@ -349,25 +945,7 @@ function createServer(
 
   server.registerTool(
     "assert_link",
-    {
-      annotations: WRITE_METADATA_TOOL,
-      description:
-        "Assert a concept edge between two nodes (closed relation vocabulary). Bi-temporal: a conflicting assertion on the same pair is superseded, never deleted; an identical one is a noop.",
-      inputSchema: z.object({
-        reason: z.string().trim().min(1).max(500),
-        relation: z.enum(AGENT_ASSERTION_RELATIONS),
-        source_node_id: z.string().trim().min(1),
-        target_node_id: z.string().trim().min(1),
-      }),
-      outputSchema: z.object({
-        assertion: z.object({
-          id: z.string().nullable(),
-          invalidatedId: z.string().nullable(),
-          outcome: z.enum(["added", "noop", "superseded", "unknown_node"]),
-        }),
-        workspaceId: z.string(),
-      }),
-    },
+    ASSERT_LINK_TOOL,
     async ({ reason, relation, source_node_id, target_node_id }) => {
       requireScope("mcp:write");
       const assertion = await store.assertLink(principal, {
@@ -389,24 +967,7 @@ function createServer(
 
   server.registerTool(
     "explain_module",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Explain the module (deterministic structure cluster) containing a node. Prose is lazy: 'ready' serves the cached inferred summary, 'pending'/'stale' enqueue one credit-lifecycle enrich job and return the member list now — ask again after the worker runs.",
-      inputSchema: z.object({
-        node_id: z.string().trim().min(1),
-      }),
-      outputSchema: z.object({
-        memberPaths: z.array(z.string()),
-        moduleKey: z.string(),
-        name: z.string(),
-        refreshJobId: z.string().nullable(),
-        state: z.enum(["pending", "ready", "stale"]),
-        summary: z.string().nullable(),
-        summaryGrade: z.literal("inferred"),
-        workspaceId: z.string(),
-      }),
-    },
+    EXPLAIN_MODULE_TOOL,
     async ({ node_id }) => {
       const workspace = await readWorkspace();
       const explanation = findModuleForNode(workspace, node_id);
@@ -448,173 +1009,47 @@ function createServer(
     },
   );
 
-  server.registerTool(
-    "get_artifact",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Read an artifact by path or id with its graph-neighbor summary",
-      inputSchema: z
-        .object({
-          id: z.string().trim().min(1).optional(),
-          path: z.string().trim().min(1).optional(),
-        })
-        .refine(
-          ({ id, path }) => Boolean(id) !== Boolean(path),
-          "Provide exactly one of id or path",
-        ),
-      outputSchema: z.object({
-        artifact: z
-          .object({
-            content: z.string(),
-            id: z.string(),
-            kind: z.string(),
-            path: z.string(),
-            repositoryId: z.string(),
-            status: z.string(),
-            summary: z.string(),
-            title: z.string(),
-          })
-          .nullable(),
-        neighbors: z.array(
-          z.object({
-            direction: z.enum(["incoming", "outgoing"]),
-            id: z.string(),
-            label: z.string(),
-            path: z.string().optional(),
-            relation: RELATION_SCHEMA,
-            type: NODE_TYPE_SCHEMA,
-          }),
-        ),
-        workspaceId: z.string(),
-      }),
-    },
-    async (selector) => {
-      const workspace = await readWorkspace();
-      const result = getWorkspaceArtifact(workspace, selector);
-      emitAccessEvent(store, principal, "get_artifact", [
-        ...(result.artifact ? [result.artifact.id] : []),
-        ...result.neighbors.map(({ id }) => id),
-      ]);
-      return toolResult({
-        ...result,
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
-
-  server.registerTool(
-    "get_findings",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Get findings with explicit status, severity, and provenance",
-      inputSchema: z.object({
-        filter: z
-          .object({
-            kind: z.string().optional(),
-            severity: z.string().optional(),
-            status: z.string().optional(),
-          })
-          .optional(),
-      }),
-      outputSchema: z.object({
-        findings: z.array(
-          z.object({
-            confidence: z.number(),
-            evidenceGrade: z.enum(["inferred", "verified"]),
-            id: z.string(),
-            kind: z.string(),
-            provenance: z.unknown(),
-            repositoryId: z.string(),
-            severity: z.string(),
-            sourceNodeId: z.string().nullable(),
-            status: z.string(),
-            title: z.string(),
-          }),
-        ),
-        workspaceId: z.string(),
-      }),
-    },
-    async ({ filter }) => {
-      const workspace = await readWorkspace();
-      const findings = getWorkspaceFindings(workspace, filter);
-      emitAccessEvent(
-        store,
-        principal,
-        "get_findings",
-        findings.map((finding) => finding.sourceNodeId ?? finding.id),
-      );
-      return toolResult({
-        findings,
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
-
-  server.registerTool(
-    "get_graph_schema",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Call first: this workspace's graph vocabulary — node kinds, edge relations and counts — so queries speak the stored graph instead of guessing one.",
-      inputSchema: z.object({}),
-      outputSchema: z.object({
-        nodeCounts: z.record(z.string(), z.number().int().nonnegative()),
-        relationCounts: z.record(z.string(), z.number().int().nonnegative()),
-        repositories: z.array(
-          z.object({
-            artifactCount: z.number().int().nonnegative(),
-            fullName: z.string(),
-            id: z.string(),
-          }),
-        ),
-        text: z.string(),
-        workspaceId: z.string(),
-      }),
-    },
-    async () => {
-      const workspace = await readWorkspace();
-      const schema = buildGraphSchema(workspace);
-      emitAccessEvent(store, principal, "get_graph_schema", []);
-      return toolResult({
-        ...schema,
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
-
-  const GRAPH_NODE_SCHEMA = z.object({
-    id: z.string(),
-    path: z.string().nullable(),
-    repositoryId: z.string(),
-    type: NODE_TYPE_SCHEMA,
+  server.registerTool("get_artifact", GET_ARTIFACT_TOOL, async (selector) => {
+    const workspace = await readWorkspace();
+    const result = getWorkspaceArtifact(workspace, selector);
+    emitAccessEvent(store, principal, "get_artifact", [
+      ...(result.artifact ? [result.artifact.id] : []),
+      ...result.neighbors.map(({ id }) => id),
+    ]);
+    return toolResult({
+      ...result,
+      workspaceId: principal.workspaceId,
+    });
   });
-  const GRAPH_EDGE_SCHEMA = z.object({
-    derived: z.boolean(),
-    relation: RELATION_SCHEMA,
-    sourceNodeId: z.string(),
-    targetNodeId: z.string(),
+
+  server.registerTool("get_findings", GET_FINDINGS_TOOL, async ({ filter }) => {
+    const workspace = await readWorkspace();
+    const findings = getWorkspaceFindings(workspace, filter);
+    emitAccessEvent(
+      store,
+      principal,
+      "get_findings",
+      findings.map((finding) => finding.sourceNodeId ?? finding.id),
+    );
+    return toolResult({
+      findings,
+      workspaceId: principal.workspaceId,
+    });
+  });
+
+  server.registerTool("get_graph_schema", GET_GRAPH_SCHEMA_TOOL, async () => {
+    const workspace = await readWorkspace();
+    const schema = buildGraphSchema(workspace);
+    emitAccessEvent(store, principal, "get_graph_schema", []);
+    return toolResult({
+      ...schema,
+      workspaceId: principal.workspaceId,
+    });
   });
 
   server.registerTool(
     "get_neighbors",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "ID-first neighborhood of a node (depth 1-2): node ids, types, paths, and connecting edges. No bodies — fetch content explicitly with get_node_content.",
-      inputSchema: z.object({
-        depth: z.union([z.literal(1), z.literal(2)]).optional(),
-        node_id: z.string().trim().min(1),
-        relations: z.array(RELATION_SCHEMA).max(7).optional(),
-      }),
-      outputSchema: z.object({
-        edges: z.array(GRAPH_EDGE_SCHEMA),
-        found: z.boolean(),
-        nodes: z.array(GRAPH_NODE_SCHEMA),
-        workspaceId: z.string(),
-      }),
-    },
+    GET_NEIGHBORS_TOOL,
     async ({ depth, node_id, relations }) => {
       const workspace = await readWorkspace();
       const result = collectNeighbors(
@@ -640,44 +1075,7 @@ function createServer(
 
   server.registerTool(
     "get_node_content",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "The explicit second step after ID-first traversal: stored content for one node id, or up to four at once via node_ids — batch related nodes into one call instead of one round-trip each (artifacts return their stored summary — raw source bodies are never persisted).",
-      inputSchema: z.object({
-        node_id: z.string().trim().min(1).optional(),
-        node_ids: z
-          .array(z.string().trim().min(1))
-          .min(1)
-          .max(4)
-          .optional()
-          .describe("Batch form: up to 4 node ids fetched in one call"),
-      }),
-      outputSchema: z.object({
-        node: z
-          .object({
-            content: z.string(),
-            id: z.string(),
-            kind: z.string(),
-            path: z.string().nullable(),
-            repositoryId: z.string(),
-            type: NODE_TYPE_SCHEMA,
-          })
-          .nullable(),
-        nodes: z.array(
-          z.object({
-            content: z.string(),
-            id: z.string(),
-            kind: z.string(),
-            path: z.string().nullable(),
-            repositoryId: z.string(),
-            requestedId: z.string(),
-            type: NODE_TYPE_SCHEMA,
-          }),
-        ),
-        workspaceId: z.string(),
-      }),
-    },
+    GET_NODE_CONTENT_TOOL,
     async ({ node_id, node_ids }) => {
       if (!node_id && (!node_ids || node_ids.length === 0)) {
         throw new Error("get_node_content requires node_id or node_ids");
@@ -704,32 +1102,7 @@ function createServer(
 
   server.registerTool(
     "impact_of",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "ID-first impact report for a node: direct dependents (edges into it), direct dependencies (edges out of it), and the depth-limited transitive closure.",
-      inputSchema: z.object({
-        depth: z.union([z.literal(1), z.literal(2)]).optional(),
-        node_id: z.string().trim().min(1),
-      }),
-      outputSchema: z.object({
-        found: z.boolean(),
-        impact: z
-          .object({
-            dependencies: z.object({
-              edges: z.array(GRAPH_EDGE_SCHEMA),
-              nodeIds: z.array(z.string()),
-            }),
-            dependents: z.object({
-              edges: z.array(GRAPH_EDGE_SCHEMA),
-              nodeIds: z.array(z.string()),
-            }),
-            transitiveNodeIds: z.array(z.string()),
-          })
-          .nullable(),
-        workspaceId: z.string(),
-      }),
-    },
+    IMPACT_OF_TOOL,
     async ({ depth, node_id }) => {
       const workspace = await readWorkspace();
       const impact = impactOf(workspace, node_id, depth ?? 2);
@@ -754,72 +1127,25 @@ function createServer(
     },
   );
 
-  server.registerTool(
-    "log_progress",
-    {
-      annotations: WRITE_METADATA_TOOL,
-      description:
-        "Record one compact structured progress update; never writes to the repository",
-      inputSchema: z.object({
-        refs: z.array(z.string().trim().min(1).max(200)).max(10).optional(),
-        status: z.enum(["started", "progress", "done", "blocked"]),
-        summary: z.string().trim().min(1).max(200),
-        task: z.string().trim().min(1).max(120),
-      }),
-      outputSchema: z.object({
-        event: z.object({
-          id: z.string(),
-          refs: z.array(z.string()),
-          status: z.enum(["started", "progress", "done", "blocked"]),
-          summary: z.string(),
-          task: z.string(),
-          todoId: z.string(),
-        }),
-        workspaceId: z.string(),
-      }),
-    },
-    async (input) => {
-      requireScope("mcp:write");
-      const event = await store.appendProgress(principal, input);
-      return toolResult({
-        event: {
-          id: event.id,
-          refs: event.refs,
-          status: event.status,
-          summary: event.summary,
-          task: event.task,
-          todoId: event.todoId,
-        },
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
-
-  const MEMORY_ENTRY_SCHEMA = z.object({
-    anchorNodeId: z.string().nullable(),
-    anchorPath: z.string().nullable(),
-    entryKey: z.string(),
-    id: z.string(),
-    name: z.enum(MEMORY_BLOCK_NAMES),
-    text: z.string(),
-    updatedAt: z.string(),
+  server.registerTool("log_progress", LOG_PROGRESS_TOOL, async (input) => {
+    requireScope("mcp:write");
+    const event = await store.appendProgress(principal, input);
+    return toolResult({
+      event: {
+        id: event.id,
+        refs: event.refs,
+        status: event.status,
+        summary: event.summary,
+        task: event.task,
+        todoId: event.todoId,
+      },
+      workspaceId: principal.workspaceId,
+    });
   });
 
   server.registerTool(
     "memory_read",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Read the workspace's bounded memory blocks (gotchas / conventions / decisions) — durable notes earlier agents distilled. Filter by block name or anchor node.",
-      inputSchema: z.object({
-        anchor_node_id: z.string().trim().min(1).optional(),
-        name: z.enum(MEMORY_BLOCK_NAMES).optional(),
-      }),
-      outputSchema: z.object({
-        entries: z.array(MEMORY_ENTRY_SCHEMA),
-        workspaceId: z.string(),
-      }),
-    },
+    MEMORY_READ_TOOL,
     async ({ anchor_node_id, name }) => {
       const workspace = await readWorkspace();
       const entries = (workspace.memoryEntries ?? []).filter(
@@ -844,36 +1170,7 @@ function createServer(
 
   server.registerTool(
     "memory_write",
-    {
-      annotations: WRITE_METADATA_TOOL,
-      description:
-        "Write one bounded memory entry (gotchas / conventions / decisions), keyed for reconciliation: same key + same text is a noop, a new text supersedes the old (never deleted), `remove` invalidates. At most 12 active entries per block — over the cap the write is rejected: distill, don't accumulate.",
-      inputSchema: z.object({
-        anchor_node_id: z.string().trim().min(1).optional(),
-        entry_key: z
-          .string()
-          .trim()
-          .regex(/^[a-z0-9][a-z0-9-]{0,79}$/),
-        name: z.enum(MEMORY_BLOCK_NAMES),
-        remove: z.boolean().optional(),
-        text: z.string().trim().min(1).max(500).optional(),
-      }),
-      outputSchema: z.object({
-        entry: z.object({
-          id: z.string().nullable(),
-          invalidatedId: z.string().nullable(),
-          outcome: z.enum([
-            "added",
-            "invalidated",
-            "noop",
-            "rejected_cap",
-            "unknown_node",
-            "updated",
-          ]),
-        }),
-        workspaceId: z.string(),
-      }),
-    },
+    MEMORY_WRITE_TOOL,
     async ({ anchor_node_id, entry_key, name, remove, text }) => {
       requireScope("mcp:write");
       if (!remove && !text) {
@@ -899,73 +1196,25 @@ function createServer(
     },
   );
 
-  server.registerTool(
-    "query_brain",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Run a deterministic structured query over graph types, statuses, and relations",
-      inputSchema: z.object({
-        filter: z.object({
-          path: z.string().trim().min(1).optional(),
-          relations: z.array(RELATION_SCHEMA).optional(),
-          statuses: z.array(z.string().trim().min(1)).optional(),
-          types: z.array(NODE_TYPE_SCHEMA).optional(),
-          withoutRelations: z.array(RELATION_SCHEMA).optional(),
-        }),
-      }),
-      outputSchema: z.object({
-        count: z.number().int().nonnegative(),
-        nodes: z.array(
-          z.object({
-            id: z.string(),
-            label: z.string(),
-            path: z.string().optional(),
-            relations: z.array(RELATION_SCHEMA),
-            repositoryId: z.string(),
-            status: z.string(),
-            type: NODE_TYPE_SCHEMA,
-          }),
-        ),
-        workspaceId: z.string(),
-      }),
-    },
-    async ({ filter }) => {
-      const workspace = await readWorkspace();
-      const nodes = queryWorkspaceBrain(workspace, filter);
-      emitAccessEvent(
-        store,
-        principal,
-        "query_brain",
-        nodes.map(({ id }) => id),
-      );
-      return toolResult({
-        count: nodes.length,
-        nodes,
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
+  server.registerTool("query_brain", QUERY_BRAIN_TOOL, async ({ filter }) => {
+    const workspace = await readWorkspace();
+    const nodes = queryWorkspaceBrain(workspace, filter);
+    emitAccessEvent(
+      store,
+      principal,
+      "query_brain",
+      nodes.map(({ id }) => id),
+    );
+    return toolResult({
+      count: nodes.length,
+      nodes,
+      workspaceId: principal.workspaceId,
+    });
+  });
 
   server.registerTool(
     "record_note",
-    {
-      annotations: WRITE_METADATA_TOOL,
-      description:
-        "Record a private workspace note; never writes to the repository",
-      inputSchema: z.object({
-        target: z.string().trim().min(1).max(200).optional(),
-        text: z.string().trim().min(1).max(2_000),
-      }),
-      outputSchema: z.object({
-        note: z.object({
-          id: z.string(),
-          target: z.string().nullable(),
-          text: z.string(),
-        }),
-        workspaceId: z.string(),
-      }),
-    },
+    RECORD_NOTE_TOOL,
     async ({ target, text }) => {
       requireScope("mcp:write");
       const note = await store.appendNote(principal, { target, text });
@@ -978,22 +1227,7 @@ function createServer(
 
   server.registerTool(
     "record_prompt",
-    {
-      annotations: WRITE_METADATA_TOOL,
-      description:
-        "Record one prompt for the authenticated member (ADR-011). Metadata by default; `raw_text` is stored only when the member's separate raw-sync switch is on, and the database rejects the write outright unless the workspace enabled capture AND the member consented.",
-      inputSchema: z.object({
-        raw_text: z.string().trim().min(1).max(20_000).optional(),
-        rubric: z.record(z.string(), z.number().min(0).max(2)).optional(),
-        target_node_ids: z.array(z.string().trim().min(1)).max(50).optional(),
-        token_count: z.number().int().nonnegative().max(10_000_000),
-        tool_name: z.string().trim().min(1).max(120),
-      }),
-      outputSchema: z.object({
-        recordId: z.string(),
-        workspaceId: z.string(),
-      }),
-    },
+    RECORD_PROMPT_TOOL,
     async ({ raw_text, rubric, target_node_ids, token_count, tool_name }) => {
       requireScope("mcp:write");
       const recorded = await store.recordPrompt(principal, {
@@ -1016,21 +1250,7 @@ function createServer(
 
   server.registerTool(
     "record_ruled_out",
-    {
-      annotations: WRITE_METADATA_TOOL,
-      description:
-        "Append one ruled-out attempt to the workspace log: a hypothesis that was tried and what happened. The log is append-only in the database, so a recorded dead end cannot later be edited or removed — that permanence is the point, since the next agent reads it to avoid repeating the attempt.",
-      inputSchema: z.object({
-        hypothesis: z.string().trim().min(1).max(2000),
-        outcome: z.string().trim().min(1).max(2000),
-        refs: z.array(z.string().trim().min(1)).max(50).optional(),
-        repository_id: z.string().trim().min(1).optional(),
-      }),
-      outputSchema: z.object({
-        attemptId: z.string(),
-        workspaceId: z.string(),
-      }),
-    },
+    RECORD_RULED_OUT_TOOL,
     async ({ hypothesis, outcome, refs, repository_id }) => {
       requireScope("mcp:write");
       const recorded = await store.recordRuledOut(principal, {
@@ -1050,32 +1270,7 @@ function createServer(
 
   server.registerTool(
     "repo_map",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Token-budgeted orientation map: files ranked by personalized PageRank (seeded by focus terms), each line a path plus its exported symbols. Compact text, no bodies.",
-      inputSchema: z.object({
-        focus: z
-          .array(z.string().trim().min(1).max(400))
-          .max(16)
-          .optional()
-          .describe("Paths or symbol names to bias the walk toward"),
-        token_budget: z
-          .number()
-          .int()
-          .min(REPO_MAP_MIN_BUDGET)
-          .max(REPO_MAP_MAX_BUDGET)
-          .optional(),
-      }),
-      outputSchema: z.object({
-        focusMatched: z.array(z.string()),
-        omittedCount: z.number().int().nonnegative(),
-        text: z.string(),
-        tokenBudget: z.number().int().positive(),
-        tokenEstimate: z.number().int().nonnegative(),
-        workspaceId: z.string(),
-      }),
-    },
+    REPO_MAP_TOOL,
     async ({ focus, token_budget }) => {
       const workspace = await readWorkspace();
       const map = buildRepoMap(workspace, {
@@ -1099,94 +1294,25 @@ function createServer(
     },
   );
 
-  server.registerTool(
-    "repo_overview",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Architecture overview: deterministic module clusters with sizes, plus cached module prose where fresh. Zero model calls — the grep-can't-answer 'what is this repo' entry point.",
-      inputSchema: z.object({}),
-      outputSchema: z.object({
-        repositories: z.array(
-          z.object({
-            artifactCount: z.number().int().nonnegative(),
-            fullName: z.string(),
-            modules: z.array(
-              z.object({
-                key: z.string(),
-                memberCount: z.number().int().positive(),
-                name: z.string(),
-                summary: z.string().nullable(),
-              }),
-            ),
-            repositoryId: z.string(),
-          }),
-        ),
-        text: z.string(),
-        workspaceId: z.string(),
-      }),
-    },
-    async () => {
-      const workspace = await readWorkspace();
-      const overview = buildRepoOverview(workspace);
-      emitAccessEvent(store, principal, "repo_overview", []);
-      return toolResult({
-        repositories: overview.repositories.map((repository) => ({
-          artifactCount: repository.artifactCount,
-          fullName: repository.fullName,
-          modules: repository.modules.map((module) => ({ ...module })),
-          repositoryId: repository.repositoryId,
-        })),
-        text: overview.text,
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
+  server.registerTool("repo_overview", REPO_OVERVIEW_TOOL, async () => {
+    const workspace = await readWorkspace();
+    const overview = buildRepoOverview(workspace);
+    emitAccessEvent(store, principal, "repo_overview", []);
+    return toolResult({
+      repositories: overview.repositories.map((repository) => ({
+        artifactCount: repository.artifactCount,
+        fullName: repository.fullName,
+        modules: repository.modules.map((module) => ({ ...module })),
+        repositoryId: repository.repositoryId,
+      })),
+      text: overview.text,
+      workspaceId: principal.workspaceId,
+    });
+  });
 
   server.registerTool(
     "request_context_pack",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Select a load-on-demand context pack for a task and token budget",
-      inputSchema: z.object({
-        target_agent: z
-          .enum(["claude-code", "codex", "cursor", "generic"])
-          .optional(),
-        task_description: z.string().trim().min(1).max(1_000),
-        token_budget: z.number().int().min(128).max(32_000).optional(),
-      }),
-      outputSchema: z.object({
-        assumption: z.string(),
-        estimatedTokens: z.number().int().nonnegative(),
-        excluded: z.array(z.object({ path: z.string(), reason: z.string() })),
-        nodeIds: z.array(z.string()),
-        omitted: z.array(
-          z.object({
-            estimatedTokens: z.number().int().positive(),
-            path: z.string(),
-            rank: z.number().int().positive(),
-            reason: z.string(),
-            title: z.string(),
-          }),
-        ),
-        paths: z.array(z.string()),
-        readingOrder: z.array(
-          z.object({
-            estimatedTokens: z.number().int().positive(),
-            id: z.string(),
-            path: z.string(),
-            rank: z.number().int().positive(),
-            reason: z.string(),
-            title: z.string(),
-          }),
-        ),
-        targetAgent: z.enum(["claude-code", "codex", "cursor", "generic"]),
-        text: z.string(),
-        title: z.string(),
-        workspaceId: z.string(),
-      }),
-    },
+    REQUEST_CONTEXT_PACK_TOOL,
     async ({ target_agent, task_description, token_budget }) => {
       const workspace = await readWorkspace();
       const contextPack = selectWorkspaceContextPack(workspace, {
@@ -1219,75 +1345,21 @@ function createServer(
     },
   );
 
-  server.registerTool(
-    "route_query",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "Deterministic query routing: simple lookups go to text search, multi-hop or relational questions go to the graph tools. The decision carries its matched signals and a fallback for when the chosen route returns nothing.",
-      inputSchema: z.object({
-        question: z.string().trim().min(1).max(1_000),
-      }),
-      outputSchema: z.object({
-        fallback: z.object({
-          reason: z.string(),
-          route: z.enum(["graph", "search"]),
-          tools: z.array(z.string()),
-        }),
-        matchedSignals: z.array(z.string()),
-        reason: z.string(),
-        recommendedTools: z.array(z.string()),
-        route: z.enum(["graph", "search"]),
-        workspaceId: z.string(),
-      }),
-    },
-    async ({ question }) => {
-      requireScope("mcp:read");
-      const decision = routeQuery(question);
-      // The access event records only the tool name and timestamp — the
-      // question text itself is never stored (WORK_SPEC §11).
-      emitAccessEvent(store, principal, "route_query", []);
-      return toolResult({
-        ...decision,
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
+  server.registerTool("route_query", ROUTE_QUERY_TOOL, async ({ question }) => {
+    requireScope("mcp:read");
+    const decision = routeQuery(question);
+    // The access event records only the tool name and timestamp — the
+    // question text itself is never stored (WORK_SPEC §11).
+    emitAccessEvent(store, principal, "route_query", []);
+    return toolResult({
+      ...decision,
+      workspaceId: principal.workspaceId,
+    });
+  });
 
   server.registerTool(
     "search_index",
-    {
-      annotations: READ_ONLY_TOOL,
-      description: "Search the deterministic Alrescha data index",
-      inputSchema: z.object({
-        query: z.string().trim().min(1),
-        type_filter: NODE_TYPE_SCHEMA.optional(),
-      }),
-      outputSchema: z.object({
-        query: z.string(),
-        results: z.array(
-          z.object({
-            excerpt: z.string(),
-            id: z.string(),
-            neighborIds: z.array(z.string()),
-            nodeId: z.string(),
-            path: z.string(),
-            rank: z.enum([
-              "exact",
-              "title-heading",
-              "path-symbol",
-              "graph-neighbor",
-            ]),
-            repositoryId: z.string(),
-            // Tier score plus the fractional connectivity bonus (todo 5).
-            score: z.number(),
-            title: z.string(),
-            type: NODE_TYPE_SCHEMA,
-          }),
-        ),
-        workspaceId: z.string(),
-      }),
-    },
+    SEARCH_INDEX_TOOL,
     async ({ query, type_filter }) => {
       const workspace = await readWorkspace();
       const results = searchWorkspaceIndex(workspace, {
@@ -1310,35 +1382,7 @@ function createServer(
 
   server.registerTool(
     "search_nodes",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "ID-first node search — the same deterministic ranking as search_index with excerpts stripped: node ids, types, paths, and neighbor ids only. search_index remains the text entry point; this is the graph entry point.",
-      inputSchema: z.object({
-        query: z.string().trim().min(1),
-        type_filter: NODE_TYPE_SCHEMA.optional(),
-        // Phase 2D todo 5 — optional facet filter, derived from the stored
-        // path (deterministic, ADR-013-equivalent). Backward compatible.
-        domain_filter: z
-          .enum(["frontend", "backend", "shared", "unclassified"])
-          .optional(),
-      }),
-      outputSchema: z.object({
-        query: z.string(),
-        results: z.array(
-          z.object({
-            neighborIds: z.array(z.string()),
-            nodeId: z.string(),
-            path: z.string(),
-            rank: z.string(),
-            repositoryId: z.string(),
-            score: z.number(),
-            type: NODE_TYPE_SCHEMA,
-          }),
-        ),
-        workspaceId: z.string(),
-      }),
-    },
+    SEARCH_NODES_TOOL,
     async ({ query, type_filter, domain_filter }) => {
       const workspace = await readWorkspace();
       const unfiltered = searchWorkspaceNodes(workspace, query, type_filter);
@@ -1365,28 +1409,7 @@ function createServer(
 
   server.registerTool(
     "trace_path",
-    {
-      annotations: READ_ONLY_TOOL,
-      description:
-        "ID-first shortest evidence path between two nodes (max depth 6), with graphify-style explain lines per hop. Derived edges are marked with *.",
-      inputSchema: z.object({
-        from_node_id: z.string().trim().min(1),
-        max_depth: z.number().int().min(1).max(6).optional(),
-        to_node_id: z.string().trim().min(1),
-      }),
-      outputSchema: z.object({
-        found: z.boolean(),
-        path: z
-          .object({
-            edges: z.array(GRAPH_EDGE_SCHEMA),
-            explain: z.array(z.string()),
-            hops: z.number(),
-            nodeIds: z.array(z.string()),
-          })
-          .nullable(),
-        workspaceId: z.string(),
-      }),
-    },
+    TRACE_PATH_TOOL,
     async ({ from_node_id, max_depth, to_node_id }) => {
       const workspace = await readWorkspace();
       const path = tracePath(

@@ -398,6 +398,61 @@ describe("hosted MCP contract", () => {
     expect(listed.tools.map(({ name }) => name)).not.toContain("write_file");
   });
 
+  it("serves two tenants from one process with identical, unmutated tool schemas", async () => {
+    // The tool definitions are module-scope constants shared by every request
+    // (perf research MT-10). If the SDK ever mutated one during registration,
+    // the second server built in the same process would drift from the first
+    // — this is the assertion that would catch it.
+    const otherWorkspaceId = "01K287J3D18V7A1MZG9E8D1Y02";
+    const store = new InMemoryMcpStore({
+      workspaces: [
+        workspaceFixture(),
+        {
+          id: otherWorkspaceId,
+          ownerUserId: "user-other",
+          repositories: [],
+        },
+      ],
+    });
+    const first = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "First tenant",
+      scopes: ["mcp:read", "mcp:write"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const second = await store.issueAccessToken({
+      actorUserId: "user-other",
+      name: "Second tenant",
+      scopes: ["mcp:read", "mcp:write"],
+      workspaceId: otherWorkspaceId,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+
+    const catalogs: unknown[] = [];
+    for (const token of [first, second, first]) {
+      const { client, transport } = createSdkClient(
+        endpoint.fetch,
+        token.secret,
+      );
+      clients.push(client);
+      await client.connect(transport);
+      const listed = await client.listTools();
+      catalogs.push(
+        listed.tools.map((tool) => ({
+          annotations: tool.annotations,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+          name: tool.name,
+          outputSchema: tool.outputSchema,
+        })),
+      );
+    }
+
+    expect(catalogs[1]).toEqual(catalogs[0]);
+    expect(catalogs[2]).toEqual(catalogs[0]);
+    expect((catalogs[0] as unknown[]).length).toBe(22);
+  });
+
   it("ranks index results deterministically and applies the type filter", async () => {
     const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
     const issued = await store.issueAccessToken({
