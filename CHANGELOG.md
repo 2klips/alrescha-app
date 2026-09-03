@@ -88,8 +88,8 @@ from server-observed evidence only). Per-todo evidence:
   MUST statements into 90+ live requirements. Whole-segment match only;
   previously stored fixture artifacts fall out on the next scan. Verified in
   production (14 fixture artifacts → 0, 113 → 99 requirements), which exposed
-  that removing an artifact node cascades into the requirement *rows* but
-  leaves their *nodes* orphaned; `reconcileRequirements` now sweeps
+  that removing an artifact node cascades into the requirement _rows_ but
+  leaves their _nodes_ orphaned; `reconcileRequirements` now sweeps
   requirement nodes that have no row.
 - **Pre-rename receipts verify again (OQ-022 ⑴, 2026-09-02)**: receipts are
   read back through a stored-shape schema whose `tool.name` accepts the
@@ -102,6 +102,20 @@ from server-observed evidence only). Per-todo evidence:
   labelled, unreadable rows kept visible. Commit cards and the shell header now
   link here instead of the demo chain. OPEN_QUESTIONS status drift cleared
   (OQ-004 obsolete, OQ-009 → ADR-010, OQ-011 → ADR-012).
+- **Perf research mid-term wave 1 (2026-09-03)**: three items off the
+  2026-08-27 hot-path report, each shipped with a before/after measurement and
+  a script anyone can re-run (`.omo/evidence/perf/`). MT-4 caches the graph
+  frame invariants and skips idle animation frames — a settled, untouched
+  3,500-node map went from 120 painted frames per 120 ticks to 0, and the
+  far-zoom frame plan from 1.846 ms to 0.103 ms p50. MT-10 hoists the 22 MCP
+  tool definitions out of the per-request server factory — `tools/call` 3.242
+  ms → 1.415 ms p50 against an in-memory store, with no session state added.
+  MT-3 fetches scan blob bodies eight at a time instead of one, cutting a
+  600-file first scan from 9,386 ms to 1,170 ms at a stated simulated 5 ms per
+  request, with the plan proven byte-identical at every concurrency setting.
+  MT-1 had already shipped in `ef15ff5`. Selection and the eight deferred
+  items: `.omo/evidence/perf/midterm-wave-1.md`; the remaining MCP
+  registration cost is OQ-024.
 - **Production (Wave 4)**: Supabase (Seoul) + Vercel `arr-app-web.vercel.app`
   (web, hosted MCP route, webhooks) + Fly.io `arr-worker` drain loop; receipt
   `predicateType` finalized on the production namespace together with the
