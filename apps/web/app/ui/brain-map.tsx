@@ -198,13 +198,26 @@ export function BrainMap({
       let reportedLod = "";
       let reportedLabels = -1;
       let syncedAt = 0;
+      let lastFrame: RenderFrame | null = null;
       const paint = () => {
         // Built once per tick and handed to both the backend and the hit-layer
         // sync below — each used to call back into the engine for its own
         // frame, tripling the frame-plan cost (degree map, radii sort,
         // interpolation, label selection) on the throttled tick.
-        const frame = created.frame();
-        created.paint(frame);
+        //
+        // `paintIfChanged` returns null on a tick where nothing moved: no
+        // engine mutation and no new interpolated positions, which is the
+        // steady state of a settled graph nobody is touching (MT-4). The
+        // hit-layer sync keeps running on its own throttle against the last
+        // frame, so a target mounted while the graph was idle still gets
+        // parked over its node.
+        const painted = created.paintIfChanged();
+        if (painted) lastFrame = painted;
+        const frame = lastFrame;
+        if (!frame) {
+          frameHandle = window.requestAnimationFrame(paint);
+          return;
+        }
         // Both the hit layer and the LOD report are React-visible work, so they
         // run on one throttled tick rather than once per painted frame: the
         // label set churns while the simulation settles.

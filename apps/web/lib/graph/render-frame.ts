@@ -19,8 +19,8 @@ import type {
 import type { DesignToken } from "../theme/tokens";
 import { collapseGraph, shouldCollapse } from "./clustering";
 import {
+  lodForPixelSize,
   nodePixelSize,
-  resolveLod,
   selectLabels,
   showsStatusBadges,
   type LabelCandidate,
@@ -220,7 +220,22 @@ export function nodeRadius(degree: number, clusterCount?: number): number {
   return Math.min(26, size);
 }
 
-export function degreeMap(data: GraphData): Map<string, number> {
+/**
+ * Node id → edge count, cached per `GraphData` (perf research MT-4).
+ *
+ * Degree is a property of the graph, not of the instant: it cannot change
+ * without the data object changing. Recomputing it every animation frame cost
+ * O(nodes + edges) for an answer that was already known — the same reasoning
+ * that already applied to `importanceMap` above, applied to its other half.
+ *
+ * The returned map is shared with every other caller holding the same
+ * `GraphData`, hence `ReadonlyMap`: treat it as the graph's own data.
+ */
+const degreeCache = new WeakMap<GraphData, ReadonlyMap<string, number>>();
+
+export function degreeMap(data: GraphData): ReadonlyMap<string, number> {
+  const cached = degreeCache.get(data);
+  if (cached) return cached;
   const degrees = new Map<string, number>();
   for (const node of data.nodes) degrees.set(node.id, 0);
   for (const edge of data.edges) {
@@ -229,7 +244,35 @@ export function degreeMap(data: GraphData): Map<string, number> {
     if (degrees.has(edge.target))
       degrees.set(edge.target, (degrees.get(edge.target) as number) + 1);
   }
+  degreeCache.set(data, degrees);
   return degrees;
+}
+
+/**
+ * The median node radius, which is what `resolveLod` actually needs — also a
+ * property of the graph alone (degree and `clusterCount`), so the O(n) radius
+ * pass and its O(n log n) sort run once per graph instead of once per frame.
+ */
+const medianRadiusCache = new WeakMap<GraphData, number>();
+
+function medianNodeRadius(
+  data: GraphData,
+  degrees: ReadonlyMap<string, number>,
+): number {
+  const cached = medianRadiusCache.get(data);
+  if (cached !== undefined) return cached;
+  const radii = data.nodes
+    .map((node) => nodeRadius(degrees.get(node.id) ?? 0, node.clusterCount))
+    .sort((left, right) => left - right);
+  const middle = Math.floor(radii.length / 2);
+  const value =
+    radii.length === 0
+      ? 0
+      : radii.length % 2 === 1
+        ? (radii[middle] as number)
+        : ((radii[middle - 1] as number) + (radii[middle] as number)) / 2;
+  medianRadiusCache.set(data, value);
+  return value;
 }
 
 export interface FrameInput {
@@ -273,11 +316,10 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
   const glow = input.glow;
 
   const rawDegrees = degreeMap(input.data);
-  const lod = resolveLod(
-    input.data.nodes.map((node) =>
-      nodeRadius(rawDegrees.get(node.id) ?? 0, node.clusterCount),
-    ),
-    camera.scale,
+  // Same answer as `resolveLod(radii, scale)`, without rebuilding and sorting
+  // the radius array every frame — see `medianNodeRadius` (MT-4).
+  const lod = lodForPixelSize(
+    nodePixelSize(medianNodeRadius(input.data, rawDegrees), camera.scale),
   );
 
   const collapsed =

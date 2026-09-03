@@ -134,9 +134,21 @@ export interface GraphEngine {
    * Build and hand the current frame to the backend. Pass an already-built
    * `RenderFrame` (e.g. one the caller also needs for its own bookkeeping
    * this tick) to skip building a second one; omit it to build fresh, as
-   * every existing caller does.
+   * every existing caller does. Always paints — see `paintIfChanged` for the
+   * animation-loop form.
    */
   paint(frame?: RenderFrame): void;
+  /**
+   * Paint only if something moved since the last painted frame: any engine
+   * mutation, or a new set of interpolated positions. Returns the frame it
+   * painted, or `null` when the tick was skipped (perf research MT-4).
+   *
+   * A settled simulation stops streaming positions and the buffer then hands
+   * back the same map object every tick, so an untouched, settled graph costs
+   * one comparison per animation frame instead of a full frame plan and a GPU
+   * pass.
+   */
+  paintIfChanged(): RenderFrame | null;
   positions(): ReadonlyMap<string, Position>;
   ready(): boolean;
   resize(width: number, height: number): void;
@@ -186,6 +198,18 @@ export async function createGraphEngine(
   let assignment = communityAssignment(data, { seed: options.seed ?? 1 });
   const expanded = new Set<string>();
 
+  /**
+   * Bumped by every mutation that a frame can see (MT-4). Positions are not
+   * counted here — they are compared by the identity of the buffer's output,
+   * which is stable exactly when the interpolation has nothing left to do.
+   */
+  let revision = 0;
+  let paintedRevision = -1;
+  let paintedPositions: ReadonlyMap<string, Position> | null = null;
+  const touch = () => {
+    revision += 1;
+  };
+
   worker.setMessageHandler((raw) => {
     if (disposed) return;
     const message = parseWorkerMessage(raw);
@@ -203,7 +227,7 @@ export async function createGraphEngine(
   layoutRestarts += 1;
   backend.setPalette(palette);
 
-  function frame(): RenderFrame {
+  function frameAt(positions: ReadonlyMap<string, Position>): RenderFrame {
     return buildRenderFrame({
       afterglow,
       assignment,
@@ -213,11 +237,15 @@ export async function createGraphEngine(
       expanded,
       glow,
       palette,
-      positions: buffer.at(now()),
+      positions,
       selectedNodeId,
       textFadeThreshold,
       viewport,
     });
+  }
+
+  function frame(): RenderFrame {
+    return frameAt(buffer.at(now()));
   }
 
   return {
@@ -227,6 +255,7 @@ export async function createGraphEngine(
     toggleCommunity(community) {
       if (expanded.has(community)) expanded.delete(community);
       else expanded.add(community);
+      touch();
     },
     dispose() {
       if (disposed) return;
@@ -250,6 +279,7 @@ export async function createGraphEngine(
         x: -position.x * camera.scale,
         y: -position.y * camera.scale,
       };
+      touch();
       return true;
     },
     forceConfig: () => ({ ...config }),
@@ -261,14 +291,28 @@ export async function createGraphEngine(
       if (disposed) return;
       backend.render(prebuilt ?? frame());
     },
+    paintIfChanged() {
+      if (disposed) return null;
+      const positions = buffer.at(now());
+      if (revision === paintedRevision && positions === paintedPositions) {
+        return null;
+      }
+      const built = frameAt(positions);
+      backend.render(built);
+      paintedRevision = revision;
+      paintedPositions = positions;
+      return built;
+    },
     positions: () => buffer.at(now()),
     ready: () => ready,
     resize(width, height) {
       viewport = { height, width };
+      touch();
       if (!disposed) backend.resize(width, height);
     },
     setCamera(next) {
       camera = { ...next };
+      touch();
     },
     setData(next) {
       data = next;
@@ -276,6 +320,7 @@ export async function createGraphEngine(
       assignment = communityAssignment(next, { seed: options.seed ?? 1 });
       expanded.clear();
       buffer.reset();
+      touch();
       if (disposed) return;
       worker.postMessage(createStartMessage(next, config, options.seed ?? 1));
       layoutRestarts += 1;
@@ -287,22 +332,28 @@ export async function createGraphEngine(
     setGlow(intensities, nextAfterglow) {
       glow = intensities;
       afterglow = nextAfterglow ?? new Set();
+      touch();
     },
     setDirectionalFocus(enabled) {
       directionalFocus = enabled;
+      touch();
     },
     setPalette(next) {
       palette = next;
+      touch();
       if (!disposed) backend.setPalette(next);
     },
     setSelectedNode(nodeId) {
       selectedNodeId = nodeId;
+      touch();
     },
     setTextFadeThreshold(value) {
       textFadeThreshold = Math.min(1, Math.max(0, value));
+      touch();
     },
     setViewport(next) {
       viewport = next;
+      touch();
     },
   };
 }

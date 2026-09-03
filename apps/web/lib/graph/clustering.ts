@@ -136,70 +136,85 @@ export interface CollapseInput {
 }
 
 /**
- * Aggregate a graph for display. Members of collapsed communities are replaced
- * by one supernode drawn at their centroid; intra-community edges disappear,
- * inter-community edges are merged (keeping the worst grade so broken evidence
- * stays visible at every zoom).
+ * The half of a collapse that does not depend on where the nodes currently
+ * are (perf research MT-4). Membership, the merged edge set, and every
+ * supernode field except its centroid are functions of
+ * `(data, assignment, expanded)` alone — and that triple changes when the user
+ * clicks a community open, not sixty times a second.
  */
-export function collapseGraph(input: CollapseInput): CollapsedGraph {
-  const expanded = input.expanded ?? new Set<string>();
+interface CollapseStructure {
+  /** Merged inter-community edges — identical for every frame of this key. */
+  readonly edges: readonly GraphEdge[];
+  /** Communities in sorted key order, each with its members. */
+  readonly groups: readonly {
+    readonly id: string;
+    readonly members: readonly GraphNode[];
+    /** Everything about the supernode that a centroid does not decide. */
+    readonly template: Omit<GraphNode, "x" | "y">;
+  }[];
+  /** Nodes rendered raw, in input order. */
+  readonly kept: readonly GraphNode[];
+}
+
+/**
+ * `data → assignment → expanded-key → structure`. Both outer levels are weak,
+ * so a discarded graph takes its cache with it; the inner map is bounded
+ * because a user can only click so many communities open before the zoom
+ * leaves the collapse band entirely.
+ */
+const structureCache = new WeakMap<
+  GraphData,
+  WeakMap<ReadonlyMap<string, string>, Map<string, CollapseStructure>>
+>();
+
+/** Enough for a session's worth of expand/collapse clicks on one graph. */
+const STRUCTURE_CACHE_LIMIT = 16;
+
+function buildStructure(
+  data: GraphData,
+  assignment: ReadonlyMap<string, string>,
+  expanded: ReadonlySet<string>,
+): CollapseStructure {
   const members = new Map<string, GraphNode[]>();
-  for (const node of input.data.nodes) {
-    const community = input.assignment.get(node.id);
-    if (community === undefined || expanded.has(community)) continue;
-    members.set(community, [...(members.get(community) ?? []), node]);
+  const kept: GraphNode[] = [];
+  for (const node of data.nodes) {
+    const community = assignment.get(node.id);
+    if (community === undefined || expanded.has(community)) {
+      kept.push(node);
+      continue;
+    }
+    // Push, not spread-and-replace: the old form copied the array on every
+    // insert, which is quadratic in the size of a community.
+    const group = members.get(community);
+    if (group) group.push(node);
+    else members.set(community, [node]);
   }
 
-  const positionOf = (node: GraphNode): Position =>
-    input.positions.get(node.id) ?? { x: node.x, y: node.y };
-
-  const nodes: GraphNode[] = [];
-  const positions = new Map<string, Position>();
-
-  for (const node of input.data.nodes) {
-    const community = input.assignment.get(node.id);
-    if (community !== undefined && !expanded.has(community)) continue;
-    nodes.push(node);
-    positions.set(node.id, positionOf(node));
-  }
-
-  for (const [community, group] of [...members.entries()].sort((left, right) =>
-    left[0] < right[0] ? -1 : 1,
-  )) {
-    const id = `${SUPERNODE_PREFIX}${community}`;
-    const centroid = group.reduce(
-      (sum, node) => {
-        const position = positionOf(node);
-        return {
-          x: sum.x + position.x / group.length,
-          y: sum.y + position.y / group.length,
-        };
+  const groups = [...members.entries()]
+    .sort((left, right) => (left[0] < right[0] ? -1 : 1))
+    .map(([community, group]) => ({
+      id: `${SUPERNODE_PREFIX}${community}`,
+      members: group,
+      template: {
+        clusterCount: group.length,
+        findingCount: group.reduce((sum, node) => sum + node.findingCount, 0),
+        grade: worstGrade(group),
+        id: `${SUPERNODE_PREFIX}${community}`,
+        label: community,
+        path: `${group.length} indexed artifacts`,
+        type: dominantType(group),
       },
-      { x: 0, y: 0 },
-    );
-    nodes.push({
-      clusterCount: group.length,
-      findingCount: group.reduce((sum, node) => sum + node.findingCount, 0),
-      grade: worstGrade(group),
-      id,
-      label: community,
-      path: `${group.length} indexed artifacts`,
-      type: dominantType(group),
-      x: centroid.x,
-      y: centroid.y,
-    });
-    positions.set(id, centroid);
-  }
+    }));
 
   const representative = (nodeId: string): string => {
-    const community = input.assignment.get(nodeId);
+    const community = assignment.get(nodeId);
     return community === undefined || expanded.has(community)
       ? nodeId
       : `${SUPERNODE_PREFIX}${community}`;
   };
 
   const merged = new Map<string, GraphEdge>();
-  for (const edge of input.data.edges) {
+  for (const edge of data.edges) {
     const source = representative(edge.source);
     const target = representative(edge.target);
     if (source === target) continue;
@@ -213,5 +228,71 @@ export function collapseGraph(input: CollapseInput): CollapsedGraph {
     }
   }
 
-  return { data: { edges: [...merged.values()], nodes }, positions };
+  return { edges: [...merged.values()], groups, kept };
+}
+
+function collapseStructure(
+  data: GraphData,
+  assignment: ReadonlyMap<string, string>,
+  expanded: ReadonlySet<string>,
+): CollapseStructure {
+  let byAssignment = structureCache.get(data);
+  if (!byAssignment) {
+    byAssignment = new WeakMap();
+    structureCache.set(data, byAssignment);
+  }
+  let byExpanded = byAssignment.get(assignment);
+  if (!byExpanded) {
+    byExpanded = new Map();
+    byAssignment.set(assignment, byExpanded);
+  }
+  // Content key, not identity: the engine mutates one long-lived `expanded`
+  // set rather than replacing it.
+  const key = [...expanded].sort().join(" ");
+  const cached = byExpanded.get(key);
+  if (cached) return cached;
+  const structure = buildStructure(data, assignment, expanded);
+  if (byExpanded.size >= STRUCTURE_CACHE_LIMIT) {
+    const oldest = byExpanded.keys().next();
+    if (!oldest.done) byExpanded.delete(oldest.value);
+  }
+  byExpanded.set(key, structure);
+  return structure;
+}
+
+/**
+ * Aggregate a graph for display. Members of collapsed communities are replaced
+ * by one supernode drawn at their centroid; intra-community edges disappear,
+ * inter-community edges are merged (keeping the worst grade so broken evidence
+ * stays visible at every zoom).
+ *
+ * Everything except the centroids is cached per `(data, assignment, expanded)`
+ * — see `CollapseStructure`. The returned value is a fresh object graph, so a
+ * caller may hold two results at once; only the shared node and edge records
+ * are, as everywhere else in this module, read-only.
+ */
+export function collapseGraph(input: CollapseInput): CollapsedGraph {
+  const expanded = input.expanded ?? new Set<string>();
+  const structure = collapseStructure(input.data, input.assignment, expanded);
+
+  const positionOf = (node: GraphNode): Position =>
+    input.positions.get(node.id) ?? { x: node.x, y: node.y };
+
+  const nodes: GraphNode[] = [...structure.kept];
+  const positions = new Map<string, Position>();
+  for (const node of structure.kept) positions.set(node.id, positionOf(node));
+
+  for (const group of structure.groups) {
+    let x = 0;
+    let y = 0;
+    for (const node of group.members) {
+      const position = positionOf(node);
+      x += position.x / group.members.length;
+      y += position.y / group.members.length;
+    }
+    nodes.push({ ...group.template, x, y });
+    positions.set(group.id, { x, y });
+  }
+
+  return { data: { edges: [...structure.edges], nodes }, positions };
 }

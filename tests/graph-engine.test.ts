@@ -6,11 +6,17 @@ import {
   type GraphData,
 } from "../apps/web/lib/dashboard/graph-model";
 import {
+  collapseGraph,
+  communityAssignment,
+  isSupernodeId,
+} from "../apps/web/lib/graph/clustering";
+import {
   createGraphEngine,
   readEngineCounters,
   recordContextLoss,
   resetEngineCounters,
   type GraphBackend,
+  type GraphEngine,
   type SimulationWorkerLike,
 } from "../apps/web/lib/graph/engine";
 import {
@@ -680,5 +686,219 @@ describe("camera focus (Phase 2A todo 7)", () => {
 
     expect(engine.layoutRestarts()).toBe(restarts);
     engine.dispose();
+  });
+});
+
+describe("idle frame skipping (perf research MT-4)", () => {
+  interface DirtyHarness {
+    emit: (message: unknown) => void;
+    engine: GraphEngine;
+    painted: () => number;
+    tick: () => number;
+  }
+
+  /**
+   * An engine whose clock is parked past the interpolation window, so the
+   * position buffer is done blending and hands back a stable map — the settled
+   * state a user leaves the map in.
+   */
+  async function settled(data: GraphData): Promise<DirtyHarness> {
+    resetEngineCounters();
+    let handler: ((message: unknown) => void) | null = null;
+    let frames = 0;
+    const backend: GraphBackend = {
+      destroy() {},
+      render() {
+        frames += 1;
+      },
+      resize() {},
+      setPalette() {},
+    };
+    const worker: SimulationWorkerLike = {
+      postMessage: () => {},
+      setMessageHandler: (next) => {
+        handler = next;
+      },
+      terminate: () => {},
+    };
+    let clock = 0;
+    const engine = await createGraphEngine({
+      createBackend: () => backend,
+      createWorker: () => worker,
+      data,
+      now: () => clock,
+      palette: PALETTE,
+    });
+    const emit = (message: unknown) => handler?.(message);
+    emit({ nodeCount: data.nodes.length, type: "ready" });
+    emit({
+      alpha: 0.0009,
+      positions: encodePositions(
+        data.nodes.map((node) => ({ x: node.x, y: node.y })),
+      ),
+      revision: 1,
+      type: "positions",
+    });
+    emit({ revision: 1, type: "settled" });
+    clock = 10_000;
+    return {
+      emit,
+      engine,
+      painted: () => frames,
+      tick: () => {
+        engine.paintIfChanged();
+        return frames;
+      },
+    };
+  }
+
+  test("a settled graph nobody is touching paints once and then stops", async () => {
+    const { engine, painted, tick } = await settled(fixture(40));
+
+    expect(tick()).toBe(1);
+    for (let index = 0; index < 30; index += 1) tick();
+
+    expect(painted()).toBe(1);
+    engine.dispose();
+  });
+
+  test("every visible mutation makes the next tick paint again", async () => {
+    const data = fixture(40);
+    const { engine, painted, tick } = await settled(data);
+    tick();
+    const baseline = painted();
+
+    const mutations: [string, () => void][] = [
+      ["setCamera", () => engine.setCamera({ scale: 2, x: 10, y: 10 })],
+      ["setSelectedNode", () => engine.setSelectedNode("req-auth")],
+      ["setGlow", () => engine.setGlow(new Map([["req-auth", 1]]))],
+      ["setDirectionalFocus", () => engine.setDirectionalFocus(true)],
+      ["setTextFadeThreshold", () => engine.setTextFadeThreshold(0.9)],
+      ["setViewport", () => engine.setViewport({ height: 600, width: 800 })],
+      ["resize", () => engine.resize(1024, 768)],
+      ["setPalette", () => engine.setPalette({ ...PALETTE, text: 0x010203 })],
+      ["toggleCommunity", () => engine.toggleCommunity("modules/1")],
+      [
+        "focusNode",
+        () => engine.focusNode((data.nodes[2] as { id: string }).id),
+      ],
+    ];
+
+    for (const [name, mutate] of mutations) {
+      const before = painted();
+      mutate();
+      expect(`${name}:${tick()}`).toBe(`${name}:${before + 1}`);
+      // …and only once: a second tick with nothing new is still skipped.
+      expect(`${name}:${tick()}`).toBe(`${name}:${before + 1}`);
+    }
+
+    expect(painted()).toBe(baseline + mutations.length);
+    engine.dispose();
+  });
+
+  test("a fresh simulation frame repaints, and a disposed engine paints nothing", async () => {
+    const data = fixture(20);
+    const { emit, engine, painted, tick } = await settled(data);
+    tick();
+    const before = painted();
+
+    emit({
+      alpha: 0.0008,
+      positions: encodePositions(
+        data.nodes.map((node) => ({ x: node.x + 5, y: node.y - 5 })),
+      ),
+      revision: 1,
+      type: "positions",
+    });
+
+    expect(tick()).toBe(before + 1);
+
+    engine.dispose();
+    expect(engine.paintIfChanged()).toBeNull();
+    expect(painted()).toBe(before + 1);
+  });
+
+  test("explicit paint() still paints, dirty or not", async () => {
+    const { engine, painted } = await settled(fixture(20));
+    engine.paintIfChanged();
+    const before = painted();
+
+    engine.paint();
+    engine.paint();
+
+    expect(painted()).toBe(before + 2);
+    engine.dispose();
+  });
+});
+
+describe("frame invariant caches (perf research MT-4)", () => {
+  test("degree is computed once per graph and shared", () => {
+    const data = fixture(60);
+
+    expect(degreeMap(data)).toBe(degreeMap(data));
+    expect(degreeMap(fixture(60))).not.toBe(degreeMap(data));
+  });
+
+  test("a cached collapse still moves its supernodes when the members move", () => {
+    const data = fixture(80);
+    const assignment = communityAssignment(data, { seed: 3 });
+    const near = new Map(
+      data.nodes.map((node, index) => [node.id, { x: index, y: index }]),
+    );
+    const far = new Map(
+      data.nodes.map((node, index) => [
+        node.id,
+        { x: index * 10, y: index * 10 },
+      ]),
+    );
+
+    const first = collapseGraph({ assignment, data, positions: near });
+    const second = collapseGraph({ assignment, data, positions: far });
+    const again = collapseGraph({ assignment, data, positions: near });
+
+    // Structure is identical across all three; only the centroids move.
+    expect(second.data.nodes.map((node) => node.id)).toEqual(
+      first.data.nodes.map((node) => node.id),
+    );
+    expect(second.data.edges).toEqual(first.data.edges);
+    expect([...again.positions.entries()]).toEqual([
+      ...first.positions.entries(),
+    ]);
+    // Holding two results at once must not let the later call rewrite the
+    // earlier one — the centroids are per-call, only the cache is shared.
+    const supernode = first.data.nodes.find((node) =>
+      isSupernodeId(node.id),
+    ) as GraphData["nodes"][number];
+    const moved = second.data.nodes.find(
+      (node) => node.id === supernode.id,
+    ) as GraphData["nodes"][number];
+    expect(moved.x).toBeCloseTo(supernode.x * 10, 6);
+    expect(first.positions.get(supernode.id)).toEqual({
+      x: supernode.x,
+      y: supernode.y,
+    });
+  });
+
+  test("expanding a community is a different cache key, not a stale hit", () => {
+    const data = fixture(80);
+    const assignment = communityAssignment(data, { seed: 3 });
+    const positions = new Map(
+      data.nodes.map((node, index) => [node.id, { x: index, y: index }]),
+    );
+    const community = [...new Set(assignment.values())][0] as string;
+    const expanded = new Set<string>();
+
+    const collapsed = collapseGraph({ assignment, data, expanded, positions });
+    expanded.add(community);
+    const opened = collapseGraph({ assignment, data, expanded, positions });
+    expanded.delete(community);
+    const closed = collapseGraph({ assignment, data, expanded, positions });
+
+    expect(opened.data.nodes.length).toBeGreaterThan(
+      collapsed.data.nodes.length,
+    );
+    expect(closed.data.nodes.map((node) => node.id)).toEqual(
+      collapsed.data.nodes.map((node) => node.id),
+    );
   });
 });
