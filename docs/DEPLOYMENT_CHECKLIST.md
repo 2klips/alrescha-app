@@ -25,10 +25,11 @@ Unticked boxes are genuinely open, and each one says what is missing.
       `record_security_audit_event`, `consume_workspace_security_limit`,
       `audit_scan_job_request`, and `prune_expired_access_events` all present.
 - [x] Configure server-only secrets: `SUPABASE_SERVICE_ROLE_KEY`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_CLIENT_SECRET`, `GITHUB_INSTALL_STATE_SECRET`, `GITHUB_WEBHOOK_SECRET`, and `BYOK_ENCRYPTION_KEY`.
-      Presence proved functionally, never by reading a value: 35 of 35 webhook
-      deliveries answered `200` (secret present, HMAC verifying), the 2026-08-27
-      installation completed through the signed-state callback, and server-side
-      reads render. `BYOK_ENCRYPTION_KEY` is deliberately absent — the pilot ships
+      Presence proved functionally, never by reading a value: GitHub's own
+      delivery log answered `200` on 25 of 25 deliveries in its retained window
+      and 35 accepted deliveries are stored all-time (so the secret is present
+      and the HMAC verifies), the 2026-08-27 installation completed through the
+      signed-state callback, and server-side reads render. `BYOK_ENCRYPTION_KEY` is deliberately absent — the pilot ships
       no BYOK path, so it is not required (see OQ-027).
 - [x] Register a **dedicated GitHub OAuth App for sign-in** (OQ-017: Settings → Developer settings → OAuth Apps; authorization callback = `<SUPABASE_URL>/auth/v1/callback`) and configure `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET`. Never reuse the GitHub App's client credentials for the Supabase provider — the minimal-permission App cannot serve `/user/emails`, and widening it violates the permission guardrail.
       The Supabase authorize endpoint redirects to GitHub with a client id that

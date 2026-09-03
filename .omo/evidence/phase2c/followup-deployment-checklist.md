@@ -94,7 +94,7 @@ Vercel 환경변수 목록은 이 에이전트가 읽을 수 없었다(연결된
 
 | 값                                    | 기능 증거                                                            |
 | ------------------------------------- | -------------------------------------------------------------------- |
-| `GITHUB_WEBHOOK_SECRET`               | delivery 35건 전부 `200` (없으면 `503 github_webhook_not_configured`) |
+| `GITHUB_WEBHOOK_SECRET`               | GitHub delivery 로그 보존 창 25건 전부 `200` + 수용 delivery 35건 저장(없으면 `503 github_webhook_not_configured`) |
 | `GITHUB_APP_*`, `GITHUB_INSTALL_STATE_SECRET` | 2026-08-27 설치가 서명 state 콜백을 통과                     |
 | `SUPABASE_SERVICE_ROLE_KEY`           | 서버 렌더 화면(receipts·stats)이 admin 경로로 데이터를 읽는다        |
 | `NEXT_PUBLIC_*` 3종                   | 익명 리다이렉트가 정상 동작하고 인증 화면이 렌더된다                 |
