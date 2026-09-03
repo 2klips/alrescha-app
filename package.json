@@ -18,6 +18,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
+    "ops:health": "tsx scripts/ops-health.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm -r --if-present typecheck"
