@@ -10,6 +10,7 @@ import {
   type CodeLink,
   type ParsedFileLinks,
 } from "./code-links";
+import { clampConcurrency, mapWithConcurrency } from "./concurrency";
 
 export type ArtifactClassification =
   | "adr"
@@ -506,8 +507,24 @@ function decodedText(bytes: Uint8Array): string | null {
   }
 }
 
+/**
+ * Default width for the content-fetch pass — perf research MT-3. Every blob
+ * the scan needs is a separate round trip to the repository host, and on a
+ * first scan every file is "changed", so a strictly serial loop made
+ * onboarding wait for thousands of sequential round trips. Eight is
+ * deliberately modest: the point is to overlap latency, not to lean on the
+ * host rate limiter.
+ */
+export const DEFAULT_SCAN_FETCH_CONCURRENCY = 8;
+
 export async function scanRepository(input: {
   readonly commitSha: string;
+  /**
+   * Blob fetches in flight at once. Clamped to [1, 32]; anything else falls
+   * back to `DEFAULT_SCAN_FETCH_CONCURRENCY`. The scan plan is identical at
+   * every setting — see `mapWithConcurrency`.
+   */
+  readonly fetchConcurrency?: number;
   readonly maxFileBytes?: number;
   readonly previousArtifacts?: readonly PreviousScannedArtifact[];
   readonly previousCommitSha?: string | null;
@@ -553,22 +570,47 @@ export async function scanRepository(input: {
   const parsedLinks = new Map<string, ParsedFileLinks>();
   const knownCodePaths = new Set<string>();
 
+  /**
+   * Pass 1 — classification, no I/O (perf research MT-3). Every decision that
+   * does not need the file body is made here, in path order, and each entry
+   * lands in a slot. The blob-sha skip already happened before any fetch in
+   * the old sequential loop, so the set of files that really need fetching is
+   * fully known before the first request goes out.
+   */
+  type ScanSlot =
+    | { readonly kind: "skipped"; readonly skip: ScanSkip }
+    | { readonly kind: "unchanged"; readonly path: string }
+    | {
+        readonly kind: "fetch";
+        readonly classification: ArtifactClassification;
+        readonly entry: RepositoryTreeEntry;
+        readonly previous: PreviousScannedArtifact | undefined;
+      };
+
+  const slots: ScanSlot[] = [];
+
   for (const entry of [...tree.entries].sort((left, right) =>
     left.path.localeCompare(right.path),
   )) {
     if (entry.type === "commit" || entry.mode === "160000") {
-      skipped.push({
-        detail: "Git submodules are not followed.",
-        path: entry.path,
-        reason: "submodule",
+      slots.push({
+        kind: "skipped",
+        skip: {
+          detail: "Git submodules are not followed.",
+          path: entry.path,
+          reason: "submodule",
+        },
       });
       continue;
     }
     if (entry.mode === "120000") {
-      skipped.push({
-        detail: "Symbolic links are not followed.",
-        path: entry.path,
-        reason: "symlink",
+      slots.push({
+        kind: "skipped",
+        skip: {
+          detail: "Symbolic links are not followed.",
+          path: entry.path,
+          reason: "symlink",
+        },
       });
       continue;
     }
@@ -586,21 +628,60 @@ export async function scanRepository(input: {
     }
 
     if ((entry.size ?? 0) > maxFileBytes) {
-      skipped.push({
-        detail: `File size ${entry.size} exceeds ${maxFileBytes} bytes.`,
-        path: entry.path,
-        reason: "oversized",
+      slots.push({
+        kind: "skipped",
+        skip: {
+          detail: `File size ${entry.size} exceeds ${maxFileBytes} bytes.`,
+          path: entry.path,
+          reason: "oversized",
+        },
       });
       continue;
     }
 
     const previous = previousByPath.get(entry.path);
     if (previous?.sourceBlobSha === entry.sha) {
-      unchangedPaths.push(entry.path);
+      slots.push({ kind: "unchanged", path: entry.path });
       continue;
     }
 
-    const bytes = await input.source.fetchContent(entry.path, input.commitSha);
+    slots.push({ classification, entry, kind: "fetch", previous });
+  }
+
+  /**
+   * Pass 2 — fetch the bodies, several at a time. Results come back in slot
+   * order and a failure surfaces as the first one in slot order, so both the
+   * plan and the thrown error are what the sequential loop produced.
+   */
+  const pending = slots.filter(
+    (slot): slot is Extract<ScanSlot, { kind: "fetch" }> =>
+      slot.kind === "fetch",
+  );
+  const fetched = await mapWithConcurrency(
+    pending,
+    clampConcurrency(input.fetchConcurrency, DEFAULT_SCAN_FETCH_CONCURRENCY),
+    (slot) => input.source.fetchContent(slot.entry.path, input.commitSha),
+  );
+
+  /**
+   * Pass 3 — the original post-fetch work, in the original order. Nothing here
+   * touches the network, so `artifacts`, `skipped`, `unchangedPaths` and the
+   * `parsedLinks` insertion order are what they always were.
+   */
+  let fetchIndex = 0;
+  for (const slot of slots) {
+    if (slot.kind === "skipped") {
+      skipped.push(slot.skip);
+      continue;
+    }
+    if (slot.kind === "unchanged") {
+      unchangedPaths.push(slot.path);
+      continue;
+    }
+
+    const { classification, entry, previous } = slot;
+    const bytes = fetched[fetchIndex] as Uint8Array;
+    fetchIndex += 1;
     if (bytes.byteLength > maxFileBytes) {
       skipped.push({
         detail: `Fetched file size ${bytes.byteLength} exceeds ${maxFileBytes} bytes.`,

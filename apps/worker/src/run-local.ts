@@ -68,6 +68,19 @@ function workerConcurrency(): number {
 }
 
 /**
+ * How many blob bodies one scan fetches at a time (perf research MT-3). The
+ * scan plan is identical at every setting, so this is purely a throughput and
+ * politeness dial against the repository host. Unset uses the scanner default;
+ * the scanner clamps anything above its own ceiling.
+ */
+function scanFetchConcurrency(): number | undefined {
+  const raw = process.env.SCAN_FETCH_CONCURRENCY;
+  if (!raw) return undefined;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+/**
  * App JWT. This duplicates `apps/web/lib/github/api.ts` — the signer lives in
  * the web app and @alrescha/core exposes none, so the worker cannot share it. When
  * the worker is productionised the signer should move into @alrescha/core and both
@@ -171,8 +184,10 @@ function createScanHandler(
     const commitSha = (job.payload as { commitSha?: string }).commitSha;
     if (!commitSha) throw new Error("scan job payload has no commitSha");
 
+    const fetchConcurrency = scanFetchConcurrency();
     const result = await runRepositoryScan({
       commitSha,
+      ...(fetchConcurrency === undefined ? {} : { fetchConcurrency }),
       repositoryId: job.repositoryId,
       source: await sourceFor(job.workspaceId, job.repositoryId),
       store,

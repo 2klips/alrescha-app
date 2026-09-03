@@ -64,6 +64,7 @@ export type {
 } from "./ingest/code-links";
 
 export {
+  DEFAULT_SCAN_FETCH_CONCURRENCY,
   classifyArtifactPath,
   extractExportedSymbols,
   extractRationales,
@@ -71,6 +72,11 @@ export {
   persistedKind,
   scanRepository,
 } from "./ingest/repository-scanner";
+export {
+  MAX_CONCURRENCY,
+  clampConcurrency,
+  mapWithConcurrency,
+} from "./ingest/concurrency";
 export type {
   ArtifactClassification,
   ExportedSymbolMetadata,
