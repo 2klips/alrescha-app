@@ -34,3 +34,4 @@ OQ-022 ⑴(읽기 측 레거시 수용)로 프로덕션 receipt 28건이 전부 
 - 레거시 `?receipt=01M11RD61P71AHRX525315EKAE`(`00d8f27`, 2026-08-27): **`digest 검증됨`** + **"리네임 이전 발급"** + 발급 도구 `arr 0.1.0` + 체인 시작점 + stale 배너 — OQ-022 ⑴이 실 표면에서 성립.
 - **발견한 결함**: stale 배너가 "현재 commit **00d8f27**보다 이전"이라고 receipt 자신의 commit을 말했다(저장소의 최신 스캔 commit 416a847이어야 함). 보드가 `receipt.commitSha`를 넘기고 있었고 e2e도 같은 값을 기대해 통과했다 → `WorkspaceReceipt.headCommitSha`(레포 `last_scanned_commit_sha`) 추가, 배너는 그것을 표시, 단위·e2e 기대값 수정(보드 테스트 +1).
 - 미조치 관찰: 레일이 32건이라 `?receipt=`로 깊은 항목을 열면 선택 항목이 스크롤 밖에 있다(기능 영향 없음, 후속 후보).
+- 수정 배포 확인(`253782c`, Vercel success): 같은 레거시 receipt의 stale 배너가 **"현재 commit 253782c보다 이전입니다"** — 저장소의 최신 스캔 commit을 가리킨다.
