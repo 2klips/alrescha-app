@@ -21,3 +21,9 @@ OQ-022 ⑴(읽기 측 레거시 수용)로 프로덕션 receipt 28건이 전부 
 - OQ-009 → resolved(ADR-010 §2): 임시 결정(텍스트 전용 파생 토큰)이 그대로 확정됐던 것.
 - OQ-011 → resolved(ADR-012): 정확도 주장 철회·토큰 주장 유지. v3 실행은 판정이 아니라 실행 과제.
 - 남은 open: OQ-012(낮은 우선순위), OQ-019, OQ-020, **OQ-021(pack kind — 사용자 판단 필요)**.
+
+## e2e (로컬 Supabase, 2026-09-03)
+
+- `tests/e2e/receipts.spec.ts` 신설 2/2: 빈 워크스페이스 → 빈 상태(데모 체인 아님) / 시드된 receipt 2건(현행 발급자 @ 최신 commit, `arr` 발급자 @ 이전 commit) → 레일 링크 2, 최신 상세 `data-verification="verified"`·판정 `verified 3 · inferred 1`·델타 `+2 / -1 · 열린 Findings 5건`·commit 카드 링크 → 레거시 클릭 시 `?receipt=` URL·verified·"리네임 이전 발급"·`arr 0.1.0`·stale 배너 → `/app/commits?run=`의 "Receipt 보기"가 `/app/receipts?receipt=<실 id>`. 스크린샷 `live-receipts/receipts-{current,legacy}-verified.png`.
+- 인증 화면 순회에 `app-receipts` 편입: screens-theme(다크·라이트) · a11y-contrast(다크·라이트 AA 위반 0) 통과. 세 스펙 합계 **65 passed**.
+- 운영 메모: Docker Desktop이 `sailor-ingest.sock: The file cannot be accessed by the system`으로 기동 실패 — `%LOCALAPPDATA%\Docker\run\`의 AF_UNIX 소켓 잔재는 Windows 쪽(del·Remove-Item·fsutil·move)으로는 지워지지 않고 `wsl -d docker-desktop -e sh -c "rm -f /mnt/host/c/…/Docker/run/*"`로 지우면 즉시 기동한다.
