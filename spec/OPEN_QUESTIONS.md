@@ -220,3 +220,35 @@
 - 임시 결정: 호이스트까지만 적용하고 `registerTool` 잔여 비용은 남긴다. 타입 안전성을 조용히 맞바꾸지 않는다.
 - 필요한 결정: ⑴ 현행 유지 — 약 2ms/요청을 정적 타입 검사의 대가로 수용(기본값) ⑵ `fromJsonSchema` 등록으로 전환하되 각 핸들러에 명시적 인자 타입 주석을 달아 검사를 복원 ⑶ 요청당 서버 재구축 자체를 없애는 상류 SDK 변경을 기다린다(팩토리는 SDK 계약이라 이 저장소에서 단독으로 바꿀 수 없음)
 - 상태: open
+
+## OQ-025 — 파일럿에 자격증명 없는 알림 수단이 없다
+
+- 발견: 배포 체크리스트 실측·운영 항목 구현(2026-09-03) / `docs/DEPLOYMENT_CHECKLIST.md` "Alert on repeated invalid webhook signatures and cross-tenant/RLS errors", `docs/DEPLOYMENT_RUNBOOK.md` §10.3
+- 내용: 체크리스트는 **알림**(alert)을 요구하지만, 거절된 webhook(반복 서명 불일치)과 RLS 거부는 저장 전에 끝나므로 DB에서 보이지 않고 콘솔 로그에만 남는다. 그 로그를 사람 없이 감시하려면 Vercel **Log Drains**(Pro 이상) 또는 Fly metrics → Grafana/Alertmanager 같은 외부 수신점이 필요하고, 둘 다 **새 자격증명과 비용**을 부른다. 현재 프로덕션은 Vercel Hobby·Fly personal·Supabase 무료 조합이다. 따라서 지금 구현된 것은 알림이 아니라 **사람이 돌리는 점검**(`pnpm ops:health`)과 콘솔 감시 절차다 — 항목의 문자적 요구("alert on")는 미충족이다.
+- 임시 결정: 자격증명이 필요 없는 범위만 구현했다 — DB에서 보이는 7개 신호는 `scripts/ops-health.ts`가 종료 코드로 판정하고(`alert` 3종은 관측 가능한 불변식 위반), 보이지 않는 3종은 런북 §10.2에 위치·검색어·판독법을 적었다. Fly의 앱 사망 이메일과 Vercel의 배포 실패 알림(둘 다 기본 켜짐)이 현재의 유일한 무인 알림이다. 체크리스트 항목은 이 범위로 체크하고 한계를 명시했다.
+- 필요한 결정: ⑴ **파일럿 동안 현행 유지** — 워크스페이스 1개·운영자 1명 규모에서는 하루 1회 수동 점검이 실질적으로 충분하고, `ops-health`의 alert 3종이 조용한 실패(prune 미동작·감사 유실·리스 누수)를 잡는다. ⑵ Vercel Log Drains 또는 Fly metrics 스택 도입 — 비용·자격증명 승인 필요(GUIDE §2 Phase 단위 준비물). ⑶ `ops-health`를 GitHub Actions 스케줄로 돌려 실패 시 이슈 생성 — **CI가 없다는 별개 문제**(OQ-026)와 프로덕션 `DATABASE_URL`을 Actions 시크릿에 넣는 판단이 함께 필요하다.
+- 상태: open. ⑴이 기본값으로 진행 중. 두 번째 워크스페이스가 붙거나 운영자가 매일 볼 수 없게 되는 시점이 재판정 트리거.
+
+## OQ-026 — 자동 게이트를 강제하는 CI가 없다
+
+- 발견: 배포 체크리스트 실측(2026-09-03) / `docs/DEPLOYMENT_CHECKLIST.md` "Automated gate", 레포에 `.github/` 부재
+- 내용: 체크리스트의 "Automated gate"는 `pnpm install --frozen-lockfile` 이하 6개 명령을 요구하고 `AGENTS.md`는 "세션 종료 시 lint/typecheck/test green"을 하드룰로 둔다. 그런데 레포에 워크플로가 없다 — 게이트는 **에이전트/운영자의 로컬 머신에서만** 돈다. 그 결과 ⑴ 락파일 고정은 관행일 뿐 강제되지 않고 ⑵ `main` 푸시는 게이트 통과 여부와 무관하게 Vercel 배포를 트리거하며(Vercel 빌드 성공 ≠ 테스트 통과) ⑶ 체크리스트의 "Pin reviewed … lockfile" 항목은 파일이 존재한다는 것 이상을 보장하지 못한다.
+- 임시 결정: 현행 유지. 게이트는 커밋마다 로컬에서 돌리고 수치를 커밋 메시지에 남긴다(기존 관행). 체크리스트 항목은 실측된 핀 값으로 체크하되 "No CI enforces `--frozen-lockfile`"를 항목과 알려진 한계에 명시했다.
+- 필요한 결정: ⑴ **GitHub Actions에 게이트 워크플로 추가** — 자격증명 불필요(단위 테스트는 PGlite, e2e는 별도 판단). `main` 보호 규칙과 함께 도입해야 실효가 있다. ⑵ Vercel의 Ignored Build Step으로 게이트 실패 시 배포 차단 — Vercel 빌드 안에서 테스트를 돌리는 형태, 빌드 시간·한도 영향. ⑶ 현행 유지 — 운영자 1명 규모에서는 로컬 게이트가 실질적으로 동등하다는 판단.
+- 상태: open. e2e가 로컬 Supabase·Docker에 의존하므로 ⑴을 하더라도 단위·lint·typecheck만 CI로 올리고 e2e는 로컬에 남기는 분할이 현실적 후보.
+
+## OQ-027 — BYOK가 체크리스트에서는 필수, 런북에서는 선택이다
+
+- 발견: 배포 체크리스트 실측(2026-09-03) / `docs/DEPLOYMENT_CHECKLIST.md` "Configure server-only secrets", `docs/DEPLOYMENT_RUNBOOK.md` §5·§6, `flyctl secrets list -a arr-worker`
+- 내용: 체크리스트는 `BYOK_ENCRYPTION_KEY`를 서버 전용 시크릿 6종의 하나로 **필수처럼** 나열하고 `docs/SECURITY_CHECKLIST.md`도 "BYOK ciphertext is stored separately"를 점검 항목으로 둔다. 반면 런북은 Vercel·Fly 양쪽에서 이 값을 **선택(BYOK 사용 시)**으로 표시한다. 프로덕션 실측 결과 워커에는 이 시크릿이 **없다**(Vercel 쪽은 이 에이전트가 읽을 수 없었다). 즉 문서 두 개가 같은 값의 필수성에 대해 다르게 말하고, 실제 배포는 런북 쪽을 따르고 있다.
+- 임시 결정: 런북을 실태로 인정하고 체크리스트 항목을 체크했다 — 필수 5종은 기능으로 존재를 증명했고, `BYOK_ENCRYPTION_KEY`는 "파일럿에 BYOK 경로가 없으므로 필수가 아니다"라고 항목에 명시했다. 가드레일·코드는 손대지 않았다.
+- 필요한 결정: ⑴ **파일럿 범위에서 BYOK를 명시적으로 미제공으로 선언**하고 체크리스트에서 조건부 항목으로 내린다(런북·PRIVACY·SECURITY_CHECKLIST의 BYOK 문구도 "제공 시" 조건부로 통일) — 지금의 실태와 일치. ⑵ BYOK를 파일럿 기능으로 확정하고 `BYOK_ENCRYPTION_KEY`를 양쪽 환경에 설정한 뒤 암호문 분리·평문 비유출을 프로덕션에서 실증한다 — 체크리스트·SECURITY_CHECKLIST 문구는 그대로. ⑶ 현행 유지(문서 불일치 존속) — 비권장.
+- 상태: open. `/app/settings`에 BYOK 표면이 실제로 노출되는지가 판정 입력 — 노출된다면 ⑵ 외의 선택지는 정직하지 않다.
+
+## OQ-028 — 3개 테이블에 `force row level security`가 빠져 있다
+
+- 발견: 배포 체크리스트 실측 중 RLS 커버리지 확인(2026-09-03) / `supabase/migrations/202608170003_rationale_nodes.sql`, `202608240002_concept_graph.sql`, `202608240003_module_summaries.sql`, 프로덕션 `pg_class` 실측
+- 내용: 프로덕션 `public` 스키마의 테이블 43개 전부 RLS가 켜져 있지만 `relforcerowsecurity`는 **40개만** 참이다. 빠진 셋은 `concepts`·`module_summaries`·`rationales`이고, 원본 마이그레이션 3건이 `alter table … enable row level security`만 쓰고 `force row level security` 줄을 누락한 것이 원인이다(나머지 마이그레이션은 두 줄을 쌍으로 쓴다 — 레포 관행). 실질 노출은 아니다: `force`는 **테이블 소유자에게** RLS를 적용하는 스위치이고, 앱 경로는 `authenticated`(RLS 적용됨) 또는 `service_role`(어차피 bypass)로 접근하므로 교차 테넌트 경로가 열리지는 않는다. 그러나 소유자 롤로 무엇이든 연결되는 순간(마이그레이션·수동 조회·향후 DB 함수) 세 테이블만 정책이 무시된다.
+- 임시 결정: 이번 작업 범위(체크리스트 정합·운영 항목)에서 제외하고 기록만 남겼다. 세 테이블은 `docs/SECURITY_CHECKLIST.md`가 RLS 격리를 명시적으로 요구하는 대상(evidence·credits·MCP 토큰·access events·`security_audit_events`)에 포함되지 않으므로 배포 항목을 막지 않는다.
+- 필요한 결정: ⑴ **관행에 맞추는 마이그레이션 추가** — 세 테이블에 `force row level security`를 켜고 `ALL_MIGRATIONS`에 등록, RLS 격리 테스트에 세 테이블을 편입. 작고 되돌릴 수 있으며 관행 이탈을 없앤다(기본 후보). ⑵ 관행 자체를 재검토 — `force`가 실제로 무엇을 막는지 판정하고 필요 없다면 40개에서 빼는 방향으로 통일. ⑶ 현행 유지 — 이탈을 문서로만 남김, 비권장.
+- 상태: open. ⑴은 별도 작업 단위로 분리했다(이 세션의 범위를 넘는 보안 의미 변경이므로 테스트 동반이 필요).

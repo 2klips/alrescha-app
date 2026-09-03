@@ -171,3 +171,66 @@ fly deploy
 - `spec/BUILD_PLAN_PHASE2C.md` Wave 4 — todo 9·10 원문
 - `spec/WORK_SPEC.md` §13 — receipt 포맷 정본
 - `.omo/evidence/phase2c/wave-4-todo-10.md` — 도메인 채택 시 실제로 손댄 지점(§2의 실행 예시)
+
+---
+
+## 10. 모니터링·알림 런북 (2026-09-03 추가)
+
+배포 체크리스트의 운영 항목 3종(관측 대상 / 알림 대상 / 롤백 준비)을 실행 절차로 옮긴 것이다. **새 자격증명·유료 서비스를 도입하지 않는다** — 이미 있는 Fly·Vercel·Supabase 콘솔과 프로덕션 `DATABASE_URL`만 쓴다.
+
+### 10.1 DB에서 보이는 것 — `pnpm ops:health`
+
+```bash
+DATABASE_URL="<프로덕션 세션 풀러 URL>" pnpm ops:health
+```
+
+읽기 전용 단일 쿼리(`scripts/ops-health.ts`)로 7개 신호를 판정해 한 줄씩 출력하고, `ok`가 아니면 종료 코드 1을 낸다. 페이로드·프롬프트·토큰·프로바이더 키는 읽지 않는다 — 집계값과 시각만 나온다.
+
+| 신호                         | 판정  | 의미                                                          |
+| ---------------------------- | ----- | ------------------------------------------------------------- |
+| `access-event-retention`     | alert | 보존 기간을 넘긴 access event가 남아 있다 = 일일 prune 미동작 |
+| `audit-write-coverage`       | alert | scan 잡 수 > `scan_requested` 감사 행 수 = 감사 기록 유실     |
+| `stale-leases`               | alert | 리스 만료 상태로 `running` = 워커가 잡 중간에 죽었다          |
+| `credit-reservations`        | alert | reserve에 대응하는 settle·refund가 없다 = 예약 크레딧 미정산  |
+| `queue-depth`                | warn  | queued+running > 25 = 드레인 루프 정지 의심                   |
+| `permanent-failures`         | warn  | 재시도 소진 실패 > 5 = 프로바이더·잡 종류 계통 실패           |
+| `webhook-delivery-freshness` | warn  | 최신 수신 delivery가 24시간보다 오래됐다 = webhook 경로 단절  |
+
+임계값 근거는 `DEFAULT_OPS_HEALTH_THRESHOLDS` 주석에 실측과 함께 적혀 있다. 2026-09-03 프로덕션 실측은 전 항목 `ok`(`.omo/evidence/phase2c/followup-deployment-checklist.md`).
+
+**권장 주기:** 파일럿 규모에서는 사람이 하루 1회 + 배포 직후 실행. 무인 스케줄링은 러너 자격증명이 필요하므로 도입하지 않았다.
+
+### 10.2 DB에서 보이지 않는 것 — 콘솔에서 봐야 하는 신호
+
+거절된 webhook과 RLS 거부는 **저장되기 전에 끝나므로** DB에 흔적이 없다. 이 셋은 콘솔 로그에서만 보인다.
+
+| 신호                 | 어디                                                                                                             | 무엇을 찾나                                                                                |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| webhook 4xx/5xx      | GitHub App → Advanced → **Recent Deliveries** (7일 보존) / Vercel → 프로젝트 → Logs, `/api/github/webhooks` 필터 | 200 아닌 응답. `401` 연속 = 서명 불일치, `503 github_webhook_not_configured` = 시크릿 누락 |
+| 반복 서명 불일치     | 같은 두 곳                                                                                                       | 짧은 시간에 `401`이 반복되면 위조 시도 — 시크릿 회전 전에 **먼저 원인 확인**               |
+| 교차 테넌트·RLS 오류 | Supabase → Logs → Postgres, `permission denied` / `row-level security` 검색                                      | 정상 운영에서는 0건이어야 한다. 1건이라도 나오면 해당 쿼리 경로를 즉시 조사                |
+| 워커 드레인 루프     | `flyctl logs -a arr-worker`                                                                                      | 잡 클레임·완료 로그가 멈췄는지. **HTTP 헬스체크는 없는 게 정상**                           |
+| 워커 재시작·OOM      | `flyctl status -a arr-worker`, `flyctl releases -a arr-worker`                                                   | 의도하지 않은 버전 변화나 재시작 반복                                                      |
+
+로그를 볼 때 **페이로드·시크릿을 복사해 붙여넣지 말 것** — evidence에는 상태 코드·건수·시각만 남긴다.
+
+### 10.3 알림 (파일럿 수준)
+
+전용 알림 파이프라인은 자격증명이 필요해 도입하지 않았다. 파일럿 동안의 대체 수단:
+
+- **Fly**: 앱이 죽으면 Fly가 계정 이메일로 알린다(기본 동작).
+- **Vercel**: 프로젝트 → Settings → Notifications에서 배포 실패 알림이 기본 켜져 있다.
+- **Supabase**: 프로젝트 → Settings → Integrations에 무료 알림 훅 없음 — 위 10.1을 사람이 돌리는 것이 현재의 알림이다.
+- 유료 알림(예: Fly metrics + Grafana, Vercel Log Drains)은 **결정 필요** — `spec/OPEN_QUESTIONS.md` OQ-025.
+
+### 10.4 롤백
+
+| 대상         | 절차                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| 웹 (Vercel)  | 프로젝트 → Deployments → 직전 성공 배포 → **Instant Rollback**. 커밋 되돌림 불필요                                             |
+| 워커 (Fly)   | `flyctl releases -a arr-worker`로 직전 버전 확인 → `flyctl deploy -a arr-worker --image <직전 이미지>`                         |
+| 마이그레이션 | **행을 지우는 롤백을 하지 않는다.** 되돌릴 것이 있으면 역방향 마이그레이션 파일을 새로 추가하고 `ALL_MIGRATIONS`에 등록해 적용 |
+
+`private_migrations.schema_migrations`는 적용된 파일의 체크섬을 들고 있다. **이미 적용된 마이그레이션 파일을 수정하면** 다음 `pnpm db:migrate`가 `Applied migration checksum changed`로 멈춘다 — 이것은 안전장치이니 파일을 고치지 말고 새 파일을 추가한다.
+
+사용자 데이터 삭제로 롤백하지 않는다는 원칙은 하드룰이다. 스키마를 되돌려야 하는데 데이터 손실이 불가피하면 **롤백하지 말고** 앞으로 고치는 마이그레이션을 쓴다.
