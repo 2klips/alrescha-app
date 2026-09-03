@@ -143,7 +143,11 @@ describe("buildWorkspaceReceipts", () => {
       [row({ digest }), row({ digest, id: "orphan", repository_id: "repo-gone" })],
       [{ ...repositories[0]!, last_scanned_commit_sha: NEWER_COMMIT }],
     );
-    expect(receipts[0]?.stale).toBe(true);
-    expect(receipts[1]).toMatchObject({ repository: "repo-gone", stale: false });
+    expect(receipts[0]).toMatchObject({ headCommitSha: NEWER_COMMIT, stale: true });
+    expect(receipts[1]).toMatchObject({
+      headCommitSha: null,
+      repository: "repo-gone",
+      stale: false,
+    });
   });
 });

@@ -86,10 +86,10 @@ function ReceiptDetail({
         </div>
         <VerificationBadge verification={verification} />
       </header>
-      {receipt.stale ? (
+      {receipt.stale && receipt.headCommitSha ? (
         <div className="stale-banner">
           <Icon icon={Clock3} size="xs" />
-          {LIVE.staleBanner(receipt.commitSha.slice(0, 7))}
+          {LIVE.staleBanner(receipt.headCommitSha.slice(0, 7))}
         </div>
       ) : null}
       {legacy ? (

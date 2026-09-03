@@ -27,3 +27,10 @@ OQ-022 ⑴(읽기 측 레거시 수용)로 프로덕션 receipt 28건이 전부 
 - `tests/e2e/receipts.spec.ts` 신설 2/2: 빈 워크스페이스 → 빈 상태(데모 체인 아님) / 시드된 receipt 2건(현행 발급자 @ 최신 commit, `arr` 발급자 @ 이전 commit) → 레일 링크 2, 최신 상세 `data-verification="verified"`·판정 `verified 3 · inferred 1`·델타 `+2 / -1 · 열린 Findings 5건`·commit 카드 링크 → 레거시 클릭 시 `?receipt=` URL·verified·"리네임 이전 발급"·`arr 0.1.0`·stale 배너 → `/app/commits?run=`의 "Receipt 보기"가 `/app/receipts?receipt=<실 id>`. 스크린샷 `live-receipts/receipts-{current,legacy}-verified.png`.
 - 인증 화면 순회에 `app-receipts` 편입: screens-theme(다크·라이트) · a11y-contrast(다크·라이트 AA 위반 0) 통과. 세 스펙 합계 **65 passed**.
 - 운영 메모: Docker Desktop이 `sailor-ingest.sock: The file cannot be accessed by the system`으로 기동 실패 — `%LOCALAPPDATA%\Docker\run\`의 AF_UNIX 소켓 잔재는 Windows 쪽(del·Remove-Item·fsutil·move)으로는 지워지지 않고 `wsl -d docker-desktop -e sh -c "rm -f /mnt/host/c/…/Docker/run/*"`로 지우면 즉시 기동한다.
+
+## 프로덕션 확인 (2026-09-03, 사용자 로그인 세션 · Chrome)
+
+- `/app/receipts`: **Statement 32건**(28 + 이후 push 4). 최신 `416a847` — `digest 검증됨`, 기대·계산 digest 일치(`c91fb418…`), 발급 도구 `alrescha 0.1.0`, 커버리지 `요구사항 92 · 구현 verified 84 · 테스트 verified 0`, 판정 `verified 0 · inferred 30`, commit 카드 링크 동작. 헤더 "영수증" 링크 href `/app/receipts`.
+- 레거시 `?receipt=01M11RD61P71AHRX525315EKAE`(`00d8f27`, 2026-08-27): **`digest 검증됨`** + **"리네임 이전 발급"** + 발급 도구 `arr 0.1.0` + 체인 시작점 + stale 배너 — OQ-022 ⑴이 실 표면에서 성립.
+- **발견한 결함**: stale 배너가 "현재 commit **00d8f27**보다 이전"이라고 receipt 자신의 commit을 말했다(저장소의 최신 스캔 commit 416a847이어야 함). 보드가 `receipt.commitSha`를 넘기고 있었고 e2e도 같은 값을 기대해 통과했다 → `WorkspaceReceipt.headCommitSha`(레포 `last_scanned_commit_sha`) 추가, 배너는 그것을 표시, 단위·e2e 기대값 수정(보드 테스트 +1).
+- 미조치 관찰: 레일이 32건이라 `?receipt=`로 깊은 항목을 열면 선택 항목이 스크롤 밖에 있다(기능 영향 없음, 후속 후보).

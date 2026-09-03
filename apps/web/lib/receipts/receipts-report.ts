@@ -43,6 +43,8 @@ export interface WorkspaceReceipt {
   /** The digest the analyze stored; null only for a row written without one. */
   readonly digest: string | null;
   readonly findings: CommitFindingsDelta | null;
+  /** The repository's last scanned commit — what `stale` is measured against. */
+  readonly headCommitSha: string | null;
   readonly id: string;
   /** `repositories.full_name`, or the id when the repository row is gone. */
   readonly repository: string;
@@ -80,6 +82,7 @@ export async function buildWorkspaceReceipts(
         createdAt: row.created_at,
         digest: row.digest,
         findings: receiptFindings(row.summary),
+        headCommitSha: repository?.last_scanned_commit_sha ?? null,
         id: row.id,
         repository: repository?.full_name ?? row.repository_id,
         runId: row.run_id,

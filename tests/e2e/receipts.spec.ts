@@ -218,8 +218,10 @@ test("stored receipts are listed, re-verified on the server and linked to their 
       ASSURANCE.receipts.live.legacyIssuer,
     );
     await expect(page.getByTestId("receipt-issuer")).toHaveText("arr 0.1.0");
+    // The banner names the commit the repository has since scanned — not
+    // the receipt's own (the first production render showed the latter).
     await expect(detail.locator(".stale-banner")).toContainText(
-      ASSURANCE.receipts.live.staleBanner(OLDER_COMMIT.slice(0, 7)),
+      ASSURANCE.receipts.live.staleBanner(CURRENT_COMMIT.slice(0, 7)),
     );
     await page.screenshot({
       fullPage: true,

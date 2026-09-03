@@ -132,6 +132,29 @@ describe("WorkspaceReceiptsBoard", () => {
     expect(html).toContain(ASSURANCE.receipts.live.findingsMissing);
   });
 
+  it("names the repository head commit in the stale banner, not the receipt's own", async () => {
+    const digest = await digestInTotoStatement(statement);
+    const head = "d".repeat(40);
+    const list = await buildWorkspaceReceipts(
+      [
+        {
+          commit_sha: COMMIT,
+          created_at: "2026-09-02T14:01:00.000Z",
+          digest,
+          id: "older",
+          repository_id: "repo-1",
+          run_id: "run-1",
+          status: "generated",
+          summary: { statement },
+        },
+      ],
+      [{ ...repositories[0]!, last_scanned_commit_sha: head }],
+    );
+    const html = await render("older", Promise.resolve(list));
+    expect(html).toContain(ASSURANCE.receipts.live.staleBanner(head.slice(0, 7)));
+    expect(html).not.toContain(ASSURANCE.receipts.live.staleBanner(COMMIT.slice(0, 7)));
+  });
+
   it("keeps an unreadable receipt visible as invalid with its parse issues", async () => {
     const html = await render("garbled");
     expect(html).toContain('data-verification="invalid"');
