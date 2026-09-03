@@ -87,6 +87,7 @@ const CONVERTED_SCREENS = [
   // OQ-022 follow-up — live receipts
   "apps/web/app/app/(shell)/receipts/page.tsx",
   "apps/web/app/ui/receipts-board.tsx",
+  "apps/web/app/ui/receipt-rail-scroll.tsx",
 ];
 
 /**

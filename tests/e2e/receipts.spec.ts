@@ -29,6 +29,8 @@ import {
 const EVIDENCE = path.resolve(".omo/evidence/phase2c/live-receipts");
 const CURRENT_COMMIT = "c".repeat(40);
 const OLDER_COMMIT = "a".repeat(40);
+/** A rail long enough to overflow its own scrollbox — the production shape. */
+const DEEP_LINK_RECEIPTS = 30;
 
 test.beforeAll(async () => {
   await mkdir(EVIDENCE, { recursive: true });
@@ -185,6 +187,9 @@ test("stored receipts are listed, re-verified on the server and linked to their 
       name: ASSURANCE.receipts.live.title,
     });
     await expect(rail.getByRole("link")).toHaveCount(2);
+    await expect(page.getByTestId("receipt-verification-summary")).toHaveText(
+      ASSURANCE.receipts.live.verificationSummary(2, 0, 0),
+    );
 
     // Newest first: the current-issuer receipt, verified against its digest.
     const detail = page.getByTestId("receipt-detail");
@@ -233,6 +238,81 @@ test("stored receipts are listed, re-verified on the server and linked to their 
     await expect(
       page.getByRole("link", { name: COMMITS.detail.receiptAction }),
     ).toHaveAttribute("href", `/app/receipts?receipt=${seeded.currentReceipt}`);
+  } finally {
+    await deleteWorkspaceUser(user.userId);
+  }
+});
+
+/**
+ * A rail of stored receipts, no runs — enough of them that the list overflows
+ * its scrollbox, which is the shape production reached at 32 receipts.
+ */
+async function seedManyReceipts(workspaceId: string) {
+  const client = admin();
+  const repositoryId = ulid("REPD");
+  const repo = await client.from("repositories").insert({
+    default_branch: "main",
+    full_name: "2klips/alrescha-app",
+    id: repositoryId,
+    last_scanned_commit_sha: CURRENT_COMMIT,
+    workspace_id: workspaceId,
+  });
+  if (repo.error) throw new Error(repo.error.message);
+
+  const rows = await Promise.all(
+    Array.from({ length: DEEP_LINK_RECEIPTS }, async (_unused, index) => {
+      const commitSha = index.toString(16).padStart(2, "0").repeat(20);
+      const statement = statementFor(commitSha, `run-${index}`);
+      return {
+        commit_sha: commitSha,
+        created_at: new Date(Date.UTC(2026, 6, 1 + index, 12)).toISOString(),
+        digest: await digestInTotoStatement(statement),
+        id: ulid(`RD${String(index).padStart(2, "0")}`),
+        repository_id: repositoryId,
+        run_id: null,
+        status: "generated",
+        summary: { statement },
+        workspace_id: workspaceId,
+      };
+    }),
+  );
+  const inserted = await client.from("receipts").insert(rows);
+  if (inserted.error) throw new Error(inserted.error.message);
+  // Newest first in the rail, so the earliest row is its last item.
+  return { oldest: rows[0]!.id };
+}
+
+test("a deep link to an older receipt reveals it in the rail, detail intact", async ({
+  context,
+  page,
+}) => {
+  const user = await createWorkspaceUser("receipts-deep-link");
+  try {
+    const seeded = await seedManyReceipts(user.workspaceId);
+    await signIn(context, user);
+
+    await page.goto(`/app/receipts?receipt=${seeded.oldest}`);
+    const rail = page.getByRole("navigation", {
+      name: ASSURANCE.receipts.live.title,
+    });
+    await expect(rail.getByRole("link")).toHaveCount(DEEP_LINK_RECEIPTS);
+
+    // The rail scrolled its own list to the selection: the newest receipt,
+    // which the rail renders first, has been scrolled past.
+    const selected = rail.locator('a[aria-current="true"]');
+    await expect(selected).toHaveCount(1);
+    await expect(selected).toBeInViewport();
+    await expect(rail.getByRole("link").first()).not.toBeInViewport();
+
+    // The page itself did not scroll, so the deep-linked detail is still read.
+    await expect(page.getByTestId("receipt-detail")).toBeInViewport();
+    await expect(page.getByTestId("receipt-verification-summary")).toHaveText(
+      ASSURANCE.receipts.live.verificationSummary(DEEP_LINK_RECEIPTS, 0, 0),
+    );
+    await page.screenshot({
+      fullPage: true,
+      path: path.join(EVIDENCE, "receipts-deep-link-in-view.png"),
+    });
   } finally {
     await deleteWorkspaceUser(user.userId);
   }

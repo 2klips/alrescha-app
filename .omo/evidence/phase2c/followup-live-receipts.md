@@ -35,3 +35,28 @@ OQ-022 ⑴(읽기 측 레거시 수용)로 프로덕션 receipt 28건이 전부 
 - **발견한 결함**: stale 배너가 "현재 commit **00d8f27**보다 이전"이라고 receipt 자신의 commit을 말했다(저장소의 최신 스캔 commit 416a847이어야 함). 보드가 `receipt.commitSha`를 넘기고 있었고 e2e도 같은 값을 기대해 통과했다 → `WorkspaceReceipt.headCommitSha`(레포 `last_scanned_commit_sha`) 추가, 배너는 그것을 표시, 단위·e2e 기대값 수정(보드 테스트 +1).
 - 미조치 관찰: 레일이 32건이라 `?receipt=`로 깊은 항목을 열면 선택 항목이 스크롤 밖에 있다(기능 영향 없음, 후속 후보).
 - 수정 배포 확인(`253782c`, Vercel success): 같은 레거시 receipt의 stale 배너가 **"현재 commit 253782c보다 이전입니다"** — 저장소의 최신 스캔 commit을 가리킨다.
+
+## 후속 ⑵ — 딥링크 스크롤 + 레일 검증 요약 (2026-09-03)
+
+위의 "미조치 관찰"(레일 32건에서 `?receipt=`로 오래된 항목을 열면 선택 항목이 스크롤 밖)을 처리했다. 서버 렌더 설계는 그대로 두고, 선택 신호도 계속 `aria-current` 하나다.
+
+### 설계
+
+- **레일 열이 sticky·1뷰포트**: `receipts-board.tsx`의 `aside > div.receipt-rail-sticky`가 `position: sticky; top: calc(var(--contextstrip-h) + 1.3rem); max-height: calc(100dvh - var(--contextstrip-h) - 2.6rem)`인 flex 열이고, 목록 `nav.receipt-list--live`만 `flex: 1 1 auto; min-height: 0; overflow-y: auto`로 **자기 안에서** 스크롤한다. `aside` 자체는 계속 stretch → 레일 배경·구분선은 페이지 전체 높이를 유지한다. 900px 이하 스택 레이아웃에서는 static으로 되돌린다(데스크톱 전용 트랙).
+- **클라이언트 아일랜드** `apps/web/app/ui/receipt-rail-scroll.tsx`: `"use client"` + `useEffect` 한 개. `.receipt-list a[aria-current="true"]`를 찾아 `scrollIntoView({ block: "nearest" })`를 한 번 호출하고 `null`을 렌더한다. `block: "nearest"`라서 이미 보이는 항목은 그대로 두고, 레일을 위해 문서를 스크롤하지도 않는다. 보드는 서버 컴포넌트 그대로다.
+- **레일 검증 요약**: 로더에 순수 함수 `countVerifications(receipts)` 추가 — 로더가 **이미 계산한** verification만 집계하므로 요약이 상세와 어긋난 판정을 말할 수 없다. 카피 `ASSURANCE.receipts.live.verificationSummary` → `verified 30 · 변조 0 · 무효 0`(한국어 우선 정책 통과: 허용 용어는 `verified` 뿐). 빈 워크스페이스에서는 렌더하지 않는다.
+
+### 첫 시도에서 드러난 결함
+
+목록(`nav`)만 sticky로 만들었더니, 스크롤 0에서 목록 상단이 레일 헤더(약 120px) 아래에서 시작해 **하단이 뷰포트 밖으로 약 99px 넘쳤다**. 그 결과 `scrollIntoView`가 문서까지 스크롤했고, 상세 제목이 sticky 셸 크롬에 가렸다 — e2e는 통과했지만 스크린샷에서 확인됐다. 헤더까지 포함한 **레일 열 전체**를 sticky·고정 높이로 바꾸니 스크롤 0에서 이미 제자리(`top`이 자연 위치와 정확히 일치)라 문서가 전혀 움직이지 않는다.
+
+### 검증
+
+- 단위 +5: `receipts-report.test.ts` 2건(집계 verified 2 / tampered 1 / invalid 1, 빈 목록 0), `receipts-board.test.tsx` 3건(레일 스크롤박스 클래스 + 선택 항목, 요약 `verified 2 · 변조 0 · 무효 1`, tampered 1건 집계). 빈 상태 테스트에 "요약 줄 없음" 단언 추가.
+- e2e +1: `tests/e2e/receipts.spec.ts`에 receipt 30건(run 없음)을 시드하고 가장 오래된 것으로 딥링크 → 선택 항목 `toBeInViewport`, 레일 첫 항목 `not.toBeInViewport`(레일이 실제로 스크롤됐다는 뜻), 상세 `toBeInViewport`(문서는 안 움직였다는 뜻), 요약 `verified 30 · 변조 0 · 무효 0`. 기존 라이브 테스트에는 `verified 2 · 변조 0 · 무효 0` 단언 추가. 스크린샷 `live-receipts/receipts-deep-link-in-view.png`.
+- **네거티브 컨트롤**: `scrollIntoView` 호출만 지우고 돌리면 선택 항목이 `viewport ratio 0`으로 실패 — 새 e2e가 실제로 이 결함을 잡는다. 확인 후 되돌렸다.
+
+### 게이트
+
+- `pnpm lint` 통과, `pnpm typecheck` 통과(웹 포함 6개 프로젝트), `pnpm exec vitest run` **138 파일 / 1023 passed | 1 skipped**.
+- e2e(로컬 Supabase): `receipts` · `screens-theme` · `a11y-contrast` 합계 **66 passed**(직전 65 + 신규 1). `app-receipts`는 다크·라이트 테마 순회와 AA 대비 위반 0을 그대로 통과한다.

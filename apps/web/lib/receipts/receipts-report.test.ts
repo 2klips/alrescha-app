@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildWorkspaceReceipts,
+  countVerifications,
   type ReceiptRepositoryRow,
   type WorkspaceReceiptRow,
 } from "./receipts-report";
@@ -148,6 +149,35 @@ describe("buildWorkspaceReceipts", () => {
       headCommitSha: null,
       repository: "repo-gone",
       stale: false,
+    });
+  });
+});
+
+describe("countVerifications", () => {
+  it("tallies the verdicts the loader already computed", async () => {
+    const digest = await digestInTotoStatement(statement);
+    const receipts = await buildWorkspaceReceipts(
+      [
+        row({ digest, id: "verified-1" }),
+        row({ digest, id: "verified-2" }),
+        row({ digest: "0".repeat(64), id: "tampered-1" }),
+        row({ digest: null, id: "invalid-1" }),
+      ],
+      repositories,
+    );
+
+    expect(countVerifications(receipts)).toEqual({
+      invalid: 1,
+      tampered: 1,
+      verified: 2,
+    });
+  });
+
+  it("counts nothing for a workspace without receipts", () => {
+    expect(countVerifications([])).toEqual({
+      invalid: 0,
+      tampered: 0,
+      verified: 0,
     });
   });
 });

@@ -9,10 +9,14 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import type { WorkspaceReceipt } from "../../lib/receipts/receipts-report";
+import {
+  countVerifications,
+  type WorkspaceReceipt,
+} from "../../lib/receipts/receipts-report";
 import { ASSURANCE } from "../../lib/strings";
 import { Icon } from "./ui-icon";
 import { ProductEmptyState, ProductPageHeader } from "./page-layout";
+import { ReceiptRailScroll } from "./receipt-rail-scroll";
 import { StatusBadge } from "./status-badge";
 
 const LIVE = ASSURANCE.receipts.live;
@@ -233,49 +237,68 @@ export function WorkspaceReceiptsBoard({
 }: WorkspaceReceiptsBoardProps) {
   const selected =
     receipts.find((receipt) => receipt.id === selectedId) ?? receipts[0] ?? null;
+  const counts = countVerifications(receipts);
   return (
     <main className="assurance-main receipts-layout product-page">
       <aside className="receipt-rail">
-        <ProductPageHeader
-          className="surface-heading"
-          description={LIVE.summary(receipts.length)}
-          kicker={LIVE.kicker}
-          title={LIVE.title}
-        />
-        {receipts.length === 0 ? (
-          <ProductEmptyState
-            body={LIVE.empty.body}
-            icon={<Icon icon={ReceiptText} size="md" />}
-            title={LIVE.empty.title}
+        <div className="receipt-rail-sticky">
+          <ProductPageHeader
+            className="surface-heading"
+            description={LIVE.summary(receipts.length)}
+            kicker={LIVE.kicker}
+            title={LIVE.title}
           />
-        ) : (
-          <nav aria-label={LIVE.title} className="receipt-list">
-            {receipts.map((receipt) => (
-              <Link
-                aria-current={receipt.id === selected?.id ? "true" : undefined}
-                data-verification={receipt.verification.state}
-                href={`${basePath}?receipt=${encodeURIComponent(receipt.id)}`}
-                key={receipt.id}
+          {receipts.length === 0 ? (
+            <ProductEmptyState
+              body={LIVE.empty.body}
+              icon={<Icon icon={ReceiptText} size="md" />}
+              title={LIVE.empty.title}
+            />
+          ) : (
+            <>
+              <p
+                className="receipt-rail-summary"
+                data-testid="receipt-verification-summary"
               >
-                <Icon icon={ReceiptText} size="sm" />
-                <span>
-                  <strong>
-                    {receipt.commitSha.slice(0, 7)} · {receipt.repository}
-                  </strong>
-                  <small>
-                    {receipt.createdAt.slice(0, 10)} ·{" "}
-                    {receipt.stale
-                      ? ASSURANCE.receipts.stale
-                      : ASSURANCE.receipts.current}
-                    {" · "}
-                    {ASSURANCE.receipts.verification[receipt.verification.state]}
-                  </small>
-                </span>
-                <Icon icon={ChevronRight} size="xs" />
-              </Link>
-            ))}
-          </nav>
-        )}
+                {LIVE.verificationSummary(
+                  counts.verified,
+                  counts.tampered,
+                  counts.invalid,
+                )}
+              </p>
+              <nav
+                aria-label={LIVE.title}
+                className="receipt-list receipt-list--live"
+              >
+                {receipts.map((receipt) => (
+                  <Link
+                    aria-current={receipt.id === selected?.id ? "true" : undefined}
+                    data-verification={receipt.verification.state}
+                    href={`${basePath}?receipt=${encodeURIComponent(receipt.id)}`}
+                    key={receipt.id}
+                  >
+                    <Icon icon={ReceiptText} size="sm" />
+                    <span>
+                      <strong>
+                        {receipt.commitSha.slice(0, 7)} · {receipt.repository}
+                      </strong>
+                      <small>
+                        {receipt.createdAt.slice(0, 10)} ·{" "}
+                        {receipt.stale
+                          ? ASSURANCE.receipts.stale
+                          : ASSURANCE.receipts.current}
+                        {" · "}
+                        {ASSURANCE.receipts.verification[receipt.verification.state]}
+                      </small>
+                    </span>
+                    <Icon icon={ChevronRight} size="xs" />
+                  </Link>
+                ))}
+              </nav>
+              <ReceiptRailScroll selectedId={selected?.id ?? null} />
+            </>
+          )}
+        </div>
       </aside>
       {selected ? (
         <ReceiptDetail commitsPath={commitsPath} receipt={selected} />

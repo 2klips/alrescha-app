@@ -134,6 +134,13 @@ export const ASSURANCE = {
       /** `Statement <n>건 · 저장된 digest로 서버가 검증` */
       summary: (count: number) =>
         `Statement ${count}건 · 저장된 digest로 서버가 검증`,
+      /**
+       * The rail's one-line tally of what the server just computed, so a
+       * tampered or unreadable receipt is visible without opening each one.
+       * `verified <v> · 변조 <t> · 무효 <i>`
+       */
+      verificationSummary: (verified: number, tampered: number, invalid: number) =>
+        `verified ${verified} · 변조 ${tampered} · 무효 ${invalid}`,
       empty: {
         title: "발급된 Receipt 없음",
         body: "레포를 연결하고 push하면 첫 분석이 Receipt를 발급합니다.",

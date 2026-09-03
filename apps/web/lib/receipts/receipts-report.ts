@@ -97,6 +97,26 @@ export async function buildWorkspaceReceipts(
   );
 }
 
+export interface ReceiptVerificationCounts {
+  readonly invalid: number;
+  readonly tampered: number;
+  readonly verified: number;
+}
+
+/**
+ * Pure: how the loaded receipts verified, for the rail's one-line summary.
+ *
+ * The counts are read off the verifications the loader already computed, so
+ * the line can never claim a verdict the detail would contradict.
+ */
+export function countVerifications(
+  receipts: readonly WorkspaceReceipt[],
+): ReceiptVerificationCounts {
+  const counts = { invalid: 0, tampered: 0, verified: 0 };
+  for (const receipt of receipts) counts[receipt.verification.state] += 1;
+  return counts;
+}
+
 export async function loadWorkspaceReceipts(
   client: SupabaseClient,
   userId: string,

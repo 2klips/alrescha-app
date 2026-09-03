@@ -102,6 +102,7 @@ describe("WorkspaceReceiptsBoard", () => {
     );
     expect(html).toContain(ASSURANCE.receipts.live.empty.title);
     expect(html).not.toContain('data-testid="receipt-detail"');
+    expect(html).not.toContain('data-testid="receipt-verification-summary"');
   });
 
   it("lists every receipt as a link and marks the selected one", async () => {
@@ -111,6 +112,42 @@ describe("WorkspaceReceiptsBoard", () => {
     expect(html).toContain('href="/app/receipts?receipt=garbled"');
     expect(html.match(/aria-current="true"/g)).toHaveLength(1);
     expect(html).toContain(ASSURANCE.receipts.live.summary(3));
+  });
+
+  it("gives the rail its own scrollbox so a deep link can reveal its item", async () => {
+    const html = await render("garbled");
+
+    expect(html).toContain('class="receipt-list receipt-list--live"');
+    expect(html).toContain('aria-current="true" data-verification="invalid"');
+  });
+
+  it("tallies the server-computed verdicts under the rail header", async () => {
+    const html = await render("current");
+
+    expect(html).toContain('data-testid="receipt-verification-summary"');
+    expect(html).toContain(ASSURANCE.receipts.live.verificationSummary(2, 0, 1));
+  });
+
+  it("counts a tampered receipt in the rail tally", async () => {
+    const list = await buildWorkspaceReceipts(
+      [
+        {
+          commit_sha: COMMIT,
+          created_at: "2026-09-02T14:01:00.000Z",
+          digest: "0".repeat(64),
+          id: "tampered",
+          repository_id: "repo-1",
+          run_id: "run-1",
+          status: "generated",
+          summary: { statement },
+        },
+      ],
+      repositories,
+    );
+
+    const html = await render("tampered", Promise.resolve(list));
+
+    expect(html).toContain(ASSURANCE.receipts.live.verificationSummary(0, 1, 0));
   });
 
   it("shows a server-computed verified verdict and the commit card link", async () => {

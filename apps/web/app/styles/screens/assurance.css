@@ -714,6 +714,18 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  /* Stacked layout: the rail sits above the detail, so nothing is gained by
+     scrolling it on its own. */
+  .receipt-rail-sticky {
+    display: block;
+    max-height: none;
+    position: static;
+  }
+
+  .receipt-list--live {
+    overflow-y: visible;
+  }
+
   .evidence-chain ol {
     grid-template-columns: 1fr;
   }
@@ -797,6 +809,40 @@
 
 /* /app/receipts (live): the rail is a list of links, not buttons — the same
    affordance as the demo rail, selection carried by aria-current. */
+
+/* The rail's one-line tally of the verifications the server just computed. */
+.receipt-rail-summary {
+  color: var(--fg-muted);
+  font: var(--text-2xs) var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  margin: 0.85rem 0 0;
+}
+
+/* With dozens of stored receipts the rail outgrows the detail. The live rail
+   is therefore one viewport tall and sticks under the shell chrome, with the
+   list scrolling inside it — so a deep link can reveal its selected item
+   without scrolling the detail away. The aside itself still stretches, which
+   is what keeps the rail background and divider running the full page. */
+.receipt-rail-sticky {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - var(--contextstrip-h) - 2.6rem);
+  position: sticky;
+  top: calc(var(--contextstrip-h) + 1.3rem);
+}
+
+.receipt-rail-sticky > * {
+  flex: none;
+}
+
+.receipt-list--live {
+  flex: 1 1 auto;
+  margin-top: 0.9rem;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .receipt-list a {
   align-items: center;
   background: var(--bg-overlay);
