@@ -72,3 +72,22 @@ default of 8. It can be set to `1` on the Fly app to restore the old
 sequential behaviour without a deploy, and the plan is identical either way.
 
 ## First v14 scan
+
+Push `80e233e` (this file) → webhook → the first scan on v14:
+
+```
+2026-09-03T14:34:20Z  scan @80e233e → 3 rows
+2026-09-03T14:34:20Z  local-634-0 job → succeeded
+```
+
+No errors, no 401s and no 429s in the worker log since the v14 rollout.
+
+What that proves and what it does not: it proves the restructured scanner runs
+correctly in production against real GitHub. It does **not** measure the
+speed-up, because this is an *incremental* scan — the blob-sha skip resolves
+almost every file before any fetch, so there were only a handful of bodies to
+request and nothing to overlap. The concurrency win lives in the **first** scan
+of a newly connected repository, which cannot be reproduced on an
+already-onboarded workspace. The next repository onboarding is where to look
+for it, and `jobs.started_at → finished_at` for that scan is the number to
+take (measurement programme item 4).
