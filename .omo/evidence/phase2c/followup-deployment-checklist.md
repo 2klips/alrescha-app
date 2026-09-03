@@ -179,3 +179,22 @@ alert 3종은 관측 가능한 불변식 위반이다: 보존 초과 행 존재(
 재확인한 것: `233195a`·`68be681` 모두 Vercel `success`. 이동한 커밋들은 웹 그래프·MCP·스캔 fetch 경로를 건드렸을 뿐 이 작업이 실측한 대상(마이그레이션 원장·GitHub App 권한·OAuth App·감사 이벤트·보존 설정)과 겹치지 않는다. 리베이스 후 전체 게이트를 다시 돌려 green을 확인했다.
 
 `spec/OPEN_QUESTIONS.md`에서 OQ-024를 병행 세션이 먼저 점유했으므로(MCP 툴 등록 비용) 이 작업의 항목은 **OQ-025~OQ-028**로 재번호했다.
+
+## 배포 후 확인 (2026-09-03 14:44 UTC)
+
+`b3dc578` push → **Vercel `success`**(컨텍스트 "Vercel"). 이 세션의 변경은 마이그레이션 파일·ops 스크립트·문서뿐이라 웹 동작 변화는 없다.
+
+**`ops-health` 쿼리를 프로덕션에서 실제로 1회 실행했다** — 위 개별 조회들에서 추론한 것이 아니라, `OPS_HEALTH_SNAPSHOT_QUERY` 원문을 base64로 실어 보내 그대로 돌렸다:
+
+```
+SNAPSHOT [{"access_events_overdue":0,"audited_scan_requests":40,
+  "newest_delivery_age_hours":"0.02030508083333333333","permanently_failed_jobs":1,
+  "queue_depth":1,"reservations_unresolved":0,"scan_jobs":40,"stale_leases":0}]
+```
+
+판정: 보존 초과 0 → ok / scan 40 = 감사 40 → ok / 리스 만료 0 → ok / 미정산 예약 0 → ok / 큐 1(방금 push의 스캔이 진행 중, ≤25) → ok / 영구 실패 1(≤5) → ok / 최신 delivery 73초 전(≤24h) → ok. **전 항목 ok** — 즉 `pnpm ops:health`는 프로덕션에서 종료 코드 0이다.
+
+부수 확인 2건:
+
+- `newest_delivery_age_hours`가 postgres.js에서 **문자열**("0.0203…")로 온다(numeric 타입). `toOpsHealthSnapshot`이 `Number()`로 정규화하고 `OpsHealthRow`를 `number | string`으로 타이핑한 것이 실제로 필요한 처리였음이 확인됐다.
+- scan 잡이 35 → 40으로 늘었는데 감사 행도 40으로 같이 늘었다 — 감사 트리거가 계속 성립한다.
