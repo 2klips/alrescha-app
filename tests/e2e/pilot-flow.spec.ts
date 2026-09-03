@@ -290,7 +290,7 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
   });
 
   await test.step("select the fixture repository and watch its first metadata-only scan", async () => {
-    await page.getByRole("button", { name: /2klips\/arr-app/ }).click();
+    await page.getByRole("button", { name: /2klips\/alrescha-app/ }).click();
     await expect(
       page.getByRole("heading", { name: ONBOARDING.scan.title }),
     ).toBeVisible();

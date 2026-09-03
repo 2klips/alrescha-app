@@ -17,7 +17,7 @@ test("onboards through mocked GitHub into the fixture evidence graph", async ({
     page.getByText(ONBOARDING.permission.scopes.contents.title),
   ).toBeVisible();
   await page.getByRole("button", { name: ONBOARDING.permission.cta }).click();
-  await page.getByRole("button", { name: /2klips\/arr-app/ }).click();
+  await page.getByRole("button", { name: /2klips\/alrescha-app/ }).click();
   await expect(
     page.getByRole("heading", { name: ONBOARDING.scan.title }),
   ).toBeVisible();
