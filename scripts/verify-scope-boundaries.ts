@@ -147,8 +147,12 @@ async function collectRootProductFiles(root: string): Promise<string[]> {
 
 // ADR-013: local CLI surfaces are allowed; the boundary is the raw-source
 // body itself — ingest must stay metadata-only in every transfer direction.
+// `manifestText`/`manifests` join the list in Phase 4 Wave A todo 0: the
+// resolver reads package.json and tsconfig.json to learn how a non-relative
+// specifier maps, and manifest text is a file body like any other. Only the
+// derived rules (paths and patterns) may travel.
 const RAW_BODY_IDENTIFIERS =
-  "(?:rawCode|rawSource|sourceCode|codeBody|fileContents?|fileBody|fileText)";
+  "(?:rawCode|rawSource|sourceCode|codeBody|fileContents?|fileBody|fileText|manifestTexts?|manifestBody|manifestSource)";
 const RAW_UPLOAD_CALL = new RegExp(
   `\\b(?:upload|send|post|submit|transmit|push|ingest)\\w*\\s*\\([^;]{0,240}\\b${RAW_BODY_IDENTIFIERS}\\b`,
   "i",

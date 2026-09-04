@@ -11,10 +11,13 @@ export const CLI_MESSAGES = {
   /** 업로드 요약 한 줄 */
   uploaded: (input: {
     artifactCount: number;
+    linkScope?: string;
     removedCount: number;
     skippedCount: number;
   }) =>
-    `업로드 완료 · 아티팩트 ${input.artifactCount}개 · 건너뜀 ${input.skippedCount}개 · 제거 ${input.removedCount}개`,
+    `업로드 완료 · 아티팩트 ${input.artifactCount}개 · 건너뜀 ${input.skippedCount}개 · 제거 ${input.removedCount}개${
+      input.linkScope === "full" ? " · 링크 전체 재계산" : ""
+    }`,
   unchanged: "변경 없음 — 마지막 업로드와 같은 상태입니다.",
   /**
    * ADR-015 §7: 이 경로가 무엇을 만들지 **못하는지**를 먼저 말한다. 본문이
@@ -38,5 +41,5 @@ export const CLI_MESSAGES = {
   missingServer:
     "서버 주소가 없습니다. --server <url> 또는 환경변수 ALRESCHA_SERVER_URL을 설정하세요.",
   usage:
-    "사용법: alrescha push [디렉터리] --repo <owner/name> --server <url> --token <토큰>",
+    "사용법: alrescha push [디렉터리] --repo <owner/name> --server <url> --token <토큰> [--full]\n  --full: 변경되지 않은 파일까지 다시 읽어 링크를 전부 재계산합니다(업로드 내용은 동일하게 메타데이터뿐입니다).",
 } as const;

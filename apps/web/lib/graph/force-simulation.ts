@@ -123,10 +123,43 @@ export function createForceLayout(options: ForceLayoutOptions): ForceLayout {
     target,
   }));
 
+  /**
+   * Degree-normalised link strength — d3's own default shape, restored.
+   *
+   * A flat strength pulls every spring equally hard, so a node with 40 links
+   * is dragged 40 times harder than a leaf and the neighbourhood collapses
+   * into the hairball the galaxy work is trying to undo (R5 §2.2 D3).
+   * Dividing by the sparser endpoint's degree makes a hub's individual pull
+   * proportionally gentle while a leaf's stays exactly as strong as before:
+   * at degree 1 this is `config.linkStrength`, which is what the existing
+   * default was tuned against.
+   */
+  const slotOf = (endpoint: LayoutLink["source"]): number => {
+    // d3 replaces the numeric endpoints with node objects on initialisation,
+    // so this reads slots both before and after that swap.
+    if (typeof endpoint === "number") return endpoint;
+    if (typeof endpoint === "string") return Number.parseInt(endpoint, 10);
+    return endpoint.slot;
+  };
+  const degree = new Map<number, number>();
+  for (const link of links) {
+    const source = slotOf(link.source);
+    const target = slotOf(link.target);
+    degree.set(source, (degree.get(source) ?? 0) + 1);
+    degree.set(target, (degree.get(target) ?? 0) + 1);
+  }
+  const linkStrengthOf = (link: LayoutLink): number => {
+    const sparsest = Math.min(
+      degree.get(slotOf(link.source)) ?? 1,
+      degree.get(slotOf(link.target)) ?? 1,
+    );
+    return config.linkStrength / Math.max(1, sparsest);
+  };
+
   const linkForce = forceLink<LayoutNode, LayoutLink>(links)
     .id((node) => node.slot)
     .distance(config.linkDistance)
-    .strength(config.linkStrength);
+    .strength(linkStrengthOf);
   const chargeForce = forceManyBody<LayoutNode>().strength(
     -config.repelStrength,
   );
@@ -154,7 +187,7 @@ export function createForceLayout(options: ForceLayoutOptions): ForceLayout {
     },
     setConfig(partial) {
       config = clampForceConfig({ ...config, ...partial });
-      linkForce.distance(config.linkDistance).strength(config.linkStrength);
+      linkForce.distance(config.linkDistance).strength(linkStrengthOf);
       chargeForce.strength(-config.repelStrength);
       centerForce.strength(config.centerStrength);
       simulation.alpha(Math.max(simulation.alpha(), 0.3));

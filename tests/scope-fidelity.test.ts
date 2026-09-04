@@ -147,6 +147,31 @@ describe("MVP scope fidelity", () => {
     },
   );
 
+  it("rejects manifest text on the wire, not only source-file text", async () => {
+    // Phase 4 Wave A todo 0: the resolver reads package.json and tsconfig.json
+    // to learn how a non-relative specifier maps. Manifest text is a file body
+    // like any other — only the derived rules (paths and patterns) may travel,
+    // and the boundary has to say so under the name the code would use.
+    await withFixture(
+      {
+        "packages/cli/src/push.ts": `export async function pushProject(client: any, manifestTexts: Map<string, string>) {
+          return client.upload({ manifestTexts });
+        }`,
+      },
+      async (root) => {
+        const report = await verifyScopeBoundaries(root);
+
+        expect(report.findings).toEqual([
+          expect.objectContaining({
+            boundary: "raw-source-upload",
+            file: "packages/cli/src/push.ts",
+          }),
+        ]);
+        expect(report.status).toBe("fail");
+      },
+    );
+  });
+
   it("accepts a metadata-only local CLI (ADR-013 — the boundary moved off CLI existence)", async () => {
     await withFixture(
       {

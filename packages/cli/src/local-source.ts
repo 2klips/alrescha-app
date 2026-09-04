@@ -23,10 +23,29 @@ const IGNORED_SEGMENTS = new Set([
   ".next",
   ".omo",
   ".turbo",
+  "__pycache__",
+  ".venv",
   "coverage",
   "dist",
   "node_modules",
+  "playwright-report",
+  "test-results",
+  "venv",
 ]);
+
+/**
+ * Directories git excludes by path rather than by name. `.claude/worktrees`
+ * holds complete working-tree copies of the repository, so a CLI scan that
+ * walked into it would ingest every file several times over and report a
+ * graph several times denser than the repository actually is — measured on
+ * this repository, 2,921 nodes instead of 421. The GitHub path never sees
+ * them (git excludes the directory), so skipping them is what keeps the two
+ * ingest paths equal (ADR-013).
+ *
+ * `.claude` itself stays in scope: `.claude/rules/*.md` are instruction
+ * artifacts the graph is supposed to carry.
+ */
+const IGNORED_PATHS = new Set([".claude/worktrees"]);
 
 /**
  * Files larger than this get a synthetic (still deterministic) blob sha
@@ -69,6 +88,9 @@ export async function createLocalRepositorySource(
       }
       const absolute = join(directory, dirent.name);
       const path = prefix ? `${prefix}/${dirent.name}` : dirent.name;
+      if (IGNORED_PATHS.has(path)) {
+        continue;
+      }
       if (dirent.isSymbolicLink()) {
         // Present the symlink the way a git tree does (mode 120000) so the
         // scanner records the same `symlink` skip as the GitHub path.

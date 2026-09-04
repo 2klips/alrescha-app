@@ -4,13 +4,23 @@ import ts from "typescript";
 
 import { parseTodoDocument, type ParsedTodoItem } from "../progress/todos";
 import {
+  LINK_SCHEMA_VERSION,
   parsePythonLinks,
   parseTypeScriptLinks,
   resolveCodeLinks,
+  resolveModuleSpecifier,
   type CodeLink,
   type ParsedFileLinks,
 } from "./code-links";
 import { clampConcurrency, mapWithConcurrency } from "./concurrency";
+import {
+  buildModuleResolution,
+  isIgnoredManifestPath,
+  isManifestPath,
+  MAX_MANIFEST_BYTES,
+  MAX_MANIFESTS_PER_SCAN,
+  type ModuleResolutionConfig,
+} from "./module-resolution";
 
 export type ArtifactClassification =
   | "adr"
@@ -100,15 +110,28 @@ export interface ScanSkip {
   readonly reason: ScanSkipReason;
 }
 
+/**
+ * Which files' outgoing structure edges this plan speaks for.
+ *
+ * `incremental` — only the files in `artifacts`; every other file's stored
+ * edges stay untouched, which is what makes a rescan cheap.
+ * `full` — every code file in the tree was re-parsed, so the plan replaces
+ * the repository's structure edges outright (Phase 4 Wave A todo 0).
+ */
+export type LinkScope = "full" | "incremental";
+
 export interface RepositoryScanPlan {
   readonly artifacts: readonly ScannedArtifact[];
   /**
-   * Cross-file structure links from the files scanned this pass (Phase 3
-   * Wave B todo 3). Links from unchanged files are not recomputed — their
-   * stored edges remain valid, which is what makes the rescan incremental.
+   * Cross-file structure links from the files linked this pass (Phase 3
+   * Wave B todo 3). Under `linkScope: "incremental"` the links of unchanged
+   * files are not recomputed — their stored edges remain valid.
    */
   readonly codeLinks: readonly CodeLink[];
   readonly commitSha: string;
+  /** Resolver generation that produced `codeLinks` (see LINK_SCHEMA_VERSION). */
+  readonly linkSchemaVersion: number;
+  readonly linkScope: LinkScope;
   readonly removedPaths: readonly string[];
   readonly skipped: readonly ScanSkip[];
   readonly touchedRows: number;
@@ -517,6 +540,103 @@ function decodedText(bytes: Uint8Array): string | null {
  */
 export const DEFAULT_SCAN_FETCH_CONCURRENCY = 8;
 
+/** `index.ts` and friends — the file shape a re-export barrel takes. */
+const BARREL_FILE_PATTERN = /(?:^|\/)index\.[cm]?[jt]sx?$/;
+/** Extra bodies read per scan to attribute imports through barrels. */
+const MAX_BARREL_FETCHES = 200;
+/** Barrels re-exporting barrels; the resolver's own walk stops at 4 too. */
+const MAX_BARREL_ROUNDS = 4;
+
+function isPythonPath(path: string): boolean {
+  return extension(path.toLowerCase()) === ".py";
+}
+
+/**
+ * Read the barrels this pass's imports resolve through, when the pass did not
+ * already read them, and add their parses to `parsedLinks` in place.
+ *
+ * A first scan and a full relink parse everything, so this adds no fetches
+ * there; only an incremental pass pays, and only for the index files and
+ * package entry points its changed files actually import.
+ */
+async function readBarrelBodies(input: {
+  readonly commitSha: string;
+  readonly concurrency: number;
+  readonly knownCodePaths: ReadonlySet<string>;
+  readonly maxFileBytes: number;
+  readonly parsedLinks: Map<string, ParsedFileLinks>;
+  readonly resolution: ModuleResolutionConfig;
+  readonly source: RepositorySource;
+}): Promise<void> {
+  let frontier = [...input.parsedLinks.keys()];
+  let budget = MAX_BARREL_FETCHES;
+
+  for (let round = 0; round < MAX_BARREL_ROUNDS && budget > 0; round += 1) {
+    const wanted = new Set<string>();
+    for (const path of frontier) {
+      if (isPythonPath(path)) continue;
+      const parsed = input.parsedLinks.get(path);
+      if (!parsed) continue;
+      for (const rawImport of parsed.imports) {
+        if (wanted.size >= budget) break;
+        const resolved = resolveModuleSpecifier(
+          rawImport.specifier,
+          path,
+          input.knownCodePaths,
+          input.resolution,
+        );
+        if (!resolved) continue;
+        const target = resolved.targetPath;
+        if (input.parsedLinks.has(target) || wanted.has(target)) continue;
+        if (isPythonPath(target)) continue;
+        // A package entry point is a barrel by role even when it is not
+        // called `index`; anything else has to look like one.
+        if (
+          resolved.method !== "alias-resolution" &&
+          !BARREL_FILE_PATTERN.test(target)
+        ) {
+          continue;
+        }
+        wanted.add(target);
+      }
+      if (wanted.size >= budget) break;
+    }
+    if (wanted.size === 0) return;
+
+    const paths = [...wanted].sort((left, right) => left.localeCompare(right));
+    budget -= paths.length;
+    const bodies = await mapWithConcurrency(
+      paths,
+      input.concurrency,
+      async (path) => {
+        try {
+          return await input.source.fetchContent(path, input.commitSha);
+        } catch {
+          return new Uint8Array();
+        }
+      },
+    );
+
+    const added: string[] = [];
+    paths.forEach((path, index) => {
+      const bytes = bodies[index];
+      if (
+        !bytes ||
+        bytes.byteLength === 0 ||
+        bytes.byteLength > input.maxFileBytes
+      ) {
+        return;
+      }
+      const text = decodedText(bytes);
+      if (text === null) return;
+      input.parsedLinks.set(path, parseTypeScriptLinks(path, text));
+      added.push(path);
+    });
+    if (added.length === 0) return;
+    frontier = added;
+  }
+}
+
 export async function scanRepository(input: {
   readonly commitSha: string;
   /**
@@ -526,6 +646,15 @@ export async function scanRepository(input: {
    */
   readonly fetchConcurrency?: number;
   readonly maxFileBytes?: number;
+  /**
+   * `full` re-parses every code file in the tree, including ones whose blob
+   * is unchanged, so the plan carries the repository's complete link set.
+   * Bodies are still read transiently and never stored — the only difference
+   * is that an unchanged file contributes links instead of nothing. Use it
+   * when the resolver generation moved (LINK_SCHEMA_VERSION) or when a user
+   * asks for a rescan of an already-ingested repository.
+   */
+  readonly mode?: LinkScope;
   readonly previousArtifacts?: readonly PreviousScannedArtifact[];
   readonly previousCommitSha?: string | null;
   readonly source: RepositorySource;
@@ -536,11 +665,17 @@ export async function scanRepository(input: {
     );
   }
 
-  if (input.previousCommitSha === input.commitSha) {
+  const linkScope: LinkScope = input.mode ?? "incremental";
+
+  // Same commit, incremental pass: nothing to say. A full relink still runs —
+  // the commit did not move, but the resolver did.
+  if (input.previousCommitSha === input.commitSha && linkScope !== "full") {
     return {
       artifacts: [],
       codeLinks: [],
       commitSha: input.commitSha,
+      linkSchemaVersion: LINK_SCHEMA_VERSION,
+      linkScope,
       removedPaths: [],
       skipped: [],
       touchedRows: 0,
@@ -569,6 +704,13 @@ export async function scanRepository(input: {
   const unchangedPaths: string[] = [];
   const parsedLinks = new Map<string, ParsedFileLinks>();
   const knownCodePaths = new Set<string>();
+  const treePaths = new Set<string>();
+  /**
+   * Manifest bodies read this pass, for `buildModuleResolution`. Transient by
+   * construction: the map is local to the call and nothing derived from it
+   * carries file text into the plan (WORK_SPEC §3-3).
+   */
+  const manifestTexts = new Map<string, string>();
 
   /**
    * Pass 1 — classification, no I/O (perf research MT-3). Every decision that
@@ -580,18 +722,31 @@ export async function scanRepository(input: {
   type ScanSlot =
     | { readonly kind: "skipped"; readonly skip: ScanSkip }
     | { readonly kind: "unchanged"; readonly path: string }
+    | { readonly kind: "manifest"; readonly entry: RepositoryTreeEntry }
     | {
         readonly kind: "fetch";
         readonly classification: ArtifactClassification;
         readonly entry: RepositoryTreeEntry;
         readonly previous: PreviousScannedArtifact | undefined;
+        /**
+         * The blob is unchanged and only its links are wanted: the body is
+         * read to re-parse, no artifact row is emitted, and the path stays in
+         * `unchangedPaths`. Only a `full` pass produces these.
+         */
+        readonly relinkOnly: boolean;
       };
 
   const slots: ScanSlot[] = [];
+  let manifestCount = 0;
 
-  for (const entry of [...tree.entries].sort((left, right) =>
+  const sortedEntries = [...tree.entries].sort((left, right) =>
     left.path.localeCompare(right.path),
-  )) {
+  );
+  for (const entry of sortedEntries) {
+    if (entry.type === "blob") treePaths.add(entry.path);
+  }
+
+  for (const entry of sortedEntries) {
     if (entry.type === "commit" || entry.mode === "160000") {
       slots.push({
         kind: "skipped",
@@ -620,6 +775,20 @@ export async function scanRepository(input: {
 
     const classification = classifyArtifactPath(entry.path);
     if (!classification) {
+      // Manifests are not artifacts and never persist. They are read only to
+      // learn the mappings a non-relative specifier resolves through — the
+      // package names, `exports`/`main` targets, tsconfig `paths` and Python
+      // source roots that Wave A todo 0 restores (R5 §2.2 D1).
+      if (
+        manifestCount < MAX_MANIFESTS_PER_SCAN &&
+        isManifestPath(entry.path) &&
+        !isIgnoredManifestPath(entry.path) &&
+        !underFixtureDirectory(entry.path.toLowerCase()) &&
+        (entry.size ?? 0) <= MAX_MANIFEST_BYTES
+      ) {
+        manifestCount += 1;
+        slots.push({ entry, kind: "manifest" });
+      }
       continue;
     }
     observedPaths.add(entry.path);
@@ -641,11 +810,27 @@ export async function scanRepository(input: {
 
     const previous = previousByPath.get(entry.path);
     if (previous?.sourceBlobSha === entry.sha) {
+      if (linkScope === "full" && classification === "code_metadata") {
+        slots.push({
+          classification,
+          entry,
+          kind: "fetch",
+          previous,
+          relinkOnly: true,
+        });
+        continue;
+      }
       slots.push({ kind: "unchanged", path: entry.path });
       continue;
     }
 
-    slots.push({ classification, entry, kind: "fetch", previous });
+    slots.push({
+      classification,
+      entry,
+      kind: "fetch",
+      previous,
+      relinkOnly: false,
+    });
   }
 
   /**
@@ -654,13 +839,27 @@ export async function scanRepository(input: {
    * plan and the thrown error are what the sequential loop produced.
    */
   const pending = slots.filter(
-    (slot): slot is Extract<ScanSlot, { kind: "fetch" }> =>
-      slot.kind === "fetch",
+    (slot): slot is Extract<ScanSlot, { kind: "fetch" | "manifest" }> =>
+      slot.kind === "fetch" || slot.kind === "manifest",
   );
   const fetched = await mapWithConcurrency(
     pending,
     clampConcurrency(input.fetchConcurrency, DEFAULT_SCAN_FETCH_CONCURRENCY),
-    (slot) => input.source.fetchContent(slot.entry.path, input.commitSha),
+    async (slot) => {
+      if (slot.kind !== "manifest") {
+        return input.source.fetchContent(slot.entry.path, input.commitSha);
+      }
+      // A manifest is an optimisation, never a requirement: a read that
+      // fails costs the repository some alias rules, not the scan.
+      try {
+        return await input.source.fetchContent(
+          slot.entry.path,
+          input.commitSha,
+        );
+      } catch {
+        return new Uint8Array();
+      }
+    },
   );
 
   /**
@@ -679,7 +878,17 @@ export async function scanRepository(input: {
       continue;
     }
 
-    const { classification, entry, previous } = slot;
+    if (slot.kind === "manifest") {
+      const manifestBytes = fetched[fetchIndex] as Uint8Array;
+      fetchIndex += 1;
+      if (manifestBytes.byteLength > 0) {
+        const text = decodedText(manifestBytes);
+        if (text !== null) manifestTexts.set(slot.entry.path, text);
+      }
+      continue;
+    }
+
+    const { classification, entry, previous, relinkOnly } = slot;
     const bytes = fetched[fetchIndex] as Uint8Array;
     fetchIndex += 1;
     if (bytes.byteLength > maxFileBytes) {
@@ -701,7 +910,7 @@ export async function scanRepository(input: {
     }
 
     const digest = createHash("sha256").update(bytes).digest("hex");
-    if (previous?.digest === digest) {
+    if (previous?.digest === digest && !relinkOnly) {
       unchangedPaths.push(entry.path);
       continue;
     }
@@ -715,6 +924,13 @@ export async function scanRepository(input: {
       parsedLinks.set(entry.path, parseTypeScriptLinks(entry.path, source));
     } else if (extraction?.engine === "python-structural") {
       parsedLinks.set(entry.path, parsePythonLinks(source));
+    }
+
+    if (relinkOnly) {
+      // The body was read to re-parse its links and is now discarded: the
+      // artifact row on record is already correct for this blob.
+      unchangedPaths.push(entry.path);
+      continue;
     }
 
     artifacts.push({
@@ -761,16 +977,48 @@ export async function scanRepository(input: {
       );
     }
   }
+  const resolution = buildModuleResolution({
+    manifests: manifestTexts,
+    treePaths,
+  });
+
+  /**
+   * Pass 4 — read the barrels this pass's imports point through.
+   *
+   * Attributing `import { scanRepository } from "@alrescha/core"` to the file
+   * that declares it needs the barrel's own `export … from` list, and an
+   * incremental pass only parses files that changed. Without this pass the
+   * edge would land on the barrel or on the declaring file depending on
+   * whether the barrel happened to be rescanned — the same commit yielding
+   * different edges on different scan histories. These bodies are read
+   * transiently like every other, and produce no artifact rows.
+   */
+  await readBarrelBodies({
+    commitSha: input.commitSha,
+    concurrency: clampConcurrency(
+      input.fetchConcurrency,
+      DEFAULT_SCAN_FETCH_CONCURRENCY,
+    ),
+    knownCodePaths,
+    maxFileBytes,
+    parsedLinks,
+    resolution,
+    source: input.source,
+  });
+
   const codeLinks = resolveCodeLinks({
     exportsByPath,
     files: parsedLinks,
     knownPaths: knownCodePaths,
+    resolution,
   });
 
   return {
     artifacts,
     codeLinks,
     commitSha: input.commitSha,
+    linkSchemaVersion: LINK_SCHEMA_VERSION,
+    linkScope,
     removedPaths,
     skipped,
     touchedRows: artifacts.length + removedPaths.length + skipped.length,

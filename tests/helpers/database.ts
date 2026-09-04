@@ -107,6 +107,8 @@ export const REQUIREMENT_JUDGMENT_ENQUEUE_MIGRATION =
   "supabase/migrations/202609020002_requirement_judgment_enqueue.sql";
 export const PRUNE_ACCESS_EVENTS_CRON_MIGRATION =
   "supabase/migrations/202609030001_prune_access_events_cron.sql";
+export const LINK_RECOVERY_MIGRATION =
+  "supabase/migrations/202609040001_link_recovery.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -151,6 +153,7 @@ export const ALL_MIGRATIONS = [
   RETRY_AFTER_TERMINAL_FAILURE_MIGRATION,
   REQUIREMENT_JUDGMENT_ENQUEUE_MIGRATION,
   PRUNE_ACCESS_EVENTS_CRON_MIGRATION,
+  LINK_RECOVERY_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

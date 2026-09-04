@@ -4,12 +4,19 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { localIngestPayloadSchema } from "@alrescha/core";
+import { LINK_SCHEMA_VERSION, localIngestPayloadSchema } from "@alrescha/core";
 
 import { pushLocalProject } from "./push";
 
 /** A string that exists only inside a source-file body — never in metadata. */
 const BODY_SENTINEL = "RAW_BODY_SENTINEL_9f3d7c";
+/**
+ * The scan reads manifests to learn how non-relative specifiers resolve
+ * (Phase 4 Wave A todo 0). Their text is as much a file body as any source
+ * file's, so it gets its own sentinel: the resolver may read package.json,
+ * and none of it may reach the wire (WORK_SPEC §3-3, ADR-013 §1).
+ */
+const MANIFEST_SENTINEL = "MANIFEST_BODY_SENTINEL_4b81ae";
 
 const roots: string[] = [];
 
@@ -24,6 +31,16 @@ async function fixture(): Promise<string> {
   );
   await writeFile(join(root, "TODO.md"), "- [ ] 파서 마무리\n", "utf8");
   await writeFile(join(root, "AGENTS.md"), "# 작업 규칙\n", "utf8");
+  await writeFile(
+    join(root, "package.json"),
+    `{\n  "name": "@demo/pushed",\n  "description": "${MANIFEST_SENTINEL}",\n  "exports": { ".": "./src/engine.ts" }\n}\n`,
+    "utf8",
+  );
+  await writeFile(
+    join(root, "tsconfig.json"),
+    `{\n  // ${MANIFEST_SENTINEL}\n  "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] } }\n}\n`,
+    "utf8",
+  );
   return root;
 }
 
@@ -54,7 +71,13 @@ function fakeServer(options?: { previous?: unknown; uploadStatus?: number }): {
     });
     if (method === "GET") {
       return Response.json(
-        options?.previous ?? { previous: { artifacts: [], commitSha: null } },
+        options?.previous ?? {
+          previous: {
+            artifacts: [],
+            commitSha: null,
+            linkSchemaVersion: LINK_SCHEMA_VERSION,
+          },
+        },
       );
     }
     if (options?.uploadStatus && options.uploadStatus !== 200) {
@@ -93,10 +116,52 @@ describe("pushLocalProject", () => {
 
     // Negative acceptance: the source body never leaves the machine…
     expect(body).not.toContain(BODY_SENTINEL);
+    // …nor does the manifest text the resolver read on the way…
+    expect(body).not.toContain(MANIFEST_SENTINEL);
     // …while genuine metadata does.
     expect(body).toContain("src/engine.ts");
     expect(body).toContain("computeAnswer");
     expect(body).toContain("파서 마무리");
+  });
+
+  it("re-links in full when the server's edges predate this resolver", async () => {
+    const root = await fixture();
+    const first = fakeServer();
+    const firstOutcome = await pushLocalProject({
+      ...PUSH_DEFAULTS,
+      fetchImplementation: first.fetchImplementation,
+      rootDir: root,
+    });
+    const uploadedCommit = (firstOutcome as { commitSha: string }).commitSha;
+
+    // Same commit, but the stored edges were built by resolver generation 1.
+    // An incremental pass would never re-parse a single unchanged file, so the
+    // improved resolver would never reach them (R5 §2.2 D2).
+    const stale = fakeServer({
+      previous: {
+        previous: {
+          artifacts: [],
+          commitSha: uploadedCommit,
+          linkSchemaVersion: 1,
+        },
+      },
+    });
+    const outcome = await pushLocalProject({
+      ...PUSH_DEFAULTS,
+      fetchImplementation: stale.fetchImplementation,
+      rootDir: root,
+    });
+
+    expect(outcome.status).toBe("uploaded");
+    expect((outcome as { linkScope: string }).linkScope).toBe("full");
+    const upload = stale.requests.find(({ method }) => method === "POST");
+    expect(upload).toBeDefined();
+    const plan = localIngestPayloadSchema.parse(JSON.parse(upload!.body!)).plan;
+    expect(plan.linkScope).toBe("full");
+    expect(plan.linkSchemaVersion).toBe(LINK_SCHEMA_VERSION);
+    // A relink reads bodies to re-parse them; it still uploads none.
+    expect(upload!.body).not.toContain(BODY_SENTINEL);
+    expect(upload!.body).not.toContain(MANIFEST_SENTINEL);
   });
 
   it("short-circuits to unchanged when the server already has this commit", async () => {
@@ -111,7 +176,13 @@ describe("pushLocalProject", () => {
     const uploadedCommit = (firstOutcome as { commitSha: string }).commitSha;
 
     const second = fakeServer({
-      previous: { previous: { artifacts: [], commitSha: uploadedCommit } },
+      previous: {
+        previous: {
+          artifacts: [],
+          commitSha: uploadedCommit,
+          linkSchemaVersion: LINK_SCHEMA_VERSION,
+        },
+      },
     });
     const secondOutcome = await pushLocalProject({
       ...PUSH_DEFAULTS,

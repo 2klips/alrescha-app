@@ -1,3 +1,4 @@
+import { isTestPath } from "./path-conventions";
 import type { ArtifactClassification } from "./repository-scanner";
 
 /**
@@ -36,10 +37,7 @@ export function deriveArtifactFacets(
   path: string,
   classification: ArtifactClassification,
 ): ArtifactFacets {
-  const isTest =
-    /(?:^|\/)(?:__tests__|tests?)(?:\/|$)|\.(?:spec|test)\.[cm]?[jt]sx?$/.test(
-      path,
-    );
+  const isTest = isTestPath(path);
 
   const domain: FacetDomain = path.startsWith("apps/web/")
     ? "frontend"

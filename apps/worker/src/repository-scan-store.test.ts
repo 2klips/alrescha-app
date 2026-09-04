@@ -23,6 +23,8 @@ const PLAN: RepositoryScanPlan = {
   artifacts: [],
   codeLinks: [],
   commitSha: "a".repeat(40),
+  linkSchemaVersion: 2,
+  linkScope: "incremental",
   removedPaths: [],
   skipped: [],
   touchedRows: 370,

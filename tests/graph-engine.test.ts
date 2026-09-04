@@ -164,6 +164,33 @@ describe("simulation wire protocol", () => {
     ]);
     expect(message.config).toEqual(DEFAULT_FORCE_CONFIG);
   });
+
+  test("start message gives a node pair one spring, however many relations join it", () => {
+    // Two files that import each other, call each other and are joined by a
+    // derived `tests` edge are three edges but one relationship as far as the
+    // layout is concerned. Counting each one pulled the closest pairs three
+    // times harder than the graph says they are related, and the scanner now
+    // emits exactly this shape (R5 §2.2 D3).
+    const base = fixture(15).edges[0]!;
+    const nodes = fixture(15).nodes;
+    const source = nodes.findIndex((node) => node.id === "req-auth");
+    const target = nodes.findIndex((node) => node.id === "code-auth");
+    const data: GraphData = {
+      edges: [
+        { ...base, id: "e-imports", source: "req-auth", target: "code-auth" },
+        { ...base, id: "e-calls", source: "req-auth", target: "code-auth" },
+        // Reversed: direction is meaningless to a spring, so this is the
+        // same pair and must not add a second one.
+        { ...base, id: "e-tests", source: "code-auth", target: "req-auth" },
+      ],
+      nodes,
+    };
+
+    const message = createStartMessage(data);
+
+    expect(message.links).toHaveLength(1);
+    expect(message.links[0]).toEqual([source, target]);
+  });
 });
 
 describe("worker runtime", () => {

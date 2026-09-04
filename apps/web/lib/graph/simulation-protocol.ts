@@ -217,11 +217,24 @@ export function createStartMessage(
   const nodeIds = data.nodes.map((node) => node.id);
   const indexById = new Map(nodeIds.map((id, index) => [id, index]));
   const links: LinkPair[] = [];
+  /**
+   * One spring per node *pair*, not per edge. Two files that both import and
+   * call each other are one relationship as far as the layout is concerned;
+   * counting it twice doubled the pull on exactly the pairs that already sit
+   * closest, and the derived `tests` relation would have made it three
+   * (R5 §2.2 D3). Direction is irrelevant to a spring, so the key is ordered.
+   */
+  const seen = new Set<number>();
   for (const edge of data.edges) {
     const source = indexById.get(edge.source);
     const target = indexById.get(edge.target);
     if (source === undefined || target === undefined || source === target)
       continue;
+    const low = source < target ? source : target;
+    const high = source < target ? target : source;
+    const key = low * nodeIds.length + high;
+    if (seen.has(key)) continue;
+    seen.add(key);
     links.push([source, target]);
   }
   return {

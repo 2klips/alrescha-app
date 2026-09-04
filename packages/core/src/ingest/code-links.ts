@@ -1,23 +1,58 @@
 import ts from "typescript";
 
+import {
+  aliasCandidates,
+  EMPTY_MODULE_RESOLUTION,
+  type ModuleResolutionConfig,
+  type ResolutionTier,
+} from "./module-resolution";
+import {
+  directoryOf,
+  isTestPath,
+  joinRepositoryPath,
+  normalizeRepositoryPath,
+} from "./path-conventions";
+
 /**
- * Structural code links (Phase 3 Wave B todo 3).
+ * Structural code links (Phase 3 Wave B todo 3, widened in Phase 4 Wave A
+ * todo 0).
  *
  * Two-tier honesty, recorded per link (RESEARCH_KG_FUSION §1/§2):
  * - `resolved` — the connection is deterministic: a module specifier resolved
- *   against the repository tree, or a call through an import binding.
- * - `reference` — a name match: plausible, provenance-carried, but not proven
- *   by resolution. Rendered thinner (`edgeStroke`).
+ *   against the repository tree (relative, or through a mapping a manifest
+ *   states outright), or a call through an import binding.
+ * - `reference` — a name match, a layout convention, or a structural parse:
+ *   plausible, provenance-carried, but not proven by resolution. Rendered
+ *   thinner (`edgeStroke`).
  *
  * Only metadata travels: paths, symbol names, line spans. No checker program
  * is built (ADR-014 keeps the engine chain) and no source text leaves the
  * scan; parsing is per-file and resolution runs over the collected metadata.
  */
 
-export type CodeLinkKind = "calls" | "imports";
+export type CodeLinkKind = "calls" | "imports" | "tests";
 export type CodeLinkMethod =
-  "import-binding" | "module-resolution" | "name-match";
-export type CodeLinkTier = "reference" | "resolved";
+  | "alias-resolution"
+  | "barrel-resolution"
+  | "import-binding"
+  | "module-resolution"
+  | "name-match"
+  | "test-import";
+export type CodeLinkTier = ResolutionTier;
+
+/**
+ * Bumped whenever this resolver can derive links it could not derive before.
+ * A repository stamped with an older version is re-linked in full on its next
+ * scan (`scanRepository({ mode: "full" })`) instead of keeping the thin graph
+ * an incremental pass would preserve — unchanged files are never re-parsed by
+ * an incremental scan, so a resolver improvement would otherwise only reach
+ * files that happen to change afterwards (R5 §2.2 D2).
+ *
+ * 1 — relative specifiers only.
+ * 2 — workspace/tsconfig aliases, barrel re-exports, Python source roots,
+ *     and the derived `tests` relation.
+ */
+export const LINK_SCHEMA_VERSION = 2;
 
 export interface CodeLinkSpan {
   readonly endLine: number;
@@ -41,9 +76,18 @@ interface RawImportBinding {
   readonly symbol: string | null;
 }
 
+/** `export { a as b } from "./x"` — the barrel exports `b`, sourced as `a`. */
+interface RawReExport {
+  readonly exportedAs: string;
+  readonly sourceName: string;
+}
+
 interface RawImport {
   readonly bindings: readonly RawImportBinding[];
+  /** `export … from` rather than `import …`. */
+  readonly isReExport: boolean;
   readonly names: readonly string[];
+  readonly reExports: readonly RawReExport[];
   readonly span: CodeLinkSpan;
   readonly specifier: string;
 }
@@ -131,7 +175,9 @@ export function parseTypeScriptLinks(
       }
       imports.push({
         bindings,
+        isReExport: false,
         names,
+        reExports: [],
         span: lineSpan(sourceFile, statement),
         specifier: statement.moduleSpecifier.text,
       });
@@ -143,15 +189,21 @@ export function parseTypeScriptLinks(
       ts.isStringLiteral(statement.moduleSpecifier)
     ) {
       const names: string[] = [];
+      const reExports: RawReExport[] = [];
       if (statement.exportClause && ts.isNamedExports(statement.exportClause)) {
-        for (const element of statement.exportClause.elements)
-          names.push(element.propertyName?.text ?? element.name.text);
+        for (const element of statement.exportClause.elements) {
+          const sourceName = element.propertyName?.text ?? element.name.text;
+          names.push(sourceName);
+          reExports.push({ exportedAs: element.name.text, sourceName });
+        }
       } else {
         names.push("*");
       }
       imports.push({
         bindings: [],
+        isReExport: true,
         names,
+        reExports,
         span: lineSpan(sourceFile, statement),
         specifier: statement.moduleSpecifier.text,
       });
@@ -186,7 +238,9 @@ export function parseTypeScriptLinks(
     ) {
       imports.push({
         bindings: [],
+        isReExport: false,
         names: ["*"],
+        reExports: [],
         span: lineSpan(sourceFile, node),
         specifier: node.arguments[0].text,
       });
@@ -225,7 +279,9 @@ export function parsePythonLinks(source: string): ParsedFileLinks {
       for (const module of plain[1].split(",")) {
         imports.push({
           bindings: [],
+          isReExport: false,
           names: ["*"],
+          reExports: [],
           span,
           specifier: module.trim(),
         });
@@ -239,42 +295,24 @@ export function parsePythonLinks(source: string): ParsedFileLinks {
         .split(",")
         .map((part) => part.trim().split(/\s+as\s+/)[0] ?? "")
         .filter((name) => /^[\w*]+$/.test(name));
-      imports.push({ bindings: [], names, span, specifier: named[1] });
+      imports.push({
+        bindings: [],
+        isReExport: false,
+        names,
+        reExports: [],
+        span,
+        specifier: named[1],
+      });
     }
   });
   return { calls: [], imports, localNames: new Set() };
 }
 
-function directoryOf(path: string): string {
-  const slash = path.lastIndexOf("/");
-  return slash === -1 ? "" : path.slice(0, slash);
-}
-
-/** Normalize `a/b/../c` → `a/c`; returns null when it escapes the repo root. */
-function normalizePath(path: string): string | null {
-  const segments: string[] = [];
-  for (const segment of path.split("/")) {
-    if (segment === "" || segment === ".") continue;
-    if (segment === "..") {
-      if (segments.length === 0) return null;
-      segments.pop();
-      continue;
-    }
-    segments.push(segment);
-  }
-  return segments.join("/");
-}
-
-/** Resolve a relative TS/JS specifier against the repository tree. */
-export function resolveTypeScriptSpecifier(
-  specifier: string,
-  fromPath: string,
+/** Extension and index probing for a repo-relative module path. */
+function probeModulePath(
+  joined: string,
   knownPaths: ReadonlySet<string>,
 ): string | null {
-  if (!specifier.startsWith(".")) return null;
-  const joined = normalizePath(`${directoryOf(fromPath)}/${specifier}`);
-  if (joined === null) return null;
-
   const candidates: string[] = [joined];
   // NodeNext style: `./x.js` written for an on-disk `./x.ts`.
   const withoutExtension = joined.replace(/\.(?:[cm]?js|jsx)$/, "");
@@ -289,26 +327,111 @@ export function resolveTypeScriptSpecifier(
   return candidates.find((candidate) => knownPaths.has(candidate)) ?? null;
 }
 
-/** Resolve a Python module to a repo file, relative dots included. */
-export function resolvePythonModule(
+/** Resolve a relative TS/JS specifier against the repository tree. */
+export function resolveTypeScriptSpecifier(
   specifier: string,
   fromPath: string,
   knownPaths: ReadonlySet<string>,
 ): string | null {
-  let base = "";
-  let module = specifier;
+  if (!specifier.startsWith(".")) return null;
+  const joined = normalizeRepositoryPath(
+    `${directoryOf(fromPath)}/${specifier}`,
+  );
+  if (joined === null) return null;
+  return probeModulePath(joined, knownPaths);
+}
+
+export interface ResolvedSpecifier {
+  readonly method: CodeLinkMethod;
+  readonly targetPath: string;
+  readonly tier: CodeLinkTier;
+}
+
+/**
+ * Resolve any TS/JS specifier: relative against the tree, non-relative
+ * through the manifest-derived alias rules. A specifier that names a real
+ * dependency (`react`) matches no rule and produces nothing — the scanner
+ * never invents an edge to code it cannot see.
+ */
+export function resolveModuleSpecifier(
+  specifier: string,
+  fromPath: string,
+  knownPaths: ReadonlySet<string>,
+  resolution: ModuleResolutionConfig,
+): ResolvedSpecifier | null {
+  if (specifier.startsWith(".")) {
+    const relative = resolveTypeScriptSpecifier(
+      specifier,
+      fromPath,
+      knownPaths,
+    );
+    return relative === null
+      ? null
+      : {
+          method: "module-resolution",
+          targetPath: relative,
+          tier: "resolved",
+        };
+  }
+  for (const match of aliasCandidates(specifier, fromPath, resolution)) {
+    for (const candidate of match.candidates) {
+      const probed = probeModulePath(candidate, knownPaths);
+      if (probed !== null) {
+        return {
+          method: "alias-resolution",
+          targetPath: probed,
+          tier: match.tier,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Resolve a Python module to a repo file, relative dots included. Absolute
+ * modules are tried against the source roots — the importing file's own root
+ * first, then any root that matches uniquely.
+ */
+export function resolvePythonModule(
+  specifier: string,
+  fromPath: string,
+  knownPaths: ReadonlySet<string>,
+  pythonRoots: readonly string[] = [""],
+): string | null {
   const relative = /^(\.+)(.*)$/.exec(specifier);
   if (relative?.[1]) {
-    base = directoryOf(fromPath);
+    let base = directoryOf(fromPath);
     for (let index = 1; index < relative[1].length; index += 1) {
       base = directoryOf(base);
     }
-    module = relative[2] ?? "";
+    return probePythonModule(base, relative[2] ?? "", knownPaths);
   }
-  const modulePath = module.replaceAll(".", "/");
-  const joined = normalizePath(
-    [base, modulePath].filter((part) => part.length > 0).join("/"),
-  );
+
+  const roots = pythonRoots.length > 0 ? pythonRoots : [""];
+  const ownRoot = roots
+    .filter((root) => root === "" || fromPath.startsWith(`${root}/`))
+    .sort((left, right) => right.length - left.length)[0];
+  if (ownRoot !== undefined) {
+    const own = probePythonModule(ownRoot, specifier, knownPaths);
+    if (own !== null) return own;
+  }
+
+  const hits: string[] = [];
+  for (const root of roots) {
+    if (root === ownRoot) continue;
+    const hit = probePythonModule(root, specifier, knownPaths);
+    if (hit !== null && !hits.includes(hit)) hits.push(hit);
+  }
+  return hits.length === 1 ? (hits[0] ?? null) : null;
+}
+
+function probePythonModule(
+  base: string,
+  module: string,
+  knownPaths: ReadonlySet<string>,
+): string | null {
+  const joined = joinRepositoryPath(base, module.replaceAll(".", "/"));
   if (joined === null || joined.length === 0) return null;
   for (const candidate of [`${joined}.py`, `${joined}/__init__.py`]) {
     if (knownPaths.has(candidate)) return candidate;
@@ -323,6 +446,8 @@ export interface ResolveCodeLinksInput {
   readonly files: ReadonlyMap<string, ParsedFileLinks>;
   /** Every code-file path in the tree (changed or not) — resolution targets. */
   readonly knownPaths: ReadonlySet<string>;
+  /** Manifest-derived alias rules and Python roots; empty when unavailable. */
+  readonly resolution?: ModuleResolutionConfig;
 }
 
 interface MutableLink {
@@ -376,6 +501,114 @@ function buildSymbolOwnerIndex(
   return index;
 }
 
+interface BarrelTable {
+  /** Exported name → the specifier it is re-exported from. */
+  readonly named: ReadonlyMap<string, RawReExport & { specifier: string }>;
+  /** `export * from` specifiers, in source order. */
+  readonly stars: readonly string[];
+}
+
+/**
+ * Index of the re-export declarations in each file scanned this pass. A file
+ * with no `export … from` never appears, so the lookup below is also the
+ * "is this a barrel?" test.
+ */
+function buildBarrelTables(
+  files: ReadonlyMap<string, ParsedFileLinks>,
+): ReadonlyMap<string, BarrelTable> {
+  const tables = new Map<string, BarrelTable>();
+  for (const [path, parsed] of files) {
+    const named = new Map<string, RawReExport & { specifier: string }>();
+    const stars: string[] = [];
+    for (const rawImport of parsed.imports) {
+      if (!rawImport.isReExport) continue;
+      if (rawImport.reExports.length === 0) {
+        stars.push(rawImport.specifier);
+        continue;
+      }
+      for (const reExport of rawImport.reExports) {
+        if (!named.has(reExport.exportedAs))
+          named.set(reExport.exportedAs, {
+            ...reExport,
+            specifier: rawImport.specifier,
+          });
+      }
+    }
+    if (named.size > 0 || stars.length > 0) tables.set(path, { named, stars });
+  }
+  return tables;
+}
+
+const MAX_BARREL_DEPTH = 4;
+
+/**
+ * Follow a name through `index.ts`-style re-exports to the file that actually
+ * declares it. An `import { scanRepository } from "@alrescha/core"` should
+ * connect to the scanner, not pile another edge onto a hub the reader learns
+ * nothing from (R5 §2.5). Ambiguity ends the walk: a name reachable through
+ * two different `export *` chains resolves to neither.
+ */
+function resolveThroughBarrel(
+  barrelPath: string,
+  name: string,
+  context: {
+    readonly barrels: ReadonlyMap<string, BarrelTable>;
+    readonly exportsByPath: ReadonlyMap<string, ReadonlySet<string>>;
+    readonly knownPaths: ReadonlySet<string>;
+    readonly resolution: ModuleResolutionConfig;
+  },
+  depth = 0,
+  visited: ReadonlySet<string> = new Set(),
+): string | null {
+  if (depth >= MAX_BARREL_DEPTH || visited.has(barrelPath)) return null;
+  const table = context.barrels.get(barrelPath);
+  if (!table) return null;
+  const nextVisited = new Set(visited).add(barrelPath);
+
+  const direct = table.named.get(name);
+  if (direct) {
+    const resolved = resolveModuleSpecifier(
+      direct.specifier,
+      barrelPath,
+      context.knownPaths,
+      context.resolution,
+    );
+    if (!resolved) return null;
+    const deeper = resolveThroughBarrel(
+      resolved.targetPath,
+      direct.sourceName,
+      context,
+      depth + 1,
+      nextVisited,
+    );
+    return deeper ?? resolved.targetPath;
+  }
+
+  const hits: string[] = [];
+  for (const specifier of table.stars) {
+    const resolved = resolveModuleSpecifier(
+      specifier,
+      barrelPath,
+      context.knownPaths,
+      context.resolution,
+    );
+    if (!resolved) continue;
+    if (context.exportsByPath.get(resolved.targetPath)?.has(name)) {
+      if (!hits.includes(resolved.targetPath)) hits.push(resolved.targetPath);
+      continue;
+    }
+    const deeper = resolveThroughBarrel(
+      resolved.targetPath,
+      name,
+      context,
+      depth + 1,
+      nextVisited,
+    );
+    if (deeper !== null && !hits.includes(deeper)) hits.push(deeper);
+  }
+  return hits.length === 1 ? (hits[0] ?? null) : null;
+}
+
 /**
  * Resolve parsed files into cross-file links, one per
  * (sourcePath, targetPath, kind) — the persisted edge granularity.
@@ -383,6 +616,14 @@ function buildSymbolOwnerIndex(
 export function resolveCodeLinks(input: ResolveCodeLinksInput): CodeLink[] {
   const links = new Map<string, MutableLink>();
   const symbolOwners = buildSymbolOwnerIndex(input.exportsByPath);
+  const resolution = input.resolution ?? EMPTY_MODULE_RESOLUTION;
+  const barrels = buildBarrelTables(input.files);
+  const barrelContext = {
+    barrels,
+    exportsByPath: input.exportsByPath,
+    knownPaths: input.knownPaths,
+    resolution,
+  };
 
   function record(
     kind: CodeLinkKind,
@@ -420,33 +661,117 @@ export function resolveCodeLinks(input: ResolveCodeLinksInput): CodeLink[] {
   }
 
   for (const [path, parsed] of input.files) {
+    const sourceIsTest = isTestPath(path);
     // Import target per local binding, for the call pass.
     const importTargets = new Map<
       string,
       { symbol: string | null; target: string }
     >();
 
-    for (const rawImport of parsed.imports) {
-      const target = isPython(path)
-        ? resolvePythonModule(rawImport.specifier, path, input.knownPaths)
-        : resolveTypeScriptSpecifier(
-            rawImport.specifier,
-            path,
-            input.knownPaths,
-          );
-      if (!target) continue;
+    /**
+     * A test file's import is also the closest deterministic statement the
+     * repository makes about coverage. It is a *reference*: the file is
+     * exercised, which is not the same as a passing run, so this never
+     * promotes anything to `verified` (WORK_SPEC §3-1, OQ-036).
+     */
+    function recordTestEdge(
+      targetPath: string,
+      span: CodeLinkSpan,
+      symbols: readonly string[],
+    ): void {
+      if (!sourceIsTest || isTestPath(targetPath)) return;
       record(
-        "imports",
+        "tests",
         path,
-        target,
-        // Python parsing is structural (no AST), so its links stay reference.
-        isPython(path) ? "reference" : "resolved",
-        "module-resolution",
-        rawImport.span,
-        rawImport.names.filter((name) => name !== "*"),
+        targetPath,
+        "reference",
+        "test-import",
+        span,
+        symbols,
       );
+    }
+
+    for (const rawImport of parsed.imports) {
+      if (isPython(path)) {
+        const target = resolvePythonModule(
+          rawImport.specifier,
+          path,
+          input.knownPaths,
+          resolution.pythonRoots,
+        );
+        if (!target) continue;
+        const symbols = rawImport.names.filter((name) => name !== "*");
+        // Python parsing is structural (no AST), so its links stay reference.
+        record(
+          "imports",
+          path,
+          target,
+          "reference",
+          "module-resolution",
+          rawImport.span,
+          symbols,
+        );
+        recordTestEdge(target, rawImport.span, symbols);
+        continue;
+      }
+
+      const resolved = resolveModuleSpecifier(
+        rawImport.specifier,
+        path,
+        input.knownPaths,
+        resolution,
+      );
+      if (!resolved) continue;
+
+      const namedImports = rawImport.names.filter((name) => name !== "*");
+      const owners = new Map<string, string>();
+      if (barrels.has(resolved.targetPath)) {
+        for (const name of namedImports) {
+          const owner = resolveThroughBarrel(
+            resolved.targetPath,
+            name,
+            barrelContext,
+          );
+          if (owner !== null && owner !== path) owners.set(name, owner);
+        }
+      }
+
+      for (const [name, owner] of owners) {
+        record(
+          "imports",
+          path,
+          owner,
+          "resolved",
+          "barrel-resolution",
+          rawImport.span,
+          [name],
+        );
+        recordTestEdge(owner, rawImport.span, [name]);
+      }
+
+      // The barrel itself stays on the graph whenever it still carries part
+      // of this import: a namespace/default form, or a name the walk could
+      // not attribute to exactly one declaring file.
+      const unattributed = namedImports.filter((name) => !owners.has(name));
+      if (unattributed.length > 0 || namedImports.length === 0) {
+        record(
+          "imports",
+          path,
+          resolved.targetPath,
+          resolved.tier,
+          resolved.method,
+          rawImport.span,
+          unattributed,
+        );
+        recordTestEdge(resolved.targetPath, rawImport.span, unattributed);
+      }
+
       for (const binding of rawImport.bindings) {
-        importTargets.set(binding.local, { symbol: binding.symbol, target });
+        const owner = binding.symbol ? owners.get(binding.symbol) : undefined;
+        importTargets.set(binding.local, {
+          symbol: binding.symbol,
+          target: owner ?? resolved.targetPath,
+        });
       }
     }
 

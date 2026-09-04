@@ -50,9 +50,11 @@ export {
 export type { PageRankEdge, PageRankInput } from "./brain/pagerank";
 
 export {
+  LINK_SCHEMA_VERSION,
   parsePythonLinks,
   parseTypeScriptLinks,
   resolveCodeLinks,
+  resolveModuleSpecifier,
   resolvePythonModule,
   resolveTypeScriptSpecifier,
 } from "./ingest/code-links";
@@ -62,6 +64,24 @@ export type {
   CodeLinkMethod,
   CodeLinkTier,
 } from "./ingest/code-links";
+
+export {
+  EMPTY_MODULE_RESOLUTION,
+  aliasCandidates,
+  buildModuleResolution,
+  isManifestPath,
+} from "./ingest/module-resolution";
+export type {
+  AliasRule,
+  AliasSource,
+  ModuleResolutionConfig,
+} from "./ingest/module-resolution";
+
+export {
+  directoryOf,
+  isTestPath,
+  normalizeRepositoryPath,
+} from "./ingest/path-conventions";
 
 export {
   DEFAULT_SCAN_FETCH_CONCURRENCY,
@@ -80,6 +100,7 @@ export {
 export type {
   ArtifactClassification,
   ExportedSymbolMetadata,
+  LinkScope,
   PersistedArtifactKind,
   PreviousScannedArtifact,
   RationaleKind,

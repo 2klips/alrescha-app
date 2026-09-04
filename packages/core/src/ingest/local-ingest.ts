@@ -79,8 +79,15 @@ const scannedArtifactSchema = z.strictObject({
 });
 
 const codeLinkSchema = z.strictObject({
-  kind: z.enum(["calls", "imports"]),
-  method: z.enum(["import-binding", "module-resolution", "name-match"]),
+  kind: z.enum(["calls", "imports", "tests"]),
+  method: z.enum([
+    "alias-resolution",
+    "barrel-resolution",
+    "import-binding",
+    "module-resolution",
+    "name-match",
+    "test-import",
+  ]),
   sourcePath: z.string().min(1).max(1000),
   span: z.strictObject({
     endLine: z.number().int().positive(),
@@ -95,6 +102,11 @@ export const repositoryScanPlanSchema = z.strictObject({
   artifacts: z.array(scannedArtifactSchema).max(100_000),
   codeLinks: z.array(codeLinkSchema).max(200_000),
   commitSha: sha1Schema,
+  // Defaulted rather than required: a CLI built before Phase 4 uploads a
+  // plan that predates both fields, and its links are incremental by
+  // definition. Nothing about the payload's metadata-only contract changes.
+  linkSchemaVersion: z.number().int().positive().max(10_000).default(1),
+  linkScope: z.enum(["full", "incremental"]).default("incremental"),
   removedPaths: z.array(z.string().min(1).max(1000)).max(100_000),
   skipped: z
     .array(
@@ -127,6 +139,12 @@ export interface LocalIngestPrincipal {
 export interface LocalIngestPreviousState {
   readonly artifacts: readonly unknown[];
   readonly commitSha: string | null;
+  /**
+   * Resolver generation the stored edges were produced by. The CLI compares
+   * it with `LINK_SCHEMA_VERSION` and asks for a full relink when they differ,
+   * so an improved resolver reaches files that never change (R5 §2.2 D2).
+   */
+  readonly linkSchemaVersion?: number;
 }
 
 /** Injected persistence boundary — implemented with supabase in the web app. */

@@ -38,10 +38,18 @@ export class RepositoryScanStore {
   ): Promise<{
     artifacts: readonly PreviousScannedArtifact[];
     commitSha: string | null;
+    /** Resolver generation the stored structure edges were produced by. */
+    linkSchemaVersion: number;
   }> {
     const [repositories, artifacts] = await Promise.all([
-      this.sql<{ last_scanned_commit_sha: string | null }[]>`
-        select last_scanned_commit_sha from public.repositories
+      this.sql<
+        {
+          last_scanned_commit_sha: string | null;
+          link_schema_version: number | null;
+        }[]
+      >`
+        select last_scanned_commit_sha, link_schema_version
+        from public.repositories
         where workspace_id = ${workspaceId} and id = ${repositoryId}
       `,
       this.sql<PreviousArtifactRow[]>`
@@ -54,6 +62,7 @@ export class RepositoryScanStore {
     return {
       artifacts: artifacts.map(fromRow),
       commitSha: repositories[0]?.last_scanned_commit_sha ?? null,
+      linkSchemaVersion: repositories[0]?.link_schema_version ?? 1,
     };
   }
 

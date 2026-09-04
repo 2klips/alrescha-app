@@ -2,7 +2,9 @@
 /**
  * `alrescha` — local ingest CLI entry point (Phase 2B todo 3, ADR-013).
  * Command surface: `alrescha push [directory] --repo <owner/name> --server <url>
- * --token <token>`. Scan runs locally; only metadata leaves the machine.
+ * --token <token> [--full]`. Scan runs locally; only metadata leaves the machine.
+ * `--full` re-parses every code file so a resolver upgrade reaches files that
+ * never change; bodies are still read transiently and never uploaded.
  */
 
 import { basename, resolve } from "node:path";
@@ -13,6 +15,7 @@ import { pushLocalProject } from "./push";
 
 interface ParsedArguments {
   readonly directory: string;
+  readonly full: boolean;
   readonly repo: string | null;
   readonly server: string | null;
   readonly token: string | null;
@@ -23,6 +26,7 @@ function parseArguments(argv: readonly string[]): ParsedArguments | null {
     return null;
   }
   let directory = ".";
+  let full = false;
   let repo: string | null = null;
   let server: string | null = null;
   let token: string | null = null;
@@ -34,11 +38,13 @@ function parseArguments(argv: readonly string[]): ParsedArguments | null {
       server = argv[++index] ?? null;
     } else if (argument === "--token") {
       token = argv[++index] ?? null;
+    } else if (argument === "--full") {
+      full = true;
     } else if (!argument.startsWith("--")) {
       directory = argument;
     }
   }
-  return { directory, repo, server, token };
+  return { directory, full, repo, server, token };
 }
 
 export async function main(argv: readonly string[]): Promise<number> {
@@ -65,6 +71,7 @@ export async function main(argv: readonly string[]): Promise<number> {
   console.log(CLI_MESSAGES.metadataOnly);
   const outcome = await pushLocalProject({
     baseUrl: server,
+    full: parsed.full,
     repositoryFullName,
     rootDir,
     token,
