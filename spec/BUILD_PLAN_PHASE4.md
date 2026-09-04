@@ -1,0 +1,281 @@
+# arr-app — Phase 4 Work Plan v2: 은하수 그래프 · 계층형 Data Brain · 기존 레포 온보딩 · 정직한 상태판(유료 번들)
+
+> **개정 이력:** v1 2026-09-03(R4 `RESEARCH_GRAPH_SECONDBRAIN_2026-09-03.md` 기반) → **v2 2026-09-04** — 사용자 지시("은하수처럼 빽빽한 그래프 + 성능", "토큰 절약·진행도·위험·todo가 유료 요금제를 들 만큼")에 따라 설계 패널·상업성 조사·기능 감사를 수행한 [`RESEARCH_GALAXY_MONETIZATION_2026-09-04.md`](RESEARCH_GALAXY_MONETIZATION_2026-09-04.md)(이하 R5)를 반영. todo를 전면 재번호했다(구→신 대응표는 §부록).
+> **Governing decisions:** `DECISIONS-ADR.md` — ADR-001(AI 산출물은 `inferred`), ADR-012(효율 수치는 벤치 통과 전 게시 금지), ADR-013(CLI/GitHub 두 경로 동등성·메타데이터만), ADR-014(tree-sitter 미채택 — OQ-019 재판정 예약), ADR-015(보증은 서버 관측 증거만). WORK_SPEC §3 가드레일 10개.
+> **충돌 우선순위:** ADR = WORK_SPEC > 이 계획 > GUIDE. 드리프트 검증·receipt·팀 표면의 **의미**는 건드리지 않는다(라벨 정정·앵커 추가는 허용) — 기존 테스트·가드레일은 그대로 green.
+> **협업:** Claude Code와 Codex가 웨이브 단위로 분담한다(§협업 규약). 이 문서가 두 에이전트의 단일 진실 소스다.
+
+## TL;DR (For humans)
+
+Phase 3까지 "push → 스캔 → 그래프 → MCP 22툴 → enrich → 벤치"가 완주됐지만 사용자가 실레포에서 본 것은 "문서끼리 연결된 덩어리"였다. R4·R5가 코드로 확정한 원인은 렌더가 아니라 데이터다: **비상대 import(`@alrescha/*`·`@/`)를 버리고, 변경 없는 파일은 영원히 재링크되지 않으며, README·docs·sql·css는 아티팩트조차 아니고, 요구사항 노드는 엣지가 0이며, facet은 이 레포의 모노레포 관례만 안다.** 그래서 프로덕션 구조 엣지는 ~135인데 같은 레포의 결정론 링크 후보는 ~1,036쌍이다. 여기에 힘장 링크 중복·600 초과 시 15덩어리 붕괴·DOM 히트 600 캡이 얹혀 "알아볼 수 없는 형태"가 된다.
+
+**Phase 4 v2의 골격은 "모든 파일은 노트, 모든 결정론 관계는 링크(14패밀리), 허브는 SQL이 경로에서 유도한다"**이며(설계 패널 승자 + 계층/허브 설계의 실행 규율 이식), 목표 밀도는 이 레포 노드 ~1,260·엣지 ~4,000·평균 차수 ~6.3(0크레딧, 추정 — `measure-graph-density.ts`로 실측 후 게시). 그 위에 사용자가 유료로 받아들일 "정직한 상태판" 세 신호(은하수 그래프+라이브 발광, 진행 원장, 위험 지도)와 그것을 살리는 배선층(툴·지시 블록 예산)을 얹는다. **토큰 절감·AI 판정·doc_page·영수증·팀은 번들의 근거가 아니라 부속**이다(R5 §4.6).
+
+**Effort:** XL(7 waves, 28 todos) · **Risk:** Medium-High — 노드 kind 4종·relation 6종·`edges.family`·v6 통합 마이그레이션이 스키마와 계약 테스트를 넓게 건드리고, Wave B는 e2e 120건이 걸린 화면을 만진다(단언 약화 금지·경로만 이동).
+
+**Decisions locked (do not relitigate):**
+
+- 렌더 스택은 graphology + d3-force(Worker) + Pixi.js v8 **유지**. 격차는 전부 구현 공백(R4 §2.2, R5 §2.7).
+- **설계 골격 = Obsidian-native(설계 ①) + 계층/허브 설계(②)의 규율.** `feature`·`domain`은 노드가 아니다(색·접힘 키·앵커). 심볼 노드는 Wave F, 생성 문서 페이지는 Wave D — 둘 다 은하의 원천이 아니다.
+- **Phase 0(링크 복구) 없이는 어떤 노드·엣지도 화면에 도달하지 않는다** — Wave A todo 0이 모든 웨이브의 선행 조건이다.
+- 새 엣지 패밀리는 전부 resolved/reference/inferred. `tests`·`implements`는 reference ≤0.6, **`verified`는 실행 증거만**(ADR-001). 영수증 `implVerified` 라벨은 "체크됨"으로 정정(OQ-036).
+- `edges.family` 8종(structure·hierarchy·doc·database·route·statistical·semantic·evidence)으로 읽기 상한·힘장·그리기·MCP 기본값을 패밀리 단위로 정한다. 파일 레벨 NODE_LIMIT 2,000 유지, 허브·패밀리별 별도 상한(OQ-038).
+- 데이터 모델 잔결함(todo 오프셋 정체성·FK ON DELETE·240자 CHECK·repository_id·finding target_node_id·provenance 평탄화)은 **v6 통합 마이그레이션 한 파일**로 묶는다 — 두 경로 동등성 회귀를 한 번만 치른다.
+- 레이아웃 관례 설정은 레포 내 `.alrescha.json`(ADR-013). 관례 밖은 `기타`로 정직 표시.
+- id-first는 관계 질의에만. 지시 블록·최소 인덱스·툴 설명 세 곳을 **하나의 상수**로 통일하고 **예산(툴 ≤16 · 블록 ≤300토큰 · 첫 읽기 전 호출 ≤2)**을 계약 테스트로 고정. 동적 툴 노출 금지, 훅은 옵트인·차단 없음.
+- 그래프 뷰·결정론 스캔·MCP 읽기는 **무료**여야 한다(시장 기대치, R5 §3). 유료 게이트는 판정·자동 재스캔·히스토리·팀·동기화 — 구체 티어는 OQ-040(사용자 결정) 전까지 구현하지 않는다.
+- 자체 효율 수치는 graph-surface v3(프로덕션 형태 스토어) 통과 전 게시 금지(ADR-012). 60fps는 브라우저 실측 게이트 통과 전 미주장.
+- 순서: **A0 → A(1–5) ∥ B(9–15) → A′(6–8) → C(16–18) → D(19–21) → E(22–25) → (F 26–27 선택)**. A와 B는 파일이 겹치지 않아 병행 가능(Claude Code = A·A′·C·D·E, Codex = B + D19 웹 부분).
+
+---
+
+## 밀도 목표 · 성능 예산 (R5 §2.8)
+
+| 단계            | 이 레포 노드 / 엣지 / 평균 차수(추정)                          | 전형 800파일 Next+FastAPI                | 게이트                                                                            |
+| --------------- | -------------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------- |
+| A0 링크 복구    | ~656 / ~1,190 / ~3.6 (프로덕션 구조 엣지 ~135 → ~1,100)        | TS 절반 resolved                         | `scripts/measure-graph-density.ts` 실측 evidence, 두 경로 플랜 바이트 동등성      |
+| A 데이터 정합성 | ~1,070 / ~3,200(표시 ~2,300 + contains ~885 layoutOnly) / ~5.9 | —                                        | `tests/graph-density.test.ts`: 평균 차수 ≥3 · contains 제외 고아 ≤10% · 삼각형 >0 |
+| A′ 허브 패밀리  | **~1,260 / ~4,000 / ~6.3, 고아 ~7%**                           | ~1,200 / ~3,200 / ~5.3(Python 성김 배지) | 동일 + 두 테마 스크린샷                                                           |
+
+성능: 프레임 플랜 p95 <16.7ms(vitest, 1,300/4k·5k 컬링 케이스 신설) · 워커 틱 p95 <33.3ms · **브라우저 팬/줌 p95 <16.7ms는 `scripts/bench-graph-browser.ts`(Playwright, 호스트·GPU 명시) 통과 전 미주장** · 정착 후 idle 0프레임 · `/app/map` TTFB 회귀 0 · 필터·토글 시 워커 `start` 0건 · 페이로드 ≤300KB gz 목표 · `apply_repository_scan` set-based 적용 시간과 `/api/ingest/local` 타임아웃 여유 기록 · MCP 기본 로드 = structure+evidence+semantic만. 수치는 전부 실측 전 "추정"(§3-8).
+
+## 유료 번들의 최소 정의 (R5 §4.6 — 판단이지 예측이 아님)
+
+"연결(또는 푸시)마다 갱신되는, 내 레포의 정직한 상태판": ① 내 코드가 보이는 은하수 그래프 + **라이브 발광**(todo 15) + HUD 실데이터 ② 오늘/이번 주 진행 원장(거짓 0% 제거·todo 정체성·`query_brain(kind:'todo')`·다이제스트) ③ 문서 없이도 뜨는 위험 지도(코드 노드 앵커·`untested-code`·팬인·공변경·링 3단계) ④ 배선층(예산 문서, todo 22). 번들에서 빼는 것: 토큰 절감 카피(v3 통과 전), AI 판정·코칭, doc_page, 영수증 피치, 팀, CI verified(상위 업셀 후보), 심볼.
+
+**"예"라고 말하기 위한 선행 조건(전부 미충족, 사용자 결정 포함):** (a) 결제 경로·플랜 게이트(OQ-040) + 레포 단위 스코핑(OQ-042) (b) 무료 티어에 무엇을 서빙할지 — 프로덕션 아티팩트는 enrich 전 내용이 없다(OQ-039) (c) 스펙 없는 레포의 요구사항 부트스트랩(OQ-041) (d) 실스캔 픽스처 위 라이브 전용 e2e (e) 측정 4종 — T2FV ≤5분, 위험 상위 10 정밀도 ≥0.70, 세션당 `log_progress` ≥70%, 설치된 예산으로 v3 PASS 비열등·턴 비증가.
+
+---
+
+## 상태 스냅샷 — 이 계획을 처음 받은 에이전트를 위해
+
+**이미 있는 것 (재구현 금지, 확장만):** v1과 동일 — 스캐너(`packages/core/src/ingest/*`), `apply_repository_scan` v5 단일 경로, analyze(`reconcileRequirements` 노드·행만), enrich 3종, 그래프 엔진(`apps/web/lib/graph/*`, `brain-map*.tsx`, `map-screen.tsx`, `workspace-map.ts`), MCP 22툴·지시 블록·최소 인덱스, 벤치 하네스(databrain v3·graph-surface v1/v2·기법 실측), 프레임 예산 테스트, perf 후속 목록(MT-6·MT-7).
+
+**R5가 코드로 확정한 결함(전부 Phase 4 범위):**
+
+| #   | 결함                                                                                          | 위치                                                                                                                    | 고치는 todo  |
+| --- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------ |
+| D1  | 비상대 지정자 미해석(`@alrescha/*` 96건, `@/…`, `backend/app` 패키지 루트)                    | `code-links.ts:274`, `:293-317`                                                                                         | 0            |
+| D2  | 변경 없는 파일은 영원히 재링크되지 않음                                                       | `repository-scanner.ts:642-648, 714-718`, `202608230002:243-252`, 워커·CLI previousArtifacts                            | 0, 16        |
+| D3  | 힘장 링크 중복·상수 강도(허브 헤어볼)                                                         | `simulation-protocol.ts:219-226`, `force-simulation.ts:126-129`                                                         | 0(B 첫 커밋) |
+| D4  | 600 초과 시 `type:grade` 15덩어리·DOM 히트 600                                                | `workspace-map.ts:162, 500-503`, `graph-model.ts:433-467`, `brain-map-stage.tsx:45`                                     | 3, 10        |
+| D5  | 분류 사상이 문서로 몰림·README/docs/sql/css 비아티팩트·정렬 결함                              | `graph-model.ts:106-114`, `workspace-map.ts:367-389, 583-587`, `artifact-facets.ts:92`, `repository-scanner.ts:157-215` | 1, 2, 4      |
+| D6  | 요구사항 커버리지 거짓 0%(`implements` writer 없음), UI 테스트가 0%를 고정                    | `progress-report.ts:113-121`, `postgres-analysis-store.ts:134-198`, `progress-dashboard.test.tsx:36-41`                 | 1            |
+| D7  | todo 오프셋 정체성(편집 시 오귀속)·240자 CHECK 스캔 롤백·FK wedge·dead link                   | `todos.ts:29`, `202608100010:17, 58-62`, `enrich_pass.sql:405-431`, `progress-dashboard.tsx:39-43`                      | 5, 19        |
+| D8  | finding 앵커가 항상 문서 노드·전부 {medium, low}·MCP provenance 평탄화·dismiss/verdict 미반영 | `analysis-job.ts:159-177`, `rules.ts:162-173, 428`, `supabase-store.ts:96-119`, `judgment.ts:98-111`                    | 1, 19, 21    |
+| D9  | 프로덕션 아티팩트 본문 없음 → enrich 전 MCP·검색·팩·stats 미터 내용 부재                      | `supabase-store.ts:479-481, 613-614`, `context-pack.ts:118-120`                                                         | OQ-039(결정) |
+| D10 | 라이브 발광 브리지 없음(브라우저 Realtime 구독 0건), HUD 지표는 데모 상수                     | `supabase-store.ts:746-763` vs `map-screen.tsx:366-375`, `graph-model.ts:636-647`                                       | 15           |
+| D11 | 레포 연결 시 스캔 없음(웹훅 전용), CLI 레포는 analyze·enrich 불가                             | `connect-repository.ts`, `202608100004:511-520`, `run-local.ts:144-151`                                                 | 16, 17       |
+| D12 | CI 리포트 인제스트 미배선 → evidence writer 0 → verified 도달 불가                            | `analysis-job.ts:22-33`, `ci-reports.ts`, `github-ci-evidence-source.ts`                                                | 18           |
+| D13 | 지시 블록·최소 인덱스·툴 설명이 서로 다른 워크플로, 툴 정의 30,130자(outputSchema 62%)        | `instruction-blocks.ts:24-37`, `minimal-index.ts:45-53`, `repo-map.ts:223`, `hosted.ts:157-719`                         | 22           |
+| D14 | 라이브 로더가 전부 워크스페이스 평면, access_events·progress_events에 repository_id 없음      | R5 §4.5 ⒁                                                                                                               | 5, OQ-042    |
+| D15 | 라이브 화면을 실스캔 위에서 검증하는 e2e 0(파일럿 플로우는 데모 투어)                         | `tests/e2e/pilot-flow.spec.ts:269-335`, `helpers/app-screens.ts:15-28`                                                  | 검증 전략    |
+
+**게이트:** G1(로컬 Supabase)·G2(GitHub App) 열림. G3(AI 크레딧/키) — todo 20·25. G4(배포) — 웨이브 종료마다 선택.
+
+**신규 OQ(R5와 함께 등록):** OQ-035(co_changed 백필 vs ADR-013) · OQ-036(`tests`·`implVerified` — verified 정의 둘) · OQ-037(layoutOnly·앵커 vs 하드룰 ②) · OQ-038(패밀리별 읽기 상한) · **OQ-039(무료 티어 서빙 내용 — 사용자 결정)** · **OQ-040(가격 티어·게이트 — 사용자 결정)** · **OQ-041(스펙 없는 레포 요구사항 부트스트랩 — 사용자 결정)** · **OQ-042(레포 단위 스코핑 — 사용자 결정)** · OQ-043(문서 기본 포함 범위). v1의 OQ-029~034도 유효.
+
+### 세션 시작 프롬프트 템플릿 (Claude Code · Codex 공용 — 복사해서 사용)
+
+```
+arr-app 레포에서 Phase 4(v2)를 이어간다.
+1. spec/IMPLEMENTATION_GUIDE.md → spec/WORK_SPEC.md(§3 가드레일) → spec/RESEARCH_GRAPH_SECONDBRAIN_2026-09-03.md(R4) → spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md(R5) → spec/BUILD_PLAN_PHASE4.md를 읽어라.
+2. BUILD_PLAN_PHASE4의 체크박스와 git log·.omo/evidence/phase4/로 진행 상태를 파악하라. 다른 에이전트가 진행 중인 웨이브(§협업 규약 담당 표)는 건드리지 않는다.
+3. 이번 세션 범위: Wave {N} (todo {a}, {b}). 게이트가 닫혀 있으면 건너뛰고 보고하라. todo 0이 미완이면 다른 데이터 todo를 시작하지 않는다.
+4. 각 todo는 수용 기준을 테스트로 통과시켜야 완료다. 완료 시 체크박스 갱신 + .omo/evidence/phase4/todo-{k}.md + todo당 1커밋(Conventional Commits, 아래 Commit 문구).
+5. 종료 전 pnpm lint && pnpm typecheck && pnpm test 전체 green, Playwright는 변경 화면의 스펙 파일 green, scripts/verify-scope-boundaries.ts PASS, 밀도 회귀 테스트(todo 8 이후) green. 마지막 보고는 "다음 컨텍스트가 행동하는 데 필요한 것"을 앞세운다.
+```
+
+### 협업 규약 (Claude Code ↔ Codex)
+
+| 규칙            | 내용                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 담당 기본값     | **Claude Code:** Wave A·A′·C·D·E(core·SQL·worker·MCP) / **Codex:** Wave B 전부 + todo 19의 웹 표면 + todo 24 화면. 바꿀 때는 이 표를 먼저 갱신·커밋한다.                                                                                                                                                                                                                                                                                                                                                                              |
+| 브랜치          | 웨이브당 브랜치 `phase4/wave-{a,a2,b,c,d,e,f}`; todo당 1커밋; squash 금지(커밋 = 증빙 단위). 워크트리 사용 시 다른 에이전트의 미커밋 작업을 덮어쓰지 않는다.                                                                                                                                                                                                                                                                                                                                                                          |
+| 로그            | 프론트 todo는 `docs/frontend/logs/YYYY-MM-DD-<slug>.md` + `WORKLOG.md` 1행. 그 외는 `.omo/evidence/phase4/`.                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 인터페이스 동결 | A↔B 경계는 `GraphData`(`graph-model.ts`)·`WorkspaceMapModel`(`workspace-map.ts`)·`simulation-protocol.ts`의 `LinkPair`/메시지 타입이다. **A(todo 0·3)가 먼저 커밋**: `GraphNodeType += directory \| route \| db_object \| section \| rationale \| doc_page`, `GraphNode += domain·unit·hub·parentId·risk`, `GraphEdge += family·layoutOnly`, `LinkPair = [i, j, familyCode]`, 프로토콜 `pin/unpin/reheat/settled`. 신규 relation: `contains·handles·queries·defines·modifies·implements·references·tests`. B는 그 위에 렌더를 붙인다. |
+| MCP 타입 동기   | `McpNodeType`·`McpEdgeRelation`은 `packages/mcp/src/store.ts`·`hosted.ts` zod·`graph-tools.ts` 세 곳 + 계약 테스트 툴 이름 목록을 같은 커밋에서 갱신한다(갱신이지 약화가 아님).                                                                                                                                                                                                                                                                                                                                                       |
+| 금지            | `spec/` 수정 금지(OPEN_QUESTIONS.md와 이 계획의 체크박스·담당표 제외). 테스트 약화 금지. hex 하드코딩·strings 모듈 밖 카피 금지. 측정 없는 수치 게시 금지.                                                                                                                                                                                                                                                                                                                                                                            |
+
+---
+
+## Wave A — 링크 복구 + 데이터 정합성 _(게이트 없음 — 지금 시작, 렌더 무변경)_
+
+- [ ] **0. 링크 복구 — 별칭·배럴 해석, `tests` 파생, 전량 재링크, set-based 적용, 힘장 링크 중복 제거, 밀도 실측** _(R5 §2.2 D1–D3, 모든 웨이브의 선행 조건)_
+      `code-links.ts`: `resolveWorkspaceAlias`(package.json `name`/`exports`·tsconfig `paths`/`baseUrl` — 매니페스트를 플랜 메타데이터로 동봉, 레포 내 파일만 입력이라 ADR-013 유지) + `resolveThroughBarrels`(`export … from` 표로 index.ts 통과, method `barrel-resolution`) + Python 패키지 루트 탐색(가장 가까운 `pyproject.toml`/`__init__.py` 체인·`backend/app` 접두 해석, reference 상한) + `tests` 파생(source가 `unit=test` → relation `tests`, reference 0.6, method `test-import`). `LINK_SCHEMA_VERSION` 상수 + `repositories.link_schema_version`; 불일치 시 unchanged 슬롯을 fetch로 강등하는 `scanRepository({mode:'full'})` — 워커·CLI 플래그(본문은 재조회하되 저장하지 않음). `apply_repository_scan` v6: 코드 링크 적용을 `jsonb_to_recordset` set-based로, delete 집합에 `tests` 포함, 적용 시간·`/api/ingest/local` 타임아웃 여유를 evidence로. **Wave B 첫 커밋(Codex 또는 A가 대행, 5줄):** `createStartMessage` (min,max) 쌍 중복 제거 + `force-simulation.ts` 링크 강도 d3 기본 `1/min(deg)` 복원. `scripts/measure-graph-density.ts` — 로컬 스캔에서 노드/엣지/차수 히스토그램/고아/최대 차수 상위 10을 `.omo/evidence/phase4/graph-density-<date>.md`에 기록.
+      수용 기준: code-links 픽스처(별칭·배럴·테스트 import·`@/`·`backend/app`)에서 기대 엣지 스냅샷(티어별), `fixtures/layout-variants/` 신설(Next `frontend/`+FastAPI `backend/`+Prisma+Supabase 마이그레이션+단일 앱 `src/`), 두 경로 플랜 바이트 동등성, `mode:'full'` 후 이 레포 로컬 스캔 구조 엣지 ≥1,000(실측 evidence), "아티팩트 소스 tests 엣지는 verified를 만들지 않는다" 단언(`workspace-map.test.ts`), 힘장 링크 수 = 고유 쌍 수 단언(`graph-engine.test.ts`), 기존 `tests/repository-scanner.test.ts` 플랜 바이트 불변(mode 미지정 시).
+      Commit: `feat(ingest): resolve aliases and barrels, derive test edges, and add a full relink mode`
+
+- [ ] **1. 요구사항→코드 `implements` 영속화 · rationale 분리 · 정렬 결함 · 커버리지 의미 분리 · finding 코드 앵커 + `untested-code` 룰** _(D5·D6·D8, v1 todo 1 확장, 진행/위험 감사 P1)_
+      v1 todo 1 그대로(`reconcileRequirements`가 `implements` reference ≤0.6 upsert; `GraphNodeType` rationale; artifacts 정렬; `"unknown"` 폴백) + ⑴ `buildProgressDashboard`의 `ProgressMetric`에 `basis:'measured'|'no-links'|'no-data'` — active 요구사항 >0·implements 0이면 percent=null·"미측정 — 구현 링크 없음"; `progress-dashboard.test.tsx:36-41`의 거짓 0% 고정을 먼저 뒤집는다 ⑵ 커밋 항목 제목을 receipt `summary.statement.predicate.coverage`로(스키마 변경 없음) ⑶ finding에 `target_node_id`(코드 아티팩트) — stale-doc은 참조 경로 노드, missing-implementation은 심볼 소유 파일, missing-test는 implements 대상 — 맵 링·findingCount를 target에도 집계 ⑷ 신규 결정론 룰 `untested-code`(code_metadata 파일 중 형제/동명 테스트·`tests` 엣지 없음, inferred·low) — 문서 없는 레포에서도 위험 신호가 뜨는 첫 룰 ⑸ `get_findings` 기본 `status:'open'` + 심각도 정렬 버그 수정 ⑹ MCP finding provenance 평탄화 해제(경로·span·suggestedAction 전달).
+      수용 기준: v1 기준 + basis 분기 단위 테스트, drifted-demo·layout-variants에서 `untested-code` 발화 스냅샷과 오탐 상한(테스트 파일 자체·설정 파일 제외), 코드 노드 링 렌더 e2e(Wave B 이후 활성화되는 단언은 skip 아닌 todo 12 수용 기준으로 이관), `get_findings` 계약 테스트, verified 승격 0.
+      Commit: `feat(analyze): persist implements edges, anchor findings to code, and add the untested-code rule`
+
+- [ ] **2. 전 파일 노트화 + 문서→코드/문서 `references` + `edges.family`** _(D5, v1 todo 2 확장, 설계 ①)_
+      `classifyArtifactPath`: `doc` = **모든** `*.md/*.mdx/*.rst/*.txt`(spec/adr/agents/claude/skill/cursor_rule/todo 규칙 우선), `schema` = `*.sql/*.prisma/schema.graphql/drizzle/**`, `style` = `*.css/scss/less`, `config` = package.json·tsconfig*·pyproject·`*.yml/yaml/toml`·Dockerfile·`.env.example`·`.alrescha.json`; 기본 ignore(output/·coverage/·dist/·lockfile·node_modules)를 **두 경로 공통 상수**로(GitHub 경로 dot-dir 규칙과 CLI `IGNORED_SEGMENTS` 정합 — OQ-043) + `.alrescha.json ignore/layers.hidden`. `packages/core/src/ingest/doc-links.ts` 신설: `markdown.ts` `codeReferences` 중 **경로형 토큰만**(값 비저장) → 경로 존재 `resolved` / basename 단독 소유자 `reference` / 모호·다중 소유(index.ts 등) 엣지 없음; markdown/wiki 링크 doc→doc(resolved); ID 토큰 헤딩(`ADR-NNN`·`OQ-NNN`)은 todo 8. `RepositoryScanPlan.docLinks`, `local-ingest.ts` strict 스키마 동기(필드 누락 시 400 함정). 같은 마이그레이션에 `edges.family` 컬럼(CHECK 8종·인덱스·기존 행 relation→family 백필: rationale references=structure, concept 7동사=semantic, implements/tests=evidence).
+      수용 기준: 픽스처 기대 엣지 스냅샷(티어별), 두 경로 동일 플랜, 이 레포 로컬 스캔 doc→file ≥300(실측 evidence, `.omo` 포함 여부 병기), 문서 인라인 코드 값이 플랜·DB 어디에도 없음(scope 스캐너 확장), family 백필 검증 SQL 테스트, 스캔 시간 회귀 가드 갱신.
+      Commit: `feat(ingest): treat every text file as a note and resolve doc→code references`
+
+- [ ] **3. directory 노드 + `contains`(layoutOnly) · 패키지 핵 · areaHint · clusterGraph/MT-6 삭제 · 허브 별도 상한** _(D4, v1 todo 3 확장, OQ-037·OQ-038)_
+      `apply_repository_scan` v6 SQL이 경로 접두사에서 `graph_nodes(kind='directory')`·`directory --contains--> dir|file`(`{reason:'path containment', tier:'resolved'}`, family hierarchy)을 유도(플랜 불변 → ADR-013 자명), `role:'package'`(package.json/pyproject 보유), 아티팩트 0 디렉터리 스윕, 통과 디렉터리(파일 0·자식 1)는 로더가 접음. 모든 비파일 노드에 `path` 앵커 → `graphNodeArea`가 도메인 유도(facet 테스트로 고정). 로더: `MAP_CLUSTER_THRESHOLD`·`clusterGraph`·서버 `forceDirectedLayout`(MT-6) 삭제, 좌표 0 송신, `isClustered` 단언은 "3,000 초과 시 계층 할당 접힘"으로 재작성; 허브는 별도 쿼리·별도 상한(directory ≤300·route ≤100·db_object ≤100·section ≤100), 엣지는 `edges.family`별 병렬 쿼리 상한(structure 6,000·doc 6,000·hierarchy 6,000·database 3,000·route 1,000·statistical 3,000·semantic 3,000). `GraphData.layoutOnly`·`GraphEdge.family` 타입 **선커밋**(B 경계).
+      수용 기준: 트리 픽스처 스냅샷, 파일 삭제 시 빈 폴더 소멸, 두 경로 동등성, `workspace-map.test.ts` layoutOnly 분리·상한 단언(2,001 시드에서 unknown 0), `/app/map` TTFB 전후 로컬 Supabase 측정 evidence(MT-6 형식), 힘 시뮬 테스트에 contains 링크가 군집 반지름을 줄이는 결정론 단언.
+      Commit: `feat(ingest): derive directory nodes and containment edges, drop the server layout and cluster fallback`
+
+- [ ] **4. `database`·`기타` 도메인 · 레이아웃 관례 일반화 · `.alrescha.json` · `unit` 태그** _(D5, v1 todo 4 확장)_
+      v1 todo 4 그대로(FacetDomain·BrainArea에 `database`·`unclassified→기타` 정직 표시, 관례 확장 `frontend/ backend/ server/ api/ src/app/ pages/ prisma/ migrations/ db/ drizzle/`, `ROUTE_FILE` 일반화, `.alrescha.json`(`layout`·`ignore`·`layers.hidden`·`todoFiles`·`progressDocs`)을 아티팩트로 읽어 커밋 sha와 함께 `repositories.layout_config` 저장, 선택 인자 주입) + `deriveArtifactUnit`(component·route·action·schema·test·doc·lib — 경로 + 영속된 exported_symbols의 PascalCase만) → `GraphNode.unit`, 밴드 뷰 6밴드, 토큰 `node-database·node-other·node-directory·node-route·node-table`(두 테마), 범례·필터 칩 strings.
+      수용 기준: v1 기준 + `../30m`형 픽스처(`frontend/`+`backend/`+`db/`)에서 도메인 3종 이상·`unclassified` 0, unit 판정 결정론 테스트, 설정 없는 기존 픽스처 결과 불변, overview 뷰모델·밴드 뷰 e2e.
+      Commit: `feat(ingest): add the database domain, generalize layout conventions, honor .alrescha.json, and tag units`
+
+- [ ] **5. v6 통합 마이그레이션 — 데이터 모델 잔결함 일괄 수정** _(D7·D8·D14, 감사 반박 PGlite 재현)_
+      한 마이그레이션 파일에: ⑴ todo `sourceKey`를 `document:<path>:<정규화 제목 해시>[#n]`으로(편집에도 id·created_at 보존; 충돌 시 순번) — `todos.ts`·`local-ingest.ts` 동기 ⑵ `progress_events.todo_id` FK **ON DELETE SET NULL** + 기존 행 정리 ⑶ todo 제목 240자 **절단**(rationale의 `MAX_RATIONALE_TEXT` 선례) — CHECK 위반으로 스캔 전체 롤백되던 지뢰 제거 ⑷ `access_events.repository_id`·`progress_events.repository_id`(대상 노드→레포 역참조, nullable) ⑸ `findings.target_node_id`(todo 1과 같은 파일이면 병합) ⑹ `edges.family`(todo 2와 병합 가능) ⑺ `[~]`·`[-]`·`[/]` 마커 → in-progress/blocked, 중첩 depth 보존(`parent_key`).
+      수용 기준: PGlite — 불변 재스캔 delta 0, 상단 3줄 삽입 후 id 보존 100%, 300자 항목 스캔 성공, ULID 기록 후 문서 편집 재스캔 성공(wedge 0), 두 경로 플랜 동등성, 기존 e2e `local-ingest-card.spec.ts` 확장(PROGRESS.md 푸시 → `/app/progress` 보드 단언 — **실스캔 위 라이브 e2e의 첫 게이트**).
+      Commit: `fix(db): stabilize todo identity, null progress refs on delete, truncate titles, and scope events by repository`
+
+## Wave A′ — 허브 패밀리 _(A0·A2·A3 뒤, 밀도 회귀 테스트로 게이트)_
+
+- [ ] **6. route 노드 + `handles`** _(설계 ②·GitNexus Route)_
+      `packages/core/src/ingest/route-links.ts`: Next.js `app/**/(page|layout|route)`·`pages/**` URL → `graph_nodes(kind='route')` + `route --handles--> file`(SQL 유도, resolved; layout 공유 체인 포함), FastAPI/Flask 데코레이터 정규식(`@router.get('/x')` → method·path·line만) → `plan.routes`(reference) + strict 스키마 동기. 라우트 다이아몬드 스프라이트(B).
+      수용 기준: layout-variants 픽스처 route 스냅샷(Next 32+API 10 규모), 두 경로 동등성, `impact_of` 응답 `affectedRoutes`(todo 22와 계약 공유).
+      Commit: `feat(ingest): derive route nodes and handles edges from Next.js and FastAPI conventions`
+
+- [ ] **7. db_object 노드 + `queries`/`defines`/`modifies`/FK** _(설계 ①·Graphify SQL)_
+      `packages/core/src/ingest/schema-links.ts`: `create table/function/view` → `db_object`(subkind, 이름·소유 마이그레이션 span만), `alter table` → `modifies`, `references public.x` → FK(resolved); 코드 측 `.from('t')`·`.rpc('f')`·`__tablename__`·`Table('t')`·`prisma.t` 리터럴 → `queries`(reference 0.6, **소유 테이블 목록에 있는 이름만**). database 밴드·범례·사각 스프라이트.
+      수용 기준: 이 레포 실측(테이블 43·함수 59·queries ≥100) evidence, 픽스처 스냅샷, 동적 테이블명 미검출을 문서화, 두 경로 동등성.
+      Commit: `feat(ingest): extract database objects, schema edges, and code→table query references`
+
+- [ ] **8. section 노드(선택) · 4종 모양 문법 · 밀도 회귀 테스트** _(설계 ①·②)_
+      ID 토큰 헤딩(`ADR-NNN`·`OQ-NNN`·`G\d+`·`MT-\d+`, `.alrescha.json`로 확장 가능)만 `section`으로 승격, doc/rationale(`adr_ref`)→section `references`(resolved). 4종 스프라이트(원/링/다이아몬드/사각)와 `unit` 필터 칩은 B(todo 12)에서 렌더. **`tests/graph-density.test.ts`**: 픽스처 2종에서 평균 차수 ≥3·contains 제외 고아 ≤10%·삼각형 >0·두 경로 플랜 바이트 동일·verified 승격 0·원문 비저장(scope 스캐너) 단언 + 이 레포 실측표 evidence.
+      수용 기준: 위 테스트 green, 전형 레포(section 0)에서도 green, 두 테마 스크린샷(줌아웃 카테고리 라벨·줌인 파일 라벨).
+      Commit: `feat(ingest): add section nodes for id-token headings and lock the density regression gate`
+
+## Wave B — Graph View 조작감·성능 "Obsidian 급" _(게이트 없음, Codex 권장, A와 병행)_
+
+- [ ] **9. 카메라: 커서 앵커 줌 · 부드러운 줌/팬 · fit-to-view · `settled` 소비** _(v1 todo 5 그대로)_
+      Commit: `feat(map): cursor-anchored smooth zoom, fit-to-view, and settled signalling`
+
+- [ ] **10. 캔버스 히트 테스트(quadtree) + 호버 이웃 강조/페이드 + DOM 접근성 전용 캡 200** _(v1 todo 6 그대로 — **데이터 웨이브의 선행 조건**: 1,260노드는 600 캡을 넘는다)_
+      Commit: `feat(map): canvas hit-testing with a spatial index and hover neighborhood focus`
+
+- [ ] **11. 노드 드래그 + 리히트 + `forceCollide` + 패밀리별 힘장** _(v1 todo 7 확장)_
+      `LinkPair = [i, j, familyCode]`, 패밀리별 strength/distance 표(structure 0.55/90 · doc 0.3/120 · contains 0.3/30 · database 0.4/100 · route 0.45/70 · statistical 0.1/140 · semantic 0.3/110 · evidence 0.45/90), `1/min(deg)` 정규화, `forceCollide(r).iterations(2)`, `pin/unpin/reheat` 프로토콜, 시드 결정론 유지.
+      Commit: `feat(map): drag nodes with reheat, collision, and family-aware forces`
+
+- [ ] **12. 렌더 성능 + 허브 시각 문법** _(v1 todo 8 확장, G5·G6·G7·MT-7)_
+      스타일 그룹(color,width,alpha,dashed)당 1회 stroke, 4종 텍스처 Sprite 풀(원/링/다이아몬드/사각), positions 리비전에서만 엣지 지오메트리 재기록, 노드·엣지 스크린 AABB 컬링, 스크린 공간 라벨 + 실제 페이드, 라벨 Text 풀 회수, DPR 변경 추적, 패밀리별 draw 정책(far: contains·co_changed·section·semantic 숨김; near: contains α 0.08), far 라벨 kind 가중(package > route > directory > 차수) `FAR_HUB_LABEL_LIMIT` 12, dash 스크린 단위, 코드 노드 위험 링 3단계(todo 1·21의 `risk` 필드) + 범례, 상태 배지. **`scripts/bench-graph-browser.ts`** 신설(Playwright, 5k 노드 팬/줌 p95, 호스트·GPU 명시).
+      Commit: `perf(map): sprite nodes, style-group strokes, culling, screen-space labels, and the browser benchmark`
+
+- [ ] **13. 필터=가시성 · 레이아웃 영속화 · `/app/map` force 패널 · Obsidian 옵션 패리티 · 결정론 접힘 · 레이어 토글 · 도메인 앵커 슬라이더** _(v1 todo 9 확장)_
+      `setVisibility`(시뮬 재시작 0), IndexedDB 좌표 워밍(`initialPositions`, 키에 commitSha), force 패널 이식, Groups(검색어→색, 저장)·Orphans·Arrows·Node size/Link thickness·Local graph depth·뷰 프리셋·핀, `hierarchyAssignment(level)`(far→package ?? depth-2 dir, mid→leaf dir; Louvain은 허브 없는 데이터 폴백; 슈퍼노드 템플릿 = 디렉터리 노드 자신, 병합 엣지 두께 ∝ log(count), `RAW_RENDER_NODE_LIMIT` 3,000 유지), 레이어 토글(contains/co_changed/concept/section/style/config/doc), forceX/Y 도메인 앵커 슬라이더(강도 ≤0.05, 기본 off), 빈 상태를 `visibleGraph` 기준으로, 뷰 토글 시 스테이지 유지.
+      Commit: `feat(map): visibility filters, persisted layout, deterministic collapse, layer toggles, and Obsidian option parity`
+
+- [ ] **14. 렌더러 단일화 + 데모 하드코딩 제거** _(v1 todo 10 그대로)_
+      Commit: `refactor(graph): unify on the Pixi stage and drop the SVG renderer`
+
+- [ ] **15. 라이브 발광 브리지 + HUD 실데이터 칩** _(D10 — 신규, §1.4-② 시그니처 경험)_
+      브라우저가 워크스페이스 Supabase Realtime 브로드캐스트 채널을 구독해 `window` 버스(`lib/realtime/access-events.ts`)로 재전달 — 서버 `httpSend`(`supabase-store.ts:746-763`)와 `map-screen.tsx:366-375` 사이의 끊긴 선. 채널 인가(RLS·토큰)·재연결·revoked 토큰 필터. `/app/map` HUD 칩을 실데이터로(미해소 finding·위험 상위 N·커버리지 basis·마지막 스캔 커밋/신선도) — 데모 상수(`graph-model.ts:636-647`) 제거 및 e2e 문구 갱신(약화 아님, 데모 라우트 단언은 유지).
+      수용 기준: e2e — 실 MCP 토큰으로 `search_index` 호출 → 새로고침 없이 맵 노드 발광(Playwright, 로컬 Supabase Realtime), 채널 교차 테넌트 차단 테스트, HUD 값이 로더 출처와 일치.
+      Commit: `feat(map): subscribe to live access events in the browser and drive the HUD from workspace data`
+
+## Wave C — 기존(완성된) 레포 온보딩 _(G2 열림)_
+
+- [ ] **16. 연결 시 백필 스캔 · "다시 스캔" · MCP `request_rescan(mode)` · `run-local.ts` 지연 생성** _(D11, v1 todo 11 확장, OQ-029)_
+      v1 todo 11 그대로(`enqueue_backfill_scan`, 멱등 키 `backfill:<repoId>:<headSha>`, 온보딩 진행 표시, 버튼, `request_rescan` — `readOnlyHint:false`) + `link_schema_version` 불일치 시 자동으로 `mode:'full'`, `request_rescan(repository_id?, mode?)` 인자, 워커 소스 팩토리를 잡 종류별 지연 생성(DB만 읽는 결정론 잡이 CLI 레포에서도 돌게 — ADR-013). 툴 수 순증 0 목표(todo 22의 통합으로 상쇄).
+      수용 기준: v1 기준 + 재링크 잡이 0크레딧임을 원장 테스트로, e2e "레포 연결 → 진행 표시 → `/app/map` 노드 >0"(테스트 이메일 세션), T2FV(연결→의미 있는 첫 화면) 분 단위를 evidence에 기록.
+      Commit: `feat(onboarding): backfill scan on connect with a full relink mode and an on-demand rescan tool`
+
+- [ ] **17. 로컬 서빙 모드 `alrescha serve --local` + 로컬 레포 분석 경로 판정** _(v1 todo 12 그대로, OQ-030)_
+      Commit: `feat(cli): serve a local repository graph over stdio MCP`
+
+- [ ] **18. CI 증거 배선 — verified 경로 개통** _(D12, 위험 감사 P3, ADR-015 §6 정합: 서버 fetch만)_
+      이미 있는 `GitHubCiEvidenceSource`(Actions artifacts + check runs)를 analyze 잡에 주입, `ingestCiTestReports` 결과를 `evidence` 행(kind test/ci, verdict)과 `tests`/`supports` 엣지(evidence family, 소스가 evidence 노드일 때만 verified 유도)로 영속화. 커버리지 리포트(lcov/istanbul) 파싱은 파일별 "측정됨/측정 안 됨"만 — CI 없는 레포에서 "0%" 표시 0. 죽은 코드 `probes.ts`·테스트·export 정리.
+      수용 기준: 실DB 헬퍼로 픽스처 CI 리포트 → evidence 행 → 맵 verified 노드 스냅샷(처음으로 도달 가능), 실행 증거 없는 verified 0 단언 유지, 파일럿 레포(Actions 있음) 실기 1회 evidence.
+      Commit: `feat(worker): wire CI test evidence into analyze and open the verified grade`
+
+## Wave D — 0크레딧 표면 · 문서 레이어 · 질의 레이어 _(todo 19·21 게이트 없음 · todo 20은 G3)_
+
+- [ ] **19. 0크레딧 표면 묶음 — 산문 노출 · 다이제스트 · finding 상세 · dismiss/verdict · 커밋 제목 · dead link** _(v1 todo 13 확장 + 진행 P5·P6, 위험 반박, todo 반박; Codex 웹 부분)_
+      ⑴ v1 todo 13(인스펙터 파일 요약·concept 요약·모듈 카드, concept MCP 노출) ⑵ `buildProgressDashboard` `digest{today, thisWeek, sinceLastVisit}` + `attention{stale(in-progress 7일↑), blocked(사유 필수)}` 순수 함수, `workspace_screen_views`(마지막 방문), 보드 상단 정렬, `full` 상태 카피를 근거 등급 기준으로 정정 ⑶ 라이브 finding 상세(경로:라인·confidence·증거 체인·권장 조치 — 데모 `assurance-workspace.tsx` 컴포넌트 재사용 + 로더 select 확장) + 문서 todo 카드의 원문 링크를 라이브 경로로 ⑷ finding `dismissed` writer(사용자 액션) + `apply_successful_judgment`가 verdict rejected→dismissed, `reconcileFindings`가 dismissed를 open으로 복원하지 않음 ⑸ 진행 타임라인 커밋 항목 = receipt coverage 제목 + `/app/commits` 링크, 로컬 인제스트 런 "스캔됨(그래프 전용)" 표시 ⑹ write 툴 access_event 정렬(log_progress·record_note 발행; record_prompt는 스펙대로 미발행).
+      수용 기준: 뷰모델 단위 테스트(다이제스트 refs dangling 0, stale/blocked 정렬), DB 테스트(dismiss 영속·재분석 복원 0), Playwright 두 테마 axe, Korean-first 스위프, 실스캔 픽스처 위 `/app/progress`·`/app/inspection` 라이브 e2e.
+      Commit: `feat(app): digests, live finding details, finding dismissal, and stored-prose surfaces at zero credits`
+
+- [ ] **20. `doc_page` — "페이지는 노드의 얼굴"** _(v1 todo 14 사양 보강, 설계 ④, OQ-033)_
+      file/directory/concept은 `doc_pages.anchor_node_id`로 기존 노드에 붙이고 **module/feature/repo만** `graph_nodes(kind='doc_page')`. 슬러그 = md5(정렬된 멤버 디렉터리 집합) + `previous_slugs`. **`docskeleton` 잡(0크레딧, `enqueue_job` 결정론 목록 마이그레이션)**: 멤버·심볼 이름·관계·백링크(읽기 시점 역방향 조회, 저장 없음)·인용 후보 집합을 결정론으로 조립; `docpage` 잡(1크레딧/BYOK 0, enrich 라이프사이클): 저장 산문만 입력, 후보 집합 밖 인용 거부, 축자·펜스·줄 길이 검증기, `inferred` CHECK. module 페이지가 far 접힘 슈퍼노드의 라벨·산문. `/app/docs`·`/app/docs/[slug]`, MCP `get_doc_page`·`list_doc_pages`·`request_docs`(3상태; 툴 수는 todo 22 예산 안에서).
+      수용 기준: v1 기준 + 스켈레톤 0크레딧 원장 테스트, 슬러그 불변 테스트(파일 1개 변동), 인용 노드 dangling 0, CLI 레포에서도 스켈레톤 생성(todo 16 지연 생성 전제), 실기 1회(repo 1 + module 5 + feature 3 산문).
+      Commit: `feat(docs): attach skeleton pages to nodes and generate inferred prose pages from stored summaries`
+
+- [ ] **21. `query_brain` 확장 + 위험 지도 빌더 + 저장 질의** _(v1 todo 15 확장 + 위험 P2, 진행 P4, todo P3 통합)_
+      필터 `domain`·`unit`·`family`·`kind`(directory/route/db_object/section/doc_page/**todo**)·`relation`/`withoutRelation`·`hasSummary`·`pathGlob`·`changedSince`, `format:'table'|'ids'`(행 50·열 6), `sortBy:'risk'`. **`packages/core/src/inspection/risk-map.ts`**: 파일별 `RiskEntry{path,nodeId,score,level,factors[],grade:'inferred'}` — 요인 = open findings(target/source; 심각도는 {medium,low}뿐이므로 가중 아닌 카운트)·`untested-code`·팬인(imports/calls 역방향, `importanceMap` PageRank 재사용)·공변경(`file_co_changes` change_count·updated_at 감쇠)·npm audit(있을 때만); 커버리지·감사 부재는 "증거 부족" 회색. `/app/inspection` 위젯 교체(도달 불가 "드리프트 의심" 제거) + 저장 질의 3종(테스트 없는 코드·문서 없는 모듈·요구사항 미구현·위험 상위 10). todo 읽기는 새 툴이 아니라 `query_brain(kind:'todo')`; `log_progress`에 `todo_id?`·`repository_id?`·`commit_sha?` 선택 필드 + 정규화 제목 매칭(SQL·InMemory 동등성 테스트). `.alrescha.json todoFiles/progressDocs`로 인식 범위 확장(spec-kit tasks.md·PLAN/BACKLOG·핸드오프·`.beads`).
+      수용 기준: 필터 조합 단위 테스트, 표 토큰 상한, RiskEntry 계약(factors ≥1·provenance·grade), 문서 없는 픽스처에서 위험 상위 10 비어 있지 않음, 결정론 수렴·추가 본문 fetch 0·크레딧 0, 계약 테스트 하위 호환, todo 인식 픽스처 8종 중 ≥7.
+      Commit: `feat(brain): risk map, todo-aware query_brain with tabular output, and saved inspection queries`
+
+## Wave E — 에이전트 표면 예산 · 텔레메트리 · 벤치 v3 _(G3 — todo 25)_
+
+- [ ] **22. 예산 문서 — 툴 다이어트 · 단일 워크플로 문안 · 옵트인 훅 · impact 신뢰도 · families 필터 · loadWorkspace 분리** _(D13, v1 todo 16 재정의, OQ-032·OQ-024)_
+      ⑴ 툴 카탈로그 ≤16: `search_nodes`→`search_index(include_excerpt=false, domain_filter, limit, excerpt_chars)` 흡수, `get_artifact`↔`get_node_content` 통합(path|id|ids 셀렉터, `max_chars`), `route_query`는 지시 문장 1줄로 이전, `record_note`·`record_prompt` 미노출 검토(스펙 §11 유지 여부 OQ 병기), `request_rescan` 추가; **`outputSchema` 제거**(선택 항목, 카탈로그 62%); `memory_read` limit; `toolResult` 이중 직렬화의 실클라이언트 호환 패스(Claude Code·Codex·Cursor) 후 정리. **count_tokens 실측 상한(≤1,500토큰)을 계약 테스트로** ⑵ 지시 블록·최소 인덱스·`get_graph_schema.text`·툴 설명이 같은 상수를 참조: "시작 시 `query_brain(kind:'todo')` 선택 1회 → 진입 `search_index` 1회 → 관계형(경로·영향·의존) 질문만 `get_neighbors/trace_path/impact_of` → 3회 조회 후 미해결이면 파일을 직접 읽어라 → 위험 후보 파일 편집 전 `impact_of` 1회 → 종료 `log_progress` 1회 + `memory_write` ≤1회(assert_link·record_ruled_out은 필요 시)"; 블록 ≤300토큰(count_tokens), 첫 파일 읽기 전 강제 호출 ≤2; Cursor `alwaysApply`와 §1.5 긴장을 문안에 명시 ⑶ 옵트인 훅 스니펫(Claude Code SessionEnd → `log_progress` 요약 1건; PreToolUse Grep/Read → `search_index` 권고, **차단 아님**), Codex·Cursor 대응 문서화 ⑷ `impact_of` 응답 `confidence{resolved,reference,inferred,agent_asserted}`·`bound:'exact'|'lower-bound'`·`affected{tests,docs,requirements,routes,tables}`·`targetRisk` ⑸ `get_neighbors/impact_of/query_brain/trace_path`에 `families` 필터·`includeHierarchy=false` 기본·결과 캡, `get_graph_schema`가 families 카운트 광고 ⑹ `loadWorkspace` 기본 로드 = structure+evidence+semantic, hierarchy/database/route는 부분 쿼리(`loadHierarchy(ids)`), 요청당 페이로드 전후 evidence(MT-5 정신).
+      수용 기준: 계약 테스트(툴 목록·readOnlyHint·count_tokens 상한·families 필터 하위 호환), 문안 공통 상수 테스트·스니펫 스냅샷, 쓰기 툴이 graph_nodes에 없는 id 거부, `verify-scope-boundaries.ts` PASS, OQ-024 갱신.
+      Commit: `feat(mcp): budget the tool catalog and instructions, add families filters, and label impact confidence`
+
+- [ ] **23. 세션 텔레메트리 — 툴별 응답 크기 · 에이전트 보고 usage · 일 집계** _(토큰 감사 P4, 신규)_
+      `emitAccessEvent`에 `response_chars`·`estimated_tokens`(4자/토큰 가정 컬럼 고정, 원문 없음), 경량 툴 또는 훅 수신 경로 `report_session_usage({input_tokens, cache_read_tokens, …})`(옵트인, 원문 없음, 실패 무시 — 툴 수 예산 안에서 `record_prompt` 자리 재검토), `usage_daily(workspace_id, repository_id, day)` 집계, 보존은 `access_event_retention_days` 준수.
+      수용 기준: 이벤트 스키마·집계 SQL 테스트, 프라이버시(ADR-011) 음성 테스트(원문 0), `docs/PRIVACY.md` 갱신.
+      Commit: `feat(telemetry): record response sizes and opt-in session usage per repository`
+
+- [ ] **24. 레포별 절감 미터 · 상시 로드 지시문 비용 표(§5.2-③) 실데이터화** _(토큰 감사 P5·P8, Codex 화면)_
+      `/app/stats` 레포 필터 + 세 카드 분리(서빙 토큰 실측 / 에이전트 보고 usage / 팩 예산 추정, 각 가정 1줄) + n<임계 "증거 부족" + 방법론 링크를 v3 리포트로 + "벤치 수치 ≠ 내 수치" 명시. `packages/core/src/inspection/instruction-cost.ts`: agents/claude/cursor_rule/skill 아티팩트의 `size_bytes`·classification으로 파일별 토큰 추정(공통 상수)·로드 주체 규칙(Claude Code CLAUDE.md·.claude/rules / Codex AGENTS.md 계층 / Cursor alwaysApply) → `/app/harness` 표. 데모 픽스처 문구는 "데모" 라벨 + e2e 갱신.
+      수용 기준: 뷰모델 테스트, 실레포 표 합계가 `size_bytes`와 정합(±10%), 두 테마 axe.
+      Commit: `feat(stats): per-repository savings meter with stated assumptions and a live instruction cost table`
+
+- [ ] **25. graph-surface v3 — 설치된 예산 · 프로덕션 형태 스토어 · 부속 실험** _(v1 todo 17 확장, ADR-012)_
+      사전등록 v3(다이제스트 잠금): 그래프군 = todo 22 예산(지시 블록 포함) + A′ 계층 그래프 + `get_doc_page`(있으면), 툴 정의는 하네스 자체 JSON이 아니라 **제품 `tools/list` 출력에서 변환**, usage에 `cache_creation/cache_read` 포함, **프로덕션 형태(요약 전용 스토어)**로 코퍼스 구성(픽스처 본문 코퍼스 금지 — R5 §4.5 모순 ⒀), MCP 없음 baseline 유지, 질문 세트·채점은 v1과 바이트 동일. 부속 실험(주 가설 오염 금지, 별도 사전등록): 진행 기록 채택률·호출당 토큰(provider usage)·todo 중복률, 위험 상위 30 정밀도 라벨링(파일럿 레포 + arr-app, CI 유/무 분리), 관계형 질문 4개 세트. 결과는 판정 무관 게시, 사이트 문구는 ADR-012 절차로만.
+      수용 기준: 다이제스트 잠금 후 실행, 실패 0, `verify-benchmark-report.ts` PASS, 모델별 표 evidence.
+      Commit: `feat(bench): preregister and run graph-surface v3 against the production-shaped store`
+
+## Wave F — 심볼 헤일로 + tree-sitter WASM 재판정 _(선택 — OQ-031·OQ-019 판정 후)_
+
+- [ ] **26. 심볼 노드(`symbol`) + `declares`/`extends` + 헤일로 부분 로드** _(v1 todo 18 사양 확정, 설계 ③)_
+      `symbols` 테이블 + `graph_nodes(kind='symbol')`, 안정 id sha1(path|container|kind|name), name/kind/container/span/engine만(시그니처·독스트링 저장 금지 — scope 스캐너 확장), `GET /api/map/symbols?fileIds`(파일 ≤200·심볼 ≤5,000·엣지 ≤20,000) + IndexedDB(commitSha 키), 소유 파일 중심 황금각 헤일로(시뮬 불참), `symbolOwner` 접힘 층, MCP `loadSymbolNeighborhood` 지연 로드(전량 로드 금지), `impact_of(symbol)`·`trace_path` 심볼 id, `search_index` 심볼 히트에 `path:startLine-endLine`(이건 0마이그레이션이라 todo 22에서 선행 가능).
+      Commit: `feat(ingest): promote symbols to graph nodes behind hierarchical loading`
+
+- [ ] **27. OQ-019 재판정 실험 — `web-tree-sitter` 프로토타입(채택 아님)**
+      브랜치에서 WASM + python/go 그래머: CLI 패키지 크기 증분, 1k Python 파일 파싱 시간, 두 경로 동등성, 심볼 품질 대비 — ADR-014 §5 트리거 데이터(주 언어 분포·벤치 귀인)가 있을 때만 착수. 결과는 `.omo/evidence/phase4/oq-019-wasm.md` + OQ-019 갱신.
+      Commit: `chore(research): prototype web-tree-sitter for the ADR-014 re-judgement`
+
+---
+
+## Must NOT have
+
+- 렌더 라이브러리 교체, 서버 사이드 레이아웃 부활, WebGL 없는 폴백 렌더러 신설.
+- 원본 소스 본문·코드 스니펫·심볼 시그니처·독스트링의 저장·전송, 문서 본문의 AGENTS.md/CLAUDE.md 인라인.
+- `verified` 승격 — 새 엣지는 전부 resolved/reference/inferred; 영수증 `implVerified` 라벨 정정 외 의미 변경 금지.
+- 가상 `feature`/`domain` 노드, 파일→domain 저장 엣지, 설정을 DB에만 두는 레이아웃 관례, `unclassified`의 조용한 흡수.
+- 동적 툴 노출, 훅 strict 차단 기본값, 새 과금 경로, 실패 출력 과금, 툴 수 순증(예산 ≤16 밖).
+- 기존 e2e 단언 약화·스냅샷 갱신으로 회귀 은폐·측정 없는 성능/효율 수치 게시·픽스처 본문 코퍼스로 잰 벤치 수치를 제품 수치로 표기.
+- hex 하드코딩, strings 모듈 밖 사용자 카피, Pretendard 외 본문 폰트.
+
+## 검증 전략
+
+기존 규약(수용 기준 = 테스트, lint/typecheck/vitest/Playwright/scope boundaries)에 더해:
+
+- **밀도 회귀 게이트**(todo 8): 픽스처 2종에서 평균 차수·고아·삼각형·두 경로 동등성·verified 0·원문 비저장 단언. 이 레포 실측표는 `measure-graph-density.ts`로 evidence에.
+- **그래프 성능 두 겹**: vitest 프레임 플랜(1,300/4k·5k 컬링 케이스) + 브라우저 실측(`bench-graph-browser.ts`, 호스트·GPU 명시). GPU 조각은 vitest가 볼 수 없다.
+- **실스캔 위 라이브 e2e**(D15): `local-ingest-card.spec.ts` 발판을 확장해 `/app/map`·`/app/progress`·`/app/inspection`을 실스캔 픽스처 위에서 단언 — 데모 라우트 단언은 유지(약화 아님).
+- **두 경로 동등성**은 매 웨이브 회귀: 같은 픽스처를 GitHub 소스 mock과 `alrescha push`로 넣어 플랜 바이트 비교(ignore 규칙 포함).
+- **벤치는 프로덕션 형태**: v3 그래프군은 요약 전용 스토어 + 제품 `tools/list` 카탈로그로 구성. 사전등록 후 실행, 판정 무관 게시.
+- **화면은 두 테마 스크린샷 + axe**를 evidence에(1440 기준).
+
+## 우선순위·병행
+
+1. **todo 0**(Claude Code) — 단독 첫 세션. 완료 전에는 다른 데이터 todo 착수 금지. Wave B 첫 커밋(protocol dedup·강도 복원)은 이 세션에서 A가 대행해도 된다.
+2. **Wave A 1–5**(Claude Code) ∥ **Wave B 9–13**(Codex). 파일 경계: A는 `packages/core`, `apps/worker`, `supabase/migrations`, `apps/web/lib/map`·`lib/dashboard/graph-model.ts`(타입 선커밋); B는 `apps/web/lib/graph`, `app/ui/brain-map*`, `map-screen.tsx`, `dashboard-screen.tsx`, `styles/screens/map-hud.css`. A3 완료 + B10 완료가 **첫 은하 배포 지점**(1,000+ 노드가 600 캡을 넘으므로 둘 다 필요).
+3. **Wave A′ 6–8** → **Wave C 16–18**(사용자가 실제로 "완성된 레포"를 연결해 은하를 보는 첫 순간) → **Wave B 14–15** → **Wave D 19 → 21 → 20** → **Wave E 22 → 23 → 24 → 25** → 필요 시 F.
+4. 배포(G4) 권장 지점: A3+B10, C16, D19, E22.
+5. **사용자 결정이 필요한 OQ(039·040·041·042)는 Wave D 착수 전까지** — D19의 무료 표면 범위와 E22의 예산이 이 결정에 좌우된다.
+
+## 부록 — v1 todo 번호 대응
+
+| v1                  | v2                             | v1                                                                                                                           | v2                     |
+| ------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Wave A 1·2·3·4      | A 1·2·3·4 (+ A0, A5 신설)      | Wave C 11·12                                                                                                                 | C 16·17 (+ 18 신설)    |
+| Wave B 5·6·7·8·9·10 | B 9·10·11·12·13·14 (+ 15 신설) | Wave D 13·14·15                                                                                                              | D 19·20·21             |
+| —                   | A′ 6·7·8 신설                  | Wave E 16·17                                                                                                                 | E 22·25 (+ 23·24 신설) |
+| Wave F 18           | F 26 (+ 27 신설)               | OQ-029~034 본문의 "Wave C todo 11", "Wave D todo 14", "Wave E todo 16·17", "Wave F todo 18"은 각각 16·20·22/25·26으로 읽는다 |                        |

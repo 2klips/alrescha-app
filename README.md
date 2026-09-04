@@ -32,6 +32,8 @@
 - [x] Wave 0: 부트스트랩 + ADR 이식 + 픽스처
 - [x] Wave 1–5: 구현 완료 (2026-08-14 검수 — docs/reports/IMPLEMENTATION_REVIEW_2026-08-14.md)
 - [x] Phase 2A: UI 전면 재구성 (Ink & Seal + 그래프 엔진 교체) — [`CHANGELOG.md`](CHANGELOG.md), [`spec/BUILD_PLAN_PHASE2A_UI.md`](spec/BUILD_PLAN_PHASE2A_UI.md)
+- [x] Phase 2B–2D · Phase 3: 등록 플로우 · Data Brain v2 · 점검·팀 · 실물 기동 · 지식그래프 재편 (2026-08-17 ~ 2026-09-03) — [`CHANGELOG.md`](CHANGELOG.md)
+- [ ] Phase 4: 은하수 그래프 · 계층형 Data Brain · 기존 레포 온보딩 · 정직한 상태판(유료 번들) — 연구 [`spec/RESEARCH_GRAPH_SECONDBRAIN_2026-09-03.md`](spec/RESEARCH_GRAPH_SECONDBRAIN_2026-09-03.md) · [`spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md`](spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md), 계획 [`spec/BUILD_PLAN_PHASE4.md`](spec/BUILD_PLAN_PHASE4.md) v2
 - [ ] 벤치마크 정확도 게이트 회복 (ADR-008) · Phase B~D 준비물
 
 변경 이력은 [`CHANGELOG.md`](CHANGELOG.md), 단계별 증거는 [`.omo/evidence/phase2a/INDEX.md`](.omo/evidence/phase2a/INDEX.md).
