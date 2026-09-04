@@ -486,10 +486,33 @@ export function getWorkspaceArtifact(
   };
 }
 
+/**
+ * Severity order, worst first. Alphabetical ordering put `low` above
+ * `medium` and `critical` below both, so the one thing a caller reads this
+ * list for — what to look at first — was the one thing it did not say.
+ */
+const SEVERITY_RANK: Readonly<Record<string, number>> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
+function severityRank(severity: string): number {
+  return SEVERITY_RANK[severity] ?? Object.keys(SEVERITY_RANK).length;
+}
+
+/** Ask for every status explicitly; the default is the open ones. */
+export const ALL_FINDING_STATUSES = "all";
+
 export function getWorkspaceFindings(
   workspace: McpWorkspaceData,
   filter: FindingQueryFilter = {},
 ): WorkspaceFinding[] {
+  // Resolved findings are history: an agent asking what is wrong with the
+  // repository was handed them alongside the open ones, unlabelled by
+  // recency, until this default landed (R5 §4.3).
+  const status = filter.status ?? "open";
   return workspace.repositories
     .flatMap((repository) =>
       repository.findings.map((finding) => ({
@@ -501,10 +524,12 @@ export function getWorkspaceFindings(
     .filter(
       (finding) => !filter.severity || finding.severity === filter.severity,
     )
-    .filter((finding) => !filter.status || finding.status === filter.status)
+    .filter(
+      (finding) => status === ALL_FINDING_STATUSES || finding.status === status,
+    )
     .sort(
       (left, right) =>
-        left.severity.localeCompare(right.severity) ||
+        severityRank(left.severity) - severityRank(right.severity) ||
         left.title.localeCompare(right.title) ||
         left.id.localeCompare(right.id),
     );

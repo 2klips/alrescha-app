@@ -3,7 +3,10 @@ import {
   type ProgressDashboard,
   type ProgressTodo,
 } from "@alrescha/core";
+import { storedInTotoStatementSchema } from "@alrescha/core/receipts";
 import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { PROGRESS } from "../strings";
 
 interface RequirementRow {
   id: string;
@@ -95,12 +98,29 @@ function todoFromRow(row: TodoRow): ProgressTodo | null {
   };
 }
 
+/**
+ * What the commit entry says it measured.
+ *
+ * The receipt already carries deterministic coverage in its statement
+ * (WORK_SPEC §13), so the timeline can name it without a schema change —
+ * before this every commit read `Receipt recorded for <sha7>`, which told a
+ * reader nothing about the analysis it stands for (R5 §4.2).
+ */
 function receiptSummary(row: ReceiptRow): string {
   const summary = record(row.summary);
+  const statement = storedInTotoStatementSchema.safeParse(summary["statement"]);
+  if (statement.success) {
+    const { coverage } = statement.data.predicate;
+    return PROGRESS.timeline.receiptCoverage(
+      coverage.requirements,
+      coverage.implVerified,
+      coverage.testVerified,
+    );
+  }
   for (const key of ["title", "message", "commit"]) {
     if (typeof summary[key] === "string" && summary[key]) return summary[key];
   }
-  return `Receipt recorded for ${row.commit_sha.slice(0, 7)}`;
+  return PROGRESS.timeline.receiptWithoutStatement(row.commit_sha.slice(0, 7));
 }
 
 export function buildWorkspaceProgressReport(
@@ -111,12 +131,12 @@ export function buildWorkspaceProgressReport(
       .filter(({ status }) => status === "active")
       .map(({ id }) => id),
   );
+  const implementsEdges = rows.edges.filter(
+    ({ relation }) => relation === "implements",
+  );
   const coveredRequirementIds = new Set(
-    rows.edges
-      .filter(
-        ({ relation, source_node_id }) =>
-          relation === "implements" && activeRequirementIds.has(source_node_id),
-      )
+    implementsEdges
+      .filter(({ source_node_id }) => activeRequirementIds.has(source_node_id))
       .map(({ source_node_id }) => source_node_id),
   );
   return buildProgressDashboard({
@@ -155,6 +175,10 @@ export function buildWorkspaceProgressReport(
     ),
     requirements: {
       covered: coveredRequirementIds.size,
+      // Repository-wide, not just the active requirements: no `implements`
+      // edge anywhere means coverage was never linked, which is a different
+      // statement from "linked, and none of these requirements is covered".
+      links: implementsEdges.length,
       total: activeRequirementIds.size,
     },
     todos: rows.todos.flatMap((todo) => {

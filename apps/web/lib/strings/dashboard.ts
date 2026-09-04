@@ -71,6 +71,10 @@ export const DASHBOARD = {
       code: "코드",
       test: "테스트",
       concept: "개념",
+      /** 코드에서 뽑은 WHY/NOTE 주석 — 문서가 아니라 코드 쪽에 붙는다. */
+      rationale: "근거 주석",
+      /** 아티팩트 행을 못 찾은 노드. 분류를 지어내지 않는다. */
+      unknown: "미분류",
     },
     grades: {
       all: "전체 증거",

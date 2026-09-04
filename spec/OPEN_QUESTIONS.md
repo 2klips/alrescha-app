@@ -372,3 +372,27 @@
 - 임시 결정: 기본 ignore 목록(output/·coverage/·dist/·lockfile·node_modules)을 두 경로 공통 상수로 고정하고, `.alrescha.json`의 `ignore`·`layers.hidden`으로 레포별 조정. `.omo`류 로그 디렉터리는 기본 포함하되 `layers.hidden` 기본값 후보로 표기.
 - 필요한 결정: ⑴ 기본 ignore를 "빌드 산출물만"으로 최소화하고 로그 디렉터리는 사용자가 숨긴다 ⑵ 점 디렉터리(`.omo`·`.claude`·`.agents` 제외)를 기본 제외 ⑶ 문서 밀도 상한(문서 노드 ≤N)으로 자동 접기.
 - 상태: open. 기본 후보 ⑴ + 두 경로 ignore 규칙 동등성 테스트.
+
+## OQ-044 — `untested-code`의 발화 단위: 파일마다 finding인가, 레포 배너인가
+
+- 발견: Phase 4 Wave A todo 1 / `packages/core/src/assurance/rules.ts`(`untested-code` 룰), `spec/WORK_SPEC.md` §9(“missing-test — CI 미연결 레포는 일괄 배너로 안내, 개별 스팸 금지”), `spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md` §4.3 품질 바(“문서 없는 레포에서도 코드 파일 ≥100이면 위험 상위 10이 비어 있지 않음”)
+- 내용: 두 문서가 반대 방향을 가리킨다. §9는 증거가 통째로 없는 레포에 개별 finding을 만들지 말라 하고, R5 §4.3은 문서가 없는 레포에서도 위험 목록이 비지 않아야 한다고 요구한다. 테스트가 하나도 없는 레포에서 룰을 파일마다 발화시키면 "전부 미테스트"라는 한 문장이 수백 개 행이 된다.
+- 임시 결정: 파일마다 발화한다. R5의 품질 바가 요구하는 것이 정확히 그 레포의 비어 있지 않은 위험 목록이고, §9의 스팸 금지는 `missing-test`(요구사항 단위)에 대한 규정이기 때문이다. 대신 오탐을 경로 규칙으로 묶었다 — 테스트 파일 자체·설정·`.d.ts`·생성 파일·모듈 진입점(`index.*`/`__init__.py`)은 발화하지 않고, export가 하나도 없는 파일도 제외한다. 실측: 이 레포 코드 아티팩트 477개 중 103건(21.6%), drifted-demo 2건, layout-variants 6·5건.
+- 필요한 결정: ⑴ 현행 유지(파일마다) ⑵ 레포에 테스트 파일이 0이면 발화하지 않고 배너 하나로 대체 ⑶ 발화는 유지하되 표시 계층에서 집계(위험 지도 상위 N + "그 외 n건") — Wave D todo 21의 위험 지도 빌더에서 결정.
+- 상태: open. 기본값 ⑴로 진행. 정밀도는 미측정이므로 카피는 R5 §4.3대로 "위험 후보"에 머문다.
+
+## OQ-045 — 요구사항→코드 `implements` 파생이 심볼 이름 하나뿐이다 (실측 커버리지 6%)
+
+- 발견: Phase 4 Wave A todo 1 / `packages/core/src/assurance/rules.ts`(`requirementImplementationLinks`·`explicitImplementationSymbols`), `spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md` §2.5(“implements … 이 레포 ~120”)
+- 내용: 파생 규칙은 기존 `missing-implementation` 룰이 쓰던 것과 같다 — 요구사항 문장 안의 camelCase 토큰 중 **선언 파일이 유일한** 심볼. 이 레포 실측은 요구사항 127개 중 링크 8개(고유 대상 6개)로, R5 §2.5의 추정 ~120과 한 자릿수 차이다. 원인은 이 레포 스펙 문장이 심볼이 아니라 경로·클래스명·메서드명(최상위 export가 아님)을 인용하기 때문이다. 그 결과 `/app/progress`의 요구사항 커버리지는 "미측정"에서 벗어나지만 6%라는 낮은 수치로 읽힌다 — 구현률이 아니라 링크율인데 화면 라벨은 "요구사항 커버리지"다.
+- 임시 결정: 심볼 소유 방식만 채택했다. 경로 인용(요구사항 span 안의 코드 참조 토큰) 방식을 실측해 봤으나 이 레포에서 +4건에 그쳐 복잡도 대비 이득이 없었다. PascalCase(컴포넌트·클래스·타입)까지 넓히면 `missing-implementation`의 발화 조건도 함께 변하므로 이번 범위에서 제외했다.
+- 필요한 결정: ⑴ 파생을 넓힌다(PascalCase 심볼 + 요구사항 span 안의 경로 참조 + 메서드 심볼 저장) — `missing-implementation` 정밀도 영향 측정이 선행 ⑵ 지표 라벨을 "구현 링크율"로 정정해 낮은 수치가 오독되지 않게 한다 ⑶ 현행 유지하고 Wave D의 finding 상세에서 "링크 없음"을 개별 요구사항 단위로 노출한다.
+- 상태: open. 기본 후보 ⑵(카피 정정은 Wave D todo 19 범위) + R5 §4.2 품질 바(implements 정밀도 ≥0.80, 사람 라벨) 측정 후 ⑴ 재판정.
+
+## OQ-046 — `unknown` 노드와 `rationale` 노드의 도메인·색이 아직 없다
+
+- 발견: Phase 4 Wave A todo 1 / `apps/web/lib/dashboard/graph-model.ts`(`NODE_TYPE_CLASSIFICATION`), `apps/web/lib/graph/render-frame.ts`(`NODE_TOKEN_BY_TYPE`), `spec/BUILD_PLAN_PHASE4.md` Wave A todo 4(도메인 6종·`node-database` 등 신규 토큰)
+- 내용: `GraphNodeType`에 `rationale`·`unknown`을 추가했지만 `graphNodeArea`는 `BrainArea` 4종(frontend·backend·docs·tests)만 안다. 두 종류 모두 `code_metadata`로 area를 유도하므로 rationale은 자신이 붙은 코드 파일의 도메인을 따르고(의도한 수정), `unknown`은 경로로 유도돼 frontend/backend 중 하나로 들어간다 — "미분류"라고 부르면서 도메인은 하나 고르는 셈이다. 색도 기존 토큰을 빌려 쓴다(rationale=`node-code`, unknown=`border-muted`).
+- 임시 결정: 그대로 둔다. todo 4가 `unclassified→기타`를 도입하면서 같은 자리를 다시 만지고, 스프라이트·범례는 Wave B todo 12 소관이다. `unknown`은 로더 정렬 정합으로 0건이어야 하며 todo 3의 수용 기준이 그것을 단언한다.
+- 필요한 결정: todo 4에서 `unknown`을 `기타` 도메인으로 보내고 전용 토큰을 줄지, 아니면 `unknown` 자체를 렌더에서 숨기고 카운트로만 노출할지.
+- 상태: open. todo 3·4에서 함께 판정.

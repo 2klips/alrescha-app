@@ -32,7 +32,8 @@ export type AssuranceFindingType =
   | "missing-test"
   | "orphan-doc"
   | "stale-doc"
-  | "unproven-claim";
+  | "unproven-claim"
+  | "untested-code";
 export type AssuranceSeverity = "critical" | "high" | "low" | "medium";
 export type AssuranceGrade = "inferred" | "verified";
 
@@ -61,12 +62,32 @@ export interface AssuranceFinding {
   readonly severity: AssuranceSeverity;
   readonly suggestedAction: string;
   readonly summary: string;
+  /**
+   * The code file this finding is *about*, when the rule can name one
+   * deterministically — the referenced path for `stale-doc`, the file owning
+   * the named symbol for `missing-implementation`/`missing-test`, the file
+   * itself for `untested-code`.
+   *
+   * Findings anchor on their source span, which for five of the seven rules
+   * is a document. A repository whose risk lives in code therefore had no
+   * finding on any code node at all (R5 §2.2 D8); this is the second anchor
+   * that fixes it. Null when no code file can be named without guessing.
+   */
+  readonly targetPath: string | null;
   readonly type: AssuranceFindingType;
 }
 
 export interface AnalyzeRepositoryAssuranceInput {
   readonly aiAssist?: DisabledAssuranceAiAssist;
   readonly files: readonly AssuranceSourceFile[];
+  /**
+   * Paths with an incoming `tests` edge — the scan's `test-import` relation
+   * (Phase 4 Wave A todo 0), which knows a test exercises a file even when
+   * the two are named nothing alike. Absent means "no such edge is known",
+   * not "nothing is tested", so the `untested-code` rule stays deterministic
+   * on whatever the caller can actually supply.
+   */
+  readonly testedPaths?: Iterable<string>;
   /**
    * Precomputed via `prepareAssuranceContexts(files)`. Both
    * `analyzeRepositoryAssurance` and `assuranceCoverage` parse the same
@@ -99,6 +120,7 @@ interface FindingDraft {
   readonly requestedSeverity: AssuranceSeverity;
   readonly suggestedAction: string;
   readonly summary: string;
+  readonly targetPath?: string | null;
   readonly type: AssuranceFindingType;
 }
 
@@ -190,6 +212,7 @@ function findingFromDraft(draft: FindingDraft): AssuranceFinding {
     severity: capSeverity(draft.requestedSeverity, grade),
     suggestedAction: draft.suggestedAction,
     summary: draft.summary,
+    targetPath: draft.targetPath ?? null,
     type: draft.type,
   };
 }
@@ -254,6 +277,50 @@ function explicitImplementationSymbols(statement: string): readonly string[] {
   return [...statement.matchAll(/\b[a-z][A-Za-z\d]*[A-Z][A-Za-z\d]*\b/g)].map(
     ([symbol]) => symbol,
   );
+}
+
+/**
+ * Which file *declares* each exported symbol name; null when the answer is
+ * ambiguous.
+ *
+ * A barrel re-exporting a name is recorded with kind `export`, the declaring
+ * file with the kind of its declaration (`function`, `class`, `variable`, …).
+ * Counting both as owners makes almost every name in a monorepo ambiguous —
+ * on this repository 503 of 1,246 names, including every symbol a package
+ * index re-exports — so a declaration wins over a re-export, and a name is
+ * ambiguous only when two files declare it. A name that is re-exported and
+ * never declared (its declaration is outside the scanned set) keeps the one
+ * file that names it. Ambiguity yields no owner at all: the resolver's rule
+ * is that a wrong edge costs more than a missing one.
+ */
+function symbolOwners(
+  files: readonly AssuranceSourceFile[],
+): ReadonlyMap<string, string | null> {
+  const declared = new Map<string, string | null>();
+  const reExported = new Map<string, string | null>();
+  for (const file of files) {
+    for (const { kind, name } of file.exportedSymbols ?? []) {
+      const table = kind === "export" ? reExported : declared;
+      const known = table.get(name);
+      if (known === undefined) table.set(name, file.path);
+      else if (known !== file.path) table.set(name, null);
+    }
+  }
+  const owners = new Map<string, string | null>(reExported);
+  for (const [name, path] of declared) owners.set(name, path);
+  return owners;
+}
+
+/** The first symbol a statement names whose owning file is unambiguous. */
+function namedImplementation(
+  statement: string,
+  owners: ReadonlyMap<string, string | null>,
+): { readonly path: string; readonly symbol: string } | null {
+  for (const symbol of explicitImplementationSymbols(statement)) {
+    const path = owners.get(symbol);
+    if (path) return { path, symbol };
+  }
+  return null;
 }
 
 function resolveReferencePath(
@@ -356,6 +423,55 @@ function documentContexts(
     });
 }
 
+/**
+ * Files the `untested-code` rule must never report, in the order a reader
+ * would ask about them.
+ *
+ * A declaration file has nothing to execute, a config file is read by a tool
+ * rather than called by a unit, and a generated file is a build product whose
+ * test belongs to its generator. Firing on any of them would make the first
+ * risk signal a documentation-free repository ever sees a list of things
+ * nobody should write a test for.
+ */
+const DECLARATION_FILE = /\.d\.[cm]?ts$/i;
+/**
+ * Module entry points (`index.*`, `__init__.py`) re-export the files behind
+ * them; the unit a test would cover lives in those files, and the resolver
+ * already routes edges through the barrel to them (Wave A todo 0). Firing
+ * here would put one permanent finding on every package in a monorepo.
+ */
+const ENTRY_POINT_FILE = /(?:^|\/)(?:index\.[cm]?[jt]sx?|__init__\.py)$/i;
+const CONFIG_FILE =
+  /(?:^|\/)(?:[^/]*\.config\.[cm]?[jt]sx?|\.?[a-z]+rc\.[cm]?[jt]s|conftest\.py|setup\.py)$/i;
+const GENERATED_FILE =
+  /(?:^|\/)(?:__generated__|generated|dist|build|out|coverage|vendor|node_modules)(?:\/|$)|\.(?:generated|gen|min)\.[cm]?[jt]sx?$|_pb2?\.py$|\.pb\.go$/i;
+
+function baseName(path: string): string {
+  const file = path.slice(path.lastIndexOf("/") + 1);
+  const dot = file.indexOf(".");
+  return dot === -1 ? file : file.slice(0, dot);
+}
+
+/**
+ * The subject names the repository's test files claim, by convention:
+ * `auth.test.ts`, `test_auth.py` and `auth_test.go` all claim `auth`.
+ * Matching on the name alone (rather than on the directory) keeps a test
+ * suite that mirrors the source tree from reading as untested code.
+ */
+function testedSubjectNames(
+  files: readonly AssuranceSourceFile[],
+): ReadonlySet<string> {
+  const names = new Set<string>();
+  for (const file of files) {
+    if (!TEST_PATH.test(file.path)) continue;
+    const base = baseName(file.path)
+      .replace(/^test_/i, "")
+      .replace(/_test$/i, "");
+    if (base.length > 0) names.add(base.toLowerCase());
+  }
+  return names;
+}
+
 export interface PreparedAssuranceContexts {
   readonly allSymbols: ReadonlySet<string>;
   readonly contexts: readonly DocumentContext[];
@@ -384,15 +500,73 @@ export function prepareAssuranceContexts(
   };
 }
 
+/** Confidence ceiling for a requirement→code link (BUILD_PLAN_PHASE4 A1). */
+export const REQUIREMENT_IMPLEMENTATION_CONFIDENCE = 0.6;
+
+/**
+ * A requirement statement that names an exported symbol, paired with the file
+ * that owns it — the `implements` edge the analysis persists.
+ *
+ * `reference`, never `resolved` and never `verified`: naming a symbol is
+ * name matching, not an execution (WORK_SPEC §3-1). It is emitted here, next
+ * to the rules that read the same ownership map, so a finding and the edge it
+ * anchors to cannot disagree about which file implements a requirement.
+ */
+export interface RequirementImplementationLink {
+  readonly confidence: number;
+  /** Path of the document stating the requirement. */
+  readonly documentPath: string;
+  /** `REQ-…` code when the document names one, else the statement itself. */
+  readonly identity: string;
+  readonly method: "symbol-owner";
+  readonly span: MarkdownSpan;
+  readonly symbol: string;
+  readonly targetPath: string;
+  readonly tier: "reference";
+}
+
+export function requirementImplementationLinks({
+  files,
+  prepared,
+}: AnalyzeRepositoryAssuranceInput): readonly RequirementImplementationLink[] {
+  const { contexts } = prepared ?? prepareAssuranceContexts(files);
+  const owners = symbolOwners(files);
+  const links: RequirementImplementationLink[] = [];
+  const seen = new Set<string>();
+  for (const context of contexts) {
+    for (const requirement of context.requirements) {
+      const named = namedImplementation(requirement.statement, owners);
+      if (!named) continue;
+      const identity = requirement.id ?? requirement.statement;
+      const key = `${context.file.path}|${identity}|${named.path}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      links.push({
+        confidence: REQUIREMENT_IMPLEMENTATION_CONFIDENCE,
+        documentPath: context.file.path,
+        identity,
+        method: "symbol-owner",
+        span: requirement.span,
+        symbol: named.symbol,
+        targetPath: named.path,
+        tier: "reference",
+      });
+    }
+  }
+  return links;
+}
+
 export function analyzeRepositoryAssurance({
   files,
   prepared,
+  testedPaths,
 }: AnalyzeRepositoryAssuranceInput): readonly AssuranceFinding[] {
   const { allSymbols, contexts, testedRequirementIds } =
     prepared ?? prepareAssuranceContexts(files);
   const findings: AssuranceFinding[] = [];
   const occupiedSpans = new Set<string>();
   const knownPaths = new Set(files.map(({ path }) => path));
+  const owners = symbolOwners(files);
   const symbolsByPath = new Map(
     files.map((file) => [
       file.path,
@@ -429,6 +603,10 @@ export function analyzeRepositoryAssurance({
         suggestedAction:
           "Implement the requirement or link it to an existing exported symbol.",
         summary: `${requirement.id ?? "Requirement"} has no implementation symbol.`,
+        // A partially implemented requirement still names a file: anchor
+        // there so the gap shows on the code the work started in.
+        targetPath:
+          namedImplementation(requirement.statement, owners)?.path ?? null,
         type: "missing-implementation",
       });
     }
@@ -451,6 +629,9 @@ export function analyzeRepositoryAssurance({
         suggestedAction:
           "Add a CI-mapped test whose name includes the requirement ID.",
         summary: `${requirement.id ?? "Requirement"} has implementation metadata but no test mapping.`,
+        // The same file the `implements` edge points at — the untested one.
+        targetPath:
+          namedImplementation(requirement.statement, owners)?.path ?? null,
         type: "missing-test",
       });
     }
@@ -473,6 +654,9 @@ export function analyzeRepositoryAssurance({
         suggestedAction:
           "Update or remove the stale path and symbol reference.",
         summary: `The documented ${reference.symbol ?? reference.path} source reference does not exist.`,
+        // The file exists and the symbol does not: that file is where the
+        // documentation drifted. A missing file has no node to anchor to.
+        targetPath: knownPaths.has(reference.path) ? reference.path : null,
         type: "stale-doc",
       });
     }
@@ -603,6 +787,61 @@ export function analyzeRepositoryAssurance({
         type: "unproven-claim",
       });
     }
+  }
+
+  // The one rule that needs no document at all (Phase 4 Wave A todo 1).
+  //
+  // Every rule above starts from a spec, ADR or instruction file, so a
+  // repository written without documentation produced no findings whatever
+  // its state (R5 §4.3 — a 370-file pilot returned zero). This one reads the
+  // structure the scan already stored: an exported unit that no test names
+  // and no `tests` edge reaches. `inferred` and `low` by construction —
+  // "no test was found" is not "no test exists", and the absence of a test
+  // is a risk signal, not a defect.
+  const tested = new Set(testedPaths ?? []);
+  const testedNames = testedSubjectNames(files);
+  for (const file of files) {
+    if (file.classification !== "code_metadata") continue;
+    if (TEST_PATH.test(file.path)) continue;
+    if (
+      DECLARATION_FILE.test(file.path) ||
+      ENTRY_POINT_FILE.test(file.path) ||
+      CONFIG_FILE.test(file.path) ||
+      GENERATED_FILE.test(file.path)
+    )
+      continue;
+    const symbols = file.exportedSymbols ?? [];
+    // Nothing is exported, so nothing here has a surface a test could take.
+    if (symbols.length === 0) continue;
+    if (tested.has(file.path)) continue;
+    if (testedNames.has(baseName(file.path).toLowerCase())) continue;
+    const first = symbols[0]!;
+    pushUnique(findings, occupiedSpans, {
+      confidence: 0.6,
+      provenance: [
+        {
+          // A code anchor, never a code body: the line comes from the symbol
+          // metadata the scan stored, and the excerpt stays empty because
+          // this rule never reads the file (WORK_SPEC §3-3).
+          endByte: 0,
+          endColumn: first.endColumn,
+          endLine: first.endLine,
+          excerpt: "",
+          path: file.path,
+          startByte: 0,
+          startColumn: first.startColumn,
+          startLine: first.startLine,
+        },
+      ],
+      requestedSeverity: "low",
+      suggestedAction:
+        "Add a test that imports this file, or name it after the unit it covers.",
+      summary: `${posix.basename(file.path)} exports ${symbols.length} symbol${
+        symbols.length === 1 ? "" : "s"
+      } with no test covering it.`,
+      targetPath: file.path,
+      type: "untested-code",
+    });
   }
 
   return findings;

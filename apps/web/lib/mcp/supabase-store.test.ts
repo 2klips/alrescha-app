@@ -43,6 +43,14 @@ class FakeQueryBuilder<T = unknown> {
     return this.#record("order", args);
   }
 
+  is(...args: unknown[]) {
+    return this.#record("is", args);
+  }
+
+  limit(...args: unknown[]) {
+    return this.#record("limit", args);
+  }
+
   async insert(...args: unknown[]) {
     this.#record("insert", args);
     return this.response;
@@ -296,5 +304,116 @@ describe("SupabaseMcpStore.publishAccessEvent — REST broadcast (QW-17)", () =>
       ),
     ).rejects.toThrow(/boom/);
     expect(client.removedChannels).toEqual(client.channels);
+  });
+});
+
+/**
+ * Phase 4 Wave A todo 1 — finding provenance survives the trip to an agent.
+ *
+ * The analyze job stores `{reason, spans, suggestedAction, evidenceLinks}`.
+ * The reader recognised only `{sourceArtifactId, span}` and otherwise
+ * collapsed the row to `{reason}`, so every production finding reached MCP as
+ * "deterministic stale-doc rule" with no path, line or next step (R5 §4.3).
+ */
+describe("SupabaseMcpStore.loadWorkspace — finding provenance", () => {
+  const REPOSITORY_ID = "01K287J3D18V7A1MZG9E8D1Y20";
+
+  function clientWithFinding(provenance: unknown, extra: object = {}) {
+    return new FakeSupabaseClient({
+      findings: {
+        data: [
+          {
+            confidence: 0.98,
+            evidence_grade: "inferred",
+            id: "01K287J3D18V7A1MZG9E8D1Y30",
+            kind: "stale-doc",
+            provenance,
+            repository_id: REPOSITORY_ID,
+            severity: "medium",
+            source_node_id: "01K287J3D18V7A1MZG9E8D1Y11",
+            status: "open",
+            title: "The documented reference does not exist.",
+            ...extra,
+          },
+        ],
+        error: null,
+      },
+      repositories: {
+        data: [
+          {
+            default_branch: "main",
+            full_name: "2klips/alrescha-app",
+            id: REPOSITORY_ID,
+          },
+        ],
+        error: null,
+      },
+    });
+  }
+
+  async function findingOf(client: FakeSupabaseClient) {
+    const store = new SupabaseMcpStore(asClient(client));
+    const workspace = await store.loadWorkspace({
+      scopes: ["mcp:read"],
+      tokenId: TOKEN_ID,
+      userId: USER_ID,
+      workspaceId: WORKSPACE_ID,
+    });
+    return workspace.repositories[0]?.findings[0];
+  }
+
+  it("passes the path, span and suggested action through", async () => {
+    const finding = await findingOf(
+      clientWithFinding(
+        {
+          evidenceLinks: [
+            { description: "Source span used by the rule.", path: "spec/a.md" },
+          ],
+          reason: "deterministic stale-doc rule",
+          spans: [
+            {
+              endLine: 15,
+              excerpt: "`src/legacy.ts#charge` implements billing.",
+              path: "spec/a.md",
+              startLine: 15,
+            },
+          ],
+          suggestedAction: "Update or remove the stale reference.",
+        },
+        { target_node_id: "01K287J3D18V7A1MZG9E8D1Y12" },
+      ),
+    );
+
+    expect(finding?.provenance).toEqual({
+      reason: "deterministic stale-doc rule",
+      spans: [{ endLine: 15, path: "spec/a.md", startLine: 15 }],
+      suggestedAction: "Update or remove the stale reference.",
+    });
+    expect(finding?.targetNodeId).toBe("01K287J3D18V7A1MZG9E8D1Y12");
+    // The excerpt stays behind: an agent needs the location, and document
+    // bodies are what `get_artifact` serves.
+    expect(JSON.stringify(finding?.provenance)).not.toContain("excerpt");
+  });
+
+  it("still reads the older single-span shape", async () => {
+    const finding = await findingOf(
+      clientWithFinding({
+        sourceArtifactId: "01K287J3D18V7A1MZG9E8D1Y11",
+        span: { endLine: 2, path: "spec/WORK_SPEC.md", startLine: 2 },
+      }),
+    );
+
+    expect(finding?.provenance).toEqual({
+      sourceArtifactId: "01K287J3D18V7A1MZG9E8D1Y11",
+      span: { endLine: 2, path: "spec/WORK_SPEC.md", startLine: 2 },
+    });
+  });
+
+  it("never leaves a finding without a reason", async () => {
+    const finding = await findingOf(clientWithFinding({ nonsense: true }));
+
+    expect(finding?.provenance).toEqual({
+      reason: "Stored finding provenance",
+    });
   });
 });

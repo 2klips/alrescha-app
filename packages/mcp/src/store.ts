@@ -67,16 +67,36 @@ export interface McpSourceSpan {
   startLine: number;
 }
 
+/**
+ * Why a finding says what it says, as stored.
+ *
+ * The deterministic rules write a reason, the spans they read and the action
+ * they suggest. Flattening all of that to `{reason}` — which the Supabase
+ * store did until Phase 4 Wave A todo 1 — left an agent with "deterministic
+ * stale-doc rule" and no path, line or next step (R5 §4.3). Every field is
+ * optional because a row may carry any subset, but a finding always has at
+ * least a reason or a source span (enforced by `findings_provenance_shape`).
+ */
+export interface McpFindingProvenance {
+  reason?: string;
+  sourceArtifactId?: string;
+  span?: McpSourceSpan;
+  /** Every span the rule read, in the order it read them. */
+  spans?: McpSourceSpan[];
+  suggestedAction?: string;
+}
+
 export interface McpFindingData {
   confidence: number;
   evidenceGrade: "inferred" | "verified";
   id: string;
   kind: string;
-  provenance:
-    { reason: string } | { sourceArtifactId: string; span: McpSourceSpan };
+  provenance: McpFindingProvenance;
   severity: string;
   sourceNodeId: string | null;
   status: string;
+  /** Code node the finding is about, when a rule could name one. */
+  targetNodeId?: string | null;
   title: string;
 }
 

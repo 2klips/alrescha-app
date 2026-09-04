@@ -464,12 +464,16 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
         connected.add(edge.target);
       if (edge.target === selectedNode.id) connected.add(edge.source);
     }
+    // Evidence first, explanation after: a rationale sits with the code it
+    // annotates, and an unresolved node sorts last.
     const order: Record<GraphNodeType, number> = {
       requirement: 0,
       code: 1,
       test: 2,
-      document: 3,
-      concept: 4,
+      rationale: 3,
+      document: 4,
+      concept: 5,
+      unknown: 6,
     };
     return model.graph.nodes
       .filter((node) => connected.has(node.id))

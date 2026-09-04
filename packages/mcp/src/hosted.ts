@@ -234,13 +234,17 @@ const GET_ARTIFACT_TOOL = {
 
 const GET_FINDINGS_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description: "Get findings with explicit status, severity, and provenance",
+  description:
+    "Get findings with explicit status, severity, and provenance. Open findings only unless status says otherwise; severity order, worst first.",
   inputSchema: z.object({
     filter: z
       .object({
         kind: z.string().optional(),
         severity: z.string().optional(),
-        status: z.string().optional(),
+        status: z
+          .string()
+          .optional()
+          .describe("Defaults to 'open'; pass 'all' for every status."),
       })
       .optional(),
   }),
@@ -256,6 +260,7 @@ const GET_FINDINGS_TOOL = {
         severity: z.string(),
         sourceNodeId: z.string().nullable(),
         status: z.string(),
+        targetNodeId: z.string().nullish(),
         title: z.string(),
       }),
     ),

@@ -172,6 +172,10 @@
   fill: var(--node-test);
 }
 
+.overview-mini-node.unknown {
+  fill: var(--border-muted);
+}
+
 .overview-graph-foot {
   align-items: center;
   color: var(--fg-muted);

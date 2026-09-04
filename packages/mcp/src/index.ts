@@ -56,6 +56,7 @@ export type {
   McpEdgeRelation,
   McpEvidenceData,
   McpFindingData,
+  McpFindingProvenance,
   McpIndexEntryData,
   McpNodeType,
   McpNote,

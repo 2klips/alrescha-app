@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { scanRepository } from "../packages/core/src/index";
 import { createLocalRepositorySource } from "../packages/cli/src/local-source";
+import { graphNodeArea } from "../apps/web/lib/dashboard/graph-model";
 import {
   buildWorkspaceMapModel,
   MAP_CLUSTER_THRESHOLD,
@@ -184,7 +185,13 @@ describe("workspace map builder (Phase 3 Wave A todo 1)", () => {
     expect(byId.get("node-code")?.type).toBe("code");
     expect(byId.get("node-test")?.type).toBe("test");
     expect(byId.get("node-spec")?.type).toBe("document");
-    expect(byId.get("node-rationale")?.type).toBe("document");
+    // A rationale is a WHY comment lifted out of a code file; typing it as a
+    // document put all 86 of this repository's rationale nodes in the docs
+    // band with the specs (R5 §2.2 D5, Phase 4 Wave A todo 1).
+    expect(byId.get("node-rationale")?.type).toBe("rationale");
+    expect(graphNodeArea(byId.get("node-rationale")!)).toBe(
+      graphNodeArea(byId.get("node-code")!),
+    );
     expect(byId.get("node-requirement")?.type).toBe("requirement");
     expect(byId.get("node-evidence")?.type).toBe("test");
     // Findings are counts on their source node, not nodes of their own.
@@ -322,6 +329,221 @@ describe("workspace map builder (Phase 3 Wave A todo 1)", () => {
     expect(
       model.graph.edges.find((edge) => edge.id === "edge-dangling"),
     ).toBeUndefined();
+  });
+});
+
+/**
+ * Phase 4 Wave A todo 1 — findings reach code nodes.
+ *
+ * A finding is raised from a document span, so `source_node_id` is a
+ * document for five of the seven rules. The map counted only that anchor,
+ * which is why a repository whose risk lives in code showed empty rings
+ * however many findings it had (R5 §2.2 D8).
+ */
+describe("finding anchors on the workspace map", () => {
+  function anchoredRows(
+    findings: readonly {
+      source_node_id: string | null;
+      status: string;
+      target_node_id?: string | null;
+    }[],
+  ): WorkspaceMapRows {
+    return {
+      ...emptyRows(),
+      artifacts: [
+        { classification: "spec", id: "node-spec", path: "spec/auth.md" },
+        {
+          classification: "code_metadata",
+          id: "node-code",
+          path: "src/auth.ts",
+        },
+      ],
+      findings: [...findings],
+      graphNodes: [
+        { id: "node-spec", kind: "artifact", label: "spec/auth.md" },
+        { id: "node-code", kind: "artifact", label: "src/auth.ts" },
+      ],
+    };
+  }
+
+  it("rings the code node a document finding is about", () => {
+    const model = buildWorkspaceMapModel(
+      WORKSPACE,
+      anchoredRows([
+        {
+          source_node_id: "node-spec",
+          status: "open",
+          target_node_id: "node-code",
+        },
+      ]),
+    );
+    const byId = new Map(model.graph.nodes.map((node) => [node.id, node]));
+
+    expect(byId.get("node-spec")?.findingCount).toBe(1);
+    expect(byId.get("node-code")?.findingCount).toBe(1);
+    expect(byId.get("node-code")?.grade).toBe("broken");
+    // One finding, two anchors — the repository total is still one.
+    expect(model.counts.openFindings).toBe(1);
+  });
+
+  it("counts a self-anchored finding once", () => {
+    // `untested-code` raises on the code file and is about the same file.
+    const model = buildWorkspaceMapModel(
+      WORKSPACE,
+      anchoredRows([
+        {
+          source_node_id: "node-code",
+          status: "open",
+          target_node_id: "node-code",
+        },
+      ]),
+    );
+
+    expect(
+      model.graph.nodes.find(({ id }) => id === "node-code")?.findingCount,
+    ).toBe(1);
+  });
+
+  it("ignores anchors of findings that are no longer open", () => {
+    const model = buildWorkspaceMapModel(
+      WORKSPACE,
+      anchoredRows([
+        {
+          source_node_id: "node-spec",
+          status: "resolved",
+          target_node_id: "node-code",
+        },
+      ]),
+    );
+
+    expect(
+      model.graph.nodes.every(({ findingCount }) => findingCount === 0),
+    ).toBe(true);
+    expect(model.counts.openFindings).toBe(0);
+  });
+});
+
+describe("a node whose artifact row did not come back", () => {
+  it("is unknown rather than a document", () => {
+    // The loader caps `artifacts` and `graph_nodes` at the same limit, so an
+    // unordered artifacts page could return a different 2,000 rows than the
+    // nodes page; the code nodes it missed silently became documents and
+    // swelled the docs band (R4 §3.7). Both queries now share one order —
+    // this states what the fallback says when it fires anyway.
+    const model = buildWorkspaceMapModel(WORKSPACE, {
+      ...emptyRows(),
+      graphNodes: [
+        { id: "node-orphan", kind: "artifact", label: "src/deep/module.ts" },
+      ],
+    });
+    const [node] = model.graph.nodes;
+
+    expect(node?.type).toBe("unknown");
+    expect(graphNodeArea(node!)).not.toBe("docs");
+  });
+});
+
+describe("implements edges never promote a node to verified", () => {
+  it("keeps a linked code file inferred while an evidence source promotes", () => {
+    const model = buildWorkspaceMapModel(WORKSPACE, {
+      ...emptyRows(),
+      artifacts: [
+        { classification: "spec", id: "node-spec", path: "spec/auth.md" },
+        {
+          classification: "code_metadata",
+          id: "node-code",
+          path: "src/auth.ts",
+        },
+        {
+          classification: "code_metadata",
+          id: "node-covered",
+          path: "src/session.ts",
+        },
+        {
+          classification: "code_metadata",
+          id: "node-test",
+          path: "tests/session.test.ts",
+        },
+      ],
+      edges: [
+        {
+          confidence: 0.6,
+          id: "edge-implements",
+          provenance: {
+            method: "symbol-owner",
+            reason: "requirement statement names the exported symbol",
+            sourceArtifactId: "node-spec",
+            span: { endLine: 3, path: "spec/auth.md", startLine: 3 },
+            tier: "reference",
+          },
+          relation: "implements",
+          source_node_id: "node-requirement",
+          target_node_id: "node-code",
+        },
+        {
+          confidence: 0.6,
+          id: "edge-tests",
+          provenance: { reason: "test-import", tier: "reference" },
+          relation: "tests",
+          source_node_id: "node-test",
+          target_node_id: "node-covered",
+        },
+        {
+          confidence: 1,
+          id: "edge-ci",
+          provenance: { reason: "ci report parsed" },
+          relation: "supports",
+          source_node_id: "node-evidence",
+          target_node_id: "node-requirement",
+        },
+      ],
+      evidence: [
+        {
+          id: "node-evidence",
+          kind: "ci",
+          source_artifact_id: "node-test",
+          verdict: "supports",
+        },
+      ],
+      graphNodes: [
+        { id: "node-spec", kind: "artifact", label: "spec/auth.md" },
+        { id: "node-code", kind: "artifact", label: "src/auth.ts" },
+        { id: "node-covered", kind: "artifact", label: "src/session.ts" },
+        { id: "node-test", kind: "artifact", label: "tests/session.test.ts" },
+        { id: "node-requirement", kind: "requirement", label: "REQ-AUTH-002" },
+        { id: "node-evidence", kind: "evidence", label: "ci: auth suite" },
+      ],
+      requirements: [
+        {
+          id: "node-requirement",
+          source_artifact_id: "node-spec",
+          source_span: { endLine: 3, path: "spec/auth.md", startLine: 3 },
+          statement: "토큰은 회전되어야 한다",
+        },
+      ],
+    });
+    const byId = new Map(model.graph.nodes.map((node) => [node.id, node]));
+
+    // `implements` and `tests` are in SUPPORTING_RELATIONS, which promotes a
+    // target only when the *source* is execution evidence. A requirement and
+    // a test file are not (ADR-001, WORK_SPEC §3-1).
+    expect(byId.get("node-code")?.grade).toBe("inferred");
+    expect(byId.get("node-covered")?.grade).toBe("inferred");
+    expect(byId.get("node-spec")?.grade).toBe("inferred");
+    // The CI evidence row is the one thing that does promote its target.
+    expect(byId.get("node-requirement")?.grade).toBe("verified");
+    expect(
+      model.graph.nodes.filter(({ grade }) => grade === "verified").length,
+    ).toBe(2);
+    // Edge grades follow the same rule: only the evidence-sourced edge.
+    expect(
+      model.graph.edges
+        .filter(({ grade }) => grade === "verified")
+        .map(({ id }) => id),
+    ).toEqual(["edge-ci"]);
+    expect(
+      model.graph.edges.find(({ id }) => id === "edge-implements")?.tier,
+    ).toBe("reference");
   });
 });
 

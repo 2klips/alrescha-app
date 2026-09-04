@@ -25,11 +25,13 @@ import {
   assuranceSourceRequired,
   digestInTotoStatement,
   prepareAssuranceContexts,
+  requirementImplementationLinks,
   RECEIPT_PREDICATE_TYPE,
   RECEIPT_TOOL,
   type AssuranceFinding,
   type AssuranceSourceFile,
   type InTotoStatement,
+  type RequirementImplementationLink,
 } from "@alrescha/core";
 
 import { deterministicUlid } from "./deterministic-id";
@@ -54,7 +56,27 @@ export interface PersistedFinding {
   readonly provenance: unknown;
   readonly severity: AssuranceFinding["severity"];
   readonly sourceNodeId: string | null;
+  /**
+   * The code node the finding is about, when the rule named one. The source
+   * node stays the document that raised it; this is the second anchor, so a
+   * risk view over code is reachable at all (R5 §2.2 D8).
+   */
+  readonly targetNodeId: string | null;
   readonly title: string;
+}
+
+/**
+ * A requirement→code `implements` edge (Phase 4 Wave A todo 1).
+ *
+ * `reference` tier, confidence capped by the engine: the link is a name
+ * match between a requirement statement and an exported symbol, which is
+ * evidence of intent, not of execution (WORK_SPEC §3-1).
+ */
+export interface PersistedImplementsEdge {
+  readonly confidence: number;
+  readonly provenance: unknown;
+  readonly requirementId: string;
+  readonly targetNodeId: string;
 }
 
 export interface FindingsDelta {
@@ -120,10 +142,22 @@ export interface AnalysisJobStore {
     workspaceId: string;
   }): Promise<FindingsDelta>;
   /**
-   * Upsert the requirements this analysis extracted (graph node + row) and
-   * mark the active ones that no longer appear as superseded.
+   * Paths carrying an incoming `tests` edge — what the scan derived from the
+   * repository's own test imports. Read from the graph rather than guessed
+   * here so both ingest paths (GitHub, CLI) feed the rules the same set.
+   */
+  loadTestedPaths(input: {
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<readonly string[]>;
+  /**
+   * Upsert the requirements this analysis extracted (graph node + row), the
+   * `implements` edges they carry, and mark the active ones that no longer
+   * appear as superseded. One call because the edges reference the nodes:
+   * a separate write could land between the two and violate the key.
    */
   reconcileRequirements(input: {
+    implementsEdges: readonly PersistedImplementsEdge[];
     repositoryId: string;
     requirements: readonly PersistedRequirement[];
     workspaceId: string;
@@ -174,6 +208,9 @@ function persisted(
     },
     severity: finding.severity,
     sourceNodeId: firstPath ? (nodeByPath.get(firstPath) ?? null) : null,
+    targetNodeId: finding.targetPath
+      ? (nodeByPath.get(finding.targetPath) ?? null)
+      : null,
     title: finding.summary,
   };
 }
@@ -185,6 +222,65 @@ const REQUIREMENT_LABEL_LIMIT = 80;
  * REQ code is the identity when the document names one; otherwise the
  * statement itself is, so a reworded sentence supersedes rather than mutates.
  */
+function requirementNodeId(
+  documentPath: string,
+  identity: string,
+  scope: { readonly repositoryId: string; readonly workspaceId: string },
+): string {
+  return deterministicUlid(
+    `${scope.workspaceId}|${scope.repositoryId}|${documentPath}|${identity}`,
+  );
+}
+
+/**
+ * The `implements` edges the same requirements carry (Phase 4 Wave A todo 1).
+ *
+ * Until this, `reconcileRequirements` wrote requirement nodes and rows and no
+ * edge at all, so every requirement was an isolated node and coverage was not
+ * a low number but an unmeasurable one (R5 §2.2 D6). The identity keying is
+ * the same one `persistedRequirements` uses, so an edge cannot point at a
+ * requirement node this analysis did not also write.
+ */
+export function persistedImplementsEdges(
+  links: readonly RequirementImplementationLink[],
+  nodeByPath: ReadonlyMap<string, string>,
+  scope: { readonly repositoryId: string; readonly workspaceId: string },
+): PersistedImplementsEdge[] {
+  const seen = new Set<string>();
+  const edges: PersistedImplementsEdge[] = [];
+  for (const link of links) {
+    const sourceArtifactId = nodeByPath.get(link.documentPath);
+    const targetNodeId = nodeByPath.get(link.targetPath);
+    if (!sourceArtifactId || !targetNodeId) continue;
+    const requirementId = requirementNodeId(
+      link.documentPath,
+      link.identity,
+      scope,
+    );
+    const key = `${requirementId}|${targetNodeId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    edges.push({
+      confidence: link.confidence,
+      provenance: {
+        method: link.method,
+        reason: `requirement statement names the exported symbol ${link.symbol}`,
+        sourceArtifactId,
+        span: {
+          endLine: link.span.endLine,
+          path: link.span.path,
+          startLine: link.span.startLine,
+        },
+        symbol: link.symbol,
+        tier: link.tier,
+      },
+      requirementId,
+      targetNodeId,
+    });
+  }
+  return edges;
+}
+
 export function persistedRequirements(
   prepared: ReturnType<typeof prepareAssuranceContexts>,
   nodeByPath: ReadonlyMap<string, string>,
@@ -197,9 +293,7 @@ export function persistedRequirements(
     if (!sourceArtifactId) continue;
     for (const requirement of context.requirements) {
       const identity = requirement.id ?? requirement.statement;
-      const id = deterministicUlid(
-        `${scope.workspaceId}|${scope.repositoryId}|${context.file.path}|${identity}`,
-      );
+      const id = requirementNodeId(context.file.path, identity, scope);
       if (seen.has(id)) continue;
       seen.add(id);
       const label = requirement.id ?? requirement.statement;
@@ -272,18 +366,32 @@ export function createAnalysisJobHandler(
     // document) independently by default; preparing once here halves that
     // work for the one job that always needs both.
     const prepared = prepareAssuranceContexts(files);
+    const scope = { repositoryId, workspaceId };
     // The requirements the rules reason about become graph rows too (OQ-023):
     // until now they were extracted, used for findings, and dropped, which
-    // left every requirement surface empty in production.
+    // left every requirement surface empty in production. Their `implements`
+    // edges land in the same call (Phase 4 Wave A todo 1).
     await store.reconcileRequirements({
+      implementsEdges: persistedImplementsEdges(
+        requirementImplementationLinks({ files, prepared }),
+        nodeByPath,
+        scope,
+      ),
       repositoryId,
-      requirements: persistedRequirements(prepared, nodeByPath, {
-        repositoryId,
-        workspaceId,
-      }),
+      requirements: persistedRequirements(prepared, nodeByPath, scope),
       workspaceId,
     });
-    const findings = analyzeRepositoryAssurance({ files, prepared });
+    // What the repository's own tests reach, as the scan resolved it — the
+    // input the `untested-code` rule needs and cannot derive from metadata.
+    const testedPaths = await store.loadTestedPaths({
+      repositoryId,
+      workspaceId,
+    });
+    const findings = analyzeRepositoryAssurance({
+      files,
+      prepared,
+      testedPaths,
+    });
     const delta = await store.reconcileFindings({
       findings: findings.map((finding) => persisted(finding, nodeByPath)),
       repositoryId,

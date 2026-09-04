@@ -1091,6 +1091,9 @@
 .facet-band-node.concept::before {
   background: var(--node-concept);
 }
+.facet-band-node.unknown::before {
+  background: var(--border-muted);
+}
 .facet-band-node:hover,
 .facet-band-node[aria-pressed="true"] {
   border-color: var(--accent-fg);

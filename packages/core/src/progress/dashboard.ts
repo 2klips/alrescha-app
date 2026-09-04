@@ -42,7 +42,18 @@ export interface BuildProgressDashboardInput {
   readonly commits: readonly ProgressCommitInput[];
   readonly findings: readonly ProgressFindingInput[];
   readonly progressEvents: readonly ProgressEventInput[];
-  readonly requirements: { readonly covered: number; readonly total: number };
+  readonly requirements: {
+    /** Active requirements carrying at least one `implements` edge. */
+    readonly covered: number;
+    /**
+     * `implements` edges stored for this repository, whatever they point at.
+     * Zero of them means requirement coverage was never linked, so it cannot
+     * be measured — a state `covered / total` alone cannot express, because
+     * it reads identically to "linked, and nothing is implemented".
+     */
+    readonly links: number;
+    readonly total: number;
+  };
   readonly todos: readonly ProgressTodo[];
 }
 
@@ -64,8 +75,24 @@ export interface ProgressDashboard {
   }>;
 }
 
-interface ProgressMetric {
+/**
+ * Why a metric shows the number it shows.
+ *
+ * `measured` — the inputs support a percentage.
+ * `no-links`  — the inputs exist but the link they would be measured through
+ *   does not, so the percentage is unknown rather than zero.
+ * `no-data`   — nothing has been recorded for this metric yet.
+ *
+ * Splitting these apart is what keeps the screen from reporting 0% coverage
+ * for a repository whose requirements were simply never linked to code
+ * (WORK_SPEC §3-8: no false precision — say "insufficient evidence").
+ */
+export type ProgressMetricBasis = "measured" | "no-data" | "no-links";
+
+export interface ProgressMetric {
+  readonly basis: ProgressMetricBasis;
   readonly completed: number;
+  /** Null exactly when `basis` is not `measured`. */
   readonly percent: number | null;
   readonly sourceLabel: string;
   readonly total: number;
@@ -82,13 +109,30 @@ function metric(
   completed: number,
   total: number,
   sourceLabel: string,
+  basis: ProgressMetricBasis = total === 0 ? "no-data" : "measured",
 ): ProgressMetric {
   return {
+    basis,
     completed,
-    percent: total === 0 ? null : Math.round((completed / total) * 100),
+    percent:
+      basis === "measured" ? Math.round((completed / total) * 100) : null,
     sourceLabel,
     total,
   };
+}
+
+/**
+ * Requirement coverage is measurable only once something links requirements
+ * to code. Before that the honest answer is "not measured", not 0% (R5 §2.2
+ * D6 — the `implements` writer landed in Phase 4 Wave A todo 1, and every
+ * screen read a structural absence as a score until it did).
+ */
+function requirementBasis(requirements: {
+  readonly links: number;
+  readonly total: number;
+}): ProgressMetricBasis {
+  if (requirements.total === 0) return "no-data";
+  return requirements.links === 0 ? "no-links" : "measured";
 }
 
 export function buildProgressDashboard(
@@ -153,6 +197,7 @@ export function buildProgressDashboard(
         input.requirements.covered,
         input.requirements.total,
         "Evidence graph requirement coverage",
+        requirementBasis(input.requirements),
       ),
       todos: metric(
         completedTodos,

@@ -18,6 +18,8 @@ export const PROGRESS = {
     requirements: "요구사항 커버리지",
     todos: "todo 완료율",
     notMeasured: "측정 안 됨",
+    /** 요구사항은 있는데 `implements` 엣지가 하나도 없을 때 — 0%가 아니다. */
+    noLinks: "미측정 — 구현 링크 없음",
     /** `<done> / <total> 완료` */
     completed: (done: number, total: number) => `${done} / ${total} 완료`,
   },
@@ -60,5 +62,15 @@ export const PROGRESS = {
     /** `이벤트 <n>건` */
     eventCount: (count: number) => `이벤트 ${count}건`,
     empty: "진행 이벤트·commit·해소된 Findings가 없습니다.",
+    /**
+     * `요구사항 <r> · 구현 체크됨 <i> · 테스트 매핑 <t>` — receipt statement의
+     * 결정론 coverage 그대로. `implVerified`는 체크박스·심볼 존재 기준이므로
+     * "verified"라고 부르지 않는다 (WORK_SPEC §3-1, OQ-036).
+     */
+    receiptCoverage: (requirements: number, impl: number, test: number) =>
+      `요구사항 ${requirements} · 구현 체크됨 ${impl} · 테스트 매핑 ${test}`,
+    /** `<sha7> receipt · statement 없음` — coverage를 읽을 수 없는 행. */
+    receiptWithoutStatement: (sha7: string) =>
+      `${sha7} receipt · statement 없음`,
   },
 } as const;

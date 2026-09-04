@@ -117,8 +117,13 @@ const NODE_TOKEN_BY_TYPE = {
   code: "node-code",
   concept: "node-concept",
   document: "node-doc",
+  // Both new types borrow an existing token until Wave B assigns sprites
+  // (BUILD_PLAN_PHASE4 todo 12): a rationale paints as the code it annotates,
+  // and an unresolved node paints as a line rather than claiming a kind.
+  rationale: "node-code",
   requirement: "node-requirement",
   test: "node-test",
+  unknown: "border-muted",
 } as const satisfies Record<GraphNode["type"], DesignToken>;
 
 const EDGE_TOKEN_BY_GRADE = {

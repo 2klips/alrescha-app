@@ -12,7 +12,9 @@ import {
   type McpMemoryBlockName,
   type McpWriteMemoryResult,
   type McpEdgeRelation,
+  type McpFindingProvenance,
   type McpNodeType,
+  type McpSourceSpan,
   type McpNote,
   type McpPackMeasurement,
   type McpPrincipal,
@@ -94,29 +96,49 @@ function isRelation(value: unknown): value is McpEdgeRelation {
   ].includes(String(value));
 }
 
-function findingProvenance(value: unknown) {
-  const provenance = record(value);
-  const span = record(provenance.span);
-  if (
-    typeof provenance.sourceArtifactId === "string" &&
-    typeof span.path === "string" &&
+function sourceSpan(value: unknown): McpSourceSpan | null {
+  const span = record(value);
+  return typeof span.path === "string" &&
     typeof span.startLine === "number" &&
     typeof span.endLine === "number"
-  ) {
-    return {
-      sourceArtifactId: provenance.sourceArtifactId,
-      span: {
-        endLine: span.endLine,
-        path: span.path,
-        startLine: span.startLine,
-      },
-    };
-  }
+    ? { endLine: span.endLine, path: span.path, startLine: span.startLine }
+    : null;
+}
+
+/**
+ * The stored provenance, passed through rather than reduced.
+ *
+ * The analyze job writes `{reason, spans, suggestedAction, evidenceLinks}`,
+ * none of which matched the two shapes this function used to recognise — so
+ * every production finding reached an agent as `{reason: "deterministic
+ * stale-doc rule"}`, with the path, the line and the recommended action
+ * dropped on the floor (R5 §4.3). Excerpts are deliberately not forwarded:
+ * an agent asking what is wrong needs the location, and a document excerpt
+ * is what `get_artifact` is for.
+ */
+function findingProvenance(value: unknown): McpFindingProvenance {
+  const provenance = record(value);
+  const span = sourceSpan(provenance.span);
+  const spans = (Array.isArray(provenance.spans) ? provenance.spans : [])
+    .map(sourceSpan)
+    .filter((entry): entry is McpSourceSpan => entry !== null);
+  const reason =
+    typeof provenance.reason === "string" && provenance.reason
+      ? provenance.reason
+      : null;
   return {
-    reason:
-      typeof provenance.reason === "string"
-        ? provenance.reason
-        : "Stored finding provenance",
+    ...(reason || (!span && spans.length === 0)
+      ? { reason: reason ?? "Stored finding provenance" }
+      : {}),
+    ...(typeof provenance.sourceArtifactId === "string"
+      ? { sourceArtifactId: provenance.sourceArtifactId }
+      : {}),
+    ...(span ? { span } : {}),
+    ...(spans.length > 0 ? { spans } : {}),
+    ...(typeof provenance.suggestedAction === "string" &&
+    provenance.suggestedAction
+      ? { suggestedAction: provenance.suggestedAction }
+      : {}),
   };
 }
 
@@ -498,7 +520,7 @@ export class SupabaseMcpStore implements McpStore {
       this.client
         .from("findings")
         .select(
-          "id, repository_id, title, source_node_id, kind, severity, status, provenance, confidence, evidence_grade",
+          "id, repository_id, title, source_node_id, target_node_id, kind, severity, status, provenance, confidence, evidence_grade",
         )
         .eq("workspace_id", workspaceId),
       this.client
@@ -699,6 +721,7 @@ export class SupabaseMcpStore implements McpStore {
               severity: requiredString(row, "severity"),
               sourceNodeId: nullableString(row.source_node_id),
               status: requiredString(row, "status"),
+              targetNodeId: nullableString(row.target_node_id),
               title: requiredString(row, "title"),
             })),
           fullName: requiredString(repository, "full_name"),

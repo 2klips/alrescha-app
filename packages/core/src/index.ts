@@ -173,6 +173,8 @@ export type {
   ProgressDashboard,
   ProgressEventInput,
   ProgressFindingInput,
+  ProgressMetric,
+  ProgressMetricBasis,
   ProgressTodo,
 } from "./progress/dashboard";
 
@@ -186,10 +188,12 @@ export type {
 export {
   AI_ASSIST_STATUS,
   DISABLED_ASSURANCE_AI_ASSIST,
+  REQUIREMENT_IMPLEMENTATION_CONFIDENCE,
   analyzeRepositoryAssurance,
   assuranceCoverage,
   assuranceSourceRequired,
   prepareAssuranceContexts,
+  requirementImplementationLinks,
 } from "./assurance/rules";
 
 export {
@@ -218,6 +222,7 @@ export type {
   FindingEvidenceLink,
   FindingProvenance,
   PreparedAssuranceContexts,
+  RequirementImplementationLink,
 } from "./assurance/rules";
 
 export { probeRepositoryEvidence } from "./evidence/probes";

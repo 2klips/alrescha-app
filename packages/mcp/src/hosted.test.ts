@@ -8,7 +8,7 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createHostedMcpEndpoint, InMemoryMcpStore } from "./index";
-import type { McpWorkspaceData } from "./index";
+import type { McpFindingData, McpWorkspaceData } from "./index";
 
 const WORKSPACE_ID = "01K287J3D18V7A1MZG9E8D1Y01";
 const USER_ID = "user-owner";
@@ -1392,5 +1392,189 @@ describe("hosted MCP contract", () => {
     // The misroute escape hatch: an empty graph result falls back to search.
     expect(decision.fallback.route).toBe("search");
     expect(decision.fallback.tools).toContain("search_index");
+  });
+});
+
+/**
+ * Phase 4 Wave A todo 1 — what `get_findings` answers by default.
+ *
+ * Two defects met here in production. The filter had no default, so an agent
+ * asking what is wrong with the repository was handed resolved history
+ * alongside open work; and the sort compared severity strings, which orders
+ * `critical` after `high` and `low` above `medium` — the one question the
+ * list exists to answer (R5 §4.3).
+ */
+describe("get_findings contract", () => {
+  const clients: Client[] = [];
+
+  afterEach(async () => {
+    while (clients.length > 0) await clients.pop()?.close();
+  });
+
+  function finding(
+    overrides: Partial<McpFindingData> & { id: string },
+  ): McpFindingData {
+    return {
+      confidence: 0.8,
+      evidenceGrade: "inferred",
+      kind: "stale-doc",
+      provenance: { reason: "deterministic stale-doc rule" },
+      severity: "medium",
+      sourceNodeId: "01K287J3D18V7A1MZG9E8D1Y11",
+      status: "open",
+      title: overrides.id,
+      ...overrides,
+    };
+  }
+
+  function workspaceWithFindings(
+    findings: readonly McpFindingData[],
+  ): McpWorkspaceData {
+    const base = workspaceFixture();
+    const [repository] = base.repositories;
+    return {
+      ...base,
+      repositories: [{ ...repository!, findings: [...findings] }],
+    };
+  }
+
+  async function connect(workspace: McpWorkspaceData) {
+    const store = new InMemoryMcpStore({ workspaces: [workspace] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Findings reader",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+    return client;
+  }
+
+  async function titles(
+    client: Client,
+    filter: Record<string, string> | undefined,
+  ): Promise<string[]> {
+    const result = await client.callTool({
+      arguments: filter ? { filter } : {},
+      name: "get_findings",
+    });
+    const structured = result.structuredContent as {
+      findings: { title: string }[];
+    };
+    return structured.findings.map(({ title }) => title);
+  }
+
+  it("returns open findings unless asked for more", async () => {
+    const client = await connect(
+      workspaceWithFindings([
+        finding({ id: "open-one" }),
+        finding({ id: "resolved-one", status: "resolved" }),
+        finding({ id: "dismissed-one", status: "dismissed" }),
+      ]),
+    );
+
+    expect(await titles(client, undefined)).toEqual(["open-one"]);
+    expect(await titles(client, {})).toEqual(["open-one"]);
+    expect((await titles(client, { status: "all" })).sort()).toEqual([
+      "dismissed-one",
+      "open-one",
+      "resolved-one",
+    ]);
+    expect(await titles(client, { status: "resolved" })).toEqual([
+      "resolved-one",
+    ]);
+  });
+
+  it("orders by severity, worst first", async () => {
+    const client = await connect(
+      workspaceWithFindings([
+        finding({ id: "a-low", severity: "low" }),
+        finding({ id: "b-critical", severity: "critical" }),
+        finding({ id: "c-medium", severity: "medium" }),
+        finding({ id: "d-high", severity: "high" }),
+      ]),
+    );
+
+    // Alphabetically this is critical, high, low, medium — which is why the
+    // dashboard's severity sort was a dead path.
+    expect(await titles(client, undefined)).toEqual([
+      "b-critical",
+      "d-high",
+      "c-medium",
+      "a-low",
+    ]);
+  });
+
+  it("keeps the path, span and suggested action the rules recorded", async () => {
+    const client = await connect(
+      workspaceWithFindings([
+        finding({
+          id: "anchored",
+          provenance: {
+            reason: "deterministic stale-doc rule",
+            spans: [
+              { endLine: 15, path: "spec/auth.md", startLine: 15 },
+              { endLine: 20, path: "spec/auth.md", startLine: 20 },
+            ],
+            suggestedAction: "Update or remove the stale reference.",
+          },
+          targetNodeId: "01K287J3D18V7A1MZG9E8D1Y12",
+        }),
+      ]),
+    );
+
+    const result = await client.callTool({
+      arguments: {},
+      name: "get_findings",
+    });
+
+    // An agent that cannot see the line cannot act on the finding.
+    expect(result.structuredContent).toMatchObject({
+      findings: [
+        {
+          provenance: {
+            reason: "deterministic stale-doc rule",
+            spans: [
+              { endLine: 15, path: "spec/auth.md", startLine: 15 },
+              { endLine: 20, path: "spec/auth.md", startLine: 20 },
+            ],
+            suggestedAction: "Update or remove the stale reference.",
+          },
+          targetNodeId: "01K287J3D18V7A1MZG9E8D1Y12",
+          title: "anchored",
+        },
+      ],
+    });
+  });
+
+  it("labels evidence grade on every finding it returns", async () => {
+    const client = await connect(
+      workspaceWithFindings([
+        finding({ id: "one" }),
+        finding({ id: "two", severity: "low" }),
+      ]),
+    );
+
+    const result = await client.callTool({
+      arguments: { filter: { status: "all" } },
+      name: "get_findings",
+    });
+    const structured = result.structuredContent as {
+      findings: { evidenceGrade: string }[];
+    };
+
+    // WORK_SPEC §11: the inferred label is never omitted in MCP responses.
+    expect(structured.findings).toHaveLength(2);
+    expect(
+      structured.findings.every(
+        ({ evidenceGrade }) => evidenceGrade === "inferred",
+      ),
+    ).toBe(true);
   });
 });

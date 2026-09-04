@@ -38,8 +38,10 @@ const TYPE_GLYPHS = {
   code: "C",
   concept: "K",
   document: "D",
+  rationale: "W",
   requirement: "R",
   test: "T",
+  unknown: "?",
 } as const;
 
 const EMPTY_PULSE_STATES: Readonly<Record<string, PulsePhase>> = {};

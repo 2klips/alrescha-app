@@ -77,6 +77,8 @@ export interface MapEdgeRow {
 export interface MapFindingRow {
   readonly source_node_id: string | null;
   readonly status: string;
+  /** Code node the finding is about, when a rule could name one (todo 1). */
+  readonly target_node_id?: string | null;
 }
 
 export interface MapRepositoryRow {
@@ -318,11 +320,15 @@ export function buildWorkspaceMapModel(
   for (const finding of rows.findings) {
     if (finding.status !== "open") continue;
     openFindings += 1;
-    if (finding.source_node_id) {
-      openFindingCounts.set(
-        finding.source_node_id,
-        (openFindingCounts.get(finding.source_node_id) ?? 0) + 1,
-      );
+    // Both anchors count (Phase 4 Wave A todo 1): the document the finding
+    // was raised from, and the code node it is about. A finding whose two
+    // anchors are the same node still counts once for that node.
+    for (const nodeId of new Set(
+      [finding.source_node_id, finding.target_node_id].filter(
+        (value): value is string => typeof value === "string" && value !== "",
+      ),
+    )) {
+      openFindingCounts.set(nodeId, (openFindingCounts.get(nodeId) ?? 0) + 1);
     }
   }
 
@@ -366,7 +372,7 @@ export function buildWorkspaceMapModel(
       path = requirement ? requirementPath(requirement, artifactPaths) : "";
     } else if (row.kind === "rationale") {
       const rationale = rationaleById.get(row.id);
-      type = "document";
+      type = "rationale";
       label = truncate(row.label, 96);
       path = rationale
         ? `${rationale.source_path}:${rationale.source_line}`
@@ -386,7 +392,12 @@ export function buildWorkspaceMapModel(
         : "";
     } else {
       const artifact = artifactById.get(row.id);
-      type = artifact ? artifactNodeType(artifact) : "document";
+      // `unknown`, not `document`: when the artifact row is missing the node
+      // has no classification to read, and calling it a document inflated
+      // the docs band with code (R5 §2.2 D5). The loader's matched ordering
+      // is what keeps this branch empty; naming it is what makes a
+      // regression visible instead of silent.
+      type = artifact ? artifactNodeType(artifact) : "unknown";
       path = artifact?.path ?? row.label;
       label = truncate(basename(path), 96);
     }
@@ -584,6 +595,14 @@ export async function loadWorkspaceMap(
       .from("artifacts")
       .select("id,classification,path")
       .eq("workspace_id", workspaceId)
+      // Same key as the `graph_nodes` query below, and for the same reason:
+      // both are capped at NODE_LIMIT, so an unordered artifacts page could
+      // return a different 2,000 rows than the nodes page and leave matched
+      // code nodes with no classification (R4 §3.7). A scan writes a node
+      // and its artifact in one transaction, so the two keys agree row for
+      // row; `id` breaks the tie those shared timestamps create.
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .limit(NODE_LIMIT),
     client
       .from("agent_assertions")
@@ -610,7 +629,7 @@ export async function loadWorkspaceMap(
       .limit(EDGE_LIMIT),
     client
       .from("findings")
-      .select("source_node_id,status")
+      .select("source_node_id,target_node_id,status")
       .eq("workspace_id", workspaceId)
       .eq("status", "open"),
     client
@@ -618,6 +637,7 @@ export async function loadWorkspaceMap(
       .select("id,kind,label")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .limit(NODE_LIMIT),
     client
       .from("rationales")

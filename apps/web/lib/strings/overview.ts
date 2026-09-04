@@ -31,6 +31,8 @@ export const OVERVIEW = {
       code: "코드",
       test: "테스트",
       concept: "개념",
+      rationale: "근거 주석",
+      unknown: "미분류",
     },
   },
 

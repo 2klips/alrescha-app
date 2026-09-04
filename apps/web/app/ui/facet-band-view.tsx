@@ -31,8 +31,13 @@ const NODE_TYPE_CLASS = {
   code: "code",
   concept: "concept",
   document: "doc",
+  // A rationale is a comment lifted out of a code file: it belongs with the
+  // code, not with the specs (R5 §2.2 D5). `unknown` gets an inert swatch —
+  // a node whose artifact row is missing should look unresolved, not typed.
+  rationale: "code",
   requirement: "req",
   test: "test",
+  unknown: "unknown",
 } as const;
 
 export function FacetBandView({

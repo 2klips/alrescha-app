@@ -13,6 +13,7 @@ import type {
   AnalysisJobStore,
   FindingsDelta,
   PersistedFinding,
+  PersistedImplementsEdge,
   PersistedRequirement,
   RequirementsDelta,
   StoredArtifact,
@@ -66,6 +67,29 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
     }));
   }
 
+  /**
+   * Paths the scan's `tests` relation reaches (Phase 4 Wave A todo 0). Read
+   * from the graph rather than recomputed, so the rules see exactly the
+   * coverage the map shows — and the same set on both ingest paths.
+   */
+  async loadTestedPaths(input: {
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<readonly string[]> {
+    const rows = await this.sql<{ path: string }[]>`
+      select distinct a.path
+      from public.edges e
+      join public.artifacts a
+        on a.workspace_id = e.workspace_id
+       and a.repository_id = e.repository_id
+       and a.id = e.target_node_id
+      where e.workspace_id = ${input.workspaceId}
+        and e.repository_id = ${input.repositoryId}
+        and e.relation = 'tests'
+    `;
+    return rows.map(({ path }) => path);
+  }
+
   async reconcileFindings(input: {
     findings: readonly PersistedFinding[];
     repositoryId: string;
@@ -86,11 +110,13 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
       for (const finding of input.findings) {
         await tx`
           insert into public.findings (
-            workspace_id, repository_id, title, source_node_id, kind, severity,
-            status, provenance, confidence, evidence_grade, fingerprint
+            workspace_id, repository_id, title, source_node_id, target_node_id,
+            kind, severity, status, provenance, confidence, evidence_grade,
+            fingerprint
           ) values (
             ${input.workspaceId}, ${input.repositoryId}, ${finding.title},
-            ${finding.sourceNodeId}, ${finding.kind}, ${finding.severity},
+            ${finding.sourceNodeId}, ${finding.targetNodeId}, ${finding.kind},
+            ${finding.severity},
             'open', ${this.sql.json(finding.provenance as never)}::jsonb,
             ${finding.confidence}, ${finding.evidenceGrade},
             ${finding.fingerprint}
@@ -100,6 +126,7 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
           do update set
             title = excluded.title,
             source_node_id = excluded.source_node_id,
+            target_node_id = excluded.target_node_id,
             kind = excluded.kind,
             severity = excluded.severity,
             status = 'open',
@@ -132,11 +159,15 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
   }
 
   async reconcileRequirements(input: {
+    implementsEdges: readonly PersistedImplementsEdge[];
     repositoryId: string;
     requirements: readonly PersistedRequirement[];
     workspaceId: string;
   }): Promise<RequirementsDelta> {
     const ids = input.requirements.map(({ id }) => id);
+    const edgeKeys = input.implementsEdges.map(
+      ({ requirementId, targetNodeId }) => `${requirementId}|${targetNodeId}`,
+    );
 
     return this.sql.begin(async (tx) => {
       for (const requirement of input.requirements) {
@@ -168,6 +199,49 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
             status = 'active'
         `;
       }
+
+      // The `implements` edges those requirements carry. Written after the
+      // nodes above because both endpoints are foreign keys onto them.
+      for (const edge of input.implementsEdges) {
+        await tx`
+          insert into public.edges (
+            workspace_id, repository_id, source_node_id, target_node_id,
+            relation, provenance, confidence
+          ) values (
+            ${input.workspaceId}, ${input.repositoryId}, ${edge.requirementId},
+            ${edge.targetNodeId}, 'implements',
+            ${this.sql.json(edge.provenance as never)}::jsonb,
+            ${edge.confidence}
+          )
+          on conflict (workspace_id, repository_id, source_node_id,
+                       target_node_id, relation)
+          do update set
+            provenance = excluded.provenance,
+            confidence = excluded.confidence
+        `;
+      }
+
+      // A link this analysis no longer derives is removed rather than left
+      // behind: the edge asserts a present-tense relationship, and a stale
+      // one would keep counting toward requirement coverage. Only edges out
+      // of this repository's requirement nodes are in scope — the concept
+      // layer writes `implements` from concept nodes and owns those.
+      await tx`
+        delete from public.edges e
+        where e.workspace_id = ${input.workspaceId}
+          and e.repository_id = ${input.repositoryId}
+          and e.relation = 'implements'
+          and exists (
+            select 1 from public.requirements r
+            where r.workspace_id = e.workspace_id
+              and r.repository_id = e.repository_id
+              and r.id = e.source_node_id
+          )
+          and not (
+            e.source_node_id || '|' || e.target_node_id
+              = any(${edgeKeys}::text[])
+          )
+      `;
 
       // A requirement the documents no longer state is superseded, not
       // deleted: judgments and edges that pointed at it keep their target.

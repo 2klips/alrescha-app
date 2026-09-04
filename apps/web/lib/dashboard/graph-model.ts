@@ -19,8 +19,22 @@ export type DashboardState =
   | "large";
 
 export type EvidenceGrade = "verified" | "inferred" | "broken";
+/**
+ * `rationale` and `unknown` join the display vocabulary in Phase 4 Wave A
+ * todo 1. A rationale is a WHY/NOTE comment lifted out of a code file, and
+ * mapping it to `document` sent all 86 of this repository's rationale nodes
+ * into the docs band with the specs (R5 §2.2 D5). `unknown` is the honest
+ * name for a node whose artifact row did not come back with it — a state
+ * the loader's pagination could produce silently as `document`.
+ */
 export type GraphNodeType =
-  "requirement" | "document" | "code" | "test" | "concept";
+  | "requirement"
+  | "document"
+  | "code"
+  | "test"
+  | "concept"
+  | "rationale"
+  | "unknown";
 
 /**
  * How a link was derived (Phase 3 Wave A todo 2) — separate from the evidence
@@ -109,8 +123,13 @@ const NODE_TYPE_CLASSIFICATION: Readonly<
   code: "code_metadata",
   concept: "spec",
   document: "spec",
+  // A rationale's path is the code file it was lifted from, so deriving its
+  // area from that path puts it beside the code it explains.
+  rationale: "code_metadata",
   requirement: "spec",
   test: "code_metadata",
+  // Path-derived rather than claimed: an unresolved node is not a document.
+  unknown: "code_metadata",
 };
 
 export function graphNodeArea(node: GraphNode): BrainArea {

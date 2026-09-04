@@ -20,8 +20,10 @@ const NODE_TYPE_CLASS = {
   code: "code",
   concept: "concept",
   document: "doc",
+  rationale: "code",
   requirement: "req",
   test: "test",
+  unknown: "unknown",
 } as const;
 
 function ZoneHeader({
