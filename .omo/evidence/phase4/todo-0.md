@@ -118,3 +118,15 @@ the two paths equal.
 scripts/verify-scope-boundaries.ts` (PASS, 12 boundaries, 310 files).
 No test assertion was weakened; three expectations were widened to the new
 truth and eleven tests were added.
+
+## Not verified here
+
+Playwright cannot run in this environment: the suite needs the local Supabase
+stack, and no Docker daemon is installed on this machine. The map screens were
+checked by hand instead — `/map` renders the demo graph with the new
+deduplicated, degree-normalised springs and reports no console errors — and
+the layout itself is covered by the 43 unit tests in
+`tests/graph-engine.test.ts`, including the frame-budget and spread cases.
+The e2e specs that touch the graph (`brain-map`, `graph-facets`,
+`live-graph`, `workspace-map`, `dashboard-hud`) still need a run on a machine
+with Docker before Wave B lands.
