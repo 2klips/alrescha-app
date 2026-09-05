@@ -9,10 +9,12 @@ import picomatch from "picomatch";
  * same one — a convention stored only server-side would make the CLI and the
  * GitHub path disagree about what a repository contains.
  *
- * Only `ignore` is honoured here. The rest of the file's vocabulary (layout
- * conventions, hidden layers, todo and progress document lists) needs
- * `repositories.layout_config` to mean anything and arrives with it in
- * Wave A todo 4; parsing it now would store a setting nothing reads.
+ * `ignore` is applied by the scanner before anything is classified (todo 2).
+ * The rest — layout conventions, hidden layers, todo and progress document
+ * lists — travels in the plan as *parsed values*, never as the file's text,
+ * and is stored on the repository with the commit that stated it, so a
+ * reader can tell which commit's conventions produced a given picture
+ * (todo 4).
  */
 
 export const REPOSITORY_CONFIG_PATH = ".alrescha.json";
@@ -21,16 +23,41 @@ export const REPOSITORY_CONFIG_PATH = ".alrescha.json";
 const MAX_IGNORE_PATTERNS = 200;
 const MAX_PATTERN_LENGTH = 200;
 
+/** Path prefixes a repository claims for each domain (todo 4). */
+export interface RepositoryLayout {
+  readonly backend?: readonly string[];
+  readonly database?: readonly string[];
+  readonly frontend?: readonly string[];
+  readonly shared?: readonly string[];
+}
+
 export interface RepositoryScanConfig {
   /** Globs the repository excludes on top of the built-in defaults. */
   readonly ignore: readonly string[];
+  /**
+   * Layers the map hides by default. Stored rather than acted on: a hidden
+   * layer is still part of the graph, it is simply not drawn until asked for
+   * (Wave B todo 12 owns the toggle).
+   */
+  readonly layersHidden: readonly string[];
+  readonly layout: RepositoryLayout;
+  /** Documents this repository keeps its progress ledger in. */
+  readonly progressDocs: readonly string[];
+  /** Documents this repository keeps its todo list in. */
+  readonly todoFiles: readonly string[];
 }
 
 export const EMPTY_REPOSITORY_CONFIG: RepositoryScanConfig = Object.freeze({
   ignore: [],
+  layersHidden: [],
+  layout: Object.freeze({}),
+  progressDocs: [],
+  todoFiles: [],
 });
 
-function ignorePatterns(value: unknown): string[] {
+const LAYOUT_DOMAINS = ["backend", "database", "frontend", "shared"] as const;
+
+function stringList(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
     .filter(
@@ -40,6 +67,19 @@ function ignorePatterns(value: unknown): string[] {
         entry.length <= MAX_PATTERN_LENGTH,
     )
     .slice(0, MAX_IGNORE_PATTERNS);
+}
+
+function layoutOf(value: unknown): RepositoryLayout {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return {};
+  }
+  const source = value as Record<string, unknown>;
+  const layout: Record<string, readonly string[]> = {};
+  for (const domain of LAYOUT_DOMAINS) {
+    const prefixes = stringList(source[domain]);
+    if (prefixes.length > 0) layout[domain] = prefixes;
+  }
+  return layout;
 }
 
 /**
@@ -57,8 +97,31 @@ export function parseRepositoryConfig(source: string): RepositoryScanConfig {
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
     return EMPTY_REPOSITORY_CONFIG;
   }
-  const ignore = ignorePatterns((parsed as Record<string, unknown>)["ignore"]);
-  return ignore.length === 0 ? EMPTY_REPOSITORY_CONFIG : { ignore };
+  const source_ = parsed as Record<string, unknown>;
+  const layers = source_["layers"];
+  const config: RepositoryScanConfig = {
+    ignore: stringList(source_["ignore"]),
+    layersHidden: stringList(
+      typeof layers === "object" && layers !== null && !Array.isArray(layers)
+        ? (layers as Record<string, unknown>)["hidden"]
+        : undefined,
+    ),
+    layout: layoutOf(source_["layout"]),
+    progressDocs: stringList(source_["progressDocs"]),
+    todoFiles: stringList(source_["todoFiles"]),
+  };
+  return isEmptyRepositoryConfig(config) ? EMPTY_REPOSITORY_CONFIG : config;
+}
+
+/** True when the config states nothing this build acts on. */
+export function isEmptyRepositoryConfig(config: RepositoryScanConfig): boolean {
+  return (
+    config.ignore.length === 0 &&
+    config.layersHidden.length === 0 &&
+    config.progressDocs.length === 0 &&
+    config.todoFiles.length === 0 &&
+    Object.keys(config.layout).length === 0
+  );
 }
 
 /**

@@ -1,6 +1,7 @@
 import {
   BRAIN_AREAS,
   deriveBrainArea,
+  type ArtifactUnit,
   type BrainArea,
 } from "@alrescha/core/artifact-facets";
 import type { ArtifactClassification } from "@alrescha/core";
@@ -66,12 +67,21 @@ export type EdgeConfidenceTier =
 
 export interface GraphNode {
   clusterCount?: number;
+  /**
+   * The colour axis (R5 §2.6), derived once by the loader with the
+   * repository's own conventions rather than re-derived at each call site
+   * from the path alone. Absent on demo fixtures, which have no repository
+   * to state conventions.
+   */
+  domain?: BrainArea;
   findingCount: number;
   grade: EvidenceGrade;
   id: string;
   label: string;
   path: string;
   type: GraphNodeType;
+  /** Shape and filter chip (R5 §2.4): what role this file plays. */
+  unit?: ArtifactUnit;
   x: number;
   y: number;
 }
@@ -162,6 +172,9 @@ const NODE_TYPE_CLASSIFICATION: Readonly<
 };
 
 export function graphNodeArea(node: GraphNode): BrainArea {
+  // The loader derives this once with the repository's own conventions; a
+  // demo fixture has none, so the path conventions answer for it.
+  if (node.domain) return node.domain;
   // A directory's own path has no trailing slash, and the layout conventions
   // are written in terms of prefixes (`spec/`, `apps/web/`). Reading `spec`
   // as a root-level file would file the specs directory under backend.

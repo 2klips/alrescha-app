@@ -64,8 +64,10 @@ export const OVERVIEW = {
     areas: {
       frontend: "프론트엔드",
       backend: "백엔드",
+      database: "데이터베이스",
       docs: "문서",
       tests: "테스트",
+      other: "기타",
     },
     /** `<n>개 노드` */
     count: (count: number) => `${count}개 노드`,

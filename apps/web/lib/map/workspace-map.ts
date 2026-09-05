@@ -1,6 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { deriveBrainArea } from "@alrescha/core/artifact-facets";
+import {
+  deriveArtifactUnit,
+  deriveBrainArea,
+  type BrainArea,
+  type LayoutConventions,
+} from "@alrescha/core/artifact-facets";
 import type { ArtifactClassification } from "@alrescha/core";
 
 import {
@@ -39,6 +44,8 @@ export interface MapGraphNodeRow {
 
 export interface MapArtifactRow {
   readonly classification: string;
+  /** Symbol names the scan stored — the `component` unit reads these. */
+  readonly exported_symbols?: readonly { readonly name: string }[] | null;
   readonly id: string;
   readonly path: string;
 }
@@ -92,6 +99,8 @@ export interface MapRepositoryRow {
   readonly full_name: string;
   readonly id: string;
   readonly last_scanned_commit_sha: string | null;
+  /** Parsed `.alrescha.json` for the commit that stated it (todo 4). */
+  readonly layout_config?: unknown;
 }
 
 export interface MapAccessEventRow {
@@ -217,6 +226,35 @@ const PROSE_CLASSIFICATIONS: readonly ArtifactClassification[] = [
 
 function isClassification(value: string): value is ArtifactClassification {
   return (CLASSIFICATIONS as readonly string[]).includes(value);
+}
+
+/**
+ * The repository's declared layout, if it stated one. Read defensively: the
+ * column is free-form jsonb and a repository scanned by an older build has
+ * an empty object there.
+ */
+function layoutConventionsOf(
+  repositories: readonly MapRepositoryRow[],
+): LayoutConventions | undefined {
+  const stored = repositories[0]?.layout_config;
+  if (typeof stored !== "object" || stored === null || Array.isArray(stored)) {
+    return undefined;
+  }
+  const layout = (stored as Record<string, unknown>)["layout"];
+  if (typeof layout !== "object" || layout === null || Array.isArray(layout)) {
+    return undefined;
+  }
+  const source = layout as Record<string, unknown>;
+  const conventions: Record<string, string[]> = {};
+  for (const domain of ["backend", "database", "frontend", "shared"]) {
+    const prefixes = source[domain];
+    if (!Array.isArray(prefixes)) continue;
+    const strings = prefixes.filter(
+      (entry): entry is string => typeof entry === "string" && entry.length > 0,
+    );
+    if (strings.length > 0) conventions[domain] = strings;
+  }
+  return Object.keys(conventions).length > 0 ? conventions : undefined;
 }
 
 function artifactNodeType(artifact: MapArtifactRow): GraphNodeType {
@@ -413,6 +451,31 @@ export function buildWorkspaceMapModel(
   }
 
   const directoryById = new Map(rows.directories.map((row) => [row.id, row]));
+  const layout = layoutConventionsOf(rows.repositories);
+
+  /**
+   * The node's colour axis. A directory's path is read as a prefix so a
+   * folder sits with what it holds, and a node with no artifact row behind
+   * it (requirement, concept, evidence) is derived from whatever path
+   * anchors it — that anchor is why every non-file node carries one.
+   */
+  function nodeDomain(input: {
+    classification: string | undefined;
+    path: string;
+    type: GraphNodeType;
+  }): BrainArea {
+    const classification =
+      input.classification && isClassification(input.classification)
+        ? input.classification
+        : input.type === "document" || input.type === "requirement"
+          ? "spec"
+          : "code_metadata";
+    const path =
+      input.type === "directory" && input.path.length > 0
+        ? `${input.path}/`
+        : input.path;
+    return deriveBrainArea(path, classification, layout);
+  }
 
   const nodes: GraphNode[] = [];
   for (const row of rows.graphNodes) {
@@ -467,13 +530,31 @@ export function buildWorkspaceMapModel(
       label = truncate(basename(path), 96);
     }
 
+    const artifact = artifactById.get(row.id);
     nodes.push({
+      // Derived once, here, with the repository's own conventions — the
+      // renderer and the overview then read the same answer instead of each
+      // re-deriving one from the path (R5 §2.6, todo 4).
+      domain: nodeDomain({
+        classification: artifact?.classification,
+        path,
+        type,
+      }),
       findingCount: openFindingCounts.get(row.id) ?? 0,
       grade: gradeOf(row.id),
       id: row.id,
       label,
       path,
       type,
+      ...(artifact && isClassification(artifact.classification)
+        ? {
+            unit: deriveArtifactUnit({
+              classification: artifact.classification,
+              exportedSymbols: artifact.exported_symbols ?? [],
+              path: artifact.path,
+            }),
+          }
+        : {}),
       x: 0,
       y: 0,
     });
@@ -711,7 +792,7 @@ export async function loadWorkspaceMap(
       .limit(FEED_LIMIT),
     client
       .from("artifacts")
-      .select("id,classification,path")
+      .select("id,classification,path,exported_symbols")
       .eq("workspace_id", workspaceId)
       // Same key as the `graph_nodes` query below, and for the same reason:
       // both are capped at NODE_LIMIT, so an unordered artifacts page could
@@ -778,7 +859,7 @@ export async function loadWorkspaceMap(
       .limit(NODE_LIMIT),
     client
       .from("repositories")
-      .select("id,full_name,last_scanned_commit_sha")
+      .select("id,full_name,last_scanned_commit_sha,layout_config")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false }),
     client

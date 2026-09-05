@@ -527,3 +527,98 @@ describe("repository scan settings (.alrescha.json)", () => {
     );
   });
 });
+
+describe("repository layout config", () => {
+  function treeOf(files: Record<string, string>): RepositoryTree {
+    return {
+      entries: Object.keys(files).map((path, index) => ({
+        mode: "100644",
+        path,
+        sha: index.toString(16).padStart(40, "0"),
+        size: 120,
+        type: "blob" as const,
+      })),
+      treeSha: "d".repeat(40),
+      truncated: false,
+    };
+  }
+
+  function sourceOf(files: Record<string, string>): RepositorySource {
+    return {
+      fetchContent: async (path) => {
+        const body = files[path];
+        if (body === undefined) throw new Error(`no such file: ${path}`);
+        return new TextEncoder().encode(body);
+      },
+      listTree: async () => treeOf(files),
+    };
+  }
+
+  const CONFIG = {
+    ignore: ["notes/**"],
+    layers: { hidden: ["statistical", "semantic"] },
+    layout: { backend: ["svc/"], database: ["store/"] },
+    progressDocs: ["PROGRESS.md"],
+    todoFiles: ["BACKLOG.md"],
+  };
+
+  it("carries the parsed conventions in the plan, never the file's text", async () => {
+    const plan = await scanRepository({
+      commitSha: "a".repeat(40),
+      source: sourceOf({
+        ".alrescha.json": JSON.stringify(CONFIG, null, 2),
+        "svc/orders.ts": "export const orders = 1;\n",
+      }),
+    });
+
+    expect(plan.layoutConfig).toEqual({
+      ignore: ["notes/**"],
+      layersHidden: ["statistical", "semantic"],
+      layout: { backend: ["svc/"], database: ["store/"] },
+      progressDocs: ["PROGRESS.md"],
+      todoFiles: ["BACKLOG.md"],
+    });
+    // Parsed values travel; the document does not (WORK_SPEC §3-3). The
+    // source file nests `hidden` under `layers`; what leaves the scan is
+    // the parser's own five keys, with no formatting and no unknown fields.
+    expect(Object.keys(plan.layoutConfig).sort()).toEqual([
+      "ignore",
+      "layersHidden",
+      "layout",
+      "progressDocs",
+      "todoFiles",
+    ]);
+    expect(JSON.stringify(plan.layoutConfig)).not.toContain("hidden");
+  });
+
+  it("states an empty config for a repository that says nothing", async () => {
+    const plan = await scanRepository({
+      commitSha: "a".repeat(40),
+      source: sourceOf({ "src/index.ts": "export const x = 1;\n" }),
+    });
+
+    expect(plan.layoutConfig).toEqual({
+      ignore: [],
+      layersHidden: [],
+      layout: {},
+      progressDocs: [],
+      todoFiles: [],
+    });
+  });
+
+  it("ignores keys it does not understand rather than failing the scan", async () => {
+    const plan = await scanRepository({
+      commitSha: "a".repeat(40),
+      source: sourceOf({
+        ".alrescha.json": JSON.stringify({
+          futureSetting: { deeply: ["nested"] },
+          layout: { galaxy: ["everything/"] },
+        }),
+        "src/index.ts": "export const x = 1;\n",
+      }),
+    });
+
+    expect(plan.layoutConfig.layout).toEqual({});
+    expect(plan.artifacts.map(({ path }) => path)).toContain("src/index.ts");
+  });
+});

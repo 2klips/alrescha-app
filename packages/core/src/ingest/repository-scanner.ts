@@ -32,6 +32,7 @@ import {
   parseRepositoryConfig,
   repositoryIgnoreMatcher,
   REPOSITORY_CONFIG_PATH,
+  type RepositoryScanConfig,
 } from "./repository-config";
 
 /**
@@ -171,6 +172,13 @@ export interface RepositoryScanPlan {
    * for the documents it re-read, a `full` pass for all of them.
    */
   readonly docLinks: readonly DocLink[];
+  /**
+   * The repository's own conventions as stated by `.alrescha.json` at this
+   * commit (Phase 4 Wave A todo 4). Parsed values only — never the file's
+   * text — so both ingest paths carry the same settings and the server can
+   * store which commit stated them.
+   */
+  readonly layoutConfig: RepositoryScanConfig;
   /** Resolver generation that produced `codeLinks` (see LINK_SCHEMA_VERSION). */
   readonly linkSchemaVersion: number;
   readonly linkScope: LinkScope;
@@ -787,6 +795,7 @@ export async function scanRepository(input: {
       codeLinks: [],
       commitSha: input.commitSha,
       docLinks: [],
+      layoutConfig: EMPTY_REPOSITORY_CONFIG,
       linkSchemaVersion: LINK_SCHEMA_VERSION,
       linkScope,
       removedPaths: [],
@@ -1213,6 +1222,7 @@ export async function scanRepository(input: {
     codeLinks,
     commitSha: input.commitSha,
     docLinks,
+    layoutConfig: repositoryConfig,
     linkSchemaVersion: LINK_SCHEMA_VERSION,
     linkScope,
     removedPaths,

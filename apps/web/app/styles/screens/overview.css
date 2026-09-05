@@ -333,6 +333,33 @@
   height: 100%;
 }
 
+/* Six areas since Wave A todo 4, so the bars have to be told apart. The
+   front end takes the emphasis blue, leaving the accent to documents — six
+   labelled bars, six distinct fills, no invented colour. */
+[data-brain-area="frontend"] .overview-brain-bar i {
+  background: var(--accent-emphasis);
+}
+
+[data-brain-area="backend"] .overview-brain-bar i {
+  background: var(--node-code);
+}
+
+[data-brain-area="database"] .overview-brain-bar i {
+  background: var(--node-database);
+}
+
+[data-brain-area="docs"] .overview-brain-bar i {
+  background: var(--node-doc);
+}
+
+[data-brain-area="tests"] .overview-brain-bar i {
+  background: var(--node-test);
+}
+
+[data-brain-area="other"] .overview-brain-bar i {
+  background: var(--node-other);
+}
+
 .overview-brain-count {
   font-variant-numeric: tabular-nums;
   color: var(--fg-muted);

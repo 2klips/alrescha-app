@@ -115,6 +115,8 @@ export const NOTES_AND_EDGE_FAMILIES_MIGRATION =
   "supabase/migrations/202609050001_notes_and_edge_families.sql";
 export const DIRECTORY_NODES_MIGRATION =
   "supabase/migrations/202609050002_directory_nodes.sql";
+export const REPOSITORY_LAYOUT_CONFIG_MIGRATION =
+  "supabase/migrations/202609050003_repository_layout_config.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -163,6 +165,7 @@ export const ALL_MIGRATIONS = [
   FINDING_CODE_ANCHOR_MIGRATION,
   NOTES_AND_EDGE_FAMILIES_MIGRATION,
   DIRECTORY_NODES_MIGRATION,
+  REPOSITORY_LAYOUT_CONFIG_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

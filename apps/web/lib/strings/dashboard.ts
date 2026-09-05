@@ -90,8 +90,12 @@ export const DASHBOARD = {
       all: "전체 영역",
       frontend: "프론트엔드",
       backend: "백엔드",
+      /** 스키마·마이그레이션 — Wave A todo 4에서 자기 영역을 갖는다. */
+      database: "데이터베이스",
       docs: "문서",
       tests: "테스트",
+      /** 어떤 관례에도 맞지 않는 경로. 조용히 backend로 흡수하지 않는다. */
+      other: "기타",
     },
     groupMode: "영역별로 묶기",
     groupModeAria: "노드를 영역별 띠로 배치",

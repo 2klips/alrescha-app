@@ -24,6 +24,13 @@ const PLAN: RepositoryScanPlan = {
   codeLinks: [],
   commitSha: "a".repeat(40),
   docLinks: [],
+  layoutConfig: {
+    ignore: [],
+    layersHidden: [],
+    layout: {},
+    progressDocs: [],
+    todoFiles: [],
+  },
   linkSchemaVersion: 3,
   linkScope: "incremental",
   removedPaths: [],

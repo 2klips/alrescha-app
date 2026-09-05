@@ -266,4 +266,86 @@ describe("directory nodes", () => {
     expect(serialized).not.toContain("contains");
     expect((await directories()).length).toBe(6);
   });
+
+  describe("layout config", () => {
+    async function repositoryRow(): Promise<{
+      layout_config: Record<string, unknown>;
+      layout_config_commit_sha: string | null;
+    }> {
+      const rows = await database.query<{
+        layout_config: Record<string, unknown>;
+        layout_config_commit_sha: string | null;
+      }>(
+        `select layout_config, layout_config_commit_sha
+         from public.repositories where id = $1`,
+        [repositoryId],
+      );
+      return (
+        rows.rows[0] ?? { layout_config: {}, layout_config_commit_sha: null }
+      );
+    }
+
+    const CONFIG = {
+      ignore: ["notes/**"],
+      layersHidden: ["statistical"],
+      layout: { backend: ["svc/"], database: ["store/"] },
+      progressDocs: [],
+      todoFiles: ["BACKLOG.md"],
+    };
+
+    it("stores the conventions with the commit that stated them", async () => {
+      await apply({
+        artifacts: [planArtifact("svc/orders.ts")],
+        commitSha: SHA_A,
+        layoutConfig: CONFIG,
+      });
+
+      const row = await repositoryRow();
+      expect(row.layout_config).toEqual(CONFIG);
+      // Which commit's `.alrescha.json` produced this picture is part of the
+      // picture (Phase 4 Wave A todo 4).
+      expect(row.layout_config_commit_sha).toBe(SHA_A);
+    });
+
+    it("clears the conventions when the repository stops stating them", async () => {
+      await apply({
+        artifacts: [planArtifact("svc/orders.ts")],
+        commitSha: SHA_A,
+        layoutConfig: CONFIG,
+      });
+      await apply({
+        artifacts: [],
+        commitSha: SHA_B,
+        layoutConfig: {
+          ignore: [],
+          layersHidden: [],
+          layout: {},
+          progressDocs: [],
+          todoFiles: [],
+        },
+        unchangedPaths: ["svc/orders.ts"],
+      });
+
+      // A deleted settings file must not leave a repository governed by it.
+      expect((await repositoryRow()).layout_config).toEqual({
+        ignore: [],
+        layersHidden: [],
+        layout: {},
+        progressDocs: [],
+        todoFiles: [],
+      });
+    });
+
+    it("leaves an older plan's repository ungoverned rather than guessing", async () => {
+      // A CLI built before this wave uploads a plan with no `layoutConfig`.
+      await apply({
+        artifacts: [planArtifact("svc/orders.ts")],
+        commitSha: SHA_A,
+      });
+
+      const row = await repositoryRow();
+      expect(row.layout_config).toEqual({});
+      expect(row.layout_config_commit_sha).toBeNull();
+    });
+  });
 });

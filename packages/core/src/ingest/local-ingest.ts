@@ -129,6 +129,27 @@ const docLinkSchema = z.strictObject({
   tier: z.enum(["reference", "resolved"]),
 });
 
+/**
+ * The repository's own conventions (Phase 4 Wave A todo 4). Parsed values,
+ * bounded lists, and no file text: `.alrescha.json` is configuration the
+ * user wrote for this product, and what travels is what the parser made of
+ * it — not the document (WORK_SPEC §3-3).
+ */
+const configPatternSchema = z.string().min(1).max(200);
+const configListSchema = z.array(configPatternSchema).max(200);
+const layoutConfigSchema = z.strictObject({
+  ignore: configListSchema,
+  layersHidden: configListSchema,
+  layout: z.strictObject({
+    backend: configListSchema.optional(),
+    database: configListSchema.optional(),
+    frontend: configListSchema.optional(),
+    shared: configListSchema.optional(),
+  }),
+  progressDocs: configListSchema,
+  todoFiles: configListSchema,
+});
+
 export const repositoryScanPlanSchema = z.strictObject({
   artifacts: z.array(scannedArtifactSchema).max(100_000),
   codeLinks: z.array(codeLinkSchema).max(200_000),
@@ -136,6 +157,15 @@ export const repositoryScanPlanSchema = z.strictObject({
   // Defaulted for the same reason `linkSchemaVersion` is: a CLI built before
   // this wave uploads a plan with no document links at all.
   docLinks: z.array(docLinkSchema).max(200_000).default([]),
+  // Defaulted like the fields around it: a CLI built before this wave
+  // uploads a plan that states no conventions at all.
+  layoutConfig: layoutConfigSchema.default({
+    ignore: [],
+    layersHidden: [],
+    layout: {},
+    progressDocs: [],
+    todoFiles: [],
+  }),
   // Defaulted rather than required: a CLI built before Phase 4 uploads a
   // plan that predates both fields, and its links are incremental by
   // definition. Nothing about the payload's metadata-only contract changes.

@@ -403,7 +403,7 @@
 - 내용: 두 todo가 같은 파일을 나눠 갖는다. todo 2에서 `ignore`는 **스캔 결과를 바꾸므로** 지금 해석해야 했다(그러지 않으면 OQ-043의 "레포가 `.omo`를 빼는 방법"이 존재하지 않는다). 나머지 네 필드는 소비자가 아직 없다 — `layers.hidden`은 Wave B의 레이어 토글이, `layout`·`todoFiles`·`progressDocs`는 todo 4의 `repositories.layout_config`가 있어야 의미를 갖는다. 지금 저장하면 아무도 읽지 않는 설정이 DB에 남는다.
 - 임시 결정: `ignore`만 스캐너가 해석한다(트리에서 읽고 분류 전에 적용, 두 경로 동일). 나머지는 todo 4로 미룬다. 파싱 실패·미지원 필드는 조용히 빈 설정으로 취급한다 — 설정 파일 오타가 스캔을 죽이지 않는다.
 - 필요한 결정: ⑴ todo 4가 같은 모듈을 확장해 전체 설정을 파싱하고 `layout_config`에 커밋 sha와 함께 저장(기본 후보) ⑵ 설정 전체를 플랜에 실어 올리고 서버는 저장만(플랜 스키마 확대 — strict 스키마 동기 비용) ⑶ `ignore`도 서버 설정으로 옮긴다(ADR-013 동등성 위반 — 기각).
-- 상태: open. 기본 후보 ⑴, todo 4에서 판정.
+- 상태: **resolved(Wave A todo 4, 2026-09-05)** — ⑴ 채택. `repository-config.ts`가 전체 어휘를 파싱하고, 파싱된 값이 플랜에 실려 `repositories.layout_config`에 커밋 sha와 함께 저장된다. `layout`은 즉시 소비되고(도메인 유도), `layersHidden`·`todoFiles`·`progressDocs`는 저장만 — 소비자는 각각 Wave B 레이어 토글과 todo 5의 todo 파서다.
 
 ## OQ-048 — 문서 노트화 이후 `.omo` 문서가 최대 허브가 됐다 (실측)
 
