@@ -49,7 +49,51 @@ export type EnrichResultItem =
       readonly kind: "skip";
       readonly path: string;
       readonly reason: string;
+      /**
+       * The blob the attempt failed on. Carried so an older failure cannot
+       * land on top of a newer success (Codex remedy P0-A).
+       */
+      readonly summaryBlobSha: string;
     };
+
+/**
+ * What a write actually did, counted from rows rather than from items.
+ *
+ * `superseded` means the artifact is still there and its blob moved while
+ * the job ran: the prose was correct about a file that no longer exists in
+ * that form. It is not a provider failure and does not retry — the next
+ * enqueue picks the file up at its new blob.
+ */
+export interface EnrichApplyOutcome {
+  /** Summary rows written. */
+  readonly applied: number;
+  readonly invalid: number;
+  readonly missing: number;
+  /** Failure gates written. A recorded failure is not delivered work. */
+  readonly skipsApplied: number;
+  readonly superseded: number;
+}
+
+export const EMPTY_APPLY_OUTCOME: EnrichApplyOutcome = {
+  applied: 0,
+  invalid: 0,
+  missing: 0,
+  skipsApplied: 0,
+  superseded: 0,
+};
+
+function addOutcome(
+  left: EnrichApplyOutcome,
+  right: EnrichApplyOutcome,
+): EnrichApplyOutcome {
+  return {
+    applied: left.applied + right.applied,
+    invalid: left.invalid + right.invalid,
+    missing: left.missing + right.missing,
+    skipsApplied: left.skipsApplied + right.skipsApplied,
+    superseded: left.superseded + right.superseded,
+  };
+}
 
 export interface EnrichJobStore {
   listPendingFiles(input: {
@@ -92,7 +136,7 @@ export interface EnrichJobStore {
     readonly items: readonly EnrichResultItem[];
     readonly repositoryId: string;
     readonly workspaceId: string;
-  }): Promise<void>;
+  }): Promise<EnrichApplyOutcome>;
 }
 
 /** Transient source access — the same port analysis uses. */
@@ -181,7 +225,12 @@ export function createEnrichJobHandler(input: {
     const outcome =
       pending.length > 0
         ? await summarizePendingFiles({ context, input, job, model, pending })
-        : { schemaInvalidCount: 0, skippedCount: 0, summaryCount: 0 };
+        : {
+            applied: EMPTY_APPLY_OUTCOME,
+            schemaInvalidCount: 0,
+            skippedCount: 0,
+            summaryCount: 0,
+          };
     const conceptsSynthesized = await synthesizeConceptLayer({
       context,
       input,
@@ -194,11 +243,14 @@ export function createEnrichJobHandler(input: {
     // Stubborn files must not block the concept stage (pilot round 4), but a
     // run that delivered *nothing* is not billable either: schema-invalid
     // outputs reject (refund), pure provider failures retry.
-    if (
-      pending.length > 0 &&
-      outcome.summaryCount === 0 &&
-      !conceptsSynthesized
-    ) {
+    //
+    // "Landed" is now counted from rows written, not from items generated
+    // (Codex remedy P0-A). A superseded write is deliberately on the
+    // delivered side of the guard: the model produced valid prose and a
+    // rescan moved the blob underneath it, which is neither a failure to
+    // refund nor a reason to retry the same work forever.
+    const delivered = outcome.applied.applied + outcome.applied.superseded;
+    if (pending.length > 0 && delivered === 0 && !conceptsSynthesized) {
       if (outcome.schemaInvalidCount > 0) {
         throw new EnrichValidationError(
           `Enrich delivered nothing: ${outcome.schemaInvalidCount} ` +
@@ -283,6 +335,7 @@ async function summarizePendingFiles(run: {
   readonly model: () => Promise<EnrichProvider>;
   readonly pending: readonly EnrichPendingFile[];
 }): Promise<{
+  applied: EnrichApplyOutcome;
   schemaInvalidCount: number;
   skippedCount: number;
   summaryCount: number;
@@ -298,17 +351,21 @@ async function summarizePendingFiles(run: {
   const PERSIST_CHUNK = 10;
   let persisted = 0;
   let schemaInvalidCount = 0;
+  let applied = EMPTY_APPLY_OUTCOME;
   const items: EnrichResultItem[] = [];
   const flush = async (force: boolean) => {
     const unsaved = items.slice(persisted);
     if (unsaved.length === 0 || (!force && unsaved.length < PERSIST_CHUNK)) {
       return;
     }
-    await input.store.saveResults({
-      items: unsaved,
-      repositoryId: job.repositoryId,
-      workspaceId: job.workspaceId,
-    });
+    applied = addOutcome(
+      applied,
+      await input.store.saveResults({
+        items: unsaved,
+        repositoryId: job.repositoryId,
+        workspaceId: job.workspaceId,
+      }),
+    );
     persisted = items.length;
   };
   for (const file of pending) {
@@ -320,7 +377,12 @@ async function summarizePendingFiles(run: {
     });
     if (source === null) {
       // Gone between scan and enrich — a smaller repository, not a failure.
-      items.push({ kind: "skip", path: file.path, reason: "source-missing" });
+      items.push({
+        kind: "skip",
+        path: file.path,
+        reason: "source-missing",
+        summaryBlobSha: file.sourceBlobSha,
+      });
       continue;
     }
     const { clipped, truncated } = clipSummaryInput(source);
@@ -339,6 +401,7 @@ async function summarizePendingFiles(run: {
         kind: "skip",
         path: file.path,
         reason: error instanceof Error ? error.message : "provider-failure",
+        summaryBlobSha: file.sourceBlobSha,
       });
       await context.heartbeat();
       continue;
@@ -370,6 +433,7 @@ async function summarizePendingFiles(run: {
         kind: "skip",
         path: file.path,
         reason: `schema-invalid: ${error.message}`,
+        summaryBlobSha: file.sourceBlobSha,
       });
     }
     await flush(false);
@@ -378,8 +442,11 @@ async function summarizePendingFiles(run: {
 
   await flush(true);
   return {
+    applied,
     schemaInvalidCount,
     skippedCount: items.filter((item) => item.kind === "skip").length,
+    // What the model produced. `applied.applied` is what reached a row, and
+    // the two differ exactly when the repository changed under the run.
     summaryCount: items.filter((item) => item.kind === "summary").length,
   };
 }

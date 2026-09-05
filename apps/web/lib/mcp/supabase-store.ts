@@ -26,6 +26,7 @@ import {
   type McpWorkspaceData,
   type PublicMcpTokenRecord,
 } from "@alrescha/mcp";
+import { currentSummaryText } from "@alrescha/core";
 
 type Row = Record<string, unknown>;
 
@@ -664,10 +665,24 @@ export class SupabaseMcpStore implements McpStore {
             const metadata = record(row.metadata);
             const id = requiredString(row, "id");
             const path = requiredString(row, "path");
+            // The one freshness rule (Codex remedy P0-A): prose written for
+            // an older blob is not served as a description of the file now.
+            // `artifacts.metadata` is merged on rescan, so a stale summary
+            // survives every scan until enrich replaces it — and until then
+            // every excerpt, pack and `get_artifact` answer built from it
+            // described a file that had already changed.
+            const fresh = currentSummaryText({
+              currentBlobSha: nullableString(row.source_blob_sha),
+              summary:
+                typeof metadata.summary === "string" ? metadata.summary : null,
+              summaryBlobSha:
+                typeof metadata.summaryBlobSha === "string"
+                  ? metadata.summaryBlobSha
+                  : null,
+            });
             return {
               blobSha: nullableString(row.source_blob_sha) ?? "",
-              content:
-                typeof metadata.summary === "string" ? metadata.summary : "",
+              content: fresh ?? "",
               headings: strings(metadata.headings),
               id,
               kind: requiredString(row, "kind"),
@@ -676,10 +691,7 @@ export class SupabaseMcpStore implements McpStore {
                 typeof metadata.status === "string"
                   ? metadata.status
                   : "active",
-              summary:
-                typeof metadata.summary === "string"
-                  ? metadata.summary
-                  : (labels.get(id) ?? path),
+              summary: fresh ?? labels.get(id) ?? path,
               symbols: strings(metadata.symbols),
               tags: strings(metadata.tags),
               title:

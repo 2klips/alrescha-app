@@ -20,12 +20,17 @@ const EMPTY: WorkspaceInspectionRows = {
 
 const HEAD = "a".repeat(40);
 const OLD = "b".repeat(40);
+/** The blob a stored summary was computed from, when it is current. */
+const BLOB = "c".repeat(40);
 
 describe("artifactSummary", () => {
   it("reads the judgment job's merged summary", () => {
-    expect(artifactSummary({ summary: "인증 흐름 요약" })).toBe(
-      "인증 흐름 요약",
-    );
+    expect(
+      artifactSummary(
+        { summary: "인증 흐름 요약", summaryBlobSha: BLOB },
+        BLOB,
+      ),
+    ).toBe("인증 흐름 요약");
   });
 
   it.each([
@@ -34,7 +39,23 @@ describe("artifactSummary", () => {
     ["summary is not text", { summary: 42 }],
     ["summary is blank", { summary: "   " }],
   ])("yields null for %s", (_label, metadata) => {
-    expect(artifactSummary(metadata)).toBeNull();
+    expect(artifactSummary(metadata, BLOB)).toBeNull();
+  });
+
+  /**
+   * Codex remedy P0-A. `artifacts.metadata` merges on rescan, so prose
+   * written for an older blob is still in the row after a new one lands.
+   * The screen calls it a document's description, so it may only show prose
+   * whose digest matches the blob the scanner last saw.
+   */
+  it("shows prose only while it still describes the current blob", () => {
+    const metadata = { summary: "현행 스펙", summaryBlobSha: BLOB };
+    expect(artifactSummary(metadata, BLOB)).toBe("현행 스펙");
+    expect(artifactSummary(metadata, OLD)).toBeNull();
+    // Two absent digests are not a match: a legacy summary with no cache
+    // key would otherwise read as fresh forever.
+    expect(artifactSummary({ summary: "옛 산문" }, null)).toBeNull();
+    expect(artifactSummary({ summary: "옛 산문" }, BLOB)).toBeNull();
   });
 });
 
@@ -50,9 +71,13 @@ describe("artifactRowFromQuery", () => {
       kind: "spec",
       last_seen_commit_sha: "a".repeat(40),
       path: "spec/WORK_SPEC.md",
+      source_blob_sha: BLOB,
       summary: "현행 스펙",
+      summary_blob_sha: BLOB,
     });
-    expect(artifactSummary(row.metadata)).toBe("현행 스펙");
+    expect(artifactSummary(row.metadata, row.source_blob_sha)).toBe(
+      "현행 스펙",
+    );
   });
 
   it("keeps a non-string summary rejected, matching the full-object path", () => {
@@ -60,9 +85,11 @@ describe("artifactRowFromQuery", () => {
       kind: "adr",
       last_seen_commit_sha: null,
       path: "docs/adr/ADR-001.md",
+      source_blob_sha: BLOB,
       summary: 42,
+      summary_blob_sha: BLOB,
     });
-    expect(artifactSummary(row.metadata)).toBeNull();
+    expect(artifactSummary(row.metadata, row.source_blob_sha)).toBeNull();
   });
 
   it("treats an absent summary key (SQL NULL) as no summary", () => {
@@ -70,9 +97,24 @@ describe("artifactRowFromQuery", () => {
       kind: "adr",
       last_seen_commit_sha: null,
       path: "docs/adr/ADR-001.md",
+      source_blob_sha: BLOB,
       summary: null,
+      summary_blob_sha: null,
     });
-    expect(artifactSummary(row.metadata)).toBeNull();
+    expect(artifactSummary(row.metadata, row.source_blob_sha)).toBeNull();
+  });
+
+  it("carries the digests the freshness rule needs", () => {
+    const row = artifactRowFromQuery({
+      kind: "spec",
+      last_seen_commit_sha: null,
+      path: "spec/WORK_SPEC.md",
+      source_blob_sha: OLD,
+      summary: "옛 산문",
+      summary_blob_sha: BLOB,
+    });
+    expect(row.source_blob_sha).toBe(OLD);
+    expect(artifactSummary(row.metadata, row.source_blob_sha)).toBeNull();
   });
 });
 
@@ -150,14 +192,18 @@ describe("workspace inspection dashboard", () => {
         {
           kind: "spec",
           last_seen_commit_sha: HEAD,
-          metadata: { summary: "현행 스펙" },
+          metadata: { summary: "현행 스펙", summaryBlobSha: BLOB },
           path: "spec/WORK_SPEC.md",
+          source_blob_sha: BLOB,
         },
         {
           kind: "adr",
           last_seen_commit_sha: OLD,
-          metadata: {},
+          // Prose from a blob this document has moved past: the entry still
+          // appears, with no summary rather than last week's (P0-A).
+          metadata: { summary: "옛 결정", summaryBlobSha: OLD },
           path: "docs/adr/ADR-001.md",
+          source_blob_sha: BLOB,
         },
         // Code is not documentation — it must not reach this widget.
         {
@@ -178,6 +224,11 @@ describe("workspace inspection dashboard", () => {
     );
     expect(current?.freshness).toBe("current");
     expect(current?.summary).toEqual({ grade: "inferred", text: "현행 스펙" });
+    const stale = dashboard.documents.entries.find(
+      ({ path }) => path === "docs/adr/ADR-001.md",
+    );
+    expect(stale).toBeDefined();
+    expect(stale?.summary).toBeNull();
   });
 
   it("distinguishes 'no todos stored' from '0 of 0 done'", () => {

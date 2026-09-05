@@ -125,6 +125,8 @@ export const DATABASE_OBJECTS_MIGRATION =
   "supabase/migrations/202609060001_database_objects.sql";
 export const SECTION_NODES_MIGRATION =
   "supabase/migrations/202609060002_section_nodes.sql";
+export const SUMMARY_CAS_MIGRATION =
+  "supabase/migrations/202609060003_artifact_summary_cas.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -178,6 +180,7 @@ export const ALL_MIGRATIONS = [
   ROUTE_NODES_MIGRATION,
   DATABASE_OBJECTS_MIGRATION,
   SECTION_NODES_MIGRATION,
+  SUMMARY_CAS_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

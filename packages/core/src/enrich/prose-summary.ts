@@ -52,16 +52,117 @@ export interface SummaryCandidate {
 }
 
 /**
- * The blob-hash cache in one predicate: a file needs a model call only when
- * its stored summary was computed from a different blob than the one the
- * scanner last saw. `enqueue_enrich_job` applies the same predicate in SQL;
- * the handler re-derives it so a mid-flight rescan cannot bill stale work.
+ * How a stored summary stands against the blob the scanner last saw (Codex
+ * remedy P0-A / R-02).
+ *
+ * There are four answers, not two. `stale` and `unknown` are different from
+ * `missing` because the prose exists and can be shown as history; they are
+ * different from `current` because neither is a statement about the file as
+ * it is now. A reader that collapses them into "there is a summary" serves
+ * last week's description of a file that has changed since, which is worse
+ * than serving nothing — the reader cannot tell it is being lied to.
+ */
+export type SummaryState =
+  | {
+      /** ADR-001: model prose is `inferred`, whatever its freshness. */
+      readonly grade: "inferred";
+      readonly sourceBlobSha: string;
+      readonly state: "current";
+      readonly text: string;
+    }
+  | {
+      readonly currentBlobSha: string;
+      readonly sourceBlobSha: string;
+      readonly state: "stale";
+      readonly text: string;
+    }
+  | {
+      readonly reason: string;
+      readonly state: "unknown";
+      readonly text: string;
+    }
+  | { readonly state: "missing" };
+
+/**
+ * The one freshness rule, for every caller that shows prose.
+ *
+ * `current` needs **two non-empty digests that are equal**. Two nulls are not
+ * a match: an artifact with no source digest and a summary with no digest
+ * agree about nothing, and calling that current is how a legacy row with no
+ * cache key ends up presented as a fresh description forever.
+ */
+export function summaryState(input: {
+  readonly currentBlobSha: string | null | undefined;
+  readonly summary: string | null | undefined;
+  readonly summaryBlobSha: string | null | undefined;
+}): SummaryState {
+  const text = typeof input.summary === "string" ? input.summary.trim() : "";
+  if (text.length === 0) return { state: "missing" };
+  const current = (input.currentBlobSha ?? "").trim();
+  const stored = (input.summaryBlobSha ?? "").trim();
+  if (stored.length === 0) {
+    return {
+      reason: "summary carries no source digest",
+      state: "unknown",
+      text,
+    };
+  }
+  if (current.length === 0) {
+    return {
+      reason: "artifact carries no source digest",
+      state: "unknown",
+      text,
+    };
+  }
+  if (current === stored) {
+    return { grade: "inferred", sourceBlobSha: stored, state: "current", text };
+  }
+  return {
+    currentBlobSha: current,
+    sourceBlobSha: stored,
+    state: "stale",
+    text,
+  };
+}
+
+/**
+ * The prose a reader may present as a description of the file *now* — and
+ * `null` for every other state. Stale and unknown prose is kept in the row
+ * and can be shown deliberately as history; it does not leak into a default
+ * answer, an excerpt or a context pack.
+ */
+export function currentSummaryText(input: {
+  readonly currentBlobSha: string | null | undefined;
+  readonly summary: string | null | undefined;
+  readonly summaryBlobSha: string | null | undefined;
+}): string | null {
+  const state = summaryState(input);
+  return state.state === "current" ? state.text : null;
+}
+
+/**
+ * The blob-hash cache in one predicate: a file needs a model call unless its
+ * stored summary is `current` against the blob the scanner last saw.
+ * `enqueue_enrich_job` applies the same predicate in SQL; the handler
+ * re-derives it so a mid-flight rescan cannot bill stale work.
+ *
+ * The write side and the read side now decide freshness with one function,
+ * which is the point: a file the selector calls fresh is exactly a file the
+ * reader may quote.
  */
 export function selectFilesForSummarization<T extends SummaryCandidate>(
   candidates: readonly T[],
 ): T[] {
   return candidates.filter(
-    (candidate) => candidate.summaryBlobSha !== candidate.sourceBlobSha,
+    (candidate) =>
+      summaryState({
+        currentBlobSha: candidate.sourceBlobSha,
+        // The selector is asked about the cache key, not the prose: a row
+        // that stored a digest but whose text is gone still needs no call
+        // when the digest matches.
+        summary: "stored",
+        summaryBlobSha: candidate.summaryBlobSha,
+      }).state !== "current",
   );
 }
 

@@ -85,7 +85,21 @@ function store(
     loadProvider: vi.fn().mockResolvedValue(model),
     saveConceptGraph: vi.fn().mockResolvedValue(undefined),
     saveModuleSummary: vi.fn().mockResolvedValue(undefined),
-    saveResults: vi.fn().mockResolvedValue(undefined),
+    // The function reports rows written, not items sent (Codex remedy
+    // P0-A). The default mock stands in for a repository nobody is editing:
+    // every item lands.
+    saveResults: vi
+      .fn()
+      .mockImplementation(
+        async (input: { items: readonly { kind: string }[] }) => ({
+          applied: input.items.filter((item) => item.kind === "summary").length,
+          invalid: 0,
+          missing: 0,
+          skipsApplied: input.items.filter((item) => item.kind === "skip")
+            .length,
+          superseded: 0,
+        }),
+      ),
   } satisfies EnrichJobStore;
 }
 
@@ -211,11 +225,56 @@ describe("enrich job handler", () => {
 
     await expect(run).rejects.toThrow(/no summaries/);
     // The skip markers persist (the gate stays visible) even though the
-    // attempt fails — only summaries count as delivered work.
+    // attempt fails — only summaries count as delivered work, which is why
+    // the outcome's `skipsApplied` is a separate counter from `applied`.
     const saved = enrichStore.saveResults.mock.calls[0]?.[0] as {
       items: { kind: string }[];
     };
     expect(saved.items.every((item) => item.kind === "skip")).toBe(true);
+  });
+
+  /**
+   * Codex remedy P0-A. Valid prose that lost a race with a rescan is not a
+   * provider failure: the model did the work and the blob moved underneath
+   * it. Retrying would put a repository that is being edited into a loop,
+   * and rejecting would refund work that was actually performed.
+   */
+  it("does not fail the attempt when every summary was superseded", async () => {
+    const enrichStore = store(provider());
+    enrichStore.saveResults = vi.fn().mockResolvedValue({
+      applied: 0,
+      invalid: 0,
+      missing: 0,
+      skipsApplied: 0,
+      superseded: 2,
+    });
+
+    await expect(
+      createEnrichJobHandler({ readSource, store: enrichStore })(
+        job() as never,
+        context,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  it("fails the attempt when the prose reached no row at all", async () => {
+    const enrichStore = store(provider());
+    // Every file was deleted between scan and enrich: two valid summaries,
+    // nothing written, nothing to bill for.
+    enrichStore.saveResults = vi.fn().mockResolvedValue({
+      applied: 0,
+      invalid: 0,
+      missing: 2,
+      skipsApplied: 0,
+      superseded: 0,
+    });
+
+    await expect(
+      createEnrichJobHandler({ readSource, store: enrichStore })(
+        job() as never,
+        context,
+      ),
+    ).rejects.toThrow(/no summaries/);
   });
 
   it("holds the BYOK invariant: a keyed call must not also reserve credits", async () => {

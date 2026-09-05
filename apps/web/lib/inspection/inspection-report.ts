@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   buildInspectionDashboard,
+  currentSummaryText,
   type InspectionDashboard,
   type InspectionDocumentInput,
   type InspectionFindingInput,
@@ -31,6 +32,8 @@ export interface InspectionArtifactRow {
   readonly last_seen_commit_sha: string | null;
   readonly metadata: unknown;
   readonly path: string;
+  /** The blob the scanner last saw, for the freshness rule below. */
+  readonly source_blob_sha?: string | null;
 }
 
 /**
@@ -40,12 +43,18 @@ export interface InspectionArtifactRow {
  * `metadata`. `->` (not `->>`) preserves the JSON value's native type, so
  * a non-string summary still fails `artifactSummary`'s `typeof` check
  * exactly as it would have from the full metadata object.
+ *
+ * Two scalars joined it for the freshness rule (Codex remedy P0-A): the
+ * summary's own digest and the blob the scanner last saw. Both are short
+ * strings, so the reason the metadata blob stays out still holds.
  */
 interface InspectionArtifactQueryRow {
   readonly kind: string;
   readonly last_seen_commit_sha: string | null;
   readonly path: string;
+  readonly source_blob_sha: string | null;
   readonly summary: unknown;
+  readonly summary_blob_sha: unknown;
 }
 
 /**
@@ -61,8 +70,9 @@ export function artifactRowFromQuery(
   return {
     kind: row.kind,
     last_seen_commit_sha: row.last_seen_commit_sha,
-    metadata: { summary: row.summary },
+    metadata: { summary: row.summary, summaryBlobSha: row.summary_blob_sha },
     path: row.path,
+    source_blob_sha: row.source_blob_sha,
   };
 }
 
@@ -109,13 +119,29 @@ function isOneOf<T extends string>(
 
 /**
  * The `inferred` summary a judgment job merged into `artifacts.metadata`
- * (ADR-014 keeps metadata a merge, so the summary survives a rescan). Any
- * other shape reads as "no summary" rather than as text to display.
+ * (ADR-014 keeps metadata a merge, so the summary survives a rescan) — and
+ * only when it still describes the blob the scanner last saw.
+ *
+ * Surviving a rescan is exactly the problem: metadata merges, so prose
+ * written for blob A is still sitting there after blob B lands. This screen
+ * shows it as a document's description, so it uses the same
+ * `currentSummaryText` rule the MCP store and the enrich selector use
+ * (Codex remedy P0-A). Any other shape reads as "no summary" rather than as
+ * text to display.
  */
-export function artifactSummary(metadata: unknown): string | null {
+export function artifactSummary(
+  metadata: unknown,
+  sourceBlobSha?: string | null,
+): string | null {
   if (typeof metadata !== "object" || metadata === null) return null;
-  const summary = (metadata as Record<string, unknown>)["summary"];
-  return typeof summary === "string" && summary.trim() ? summary : null;
+  const fields = metadata as Record<string, unknown>;
+  const summary = fields["summary"];
+  const summaryBlobSha = fields["summaryBlobSha"];
+  return currentSummaryText({
+    currentBlobSha: sourceBlobSha ?? null,
+    summary: typeof summary === "string" ? summary : null,
+    summaryBlobSha: typeof summaryBlobSha === "string" ? summaryBlobSha : null,
+  });
 }
 
 export function buildWorkspaceInspectionDashboard(
@@ -143,7 +169,7 @@ export function buildWorkspaceInspectionDashboard(
           {
             lastSeenCommitSha: row.last_seen_commit_sha,
             path: row.path,
-            summary: artifactSummary(row.metadata),
+            summary: artifactSummary(row.metadata, row.source_blob_sha),
           },
         ]
       : [],
@@ -198,7 +224,10 @@ export async function loadWorkspaceInspectionDashboard(
         .eq("workspace_id", workspaceId),
       client
         .from("artifacts")
-        .select("path,kind,last_seen_commit_sha,summary:metadata->summary")
+        .select(
+          "path,kind,last_seen_commit_sha,source_blob_sha," +
+            "summary:metadata->summary,summary_blob_sha:metadata->summaryBlobSha",
+        )
         .eq("workspace_id", workspaceId)
         .in("kind", DOCUMENT_KINDS),
       client
@@ -230,7 +259,7 @@ export async function loadWorkspaceInspectionDashboard(
   const latestRun = (head.data ?? [])[0] as { commit_sha?: string } | undefined;
 
   const artifactRows: InspectionArtifactRow[] = (
-    (artifacts.data ?? []) as InspectionArtifactQueryRow[]
+    (artifacts.data ?? []) as unknown as InspectionArtifactQueryRow[]
   ).map(artifactRowFromQuery);
 
   return {

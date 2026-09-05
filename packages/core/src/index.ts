@@ -529,12 +529,15 @@ export {
   EnrichValidationError,
   SUMMARY_INPUT_MAX_CHARS,
   clipSummaryInput,
+  currentSummaryText,
   selectFilesForSummarization,
+  summaryState,
   validateProseSummary,
 } from "./enrich/prose-summary";
 export type {
   ClippedSummaryInput,
   SummaryCandidate,
+  SummaryState,
 } from "./enrich/prose-summary";
 export {
   CONCEPT_BATCH_MAX_CHARS,
