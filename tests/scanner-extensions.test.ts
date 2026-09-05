@@ -9,6 +9,8 @@ import {
   extractRationales,
   extractSymbols,
   scanRepository,
+  type RepositorySource,
+  type RepositoryTree,
 } from "../packages/core/src/index";
 import { createLocalRepositorySource } from "../packages/cli/src/local-source";
 import { buildWorkspaceProgressReport } from "../apps/web/lib/progress/progress-report";
@@ -46,9 +48,53 @@ describe("handoff/session file classification (todo 7 ⑶)", () => {
     expect(classifyArtifactPath(path)).toBe("todo_progress");
   });
 
-  it("still classifies ordinary documents as before", () => {
-    expect(classifyArtifactPath("docs/guide.md")).toBeNull();
+  it("keeps the specific document rules ahead of the generic one", () => {
+    // Ordinary prose became an artifact in Phase 4 Wave A todo 2 — it was
+    // not one before, which is why a README had no node to link to — but the
+    // named rules still win, or a TODO would stop being a todo.
+    expect(classifyArtifactPath("docs/guide.md")).toBe("doc");
     expect(classifyArtifactPath("TODO.md")).toBe("todo_progress");
+    expect(classifyArtifactPath("docs/adr/ADR-001.md")).toBe("adr");
+    expect(classifyArtifactPath("AGENTS.md")).toBe("agents");
+  });
+});
+
+describe("non-code text files (Phase 4 Wave A todo 2)", () => {
+  it.each([
+    ["README.md", "doc"],
+    ["notes/meeting.txt", "doc"],
+    ["docs/api.rst", "doc"],
+    ["supabase/migrations/202609050001_x.sql", "schema"],
+    ["prisma/schema.prisma", "schema"],
+    ["apps/web/app/styles/tokens.css", "style"],
+    ["apps/web/styles/main.scss", "style"],
+    ["package.json", "config"],
+    ["apps/web/tsconfig.json", "config"],
+    ["pyproject.toml", "config"],
+    ["docker-compose.yml", "config"],
+    ["Dockerfile", "config"],
+    [".env.example", "config"],
+    ["vitest.config.ts", "code_metadata"],
+  ])("classifies %s as %s", (path, expected) => {
+    expect(classifyArtifactPath(path)).toBe(expected);
+  });
+
+  it("leaves data files, lockfiles and build output out of the graph", () => {
+    // Not "every `.json`": a recorded API response and a fixture are data,
+    // and a lockfile is generated. None of them says anything about intent.
+    expect(classifyArtifactPath("fixtures/recordings/tree.json")).toBeNull();
+    expect(classifyArtifactPath("data/users.json")).toBeNull();
+    expect(classifyArtifactPath("pnpm-lock.yaml")).toBeNull();
+    expect(classifyArtifactPath("package-lock.json")).toBeNull();
+    expect(classifyArtifactPath("dist/index.js")).toBeNull();
+    expect(classifyArtifactPath("coverage/report.md")).toBeNull();
+    expect(classifyArtifactPath("node_modules/pkg/readme.md")).toBeNull();
+    expect(
+      classifyArtifactPath(".claude/worktrees/copy/spec/WORK_SPEC.md"),
+    ).toBeNull();
+    // …while a hand-written evidence log stays in (OQ-043): the CLI used to
+    // drop `.omo` and the GitHub path kept it, so the two disagreed.
+    expect(classifyArtifactPath(".omo/evidence/phase4/density.md")).toBe("doc");
   });
 });
 
@@ -401,5 +447,83 @@ describe("rationale nodes and handoff todos reach the database and dashboard", (
     } finally {
       await rm(root, { force: true, recursive: true });
     }
+  });
+});
+
+describe("repository scan settings (.alrescha.json)", () => {
+  function treeOf(paths: readonly string[]): RepositoryTree {
+    return {
+      entries: paths.map((path, index) => ({
+        mode: "100644",
+        path,
+        sha: index.toString(16).padStart(40, "0"),
+        size: 80,
+        type: "blob" as const,
+      })),
+      treeSha: "d".repeat(40),
+      truncated: false,
+    };
+  }
+
+  function sourceOf(files: Record<string, string>): RepositorySource {
+    return {
+      fetchContent: async (path) => {
+        const body = files[path];
+        if (body === undefined) throw new Error(`no such file: ${path}`);
+        return new TextEncoder().encode(body);
+      },
+      listTree: async () => treeOf(Object.keys(files)),
+    };
+  }
+
+  it("honours the repository's own ignore list", async () => {
+    const files = {
+      ".alrescha.json": JSON.stringify({ ignore: [".omo/**", "notes/*.md"] }),
+      ".omo/evidence/run.md": "# Run\n",
+      "README.md": "# Readme\n",
+      "notes/scratch.md": "# Scratch\n",
+      "src/keep.ts": "export const keep = 1;\n",
+    };
+    const plan = await scanRepository({
+      commitSha: "a".repeat(40),
+      source: sourceOf(files),
+    });
+
+    // OQ-043: evidence logs are in scope by default — the CLI used to drop
+    // them and the GitHub path kept them — so the way out is the repository
+    // saying so, in a file both ingest paths read from the same commit.
+    expect(plan.artifacts.map(({ path }) => path).sort()).toEqual([
+      ".alrescha.json",
+      "README.md",
+      "src/keep.ts",
+    ]);
+  });
+
+  it("scans everything when the settings file is absent or unreadable", async () => {
+    const paths = [".omo/evidence/run.md", "README.md"];
+    const withoutConfig = await scanRepository({
+      commitSha: "a".repeat(40),
+      source: sourceOf({
+        ".omo/evidence/run.md": "# Run\n",
+        "README.md": "# Readme\n",
+      }),
+    });
+    const withBrokenConfig = await scanRepository({
+      commitSha: "a".repeat(40),
+      source: sourceOf({
+        ".alrescha.json": "{ not json",
+        ".omo/evidence/run.md": "# Run\n",
+        "README.md": "# Readme\n",
+      }),
+    });
+
+    expect(withoutConfig.artifacts.map(({ path }) => path).sort()).toEqual(
+      [...paths].sort(),
+    );
+    // A settings file with a typo is a setting we do not have, not a scan
+    // that fails or a repository that silently loses half its notes.
+    expect(withBrokenConfig.artifacts.map(({ path }) => path).sort()).toEqual(
+      [".alrescha.json", ...paths].sort(),
+    );
   });
 });

@@ -148,6 +148,16 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
     // Same deterministic pipeline over both transports → identical plans.
     expect(localPlan).toEqual(githubPlan);
     expect(localPlan.artifacts.length).toBeGreaterThan(5);
+    // Equality has to be about something: since Phase 4 Wave A todo 2 the
+    // plan carries document links and non-code artifacts, and the ignore
+    // rules that decide both used to differ between the two paths (OQ-043).
+    expect(localPlan.docLinks.length).toBeGreaterThan(0);
+    expect(localPlan.docLinks).toEqual(githubPlan.docLinks);
+    expect(
+      localPlan.artifacts.some(
+        ({ classification }) => classification === "config",
+      ),
+    ).toBe(true);
 
     // Same apply function on both sides → identical graphs.
     const repositoryA = await ensureRepository(

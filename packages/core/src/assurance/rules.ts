@@ -130,8 +130,28 @@ interface SourceReference {
   readonly symbol: string | null;
 }
 
+/**
+ * Classifications the rules read as prose.
+ *
+ * Stated outright rather than as "not code" (Phase 4 Wave A todo 2): the
+ * scanner now classifies stylesheets, schemas, config and generic `doc`
+ * files, and "not code" would have handed every one of them to remark, run
+ * the requirement extractor over a migration, and made the analyze job fetch
+ * their bodies. The seven here are exactly the ones the six drift rules
+ * target; whether a README should join them is OQ-041, a product decision.
+ */
+const PROSE_CLASSIFICATIONS = new Set<ArtifactClassification>([
+  "adr",
+  "agents",
+  "claude",
+  "cursor_rule",
+  "skill",
+  "spec",
+  "todo_progress",
+]);
+
 function isDocument(classification: ArtifactClassification): boolean {
-  return classification !== "code_metadata";
+  return PROSE_CLASSIFICATIONS.has(classification);
 }
 
 function sliceSpan(buffer: Buffer, span: MarkdownSpan): string {

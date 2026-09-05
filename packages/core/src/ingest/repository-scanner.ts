@@ -2,6 +2,10 @@ import { createHash } from "node:crypto";
 
 import ts from "typescript";
 
+import {
+  parseMarkdownStructure,
+  type ParsedMarkdownStructure,
+} from "../parser/markdown";
 import { parseTodoDocument, type ParsedTodoItem } from "../progress/todos";
 import {
   LINK_SCHEMA_VERSION,
@@ -13,6 +17,7 @@ import {
   type ParsedFileLinks,
 } from "./code-links";
 import { clampConcurrency, mapWithConcurrency } from "./concurrency";
+import { resolveDocLinks, type DocLink } from "./doc-links";
 import {
   buildModuleResolution,
   isIgnoredManifestPath,
@@ -21,19 +26,50 @@ import {
   MAX_MANIFESTS_PER_SCAN,
   type ModuleResolutionConfig,
 } from "./module-resolution";
+import { isDefaultIgnoredPath } from "./path-conventions";
+import {
+  EMPTY_REPOSITORY_CONFIG,
+  parseRepositoryConfig,
+  repositoryIgnoreMatcher,
+  REPOSITORY_CONFIG_PATH,
+} from "./repository-config";
 
+/**
+ * What a scanned file is, as the scan can tell from its path.
+ *
+ * Phase 4 Wave A todo 2 adds the four that make a repository's own files
+ * visible at all: before it, a `README.md`, a migration, a stylesheet and a
+ * `package.json` were not artifacts, so 40% of this repository's tracked
+ * files had no node and no edge could reach them (R5 §2.2 D5).
+ *
+ * The first eight keep their meaning exactly — the rules engine reasons about
+ * those and only those, and `doc` deliberately does not join them (a README
+ * is a note in the graph, not a source of requirements; see OQ-041).
+ */
 export type ArtifactClassification =
   | "adr"
   | "agents"
   | "claude"
   | "code_metadata"
+  | "config"
   | "cursor_rule"
+  | "doc"
+  | "schema"
   | "skill"
   | "spec"
+  | "style"
   | "todo_progress";
 
 export type PersistedArtifactKind =
-  "adr" | "code_metadata" | "instruction" | "spec" | "todo";
+  | "adr"
+  | "code_metadata"
+  | "config"
+  | "doc"
+  | "instruction"
+  | "schema"
+  | "spec"
+  | "style"
+  | "todo";
 export type ScanSkipReason = "binary" | "oversized" | "submodule" | "symlink";
 
 export interface RepositoryTreeEntry {
@@ -129,6 +165,12 @@ export interface RepositoryScanPlan {
    */
   readonly codeLinks: readonly CodeLink[];
   readonly commitSha: string;
+  /**
+   * `references` links out of the documents parsed this pass (Phase 4 Wave A
+   * todo 2). Scoped exactly like `codeLinks`: an incremental pass speaks only
+   * for the documents it re-read, a `full` pass for all of them.
+   */
+  readonly docLinks: readonly DocLink[];
   /** Resolver generation that produced `codeLinks` (see LINK_SCHEMA_VERSION). */
   readonly linkSchemaVersion: number;
   readonly linkScope: LinkScope;
@@ -150,6 +192,28 @@ const TYPESCRIPT_EXTENSIONS = new Set([
   ".tsx",
 ]);
 const CODE_EXTENSIONS = new Set([...TYPESCRIPT_EXTENSIONS, ".go", ".py"]);
+/** Prose the graph carries as notes (Phase 4 Wave A todo 2, design ①). */
+const DOC_EXTENSIONS = new Set([".md", ".mdx", ".rst", ".txt"]);
+/** Schema definitions — the hub the `db_object` family hangs off (Wave A′). */
+const SCHEMA_EXTENSIONS = new Set([".sql", ".prisma", ".graphql", ".gql"]);
+const STYLE_EXTENSIONS = new Set([".css", ".scss", ".less", ".sass"]);
+/**
+ * Configuration, by extension or by exact name. Deliberately not "every
+ * `.json`": a fixture, a recorded API response and a lockfile are data, not
+ * a statement about how the project is wired.
+ */
+const CONFIG_EXTENSIONS = new Set([".toml", ".yaml", ".yml"]);
+const CONFIG_FILE_NAMES = new Set([
+  ".alrescha.json",
+  ".env.example",
+  ".nvmrc",
+  "dockerfile",
+  "package.json",
+  "pyproject.toml",
+  "requirements.txt",
+]);
+const CONFIG_FILE_PATTERN =
+  /^(?:tsconfig[\w.-]*\.json|jsconfig[\w.-]*\.json|[\w.-]*\.config\.[cm]?[jt]s|dockerfile(?:\.[\w-]+)?)$/;
 
 /** Handoff/session files agents leave behind (Phase 2B todo 7 ⑶, H1). */
 const HANDOFF_FILE_PATTERN =
@@ -182,7 +246,7 @@ export function classifyArtifactPath(
 ): ArtifactClassification | null {
   const path = inputPath.replaceAll("\\", "/");
   const lower = path.toLowerCase();
-  if (underFixtureDirectory(lower)) {
+  if (underFixtureDirectory(lower) || isDefaultIgnoredPath(lower)) {
     return null;
   }
   const fileName = lower.slice(lower.lastIndexOf("/") + 1);
@@ -234,7 +298,47 @@ export function classifyArtifactPath(
   if (CODE_EXTENSIONS.has(fileExtension)) {
     return "code_metadata";
   }
+  // Every remaining text file is a note of some sort. The order matters only
+  // where a name and an extension disagree: `requirements.txt` is a config
+  // file, not prose, so the name list is consulted first.
+  if (CONFIG_FILE_NAMES.has(fileName) || CONFIG_FILE_PATTERN.test(fileName)) {
+    return "config";
+  }
+  if (DOC_EXTENSIONS.has(fileExtension)) {
+    return "doc";
+  }
+  if (SCHEMA_EXTENSIONS.has(fileExtension)) {
+    return "schema";
+  }
+  if (STYLE_EXTENSIONS.has(fileExtension)) {
+    return "style";
+  }
+  if (CONFIG_EXTENSIONS.has(fileExtension)) {
+    return "config";
+  }
   return null;
+}
+
+/**
+ * Classifications whose body the scan parses as markdown for `references`
+ * links (Phase 4 Wave A todo 2). Instruction files and specs were already
+ * read for their spans; `doc` joins them so a README's links reach the graph.
+ */
+const DOC_LINK_CLASSIFICATIONS = new Set<ArtifactClassification>([
+  "adr",
+  "agents",
+  "claude",
+  "cursor_rule",
+  "doc",
+  "skill",
+  "spec",
+  "todo_progress",
+]);
+
+export function isMarkdownArtifact(
+  classification: ArtifactClassification,
+): boolean {
+  return DOC_LINK_CLASSIFICATIONS.has(classification);
 }
 
 export function persistedKind(
@@ -245,8 +349,16 @@ export function persistedKind(
       return "adr";
     case "code_metadata":
       return "code_metadata";
+    case "config":
+      return "config";
+    case "doc":
+      return "doc";
+    case "schema":
+      return "schema";
     case "spec":
       return "spec";
+    case "style":
+      return "style";
     case "todo_progress":
       return "todo";
     case "agents":
@@ -674,6 +786,7 @@ export async function scanRepository(input: {
       artifacts: [],
       codeLinks: [],
       commitSha: input.commitSha,
+      docLinks: [],
       linkSchemaVersion: LINK_SCHEMA_VERSION,
       linkScope,
       removedPaths: [],
@@ -703,7 +816,10 @@ export async function scanRepository(input: {
   const skipped: ScanSkip[] = [];
   const unchangedPaths: string[] = [];
   const parsedLinks = new Map<string, ParsedFileLinks>();
+  const parsedDocuments = new Map<string, ParsedMarkdownStructure>();
   const knownCodePaths = new Set<string>();
+  /** Every artifact path in the tree — what a document link resolves against. */
+  const knownArtifactPaths = new Set<string>();
   const treePaths = new Set<string>();
   /**
    * Manifest bodies read this pass, for `buildModuleResolution`. Transient by
@@ -722,7 +838,18 @@ export async function scanRepository(input: {
   type ScanSlot =
     | { readonly kind: "skipped"; readonly skip: ScanSkip }
     | { readonly kind: "unchanged"; readonly path: string }
-    | { readonly kind: "manifest"; readonly entry: RepositoryTreeEntry }
+    | {
+        /**
+         * A file whose text this pass needs for module resolution. Since
+         * Phase 4 Wave A todo 2 a manifest is usually an artifact too
+         * (`package.json` is config), so the slot carries the classification
+         * and one fetch serves both: the alias rules and the artifact row.
+         */
+        readonly kind: "manifest";
+        readonly classification: ArtifactClassification | null;
+        readonly entry: RepositoryTreeEntry;
+        readonly previous: PreviousScannedArtifact | undefined;
+      }
     | {
         readonly kind: "fetch";
         readonly classification: ArtifactClassification;
@@ -745,6 +872,29 @@ export async function scanRepository(input: {
   for (const entry of sortedEntries) {
     if (entry.type === "blob") treePaths.add(entry.path);
   }
+
+  // The repository's own scan settings, read before anything is classified
+  // because they decide what a file even is. One extra round trip, and only
+  // for a repository that ships the file (Phase 4 Wave A todo 2, OQ-043).
+  const configEntry = sortedEntries.find(
+    (entry) =>
+      entry.type === "blob" &&
+      entry.path === REPOSITORY_CONFIG_PATH &&
+      (entry.size ?? 0) <= MAX_MANIFEST_BYTES,
+  );
+  let repositoryConfig = EMPTY_REPOSITORY_CONFIG;
+  if (configEntry) {
+    try {
+      const text = decodedText(
+        await input.source.fetchContent(configEntry.path, input.commitSha),
+      );
+      if (text !== null) repositoryConfig = parseRepositoryConfig(text);
+    } catch {
+      // A settings file that cannot be read is a setting we do not have,
+      // not a scan that fails.
+    }
+  }
+  const ignoredByRepository = repositoryIgnoreMatcher(repositoryConfig);
 
   for (const entry of sortedEntries) {
     if (entry.type === "commit" || entry.mode === "160000") {
@@ -773,28 +923,49 @@ export async function scanRepository(input: {
       continue;
     }
 
-    const classification = classifyArtifactPath(entry.path);
-    if (!classification) {
-      // Manifests are not artifacts and never persist. They are read only to
-      // learn the mappings a non-relative specifier resolves through — the
-      // package names, `exports`/`main` targets, tsconfig `paths` and Python
-      // source roots that Wave A todo 0 restores (R5 §2.2 D1).
-      if (
-        manifestCount < MAX_MANIFESTS_PER_SCAN &&
-        isManifestPath(entry.path) &&
-        !isIgnoredManifestPath(entry.path) &&
-        !underFixtureDirectory(entry.path.toLowerCase()) &&
-        (entry.size ?? 0) <= MAX_MANIFEST_BYTES
-      ) {
-        manifestCount += 1;
-        slots.push({ entry, kind: "manifest" });
-      }
+    // The repository's own list runs first: `.alrescha.json` is how a
+    // repository keeps its evidence logs or generated notes out of the
+    // graph, and it has to be able to exclude a file the defaults keep.
+    if (ignoredByRepository(entry.path)) {
       continue;
     }
-    observedPaths.add(entry.path);
-    if (classification === "code_metadata") {
-      knownCodePaths.add(entry.path);
+
+    const classification = classifyArtifactPath(entry.path);
+    // A manifest is read for the mappings a non-relative specifier resolves
+    // through — package names, `exports`/`main` targets, tsconfig `paths`,
+    // Python source roots (Wave A todo 0, R5 §2.2 D1) — and is re-read on
+    // every pass, including incremental ones, because a partial alias table
+    // resolves fewer specifiers than a full scan of the same commit would.
+    const isManifest =
+      manifestCount < MAX_MANIFESTS_PER_SCAN &&
+      isManifestPath(entry.path) &&
+      !isIgnoredManifestPath(entry.path) &&
+      !underFixtureDirectory(entry.path.toLowerCase()) &&
+      (entry.size ?? 0) <= MAX_MANIFEST_BYTES;
+
+    if (!classification && !isManifest) {
+      continue;
     }
+    if (classification) {
+      observedPaths.add(entry.path);
+      knownArtifactPaths.add(entry.path);
+      if (classification === "code_metadata") {
+        knownCodePaths.add(entry.path);
+      }
+    }
+    if (isManifest) {
+      manifestCount += 1;
+      slots.push({
+        classification,
+        entry,
+        kind: "manifest",
+        previous: previousByPath.get(entry.path),
+      });
+      continue;
+    }
+    // Unreachable at runtime — the compound check above sent every
+    // unclassified entry on — but it is what tells the compiler so.
+    if (!classification) continue;
 
     if ((entry.size ?? 0) > maxFileBytes) {
       slots.push({
@@ -810,7 +981,15 @@ export async function scanRepository(input: {
 
     const previous = previousByPath.get(entry.path);
     if (previous?.sourceBlobSha === entry.sha) {
-      if (linkScope === "full" && classification === "code_metadata") {
+      // A full relink re-reads every file whose links this scan derives —
+      // documents as well as code. Without the document half, a resolver
+      // improvement would reach only the prose that happens to change next
+      // (R5 §2.2 D2), which is the defect todo 0 fixed for imports.
+      if (
+        linkScope === "full" &&
+        (classification === "code_metadata" ||
+          isMarkdownArtifact(classification))
+      ) {
         slots.push({
           classification,
           entry,
@@ -878,19 +1057,20 @@ export async function scanRepository(input: {
       continue;
     }
 
-    if (slot.kind === "manifest") {
-      const manifestBytes = fetched[fetchIndex] as Uint8Array;
-      fetchIndex += 1;
-      if (manifestBytes.byteLength > 0) {
-        const text = decodedText(manifestBytes);
-        if (text !== null) manifestTexts.set(slot.entry.path, text);
-      }
-      continue;
-    }
-
-    const { classification, entry, previous, relinkOnly } = slot;
+    // Both remaining slot kinds carry exactly one fetched body, in slot
+    // order. A manifest that is also an artifact — every `package.json` is,
+    // since todo 2 — reads its bytes once and does both jobs with them.
+    const { classification, entry, previous } = slot;
+    const relinkOnly = slot.kind === "fetch" && slot.relinkOnly;
     const bytes = fetched[fetchIndex] as Uint8Array;
     fetchIndex += 1;
+
+    if (slot.kind === "manifest" && bytes.byteLength > 0) {
+      const text = decodedText(bytes);
+      if (text !== null) manifestTexts.set(entry.path, text);
+    }
+    // A manifest outside the artifact vocabulary stops here.
+    if (classification === null) continue;
     if (bytes.byteLength > maxFileBytes) {
       skipped.push({
         detail: `Fetched file size ${bytes.byteLength} exceeds ${maxFileBytes} bytes.`,
@@ -924,6 +1104,13 @@ export async function scanRepository(input: {
       parsedLinks.set(entry.path, parseTypeScriptLinks(entry.path, source));
     } else if (extraction?.engine === "python-structural") {
       parsedLinks.set(entry.path, parsePythonLinks(source));
+    }
+
+    if (isMarkdownArtifact(classification)) {
+      parsedDocuments.set(
+        entry.path,
+        parseMarkdownStructure({ path: entry.path, source }),
+      );
     }
 
     if (relinkOnly) {
@@ -1013,10 +1200,19 @@ export async function scanRepository(input: {
     resolution,
   });
 
+  // Documents resolve against every artifact path in the tree, not only the
+  // ones this pass re-read: a spec that did not change still points at a file
+  // that did, and the target has to exist for the edge to be storable.
+  const docLinks = resolveDocLinks({
+    documents: parsedDocuments,
+    knownPaths: knownArtifactPaths,
+  });
+
   return {
     artifacts,
     codeLinks,
     commitSha: input.commitSha,
+    docLinks,
     linkSchemaVersion: LINK_SCHEMA_VERSION,
     linkScope,
     removedPaths,

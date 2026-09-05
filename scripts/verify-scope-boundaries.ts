@@ -151,8 +151,15 @@ async function collectRootProductFiles(root: string): Promise<string[]> {
 // resolver reads package.json and tsconfig.json to learn how a non-relative
 // specifier maps, and manifest text is a file body like any other. Only the
 // derived rules (paths and patterns) may travel.
+//
+// Phase 4 Wave A todo 2 adds the document half. The scan now parses every
+// note to resolve the paths it names, so the same temptation exists one
+// layer up: shipping the matched token, the sentence around it, or the
+// document body it came from. A `references` link carries the resolved
+// target path and a line span — both reconstructable from the tree — and
+// nothing else.
 const RAW_BODY_IDENTIFIERS =
-  "(?:rawCode|rawSource|sourceCode|codeBody|fileContents?|fileBody|fileText|manifestTexts?|manifestBody|manifestSource)";
+  "(?:rawCode|rawSource|sourceCode|codeBody|fileContents?|fileBody|fileText|manifestTexts?|manifestBody|manifestSource|documentBody|documentText|docBody|docText|excerptText|inlineCodeValue|codeReferenceValue|mentionText|referenceValue)";
 const RAW_UPLOAD_CALL = new RegExp(
   `\\b(?:upload|send|post|submit|transmit|push|ingest)\\w*\\s*\\([^;]{0,240}\\b${RAW_BODY_IDENTIFIERS}\\b`,
   "i",

@@ -206,10 +206,10 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
         await tx`
           insert into public.edges (
             workspace_id, repository_id, source_node_id, target_node_id,
-            relation, provenance, confidence
+            relation, family, provenance, confidence
           ) values (
             ${input.workspaceId}, ${input.repositoryId}, ${edge.requirementId},
-            ${edge.targetNodeId}, 'implements',
+            ${edge.targetNodeId}, 'implements', 'evidence',
             ${this.sql.json(edge.provenance as never)}::jsonb,
             ${edge.confidence}
           )

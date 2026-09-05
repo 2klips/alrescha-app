@@ -11,41 +11,30 @@ import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 
-import type {
-  RepositorySource,
-  RepositoryTree,
-  RepositoryTreeEntry,
+import {
+  DEFAULT_IGNORED_PATHS,
+  DEFAULT_IGNORED_SEGMENTS,
+  type RepositorySource,
+  type RepositoryTree,
+  type RepositoryTreeEntry,
 } from "@alrescha/core";
 
-/** Build outputs and VCS internals that a git tree would not contain. */
-const IGNORED_SEGMENTS = new Set([
-  ".git",
-  ".next",
-  ".omo",
-  ".turbo",
-  "__pycache__",
-  ".venv",
-  "coverage",
-  "dist",
-  "node_modules",
-  "playwright-report",
-  "test-results",
-  "venv",
-]);
-
 /**
- * Directories git excludes by path rather than by name. `.claude/worktrees`
- * holds complete working-tree copies of the repository, so a CLI scan that
- * walked into it would ingest every file several times over and report a
- * graph several times denser than the repository actually is — measured on
- * this repository, 2,921 nodes instead of 421. The GitHub path never sees
- * them (git excludes the directory), so skipping them is what keeps the two
- * ingest paths equal (ADR-013).
+ * Build outputs, VCS internals and whole-tree copies, from the one list the
+ * scanner itself applies (Phase 4 Wave A todo 2, OQ-043).
  *
- * `.claude` itself stays in scope: `.claude/rules/*.md` are instruction
- * artifacts the graph is supposed to carry.
+ * Skipping them here is an optimisation — the scanner drops them anyway —
+ * but it has to be the *same* list, or the two ingest paths disagree about
+ * what a repository contains. This module used to carry its own copy that
+ * also skipped `.omo`, a directory git tracks: the same commit ingested
+ * through GitHub kept evidence documents the CLI silently dropped (ADR-013).
+ *
+ * `.claude` itself stays in scope (`.claude/rules/*.md` are instruction
+ * artifacts); `.claude/worktrees` does not, because it holds complete copies
+ * of the repository — 2,921 nodes instead of 502 on this one.
  */
-const IGNORED_PATHS = new Set([".claude/worktrees"]);
+const IGNORED_SEGMENTS = new Set(DEFAULT_IGNORED_SEGMENTS);
+const IGNORED_PATHS = new Set(DEFAULT_IGNORED_PATHS);
 
 /**
  * Files larger than this get a synthetic (still deterministic) blob sha

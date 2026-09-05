@@ -27,6 +27,12 @@
       "exportedSymbols": []
     },
     {
+      "path": "tsconfig.json",
+      "type": "config",
+      "digest": "f3e4d96858f8b5d8601f00046381ae5fdb10b60a8a141445a2697881490fc4fb",
+      "exportedSymbols": []
+    },
+    {
       "path": "docs/adr/ADR-001-session-timeout.md",
       "type": "adr",
       "digest": "fa402a16e45fc5066d4346c5e2318c74982a97378847049db7ce4ea3c9044c64",
@@ -36,6 +42,12 @@
       "path": "docs/adr/ADR-002-unused-export.md",
       "type": "adr",
       "digest": "1b341a21fab02d680daaa04c5a68adba3426a0edd7b7e6084bfe18fbeee148c6",
+      "exportedSymbols": []
+    },
+    {
+      "path": "package.json",
+      "type": "config",
+      "digest": "dc90b91cf694e59fde7472c3232137ef0e6c610bec9d21eabdc070bdf0839b16",
       "exportedSymbols": []
     },
     {
@@ -54,19 +66,30 @@
       "path": "src/api/health.ts",
       "type": "code_metadata",
       "digest": "5713e101fb340b196abd53a4fbad2b4fac11212b09e018ef9540c79bdf651bb1",
-      "exportedSymbols": ["HealthResponse", "getHealth"]
+      "exportedSymbols": [
+        "HealthResponse",
+        "getHealth"
+      ]
     },
     {
       "path": "src/audit.ts",
       "type": "code_metadata",
       "digest": "1da106ebe3d1d15b57686c244a6c37f38548a0aef34e2d3eb03268f11bedecc6",
-      "exportedSymbols": ["AuditEvent", "AuditSink", "recordSuccessfulLogin"]
+      "exportedSymbols": [
+        "AuditEvent",
+        "AuditSink",
+        "recordSuccessfulLogin"
+      ]
     },
     {
       "path": "src/session.ts",
       "type": "code_metadata",
       "digest": "03b0600a01a52c2c049d8c3264f54ee3da58fb92af83a264bd7546f0d22548c2",
-      "exportedSymbols": ["Session", "SESSION_TIMEOUT_MS", "isSessionExpired"]
+      "exportedSymbols": [
+        "Session",
+        "SESSION_TIMEOUT_MS",
+        "isSessionExpired"
+      ]
     },
     {
       "path": "tests/session.test.ts",

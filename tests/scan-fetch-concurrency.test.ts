@@ -14,6 +14,7 @@ import {
   MAX_CONCURRENCY,
   clampConcurrency,
   mapWithConcurrency,
+  isMarkdownArtifact,
   scanRepository,
   type PreviousScannedArtifact,
   type RepositorySource,
@@ -50,8 +51,9 @@ function fixtureTree(fileCount: number): RepositoryTree {
     { mode: "160000", path: "vendor/sub", sha: "b".repeat(40), type: "commit" },
     { mode: "120000", path: "docs/link.md", sha: "c".repeat(40), type: "blob" },
   );
-  // Manifests: not artifacts, but read on every pass so that an incremental
-  // scan resolves the same aliases a full one would (Phase 4 Wave A todo 0).
+  // Manifests: config artifacts since Phase 4 Wave A todo 2, and read on
+  // every pass so that an incremental scan resolves the same aliases a full
+  // one would (Phase 4 Wave A todo 0).
   entries.push(
     {
       mode: "100644",
@@ -222,9 +224,13 @@ describe("scan content fetch concurrency (perf research MT-3)", () => {
       source: second,
     });
 
-    expect(first.fetches.length).toBe(
-      plan.artifacts.length + MANIFEST_PATHS.length,
-    );
+    // One fetch per file, manifests included: a `package.json` is a config
+    // artifact as well as an alias source since Phase 4 Wave A todo 2, and
+    // one read serves both jobs.
+    expect(first.fetches.length).toBe(plan.artifacts.length);
+    expect(first.fetches.length).toBe(new Set(first.fetches).size);
+    const storedPaths = plan.artifacts.map(({ path }) => path);
+    for (const path of MANIFEST_PATHS) expect(storedPaths).toContain(path);
     // Artifacts whose blob sha is unchanged are still never re-read…
     expect(second.fetches.filter((path) => !isManifest(path))).toEqual([]);
     // …while manifests deliberately are: the alias rules must be complete on
@@ -236,7 +242,7 @@ describe("scan content fetch concurrency (perf research MT-3)", () => {
     );
   });
 
-  it("re-reads every code file in full mode, emitting links but no artifacts", async () => {
+  it("re-reads every linkable file in full mode, emitting links but no artifacts", async () => {
     const tree = fixtureTree(20);
     const first = recordingSource(tree);
     const plan = await scanRepository({ commitSha: COMMIT_SHA, source: first });
@@ -272,11 +278,19 @@ describe("scan content fetch concurrency (perf research MT-3)", () => {
       .map(({ path }) => path);
     expect(codePaths.length).toBeGreaterThan(0);
     for (const path of codePaths) expect(second.fetches).toContain(path);
-    // …documents were not, because their links are not what changed…
+    // …and so was every document: documents carry `references` links since
+    // Phase 4 Wave A todo 2, so a relink that skipped them would leave a
+    // spec pointing at nothing until someone edited it (R5 §2.2 D2).
     const docPaths = plan.artifacts
-      .filter(({ classification }) => classification !== "code_metadata")
+      .filter(({ classification }) => isMarkdownArtifact(classification))
       .map(({ path }) => path);
-    for (const path of docPaths) expect(second.fetches).not.toContain(path);
+    expect(docPaths.length).toBeGreaterThan(0);
+    for (const path of docPaths) expect(second.fetches).toContain(path);
+    // Nothing else was: a full relink re-reads what it derives links from,
+    // and the two manifests only because the alias table must stay complete.
+    expect([...second.fetches].sort()).toEqual(
+      [...codePaths, ...docPaths, ...MANIFEST_PATHS].sort(),
+    );
     // …and re-reading produced no artifact rows, only unchanged paths.
     expect(relinked.artifacts).toEqual([]);
     expect(relinked.unchangedPaths).toEqual(

@@ -51,8 +51,10 @@ export type CodeLinkTier = ResolutionTier;
  * 1 — relative specifiers only.
  * 2 — workspace/tsconfig aliases, barrel re-exports, Python source roots,
  *     and the derived `tests` relation.
+ * 3 — every text file is an artifact, and documents resolve `references`
+ *     links to the code and documents they name (Phase 4 Wave A todo 2).
  */
-export const LINK_SCHEMA_VERSION = 2;
+export const LINK_SCHEMA_VERSION = 3;
 
 export interface CodeLinkSpan {
   readonly endLine: number;

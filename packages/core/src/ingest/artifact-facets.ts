@@ -25,6 +25,9 @@ const DOC_CLASSIFICATIONS: readonly ArtifactClassification[] = [
   "agents",
   "claude",
   "cursor_rule",
+  // Phase 4 Wave A todo 2: a README is prose in the graph, so it groups with
+  // the specs even though the rules do not reason about it.
+  "doc",
   "skill",
   "spec",
   "todo_progress",

@@ -172,6 +172,31 @@ describe("MVP scope fidelity", () => {
     );
   });
 
+  it("rejects document text on the wire, under the names a doc link would use", async () => {
+    // Phase 4 Wave A todo 2: the scan parses every note to resolve the paths
+    // it names. A `references` link may carry the resolved target and a line
+    // span — both derivable from the tree — never the matched token or the
+    // prose around it (WORK_SPEC §3-3).
+    await withFixture(
+      {
+        "packages/cli/src/push.ts": `export async function pushProject(client: any, docText: string) {
+          return client.upload({ docText });
+        }`,
+      },
+      async (root) => {
+        const report = await verifyScopeBoundaries(root);
+
+        expect(report.findings).toEqual([
+          expect.objectContaining({
+            boundary: "raw-source-upload",
+            file: "packages/cli/src/push.ts",
+          }),
+        ]);
+        expect(report.status).toBe("fail");
+      },
+    );
+  });
+
   it("accepts a metadata-only local CLI (ADR-013 — the boundary moved off CLI existence)", async () => {
     await withFixture(
       {

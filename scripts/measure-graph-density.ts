@@ -29,7 +29,6 @@ import { createLocalRepositorySource } from "../packages/cli/src/local-source";
 import {
   LINK_SCHEMA_VERSION,
   scanRepository,
-  type CodeLink,
   type LinkScope,
   type RepositoryScanPlan,
 } from "../packages/core/src/index";
@@ -164,6 +163,14 @@ function buildReport(input: {
     artifactPaths.add(link.sourcePath);
     artifactPaths.add(link.targetPath);
   }
+  // Document links count too (Phase 4 Wave A todo 2): they are a third of
+  // this repository's deterministic edges, and a density report that read
+  // only the code half would understate the graph it is measuring.
+  const allLinks = [...plan.codeLinks, ...plan.docLinks];
+  for (const link of plan.docLinks) {
+    artifactPaths.add(link.sourcePath);
+    artifactPaths.add(link.targetPath);
+  }
 
   const neighbours = new Map<string, Set<string>>();
   const rawDegree = new Map<string, number>();
@@ -175,14 +182,14 @@ function buildReport(input: {
     rawDegree.set(from, (rawDegree.get(from) ?? 0) + 1);
     rawDegree.set(to, (rawDegree.get(to) ?? 0) + 1);
   };
-  for (const edge of plan.codeLinks) link(edge.sourcePath, edge.targetPath);
+  for (const edge of allLinks) link(edge.sourcePath, edge.targetPath);
 
   let pairCount = 0;
   for (const [, set] of neighbours) pairCount += set.size;
   pairCount /= 2;
 
   const nodeCount = artifactPaths.size;
-  const edgeCount = plan.codeLinks.length;
+  const edgeCount = allLinks.length;
 
   const histogram: Record<string, number> = {};
   for (const [, label] of HISTOGRAM_BUCKETS.entries()) histogram[label[0]] = 0;
@@ -210,17 +217,15 @@ function buildReport(input: {
   }
 
   const byKind: Record<string, number> = {};
-  for (const [key, value] of tally(
-    plan.codeLinks.map((edge: CodeLink) => edge.kind),
-  )) {
+  for (const [key, value] of tally(allLinks.map((edge) => edge.kind))) {
     byKind[key] = value;
   }
   const byTier: Record<string, number> = {};
-  for (const [key, value] of tally(plan.codeLinks.map((edge) => edge.tier))) {
+  for (const [key, value] of tally(allLinks.map((edge) => edge.tier))) {
     byTier[key] = value;
   }
   const byMethod: Record<string, number> = {};
-  for (const [key, value] of tally(plan.codeLinks.map((edge) => edge.method))) {
+  for (const [key, value] of tally(allLinks.map((edge) => edge.method))) {
     byMethod[key] = value;
   }
 

@@ -176,7 +176,29 @@ const CLASSIFICATIONS: readonly ArtifactClassification[] = [
   "agents",
   "claude",
   "code_metadata",
+  "config",
   "cursor_rule",
+  "doc",
+  "schema",
+  "skill",
+  "spec",
+  "style",
+  "todo_progress",
+];
+
+/**
+ * Classifications that are prose. The rest of the text files the scan now
+ * stores — schemas, stylesheets, config — are source, and typing them as
+ * documents would put a migration in the docs band beside the specs, which
+ * is the shape R5 §2.2 D5 measured. Their own node kinds arrive with the hub
+ * families (Wave A′) and the `unit` tag (todo 4).
+ */
+const PROSE_CLASSIFICATIONS: readonly ArtifactClassification[] = [
+  "adr",
+  "agents",
+  "claude",
+  "cursor_rule",
+  "doc",
   "skill",
   "spec",
   "todo_progress",
@@ -187,9 +209,16 @@ function isClassification(value: string): value is ArtifactClassification {
 }
 
 function artifactNodeType(artifact: MapArtifactRow): GraphNodeType {
-  if (!isClassification(artifact.classification)) return "document";
-  if (artifact.classification !== "code_metadata") return "document";
-  return deriveBrainArea(artifact.path, artifact.classification) === "tests"
+  // A classification this build does not know is not a document either.
+  if (!isClassification(artifact.classification)) return "unknown";
+  if (
+    (PROSE_CLASSIFICATIONS as readonly string[]).includes(
+      artifact.classification,
+    )
+  ) {
+    return "document";
+  }
+  return deriveBrainArea(artifact.path, "code_metadata") === "tests"
     ? "test"
     : "code";
 }

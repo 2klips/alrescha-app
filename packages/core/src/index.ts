@@ -66,6 +66,30 @@ export type {
 } from "./ingest/code-links";
 
 export {
+  MAX_DOC_LINKS_PER_DOCUMENT,
+  resolveDocLinks,
+} from "./ingest/doc-links";
+export {
+  EMPTY_REPOSITORY_CONFIG,
+  REPOSITORY_CONFIG_PATH,
+  parseRepositoryConfig,
+  repositoryIgnoreMatcher,
+} from "./ingest/repository-config";
+export type { RepositoryScanConfig } from "./ingest/repository-config";
+export type {
+  DocLink,
+  DocLinkKind,
+  DocLinkMethod,
+  ResolveDocLinksInput,
+} from "./ingest/doc-links";
+
+export {
+  DEFAULT_IGNORED_PATHS,
+  DEFAULT_IGNORED_SEGMENTS,
+  isDefaultIgnoredPath,
+} from "./ingest/path-conventions";
+
+export {
   EMPTY_MODULE_RESOLUTION,
   aliasCandidates,
   buildModuleResolution,
@@ -89,6 +113,7 @@ export {
   extractExportedSymbols,
   extractRationales,
   extractSymbols,
+  isMarkdownArtifact,
   persistedKind,
   scanRepository,
 } from "./ingest/repository-scanner";

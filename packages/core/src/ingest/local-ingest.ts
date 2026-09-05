@@ -59,14 +59,28 @@ const scannedArtifactSchema = z.strictObject({
     "agents",
     "claude",
     "code_metadata",
+    "config",
     "cursor_rule",
+    "doc",
+    "schema",
     "skill",
     "spec",
+    "style",
     "todo_progress",
   ]),
   digest: sha256Schema,
   exportedSymbols: z.array(exportedSymbolSchema).max(10_000),
-  kind: z.enum(["adr", "code_metadata", "instruction", "spec", "todo"]),
+  kind: z.enum([
+    "adr",
+    "code_metadata",
+    "config",
+    "doc",
+    "instruction",
+    "schema",
+    "spec",
+    "style",
+    "todo",
+  ]),
   path: z.string().min(1).max(1000),
   rationales: z.array(rationaleNoteSchema).max(10_000),
   sizeBytes: z.number().int().nonnegative(),
@@ -98,10 +112,30 @@ const codeLinkSchema = z.strictObject({
   tier: z.enum(["reference", "resolved"]),
 });
 
+/**
+ * Document `references` links (Phase 4 Wave A todo 2). Strict like the rest:
+ * the matched token never travels, so a payload carrying one is rejected
+ * rather than quietly stored (WORK_SPEC §3-3).
+ */
+const docLinkSchema = z.strictObject({
+  kind: z.literal("references"),
+  method: z.enum(["basename-owner", "doc-link", "path-exists"]),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  targetPath: z.string().min(1).max(1000),
+  tier: z.enum(["reference", "resolved"]),
+});
+
 export const repositoryScanPlanSchema = z.strictObject({
   artifacts: z.array(scannedArtifactSchema).max(100_000),
   codeLinks: z.array(codeLinkSchema).max(200_000),
   commitSha: sha1Schema,
+  // Defaulted for the same reason `linkSchemaVersion` is: a CLI built before
+  // this wave uploads a plan with no document links at all.
+  docLinks: z.array(docLinkSchema).max(200_000).default([]),
   // Defaulted rather than required: a CLI built before Phase 4 uploads a
   // plan that predates both fields, and its links are incremental by
   // definition. Nothing about the payload's metadata-only contract changes.
