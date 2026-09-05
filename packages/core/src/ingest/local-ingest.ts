@@ -175,6 +175,33 @@ const routeSchema = z.strictObject({
   sourcePath: z.string().min(1).max(1000),
 });
 
+/**
+ * Database objects and their edges (Phase 4 Wave A′ todo 7). Names, kinds
+ * and lines — never the DDL that declares them.
+ */
+const dbObjectSchema = z.strictObject({
+  kind: z.enum(["function", "table", "view"]),
+  name: z.string().min(1).max(200),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+});
+
+const schemaLinkSchema = z.strictObject({
+  kind: z.enum(["defines", "modifies", "queries", "references"]),
+  method: z.enum(["sql-structural", "table-literal"]),
+  sourceObject: z.string().min(1).max(200).nullable(),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  targetObject: z.string().min(1).max(200),
+  tier: z.enum(["reference", "resolved"]),
+});
+
 export const repositoryScanPlanSchema = z.strictObject({
   artifacts: z.array(scannedArtifactSchema).max(100_000),
   codeLinks: z.array(codeLinkSchema).max(200_000),
@@ -200,6 +227,8 @@ export const repositoryScanPlanSchema = z.strictObject({
   // Defaulted like the fields beside it: a CLI built before this wave
   // uploads a plan that declares no routes.
   routes: z.array(routeSchema).max(20_000).default([]),
+  schemaLinks: z.array(schemaLinkSchema).max(100_000).default([]),
+  schemaObjects: z.array(dbObjectSchema).max(20_000).default([]),
   skipped: z
     .array(
       z.strictObject({

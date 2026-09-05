@@ -34,6 +34,7 @@ export const DASHBOARD = {
     document: "문서",
     code: "코드",
     test: "verified 테스트",
+    database: "테이블·함수",
   },
 
   views: {
@@ -77,6 +78,8 @@ export const DASHBOARD = {
       directory: "폴더",
       /** URL 하나 — 그 URL을 서빙하는 파일들이 매달린다 (Wave A′ todo 6). */
       route: "라우트",
+      /** 마이그레이션이 선언한 테이블·함수·뷰 (Wave A′ todo 7). */
+      database: "테이블·함수",
       /** 아티팩트 행을 못 찾은 노드. 분류를 지어내지 않는다. */
       unknown: "미분류",
     },

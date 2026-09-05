@@ -30,6 +30,9 @@ interface FacetBandViewProps {
 const NODE_TYPE_CLASS = {
   code: "code",
   concept: "concept",
+  // A table paints in the database band's own colour, so the schema layer is
+  // legible as one thing rather than as scattered code (Wave A′ todo 7).
+  database: "database",
   // Folders are chrome: muted, so they read as structure rather than as a
   // sixth category (their own sprite arrives with Wave B todo 12).
   directory: "directory",

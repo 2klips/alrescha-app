@@ -120,6 +120,7 @@ const NODE_TOKEN_BY_TYPE = {
   // Both new types borrow an existing token until Wave B assigns sprites
   // (BUILD_PLAN_PHASE4 todo 12): a rationale paints as the code it annotates,
   // and an unresolved node paints as a line rather than claiming a kind.
+  database: "node-database",
   directory: "node-directory",
   rationale: "node-code",
   route: "node-route",

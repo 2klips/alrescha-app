@@ -34,6 +34,7 @@ function emptyRows(): WorkspaceMapRows {
     assertions: [],
     coChanges: [],
     concepts: [],
+    dbObjects: [],
     directories: [],
     routes: [],
     edges: [],
@@ -695,6 +696,16 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
         methods: string[];
         url: string;
       }>("select id, url, methods from public.routes order by url");
+      const dbObjects = await tx.query<{
+        id: string;
+        kind: string;
+        name: string;
+        source_line: number;
+        source_path: string;
+      }>(
+        `select id, name, kind, source_path, source_line
+         from public.db_objects order by name`,
+      );
       const rationales = await tx.query<{
         artifact_id: string;
         id: string;
@@ -712,6 +723,7 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
       );
       return {
         artifacts: artifacts.rows,
+        dbObjects: dbObjects.rows,
         directories: directories.rows,
         edges: edges.rows,
         routes: routes.rows,
@@ -729,6 +741,11 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
     expect(
       seenByA.edges.filter(({ family }) => family === "hierarchy").length,
     ).toBeGreaterThan(0);
+
+    // `drifted-demo` ships no SQL, so the owner's own `db_objects` read is
+    // empty — and reaching it at all is what proves the new table's grants
+    // and RLS policy exist for `authenticated` (Wave A′ todo 7).
+    expect(seenByA.dbObjects).toEqual([]);
 
     const model = buildWorkspaceMapModel(workspaceA, {
       ...seenByA,

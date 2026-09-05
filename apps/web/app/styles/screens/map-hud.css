@@ -422,6 +422,10 @@
 .arr-legend i.test {
   background: var(--node-test);
 }
+.arr-legend i.database {
+  background: var(--node-database);
+  border-radius: var(--radius-small);
+}
 
 .graph-visible-count {
   color: var(--fg-muted);
@@ -1096,6 +1100,13 @@
 }
 .facet-band-node.route::before {
   background: var(--node-route);
+}
+/* A table is square. Shape carries kind where colour already carries the
+   band, so the schema layer reads as one thing at a glance; the canvas
+   sprite pool that makes this true everywhere is Wave B todo 12. */
+.facet-band-node.database::before {
+  background: var(--node-database);
+  border-radius: var(--radius-small);
 }
 .facet-band-node.unknown::before {
   background: var(--border-muted);

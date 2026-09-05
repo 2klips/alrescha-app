@@ -34,6 +34,7 @@ export const OVERVIEW = {
       rationale: "근거 주석",
       directory: "폴더",
       route: "라우트",
+      database: "테이블·함수",
       unknown: "미분류",
     },
   },

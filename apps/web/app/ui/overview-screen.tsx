@@ -19,6 +19,7 @@ import { ProductPageHeader } from "./page-layout";
 const NODE_TYPE_CLASS = {
   code: "code",
   concept: "concept",
+  database: "database",
   directory: "directory",
   document: "doc",
   rationale: "code",

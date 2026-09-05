@@ -121,6 +121,8 @@ export const TODO_IDENTITY_MIGRATION =
   "supabase/migrations/202609050004_todo_identity_and_event_scope.sql";
 export const ROUTE_NODES_MIGRATION =
   "supabase/migrations/202609050005_route_nodes.sql";
+export const DATABASE_OBJECTS_MIGRATION =
+  "supabase/migrations/202609060001_database_objects.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -172,6 +174,7 @@ export const ALL_MIGRATIONS = [
   REPOSITORY_LAYOUT_CONFIG_MIGRATION,
   TODO_IDENTITY_MIGRATION,
   ROUTE_NODES_MIGRATION,
+  DATABASE_OBJECTS_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

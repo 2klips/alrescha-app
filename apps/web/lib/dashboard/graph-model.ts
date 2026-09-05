@@ -34,6 +34,7 @@ export type GraphNodeType =
   | "code"
   | "test"
   | "concept"
+  | "database"
   | "directory"
   | "rationale"
   | "route"
@@ -160,6 +161,9 @@ const NODE_TYPE_CLASSIFICATION: Readonly<
 > = {
   code: "code_metadata",
   concept: "spec",
+  // A table's anchor path is the migration that declares it, which is where
+  // the database band already is (Wave A′ todo 7).
+  database: "code_metadata",
   // A folder's area is the area of what it holds, derived from its path.
   directory: "code_metadata",
   // A route is served by code, and its anchor path is one of its handlers.

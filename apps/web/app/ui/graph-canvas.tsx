@@ -37,6 +37,7 @@ const NODE_COLORS = {
 const TYPE_GLYPHS = {
   code: "C",
   concept: "K",
+  database: "▦",
   directory: "/",
   document: "D",
   route: "→",

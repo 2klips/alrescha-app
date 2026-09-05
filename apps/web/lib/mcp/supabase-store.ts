@@ -11,6 +11,7 @@ import {
   type McpAssertLinkResult,
   type McpMemoryBlockName,
   type McpWriteMemoryResult,
+  type McpDbObjectData,
   type McpEdgeRelation,
   type McpFindingProvenance,
   type McpNodeType,
@@ -65,6 +66,15 @@ function requiredString(row: Row, key: string): string {
 
 function nullableString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
+}
+
+/**
+ * The column has a CHECK for these three, so a fourth value means the schema
+ * moved under us. `table` is the safe read of an unknown object rather than a
+ * thrown request — the tool answer is still true about the edges.
+ */
+function dbObjectKind(value: unknown): McpDbObjectData["kind"] {
+  return value === "function" || value === "view" ? value : "table";
 }
 
 function isScope(value: string): value is McpScope {
@@ -494,6 +504,7 @@ export class SupabaseMcpStore implements McpStore {
       memoryEntries,
       moduleSummaries,
       routes,
+      dbObjects,
     ] = await Promise.all([
       this.client
         .from("repositories")
@@ -552,6 +563,10 @@ export class SupabaseMcpStore implements McpStore {
         .from("routes")
         .select("id, repository_id, url, tier, methods")
         .eq("workspace_id", workspaceId),
+      this.client
+        .from("db_objects")
+        .select("id, repository_id, name, kind, source_path, source_line")
+        .eq("workspace_id", workspaceId),
     ]);
     for (const [label, result] of [
       ["repositories", repositories],
@@ -566,6 +581,7 @@ export class SupabaseMcpStore implements McpStore {
       ["memory entries", memoryEntries],
       ["module summaries", moduleSummaries],
       ["routes", routes],
+      ["database objects", dbObjects],
     ] as const)
       queryError(`MCP ${label} query failed`, result.error);
 
@@ -584,6 +600,7 @@ export class SupabaseMcpStore implements McpStore {
     const indexRows = rows(indexEntries.data);
     const moduleSummaryRows = rows(moduleSummaries.data);
     const routeRows = rows(routes.data);
+    const dbObjectRows = rows(dbObjects.data);
 
     const artifactPathById = new Map(
       artifactRows.map((row) => [
@@ -781,6 +798,15 @@ export class SupabaseMcpStore implements McpStore {
                   ? ("reference" as const)
                   : ("resolved" as const),
               url: requiredString(row, "url"),
+            })),
+          dbObjects: dbObjectRows
+            .filter((row) => row.repository_id === repositoryId)
+            .map((row) => ({
+              kind: dbObjectKind(row.kind),
+              name: requiredString(row, "name"),
+              nodeId: requiredString(row, "id"),
+              sourceLine: Number(row.source_line ?? 0),
+              sourcePath: requiredString(row, "source_path"),
             })),
         };
       }),

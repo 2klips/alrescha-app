@@ -70,6 +70,19 @@ export {
   resolveDocLinks,
 } from "./ingest/doc-links";
 export { nextRouteFile, parsePythonRoutes } from "./ingest/route-links";
+export {
+  parseQueryReferences,
+  parseSchemaFile,
+  resolveSchemaLinks,
+} from "./ingest/schema-links";
+export type {
+  DbObject,
+  DbObjectKind,
+  ParsedQueryReference,
+  ParsedSchemaFile,
+  SchemaLink,
+  SchemaLinkKind,
+} from "./ingest/schema-links";
 export type {
   NextRouteFile,
   ParsedRouteDeclaration,

@@ -180,6 +180,10 @@
   fill: var(--node-route);
 }
 
+.overview-mini-node.database {
+  fill: var(--node-database);
+}
+
 .overview-mini-node.unknown {
   fill: var(--border-muted);
 }

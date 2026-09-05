@@ -420,3 +420,19 @@
 - 임시 결정: 저장은 충실, 접기는 미구현. `MAP_HIERARCHY_FOLD_THRESHOLD`(3,000)는 "클라이언트가 계층으로 접어야 한다"만 보고하고 접기 자체는 todo 12 소관이다.
 - 필요한 결정: ⑴ Wave B todo 12의 `hierarchyAssignment`가 통과 디렉터리 접기를 함께 처리(기본 후보) ⑵ 로더가 접고 MCP는 저장 트리를 읽는다(두 계층이 갈림 — 비추) ⑶ SQL이 아예 만들지 않는다(저장 트리가 실제 트리와 달라짐 — 비추).
 - 상태: open. 기본 후보 ⑴, todo 12에서 판정.
+
+## OQ-050 — db_object의 정체성이 스키마 한정자를 버린 이름 하나다
+
+- 발견: Phase 4 Wave A′ todo 7 / `packages/core/src/ingest/schema-links.ts`(`bareName`), `supabase/migrations/202609060001_database_objects.sql`(`db_objects_workspace_repository_name_unique`)
+- 내용: `public."todos"`·`todos`·`analytics.todos`가 모두 `todos` 한 노드로 접힌다. 이유는 실용적이다 — 마이그레이션은 같은 테이블을 어떤 줄에서는 한정자와 함께, 어떤 줄에서는 없이 쓰고, 코드 리터럴(`.from('todos')`)에는 한정자가 아예 없다. 한정자를 정체성에 넣으면 이 레포에서 FK·`queries` 대부분이 서로 다른 노드로 갈라진다. 대가는 멀티스키마 레포에서의 충돌이다: `public.events`와 `analytics.events`가 한 노드가 되고, 두 번째로 읽힌 마이그레이션이 `source_path`를 덮어쓴다.
+- 임시 결정: 한정자를 버린 소문자 이름이 정체성. 이 레포는 전부 `public`이라 지금은 무손실이다.
+- 필요한 결정: ⑴ `search_path`가 하나인 레포는 현행 유지, 스키마가 둘 이상 검출되면 그때 한정자를 붙인다(기본 후보 — 이름 규칙이 레포마다 달라지는 비용) ⑵ 항상 `schema.name`으로 저장하고 코드 리터럴은 `public`으로 가정해 매칭(가정이 틀리면 조용히 잘못된 엣지) ⑶ 현행 유지 + 충돌 시 finding 발행.
+- 상태: open. 멀티스키마 레포를 실제로 스캔할 때 판정.
+
+## OQ-051 — `queries` 엣지가 파일 단위라 호출 지점이 하나만 남는다
+
+- 발견: Phase 4 Wave A′ todo 7 실측 / `packages/core/src/ingest/schema-links.ts`(`resolveSchemaLinks`의 `path|name` 중복 제거)
+- 내용: 한 파일이 같은 테이블을 20번 읽어도 엣지는 하나고, 남는 span은 **첫 번째 줄**이다. 이 레포 실측 158개 `queries` 엣지가 40개 파일에서 나왔다 — 호출 지점 단위였다면 수천 개가 되고 database 밴드가 구조 밴드를 덮는다. 대신 "이 파일의 어느 함수가 `findings`를 건드리는가"에는 답하지 못한다. 같은 자리에 `.rpc('f')`도 있는데, 이것은 사실 함수 **호출**이면서 관계 이름은 `queries`다 — `calls`는 파일→심볼 관계라 재사용할 수 없었다.
+- 임시 결정: 파일 단위 1엣지, span은 첫 호출 지점. 밀도가 먼저다.
+- 필요한 결정: ⑴ 현행 유지 + `provenance`에 호출 횟수만 추가(기본 후보) ⑵ 심볼 엔진이 있는 언어에서 심볼→테이블로 올린다(파일 노드가 아닌 심볼 노드가 그래프에 없어 선행 작업 필요) ⑶ `.rpc()`를 별도 관계로 분리.
+- 상태: open. 밀도 게이트(todo 8)가 실측치를 다시 잴 때 함께 판정.

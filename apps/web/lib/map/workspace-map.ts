@@ -94,6 +94,14 @@ export interface MapRouteRow {
   readonly url: string;
 }
 
+export interface MapDbObjectRow {
+  readonly id: string;
+  readonly kind: string;
+  readonly name: string;
+  readonly source_line: number;
+  readonly source_path: string;
+}
+
 export interface MapFindingRow {
   readonly source_node_id: string | null;
   readonly status: string;
@@ -150,6 +158,7 @@ export interface WorkspaceMapRows {
   readonly assertions: readonly MapAssertionRow[];
   readonly coChanges: readonly MapCoChangeRow[];
   readonly concepts: readonly MapConceptRow[];
+  readonly dbObjects: readonly MapDbObjectRow[];
   readonly directories: readonly MapDirectoryRow[];
   readonly edges: readonly MapEdgeRow[];
   readonly routes: readonly MapRouteRow[];
@@ -459,6 +468,7 @@ export function buildWorkspaceMapModel(
 
   const directoryById = new Map(rows.directories.map((row) => [row.id, row]));
   const routeById = new Map(rows.routes.map((row) => [row.id, row]));
+  const dbObjectById = new Map(rows.dbObjects.map((row) => [row.id, row]));
   /**
    * A route's anchor path: the file it is served by. Every non-file node
    * carries one so `graphNodeArea` can put it in the band of the code it
@@ -535,6 +545,14 @@ export function buildWorkspaceMapModel(
       type = "route";
       label = truncate(route?.url ?? row.label, 96);
       path = handlerPathByRoute.get(row.id) ?? "";
+    } else if (row.kind === "db_object") {
+      // A table is a hub the repository already had (Wave A′ todo 7). Its
+      // anchor is the migration that declares it, so it lands in the
+      // database band with the schema rather than floating loose.
+      const object = dbObjectById.get(row.id);
+      type = "database";
+      label = truncate(object?.name ?? row.label, 96);
+      path = object?.source_path ?? "";
     } else if (row.kind === "concept") {
       // AI-synthesized concept layer (Wave C todo 7) — always inferred;
       // the path anchors facets to the first member file.
@@ -753,12 +771,19 @@ export const DIRECTORY_LIMIT = 300;
 export const ROUTE_LIMIT = 100;
 
 /**
+ * Tables and functions, likewise. This repository declares 43 tables and 59
+ * functions, and a schema-heavy project has more; 400 leaves headroom without
+ * letting the schema outweigh the code it belongs to.
+ */
+export const DB_OBJECT_LIMIT = 400;
+
+/**
  * Per-family read budgets (R5 §2.5). One shared 6,000-edge cap let whichever
  * family happened to sort first fill it: on this repository the containment
  * layer alone is ~890 edges and the structure layer ~1,700, so a single cap
- * silently decided which half of the graph a user saw. `route` and `database`
- * have no writer yet; their budgets are stated here so Wave A′ inherits a
- * contract rather than inventing one.
+ * silently decided which half of the graph a user saw. Wave A′ todo 6 gave
+ * `route` its writer and todo 7 gave `database` one; both inherited the
+ * budgets stated here rather than inventing them.
  */
 export const EDGE_FAMILY_LIMITS: Readonly<Record<GraphEdgeFamily, number>> = {
   database: 3_000,
@@ -808,6 +833,7 @@ export async function loadWorkspaceMap(
     concepts,
     directories,
     routeRows,
+    dbObjectRows,
     familyEdges,
     legacyEdges,
     findings,
@@ -867,6 +893,12 @@ export async function loadWorkspaceMap(
       .eq("workspace_id", workspaceId)
       .order("url", { ascending: true })
       .limit(ROUTE_LIMIT),
+    client
+      .from("db_objects")
+      .select("id,name,kind,source_path,source_line")
+      .eq("workspace_id", workspaceId)
+      .order("name", { ascending: true })
+      .limit(DB_OBJECT_LIMIT),
     Promise.all(familyQueries),
     // Rows written before the column existed carry no family. The migration
     // backfilled every one of them, so this is an empty set on a migrated
@@ -926,6 +958,7 @@ export async function loadWorkspaceMap(
     concepts,
     directories,
     routeRows,
+    dbObjectRows,
     ...familyEdges,
     legacyEdges,
     findings,
@@ -952,6 +985,7 @@ export async function loadWorkspaceMap(
     assertions: (assertions.data ?? []) as MapAssertionRow[],
     coChanges: (coChanges.data ?? []) as MapCoChangeRow[],
     concepts: (concepts.data ?? []) as MapConceptRow[],
+    dbObjects: (dbObjectRows.data ?? []) as MapDbObjectRow[],
     directories: (directories.data ?? []) as MapDirectoryRow[],
     edges: edgeRows,
     routes: (routeRows.data ?? []) as MapRouteRow[],

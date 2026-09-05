@@ -52,6 +52,7 @@ export type {
   McpMemoryEntryData,
   McpWriteMemoryResult,
   McpContextPackData,
+  McpDbObjectData,
   McpEdgeData,
   McpEdgeRelation,
   McpEvidenceData,

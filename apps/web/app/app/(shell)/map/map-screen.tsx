@@ -510,6 +510,10 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
                 <i className="test" />
                 {DASHBOARD.legend.test}
               </span>
+              <span>
+                <i className="database" />
+                {DASHBOARD.legend.database}
+              </span>
               {selectedNode ? (
                 <>
                   <span

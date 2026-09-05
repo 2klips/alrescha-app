@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,8 +14,8 @@ import {
   buildWorkspaceCommitCards,
   type CommitCardRunRow,
 } from "../apps/web/lib/commits/commit-cards-report";
-import { GitHubRepositorySource } from "../apps/worker/src/github-repository-source";
 import { ALL_MIGRATIONS, createTestDatabase } from "./helpers/database";
+import { githubShapedPlan } from "./helpers/github-shaped-plan";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const DRIFTED_DEMO = resolve(repoRoot, "fixtures/drifted-demo");
@@ -24,44 +24,6 @@ const USER_A = "41111111-1111-4111-8111-111111111111";
 const USER_B = "42222222-2222-4222-8222-222222222222";
 
 const BODY_SENTINEL = "RAW_BODY_SENTINEL_DB_51ac";
-
-/**
- * The GitHub transport, served from the same local files: the REAL
- * `GitHubRepositorySource` with a stubbed fetch that answers the tree and raw
- * content endpoints from disk. Everything after the transport — scanner,
- * apply — is shared code, so this is the honest two-path comparison.
- */
-async function githubShapedPlan(
-  rootDir: string,
-  commitSha: string,
-): Promise<RepositoryScanPlan> {
-  const { source: localSource } = await createLocalRepositorySource(rootDir);
-  const tree = await localSource.listTree(commitSha);
-  const fetchImplementation = (async (input: unknown) => {
-    const url = String(input);
-    if (url.includes("/git/trees/")) {
-      return Response.json({
-        sha: tree.treeSha,
-        tree: tree.entries.map((entry) => ({ ...entry })),
-        truncated: false,
-      });
-    }
-    const match = /\/contents\/([^?]+)\?/.exec(url);
-    if (!match?.[1]) {
-      return new Response("not found", { status: 404 });
-    }
-    const path = decodeURIComponent(match[1]);
-    const bytes = await readFile(join(rootDir, ...path.split("/")));
-    return new Response(new Uint8Array(bytes));
-  }) as typeof fetch;
-  const source = new GitHubRepositorySource(
-    "2klips",
-    "arr-app",
-    "installation-token",
-    fetchImplementation,
-  );
-  return scanRepository({ commitSha, source });
-}
 
 describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;

@@ -20,6 +20,14 @@ import { clampConcurrency, mapWithConcurrency } from "./concurrency";
 import { resolveDocLinks, type DocLink } from "./doc-links";
 import { parsePythonRoutes, type RouteDeclaration } from "./route-links";
 import {
+  parseQueryReferences,
+  parseSchemaFile,
+  resolveSchemaLinks,
+  type DbObject,
+  type ParsedQueryReference,
+  type SchemaLink,
+} from "./schema-links";
+import {
   buildModuleResolution,
   isIgnoredManifestPath,
   isManifestPath,
@@ -186,6 +194,13 @@ export interface RepositoryScanPlan {
    * derives them and the plan stays free of them (ADR-013).
    */
   readonly routes: readonly RouteDeclaration[];
+  /**
+   * Database objects this commit's migrations declare, and the edges that
+   * reach them (Phase 4 Wave A′ todo 7). Names and lines only — the DDL that
+   * declares a table is a source body and stays in the file.
+   */
+  readonly schemaLinks: readonly SchemaLink[];
+  readonly schemaObjects: readonly DbObject[];
   /** Resolver generation that produced `codeLinks` (see LINK_SCHEMA_VERSION). */
   readonly linkSchemaVersion: number;
   readonly linkScope: LinkScope;
@@ -805,6 +820,8 @@ export async function scanRepository(input: {
       layoutConfig: EMPTY_REPOSITORY_CONFIG,
       linkSchemaVersion: LINK_SCHEMA_VERSION,
       routes: [],
+      schemaLinks: [],
+      schemaObjects: [],
       linkScope,
       removedPaths: [],
       skipped: [],
@@ -835,6 +852,9 @@ export async function scanRepository(input: {
   const parsedLinks = new Map<string, ParsedFileLinks>();
   const parsedDocuments = new Map<string, ParsedMarkdownStructure>();
   const routes: RouteDeclaration[] = [];
+  const schemaObjects: DbObject[] = [];
+  const rawSchemaLinks: SchemaLink[] = [];
+  const queryReferences = new Map<string, readonly ParsedQueryReference[]>();
   const knownCodePaths = new Set<string>();
   /** Every artifact path in the tree — what a document link resolves against. */
   const knownArtifactPaths = new Set<string>();
@@ -1139,6 +1159,17 @@ export async function scanRepository(input: {
       }
     }
 
+    // Database objects and the code that names them (todo 7). Both sides
+    // keep names and lines only.
+    if (classification === "schema") {
+      const parsed = parseSchemaFile({ path: entry.path, source });
+      schemaObjects.push(...parsed.objects);
+      rawSchemaLinks.push(...parsed.links);
+    } else if (classification === "code_metadata") {
+      const references = parseQueryReferences(source);
+      if (references.length > 0) queryReferences.set(entry.path, references);
+    }
+
     if (relinkOnly) {
       // The body was read to re-parse its links and is now discarded: the
       // artifact row on record is already correct for this blob.
@@ -1242,6 +1273,12 @@ export async function scanRepository(input: {
     layoutConfig: repositoryConfig,
     linkSchemaVersion: LINK_SCHEMA_VERSION,
     routes,
+    schemaLinks: resolveSchemaLinks({
+      objects: schemaObjects,
+      queries: queryReferences,
+      schemaLinks: rawSchemaLinks,
+    }),
+    schemaObjects,
     linkScope,
     removedPaths,
     skipped,

@@ -18,7 +18,14 @@ export type McpNodeType =
    * `index_entries.entry_type`: the search index keeps its own six-value
    * vocabulary until a migration widens that CHECK.
    */
-  | "route";
+  | "route"
+  /**
+   * A table, view or function this repository declares (Phase 4 Wave A′
+   * todo 7). "What touches `findings`" is a question an agent asks
+   * constantly and could not ask before. Not an `index_entries.entry_type`,
+   * for the reason `route` is not.
+   */
+  | "db_object";
 
 export type McpEdgeRelation =
   | "requires"
@@ -36,7 +43,17 @@ export type McpEdgeRelation =
    * the graph tools a hierarchy flag: 885 containment edges would bury every
    * `get_neighbors` answer they appear in.
    */
-  | "handles";
+  | "handles"
+  /**
+   * The database family (Phase 4 Wave A′ todo 7): the migration that
+   * declares an object, the one that alters it, the foreign keys between
+   * objects, and the code that names one in a query literal. `queries` is
+   * `reference` — a string that matches a table name is not proof the call
+   * reaches it.
+   */
+  | "defines"
+  | "modifies"
+  | "queries";
 
 export interface McpArtifactData {
   /** Source blob sha as last scanned — module freshness input (todo 8). */
@@ -73,6 +90,16 @@ export interface McpEdgeData {
   relation: McpEdgeRelation;
   sourceNodeId: string;
   targetNodeId: string;
+}
+
+/** A table, view or function this repository's own migrations declare. */
+export interface McpDbObjectData {
+  kind: "function" | "table" | "view";
+  name: string;
+  nodeId: string;
+  /** The newest migration that declares it, and the line. */
+  sourceLine: number;
+  sourcePath: string;
 }
 
 /** A URL this repository serves, and the verbs it answers to. */
@@ -167,6 +194,8 @@ export interface McpRepositoryData {
   /** Lazy module-summary cache; absent = nothing cached yet. */
   moduleSummaries?: McpModuleSummaryData[];
   contextPacks: McpContextPackData[];
+  /** Absent on a workspace scanned before Wave A′ todo 7. */
+  dbObjects?: McpDbObjectData[];
   defaultBranch: string;
   edges: McpEdgeData[];
   evidence: McpEvidenceData[];

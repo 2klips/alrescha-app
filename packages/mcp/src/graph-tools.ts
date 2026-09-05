@@ -82,6 +82,16 @@ function buildGraphView(workspace: McpWorkspaceData): GraphView {
         type: "route",
       });
     }
+    for (const object of repository.dbObjects ?? []) {
+      nodes.set(object.nodeId, {
+        id: object.nodeId,
+        // The migration that declares it: an agent asking about a table
+        // wants that file opened, and `impact_of` reads this path.
+        path: object.sourcePath,
+        repositoryId: repository.id,
+        type: "db_object",
+      });
+    }
     for (const receipt of repository.receipts) {
       nodes.set(receipt.id, {
         id: receipt.id,

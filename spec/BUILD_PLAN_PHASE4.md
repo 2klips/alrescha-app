@@ -157,7 +157,7 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
       **MCP 절반:** `impact_of.affectedRoutes` 추가(영향 집합이 서빙하는 URL + 자기 자신이 라우트인 경우). 어휘 추가는 좁게 — `McpEdgeRelation += handles`만이고 **`contains`는 뺐다**(계층 엣지 885개가 모든 `get_neighbors` 답을 묻는다; 끄는 플래그는 todo 22). `McpNodeType += route`는 순회용이며 `index_entries.entry_type` CHECK은 6종 그대로다.
       Commit: `feat(ingest): derive route nodes and handles edges from Next.js and FastAPI conventions`
 
-- [ ] **7. db_object 노드 + `queries`/`defines`/`modifies`/FK** _(설계 ①·Graphify SQL)_
+- [x] **7. db_object 노드 + `queries`/`defines`/`modifies`/FK** _(설계 ①·Graphify SQL)_
       `packages/core/src/ingest/schema-links.ts`: `create table/function/view` → `db_object`(subkind, 이름·소유 마이그레이션 span만), `alter table` → `modifies`, `references public.x` → FK(resolved); 코드 측 `.from('t')`·`.rpc('f')`·`__tablename__`·`Table('t')`·`prisma.t` 리터럴 → `queries`(reference 0.6, **소유 테이블 목록에 있는 이름만**). database 밴드·범례·사각 스프라이트.
       수용 기준: 이 레포 실측(테이블 43·함수 59·queries ≥100) evidence, 픽스처 스냅샷, 동적 테이블명 미검출을 문서화, 두 경로 동등성.
       Commit: `feat(ingest): extract database objects, schema edges, and code→table query references`
