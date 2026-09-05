@@ -161,7 +161,8 @@ describe("six-area facet axis", () => {
 
     expect(graphNodeArea(declared)).toBe("backend");
     expect(deriveBrainArea("svc/orders.ts", "code_metadata")).toBe("other");
-    const withoutDomain = { ...declared, domain: undefined };
+    const { domain, ...withoutDomain } = declared;
+    expect(domain).toBe("backend");
     expect(graphNodeArea(withoutDomain)).toBe("other");
   });
 });

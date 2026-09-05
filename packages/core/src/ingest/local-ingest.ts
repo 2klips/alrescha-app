@@ -32,13 +32,18 @@ const markdownSpanSchema = z.strictObject({
 });
 
 const todoItemSchema = z.strictObject({
+  // Nesting the document wrote (Phase 4 Wave A todo 5). Defaulted so a CLI
+  // built before this wave still validates.
+  parentKey: z.string().min(1).max(400).nullable().default(null),
   source: z.strictObject({
     kind: z.literal("document"),
     path: z.string().min(1).max(1000),
     span: markdownSpanSchema,
   }),
   sourceKey: z.string().min(1).max(400),
-  status: z.enum(["open", "done"]),
+  // `[~]`/`[/]` and `[-]` are conventions people already write; the column
+  // has always allowed all four states.
+  status: z.enum(["open", "in-progress", "done", "blocked"]),
   title: z.string().min(1).max(240),
 });
 

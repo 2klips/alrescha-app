@@ -174,7 +174,11 @@ export type {
   ParsedTask,
 } from "./parser/markdown";
 
-export { parseTodoDocument } from "./progress/todos";
+export {
+  MAX_TODO_TITLE,
+  parseTodoDocument,
+  todoSourceKey,
+} from "./progress/todos";
 export type {
   DocumentTodoSource,
   ParsedTodoItem,
