@@ -33,6 +33,7 @@ export const OVERVIEW = {
       concept: "개념",
       rationale: "근거 주석",
       directory: "폴더",
+      route: "라우트",
       unknown: "미분류",
     },
   },

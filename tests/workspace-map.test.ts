@@ -35,6 +35,7 @@ function emptyRows(): WorkspaceMapRows {
     coChanges: [],
     concepts: [],
     directories: [],
+    routes: [],
     edges: [],
     evidence: [],
     findings: [],
@@ -689,6 +690,11 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
         path: string;
         role: string | null;
       }>("select id, path, role from public.directories order by path");
+      const routes = await tx.query<{
+        id: string;
+        methods: string[];
+        url: string;
+      }>("select id, url, methods from public.routes order by url");
       const rationales = await tx.query<{
         artifact_id: string;
         id: string;
@@ -708,6 +714,7 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
         artifacts: artifacts.rows,
         directories: directories.rows,
         edges: edges.rows,
+        routes: routes.rows,
         graphNodes: graphNodes.rows,
         rationales: rationales.rows,
         repositories: repositories.rows,

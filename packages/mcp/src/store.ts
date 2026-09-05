@@ -11,7 +11,14 @@ export type McpNodeType =
   | "finding"
   | "receipt"
   | "context_pack"
-  | "memory";
+  | "memory"
+  /**
+   * A URL (Phase 4 Wave A′ todo 6). Traversable — "what does `/auth` touch"
+   * is a question an agent should be able to ask — but not an
+   * `index_entries.entry_type`: the search index keeps its own six-value
+   * vocabulary until a migration widens that CHECK.
+   */
+  | "route";
 
 export type McpEdgeRelation =
   | "requires"
@@ -22,7 +29,14 @@ export type McpEdgeRelation =
   | "supersedes"
   | "references"
   | "imports"
-  | "calls";
+  | "calls"
+  /**
+   * A route and the files that serve it (Phase 4 Wave A′ todo 6). `contains`
+   * — the directory hierarchy — deliberately stays out until todo 22 gives
+   * the graph tools a hierarchy flag: 885 containment edges would bury every
+   * `get_neighbors` answer they appear in.
+   */
+  | "handles";
 
 export interface McpArtifactData {
   /** Source blob sha as last scanned — module freshness input (todo 8). */
@@ -59,6 +73,16 @@ export interface McpEdgeData {
   relation: McpEdgeRelation;
   sourceNodeId: string;
   targetNodeId: string;
+}
+
+/** A URL this repository serves, and the verbs it answers to. */
+export interface McpRouteData {
+  /** Empty for a Next.js page; a decorator states its own. */
+  methods: string[];
+  nodeId: string;
+  /** `resolved` when the path stated the URL, `reference` for a decorator. */
+  tier: "reference" | "resolved";
+  url: string;
 }
 
 export interface McpSourceSpan {
@@ -153,6 +177,8 @@ export interface McpRepositoryData {
   overview: string;
   receipts: McpReceiptData[];
   requirements: McpRequirementData[];
+  /** Absent on a workspace scanned before Wave A′ todo 6. */
+  routes?: McpRouteData[];
 }
 
 /** Closed concept-relation vocabulary (Graft) — agents assert only these. */

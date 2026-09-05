@@ -55,6 +55,7 @@ const NODE_TYPE_SCHEMA = z.enum([
   "receipt",
   "context_pack",
   "memory",
+  "route",
 ]);
 const RELATION_SCHEMA = z.enum([
   "requires",
@@ -66,6 +67,7 @@ const RELATION_SCHEMA = z.enum([
   "references",
   "imports",
   "calls",
+  "handles",
 ]);
 
 function toolResult(payload: Record<string, unknown>) {
@@ -365,6 +367,18 @@ const IMPACT_OF_TOOL = {
           nodeIds: z.array(z.string()),
         }),
         transitiveNodeIds: z.array(z.string()),
+        /**
+         * URLs this change reaches (Wave A′ todo 6, contract shared with the
+         * budget work in todo 22): the routes served by any affected file.
+         */
+        affectedRoutes: z.array(
+          z.object({
+            methods: z.array(z.string()),
+            nodeId: z.string(),
+            tier: z.enum(["reference", "resolved"]),
+            url: z.string(),
+          }),
+        ),
       })
       .nullable(),
     workspaceId: z.string(),

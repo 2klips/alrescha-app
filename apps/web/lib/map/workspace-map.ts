@@ -88,6 +88,12 @@ export interface MapDirectoryRow {
   readonly role: string | null;
 }
 
+export interface MapRouteRow {
+  readonly id: string;
+  readonly methods: readonly string[] | null;
+  readonly url: string;
+}
+
 export interface MapFindingRow {
   readonly source_node_id: string | null;
   readonly status: string;
@@ -146,6 +152,7 @@ export interface WorkspaceMapRows {
   readonly concepts: readonly MapConceptRow[];
   readonly directories: readonly MapDirectoryRow[];
   readonly edges: readonly MapEdgeRow[];
+  readonly routes: readonly MapRouteRow[];
   readonly findings: readonly MapFindingRow[];
   readonly graphNodes: readonly MapGraphNodeRow[];
   readonly rationales: readonly MapRationaleRow[];
@@ -451,6 +458,22 @@ export function buildWorkspaceMapModel(
   }
 
   const directoryById = new Map(rows.directories.map((row) => [row.id, row]));
+  const routeById = new Map(rows.routes.map((row) => [row.id, row]));
+  /**
+   * A route's anchor path: the file it is served by. Every non-file node
+   * carries one so `graphNodeArea` can put it in the band of the code it
+   * belongs to (Wave A todo 4) — for a URL that is its handler.
+   */
+  const handlerPathByRoute = new Map<string, string>();
+  for (const edge of rows.edges) {
+    if (edge.relation !== "handles") continue;
+    const path = artifactPaths.get(edge.target_node_id);
+    const known = handlerPathByRoute.get(edge.source_node_id);
+    // Prefer the shortest handler path: the page, not the root layout.
+    if (path && (!known || path.length > known.length)) {
+      handlerPathByRoute.set(edge.source_node_id, path);
+    }
+  }
   const layout = layoutConventionsOf(rows.repositories);
 
   /**
@@ -505,6 +528,13 @@ export function buildWorkspaceMapModel(
       type = "directory";
       path = directory?.path ?? row.label;
       label = truncate(basename(path), 96);
+    } else if (row.kind === "route") {
+      // A URL is a hub: its handlers hang off it (Wave A′ todo 6). The
+      // anchor path is one of them, so the route sits in their band.
+      const route = routeById.get(row.id);
+      type = "route";
+      label = truncate(route?.url ?? row.label, 96);
+      path = handlerPathByRoute.get(row.id) ?? "";
     } else if (row.kind === "concept") {
       // AI-synthesized concept layer (Wave C todo 7) — always inferred;
       // the path anchors facets to the first member file.
@@ -719,6 +749,9 @@ const FEED_LIMIT = 20;
  */
 export const DIRECTORY_LIMIT = 300;
 
+/** Routes are hubs too, on their own budget (R5 §2.7). */
+export const ROUTE_LIMIT = 100;
+
 /**
  * Per-family read budgets (R5 §2.5). One shared 6,000-edge cap let whichever
  * family happened to sort first fill it: on this repository the containment
@@ -774,6 +807,7 @@ export async function loadWorkspaceMap(
     coChanges,
     concepts,
     directories,
+    routeRows,
     familyEdges,
     legacyEdges,
     findings,
@@ -827,6 +861,12 @@ export async function loadWorkspaceMap(
       .eq("workspace_id", workspaceId)
       .order("path", { ascending: true })
       .limit(DIRECTORY_LIMIT),
+    client
+      .from("routes")
+      .select("id,url,methods")
+      .eq("workspace_id", workspaceId)
+      .order("url", { ascending: true })
+      .limit(ROUTE_LIMIT),
     Promise.all(familyQueries),
     // Rows written before the column existed carry no family. The migration
     // backfilled every one of them, so this is an empty set on a migrated
@@ -885,6 +925,7 @@ export async function loadWorkspaceMap(
     coChanges,
     concepts,
     directories,
+    routeRows,
     ...familyEdges,
     legacyEdges,
     findings,
@@ -913,6 +954,7 @@ export async function loadWorkspaceMap(
     concepts: (concepts.data ?? []) as MapConceptRow[],
     directories: (directories.data ?? []) as MapDirectoryRow[],
     edges: edgeRows,
+    routes: (routeRows.data ?? []) as MapRouteRow[],
     evidence: (evidence.data ?? []) as MapEvidenceRow[],
     findings: (findings.data ?? []) as MapFindingRow[],
     graphNodes: (graphNodes.data ?? []) as MapGraphNodeRow[],

@@ -39,6 +39,7 @@ const TYPE_GLYPHS = {
   concept: "K",
   directory: "/",
   document: "D",
+  route: "→",
   rationale: "W",
   requirement: "R",
   test: "T",

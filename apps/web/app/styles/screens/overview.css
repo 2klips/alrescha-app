@@ -176,6 +176,10 @@
   fill: var(--node-directory);
 }
 
+.overview-mini-node.route {
+  fill: var(--node-route);
+}
+
 .overview-mini-node.unknown {
   fill: var(--border-muted);
 }

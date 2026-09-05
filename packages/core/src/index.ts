@@ -69,6 +69,13 @@ export {
   MAX_DOC_LINKS_PER_DOCUMENT,
   resolveDocLinks,
 } from "./ingest/doc-links";
+export { nextRouteFile, parsePythonRoutes } from "./ingest/route-links";
+export type {
+  NextRouteFile,
+  ParsedRouteDeclaration,
+  RouteDeclaration,
+  RouteMethod,
+} from "./ingest/route-links";
 export {
   EMPTY_REPOSITORY_CONFIG,
   REPOSITORY_CONFIG_PATH,

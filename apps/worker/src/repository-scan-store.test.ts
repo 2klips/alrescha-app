@@ -34,6 +34,7 @@ const PLAN: RepositoryScanPlan = {
   linkSchemaVersion: 3,
   linkScope: "incremental",
   removedPaths: [],
+  routes: [],
   skipped: [],
   touchedRows: 370,
   treeSha: "b".repeat(40),

@@ -1094,6 +1094,9 @@
 .facet-band-node.directory::before {
   background: var(--node-directory);
 }
+.facet-band-node.route::before {
+  background: var(--node-route);
+}
 .facet-band-node.unknown::before {
   background: var(--border-muted);
 }

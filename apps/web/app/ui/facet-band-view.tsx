@@ -39,6 +39,7 @@ const NODE_TYPE_CLASS = {
   // a node whose artifact row is missing should look unresolved, not typed.
   rationale: "code",
   requirement: "req",
+  route: "route",
   test: "test",
   unknown: "unknown",
 } as const;

@@ -75,6 +75,8 @@ export const DASHBOARD = {
       rationale: "근거 주석",
       /** 경로에서 유도된 폴더 노드 (Wave A todo 3). */
       directory: "폴더",
+      /** URL 하나 — 그 URL을 서빙하는 파일들이 매달린다 (Wave A′ todo 6). */
+      route: "라우트",
       /** 아티팩트 행을 못 찾은 노드. 분류를 지어내지 않는다. */
       unknown: "미분류",
     },

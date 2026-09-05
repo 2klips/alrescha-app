@@ -93,6 +93,9 @@ function isRelation(value: unknown): value is McpEdgeRelation {
     "references",
     "imports",
     "calls",
+    // `contains` is deliberately absent until the graph tools can turn the
+    // hierarchy off (todo 22): it would bury every neighbour answer.
+    "handles",
   ].includes(String(value));
 }
 
@@ -490,6 +493,7 @@ export class SupabaseMcpStore implements McpStore {
       indexEntries,
       memoryEntries,
       moduleSummaries,
+      routes,
     ] = await Promise.all([
       this.client
         .from("repositories")
@@ -544,6 +548,10 @@ export class SupabaseMcpStore implements McpStore {
           "repository_id, module_key, name, member_paths, member_digest, summary",
         )
         .eq("workspace_id", workspaceId),
+      this.client
+        .from("routes")
+        .select("id, repository_id, url, tier, methods")
+        .eq("workspace_id", workspaceId),
     ]);
     for (const [label, result] of [
       ["repositories", repositories],
@@ -557,6 +565,7 @@ export class SupabaseMcpStore implements McpStore {
       ["index entries", indexEntries],
       ["memory entries", memoryEntries],
       ["module summaries", moduleSummaries],
+      ["routes", routes],
     ] as const)
       queryError(`MCP ${label} query failed`, result.error);
 
@@ -574,6 +583,7 @@ export class SupabaseMcpStore implements McpStore {
     const receiptRows = rows(receipts.data);
     const indexRows = rows(indexEntries.data);
     const moduleSummaryRows = rows(moduleSummaries.data);
+    const routeRows = rows(routes.data);
 
     const artifactPathById = new Map(
       artifactRows.map((row) => [
@@ -760,6 +770,17 @@ export class SupabaseMcpStore implements McpStore {
               sourceArtifactId: requiredString(row, "source_artifact_id"),
               statement: requiredString(row, "statement"),
               status: requiredString(row, "status"),
+            })),
+          routes: routeRows
+            .filter((row) => row.repository_id === repositoryId)
+            .map((row) => ({
+              methods: strings(row.methods),
+              nodeId: requiredString(row, "id"),
+              tier:
+                row.tier === "reference"
+                  ? ("reference" as const)
+                  : ("resolved" as const),
+              url: requiredString(row, "url"),
             })),
         };
       }),

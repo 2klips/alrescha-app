@@ -72,6 +72,16 @@ function buildGraphView(workspace: McpWorkspaceData): GraphView {
         type: "finding",
       });
     }
+    for (const route of repository.routes ?? []) {
+      nodes.set(route.nodeId, {
+        id: route.nodeId,
+        // A URL's path anchor is whichever file serves it; the edges say
+        // which, so the node itself keeps none.
+        path: null,
+        repositoryId: repository.id,
+        type: "route",
+      });
+    }
     for (const receipt of repository.receipts) {
       nodes.set(receipt.id, {
         id: receipt.id,
@@ -260,7 +270,21 @@ export function tracePath(
   return null;
 }
 
+export interface AffectedRoute {
+  readonly methods: readonly string[];
+  readonly nodeId: string;
+  readonly tier: "reference" | "resolved";
+  readonly url: string;
+}
+
 export interface ImpactReport {
+  /**
+   * URLs this change reaches (Phase 4 Wave A′ todo 6): every route served by
+   * a file in the impact set, plus the node itself when it is a route. The
+   * contract is shared with the budget work in todo 22 — "what does editing
+   * this break" is a question about screens and endpoints, not about files.
+   */
+  readonly affectedRoutes: readonly AffectedRoute[];
   readonly dependencies: {
     readonly edges: readonly GraphEdgeRef[];
     readonly nodeIds: readonly string[];
@@ -270,6 +294,27 @@ export interface ImpactReport {
     readonly nodeIds: readonly string[];
   };
   readonly transitiveNodeIds: readonly string[];
+}
+
+function affectedRoutesFor(
+  workspace: McpWorkspaceData,
+  affected: ReadonlySet<string>,
+): AffectedRoute[] {
+  const routes: AffectedRoute[] = [];
+  for (const repository of workspace.repositories) {
+    for (const route of repository.routes ?? []) {
+      const serves =
+        affected.has(route.nodeId) ||
+        repository.edges.some(
+          (edge) =>
+            edge.relation === "handles" &&
+            edge.sourceNodeId === route.nodeId &&
+            affected.has(edge.targetNodeId),
+        );
+      if (serves) routes.push(route);
+    }
+  }
+  return routes.sort((left, right) => left.url.localeCompare(right.url));
 }
 
 /**
@@ -303,6 +348,10 @@ export function impactOf(
     .filter((id) => id !== nodeId && !direct.has(id));
 
   return {
+    affectedRoutes: affectedRoutesFor(
+      workspace,
+      new Set([nodeId, ...direct, ...transitive]),
+    ),
     dependencies: {
       edges: dependencyEdges,
       nodeIds: [

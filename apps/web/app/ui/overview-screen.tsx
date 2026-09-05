@@ -23,6 +23,7 @@ const NODE_TYPE_CLASS = {
   document: "doc",
   rationale: "code",
   requirement: "req",
+  route: "route",
   test: "test",
   unknown: "unknown",
 } as const;

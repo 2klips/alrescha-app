@@ -259,3 +259,86 @@ describe("searchWorkspaceNodes", () => {
     expect(serialized).not.toContain("스펙 문서");
   });
 });
+
+describe("impactOf affectedRoutes (Phase 4 Wave A′ todo 6)", () => {
+  const ROUTE = "01K200000000000000000000E1";
+  const LAYOUT = "01K200000000000000000000F1";
+
+  function withRoutes(): McpWorkspaceData {
+    const base = repository();
+    return {
+      id: WORKSPACE_ID,
+      ownerUserId: USER_ID,
+      repositories: [
+        {
+          ...base,
+          artifacts: [
+            ...base.artifacts,
+            {
+              content: "",
+              headings: [],
+              id: LAYOUT,
+              kind: "code_metadata",
+              path: "apps/web/app/layout.tsx",
+              status: "active",
+              summary: "",
+              symbols: [],
+              tags: [],
+              title: "layout.tsx",
+            },
+          ],
+          edges: [
+            ...base.edges,
+            {
+              id: "01K200000000000000000000E2",
+              relation: "handles",
+              sourceNodeId: ROUTE,
+              targetNodeId: CODE,
+            },
+            {
+              id: "01K200000000000000000000E3",
+              relation: "handles",
+              sourceNodeId: ROUTE,
+              targetNodeId: LAYOUT,
+            },
+          ],
+          routes: [
+            { methods: [], nodeId: ROUTE, tier: "resolved", url: "/auth" },
+            {
+              methods: ["GET"],
+              nodeId: "01K200000000000000000000E4",
+              tier: "reference",
+              url: "/health",
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  it("names the URLs a change reaches, and only those", () => {
+    const impact = impactOf(withRoutes(), CODE, 2)!;
+
+    // Editing the file that serves `/auth` affects `/auth`. `/health` is
+    // served by something else and is not in the answer — "what does this
+    // break" is a question about screens, and a wrong screen is worse than
+    // no screen.
+    expect(impact.affectedRoutes).toEqual([
+      { methods: [], nodeId: ROUTE, tier: "resolved", url: "/auth" },
+    ]);
+  });
+
+  it("answers for a route node itself", () => {
+    const impact = impactOf(withRoutes(), ROUTE, 1)!;
+
+    expect(impact.affectedRoutes.map(({ url }) => url)).toEqual(["/auth"]);
+    // Its handlers are its dependencies: the page and every layout above it.
+    expect(impact.dependencies.nodeIds).toEqual([CODE, LAYOUT].sort());
+  });
+
+  it("says nothing about routes on a workspace that has none", () => {
+    const impact = impactOf(workspace(), CODE, 2)!;
+
+    expect(impact.affectedRoutes).toEqual([]);
+  });
+});

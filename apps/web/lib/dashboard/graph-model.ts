@@ -36,6 +36,7 @@ export type GraphNodeType =
   | "concept"
   | "directory"
   | "rationale"
+  | "route"
   | "unknown";
 
 /**
@@ -161,6 +162,8 @@ const NODE_TYPE_CLASSIFICATION: Readonly<
   concept: "spec",
   // A folder's area is the area of what it holds, derived from its path.
   directory: "code_metadata",
+  // A route is served by code, and its anchor path is one of its handlers.
+  route: "code_metadata",
   document: "spec",
   // A rationale's path is the code file it was lifted from, so deriving its
   // area from that path puts it beside the code it explains.

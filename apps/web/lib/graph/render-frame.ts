@@ -122,6 +122,7 @@ const NODE_TOKEN_BY_TYPE = {
   // and an unresolved node paints as a line rather than claiming a kind.
   directory: "node-directory",
   rationale: "node-code",
+  route: "node-route",
   requirement: "node-requirement",
   test: "node-test",
   unknown: "border-muted",

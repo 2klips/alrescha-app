@@ -155,6 +155,26 @@ const layoutConfigSchema = z.strictObject({
   todoFiles: configListSchema,
 });
 
+/**
+ * A decorator route (Phase 4 Wave A′ todo 6): method, path and line, and
+ * nothing of the decorator's own text.
+ */
+const routeSchema = z.strictObject({
+  line: z.number().int().positive(),
+  method: z.enum([
+    "ANY",
+    "DELETE",
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+  ]),
+  path: z.string().min(1).max(400),
+  sourcePath: z.string().min(1).max(1000),
+});
+
 export const repositoryScanPlanSchema = z.strictObject({
   artifacts: z.array(scannedArtifactSchema).max(100_000),
   codeLinks: z.array(codeLinkSchema).max(200_000),
@@ -177,6 +197,9 @@ export const repositoryScanPlanSchema = z.strictObject({
   linkSchemaVersion: z.number().int().positive().max(10_000).default(1),
   linkScope: z.enum(["full", "incremental"]).default("incremental"),
   removedPaths: z.array(z.string().min(1).max(1000)).max(100_000),
+  // Defaulted like the fields beside it: a CLI built before this wave
+  // uploads a plan that declares no routes.
+  routes: z.array(routeSchema).max(20_000).default([]),
   skipped: z
     .array(
       z.strictObject({

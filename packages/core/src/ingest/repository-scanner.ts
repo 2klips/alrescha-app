@@ -18,6 +18,7 @@ import {
 } from "./code-links";
 import { clampConcurrency, mapWithConcurrency } from "./concurrency";
 import { resolveDocLinks, type DocLink } from "./doc-links";
+import { parsePythonRoutes, type RouteDeclaration } from "./route-links";
 import {
   buildModuleResolution,
   isIgnoredManifestPath,
@@ -179,6 +180,12 @@ export interface RepositoryScanPlan {
    * store which commit stated them.
    */
   readonly layoutConfig: RepositoryScanConfig;
+  /**
+   * Route declarations read from decorators (Phase 4 Wave A′ todo 6).
+   * Next.js routes are not here: their URL is in the path, so the scan SQL
+   * derives them and the plan stays free of them (ADR-013).
+   */
+  readonly routes: readonly RouteDeclaration[];
   /** Resolver generation that produced `codeLinks` (see LINK_SCHEMA_VERSION). */
   readonly linkSchemaVersion: number;
   readonly linkScope: LinkScope;
@@ -797,6 +804,7 @@ export async function scanRepository(input: {
       docLinks: [],
       layoutConfig: EMPTY_REPOSITORY_CONFIG,
       linkSchemaVersion: LINK_SCHEMA_VERSION,
+      routes: [],
       linkScope,
       removedPaths: [],
       skipped: [],
@@ -826,6 +834,7 @@ export async function scanRepository(input: {
   const unchangedPaths: string[] = [];
   const parsedLinks = new Map<string, ParsedFileLinks>();
   const parsedDocuments = new Map<string, ParsedMarkdownStructure>();
+  const routes: RouteDeclaration[] = [];
   const knownCodePaths = new Set<string>();
   /** Every artifact path in the tree — what a document link resolves against. */
   const knownArtifactPaths = new Set<string>();
@@ -1122,6 +1131,14 @@ export async function scanRepository(input: {
       );
     }
 
+    // Decorator routes, read from the body already in hand and reduced to
+    // method, path and line before anything is kept (todo 6).
+    if (extraction?.engine === "python-structural") {
+      for (const declaration of parsePythonRoutes(source)) {
+        routes.push({ ...declaration, sourcePath: entry.path });
+      }
+    }
+
     if (relinkOnly) {
       // The body was read to re-parse its links and is now discarded: the
       // artifact row on record is already correct for this blob.
@@ -1224,6 +1241,7 @@ export async function scanRepository(input: {
     docLinks,
     layoutConfig: repositoryConfig,
     linkSchemaVersion: LINK_SCHEMA_VERSION,
+    routes,
     linkScope,
     removedPaths,
     skipped,

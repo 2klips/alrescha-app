@@ -149,9 +149,12 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
 
 ## Wave A′ — 허브 패밀리 _(A0·A2·A3 뒤, 밀도 회귀 테스트로 게이트)_
 
-- [ ] **6. route 노드 + `handles`** _(설계 ②·GitNexus Route)_
+- [x] **6. route 노드 + `handles`** _(설계 ②·GitNexus Route)_ — **완료 2026-09-06**, 증빙 [`.omo/evidence/phase4/todo-6.md`](../.omo/evidence/phase4/todo-6.md)
       `packages/core/src/ingest/route-links.ts`: Next.js `app/**/(page|layout|route)`·`pages/**` URL → `graph_nodes(kind='route')` + `route --handles--> file`(SQL 유도, resolved; layout 공유 체인 포함), FastAPI/Flask 데코레이터 정규식(`@router.get('/x')` → method·path·line만) → `plan.routes`(reference) + strict 스키마 동기. 라우트 다이아몬드 스프라이트(B).
       수용 기준: layout-variants 픽스처 route 스냅샷(Next 32+API 10 규모), 두 경로 동등성, `impact_of` 응답 `affectedRoutes`(todo 22와 계약 공유).
+      **실측(2026-09-06):** 이 레포 라우트 엔트리 파일 47개(그중 layout 5) → **URL 42개**, **`handles` 115개**. R5 §2.4 추정(~30 route / ~45 handles)과의 차이는 **layout 체인**이다 — 추정이 세지 않은 부분. 데코레이터 라우트는 0(파이썬 서비스가 없는 레포).
+      **설계 판정:** Next는 **SQL 유도**(플랜에 라우트 없음 → ADR-013 구조적 성립, resolved 1.0), FastAPI/Flask는 **plan.routes**(method·path·line만, reference 0.6 — `APIRouter(prefix=…)`가 붙인 URL은 스캔이 볼 수 없다). layout 포함 규칙은 **URL 접두가 아니라 경로 포함**이다 — `(shell)` 그룹은 URL에서 지워지므로 URL로 비교하면 루트 레이아웃과 구분되지 않아 `/api/health`까지 잡았고, 테스트가 그걸 잡아냈다. 한 규칙의 두 구현(TS `nextRouteFile` / SQL `next_route_url`)은 9개 경로에서 서로 비교하는 테스트로 묶었다.
+      **MCP 절반:** `impact_of.affectedRoutes` 추가(영향 집합이 서빙하는 URL + 자기 자신이 라우트인 경우). 어휘 추가는 좁게 — `McpEdgeRelation += handles`만이고 **`contains`는 뺐다**(계층 엣지 885개가 모든 `get_neighbors` 답을 묻는다; 끄는 플래그는 todo 22). `McpNodeType += route`는 순회용이며 `index_entries.entry_type` CHECK은 6종 그대로다.
       Commit: `feat(ingest): derive route nodes and handles edges from Next.js and FastAPI conventions`
 
 - [ ] **7. db_object 노드 + `queries`/`defines`/`modifies`/FK** _(설계 ①·Graphify SQL)_
