@@ -110,7 +110,14 @@ describe("edge families", () => {
     );
   }
 
-  async function edges(): Promise<
+  /**
+   * Every edge, or only the families asked for. Containment arrives on every
+   * scan since Wave A todo 3 and is asserted on its own below; the cases
+   * about document and rationale links name the families they are about.
+   */
+  async function edges(
+    families?: readonly string[],
+  ): Promise<
     { family: string; relation: string; source: string; target: string }[]
   > {
     const rows = await asServiceRole(database, (tx) =>
@@ -131,12 +138,14 @@ describe("edge families", () => {
          order by source_path, target_path, e.relation`,
       ),
     );
-    return rows.rows.map((row) => ({
-      family: row.family,
-      relation: row.relation,
-      source: row.source_path,
-      target: row.target_path,
-    }));
+    return rows.rows
+      .filter((row) => !families || families.includes(row.family))
+      .map((row) => ({
+        family: row.family,
+        relation: row.relation,
+        source: row.source_path,
+        target: row.target_path,
+      }));
   }
 
   it("files a document's references under doc and a rationale's under structure", async () => {
@@ -162,7 +171,7 @@ describe("edge families", () => {
 
     // Same relation, two families: a document pointing at code is
     // documentation, a WHY comment pointing at its own file is structure.
-    expect(await edges()).toEqual([
+    expect(await edges(["doc", "structure"])).toEqual([
       {
         family: "structure",
         relation: "references",
@@ -192,7 +201,7 @@ describe("edge families", () => {
         planDocLink("spec/b.md", "src/two.ts"),
       ],
     });
-    expect((await edges()).length).toBe(2);
+    expect((await edges(["doc"])).length).toBe(2);
 
     // `spec/a.md` changed and now points elsewhere; `spec/b.md` did not.
     await apply({
@@ -207,7 +216,7 @@ describe("edge families", () => {
       unchangedPaths: ["spec/b.md", "src/one.ts", "src/two.ts"],
     });
 
-    expect(await edges()).toEqual([
+    expect(await edges(["doc"])).toEqual([
       {
         family: "doc",
         relation: "references",
@@ -244,7 +253,10 @@ describe("edge families", () => {
 
     // A full relink speaks for every document, so a link it does not restate
     // is gone — the same rule the code links follow (R5 §2.2 D2).
-    expect(await edges()).toEqual([]);
+    expect(await edges(["doc"])).toEqual([]);
+    // Containment is not a document link and survives: the folders still
+    // hold the same files (Wave A todo 3).
+    expect((await edges(["hierarchy"])).length).toBeGreaterThan(0);
   });
 
   it("derives the family for a writer that does not set one", async () => {
@@ -292,6 +304,7 @@ describe("edge families", () => {
       `select e.family, n.kind
        from public.edges e
        join public.graph_nodes n on n.id = e.source_node_id
+       where e.family <> 'hierarchy'
        order by n.kind`,
     );
     // The concept layer's `implements` is synthesis; a requirement's is

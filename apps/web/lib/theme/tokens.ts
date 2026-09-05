@@ -85,6 +85,7 @@ export const NODE_TOKENS = [
   "node-code",
   "node-test",
   "node-concept",
+  "node-directory",
 ] as const;
 
 /** Typography. */

@@ -32,6 +32,7 @@ export const OVERVIEW = {
       test: "테스트",
       concept: "개념",
       rationale: "근거 주석",
+      directory: "폴더",
       unknown: "미분류",
     },
   },

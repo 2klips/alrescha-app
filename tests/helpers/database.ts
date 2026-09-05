@@ -113,6 +113,8 @@ export const FINDING_CODE_ANCHOR_MIGRATION =
   "supabase/migrations/202609040002_finding_code_anchor.sql";
 export const NOTES_AND_EDGE_FAMILIES_MIGRATION =
   "supabase/migrations/202609050001_notes_and_edge_families.sql";
+export const DIRECTORY_NODES_MIGRATION =
+  "supabase/migrations/202609050002_directory_nodes.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -160,6 +162,7 @@ export const ALL_MIGRATIONS = [
   LINK_RECOVERY_MIGRATION,
   FINDING_CODE_ANCHOR_MIGRATION,
   NOTES_AND_EDGE_FAMILIES_MIGRATION,
+  DIRECTORY_NODES_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

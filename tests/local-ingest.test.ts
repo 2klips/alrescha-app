@@ -114,29 +114,59 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
   }
 
   async function graphSnapshot(workspaceId: string, repositoryId: string) {
-    const [artifacts, nodes, todos] = await Promise.all([
-      database.query<{ path: string }>(
-        `select path, kind, classification, digest, source_blob_sha, size_bytes,
+    const [artifacts, nodes, todos, directories, containment] =
+      await Promise.all([
+        database.query<{ path: string }>(
+          `select path, kind, classification, digest, source_blob_sha, size_bytes,
                 exported_symbols, last_seen_commit_sha
          from public.artifacts
          where workspace_id = $1 and repository_id = $2
          order by path`,
-        [workspaceId, repositoryId],
-      ),
-      database.query<{ kind: string; label: string }>(
-        `select kind, label from public.graph_nodes
+          [workspaceId, repositoryId],
+        ),
+        database.query<{ kind: string; label: string }>(
+          `select kind, label from public.graph_nodes
          where workspace_id = $1 and repository_id = $2
          order by label`,
-        [workspaceId, repositoryId],
-      ),
-      database.query<{ status: string; title: string }>(
-        `select title, status, source_key, source_path from public.todos
+          [workspaceId, repositoryId],
+        ),
+        database.query<{ status: string; title: string }>(
+          `select title, status, source_key, source_path from public.todos
          where workspace_id = $1 and repository_id = $2
          order by source_key`,
-        [workspaceId, repositoryId],
-      ),
-    ]);
-    return { artifacts: artifacts.rows, nodes: nodes.rows, todos: todos.rows };
+          [workspaceId, repositoryId],
+        ),
+        // Derived by the scan SQL rather than carried in the plan, so the two
+        // paths agree only if the same paths produced the same tree (todo 3).
+        database.query<{ path: string; role: string | null }>(
+          `select path, role from public.directories
+         where workspace_id = $1 and repository_id = $2
+         order by path`,
+          [workspaceId, repositoryId],
+        ),
+        database.query<{ child: string; parent: string }>(
+          `select parent_directory.path as parent,
+                coalesce(child_directory.path, child_artifact.path) as child
+         from public.edges e
+         join public.directories parent_directory
+           on parent_directory.id = e.source_node_id
+         left join public.directories child_directory
+           on child_directory.id = e.target_node_id
+         left join public.artifacts child_artifact
+           on child_artifact.id = e.target_node_id
+         where e.workspace_id = $1 and e.repository_id = $2
+           and e.relation = 'contains'
+         order by parent, child`,
+          [workspaceId, repositoryId],
+        ),
+      ]);
+    return {
+      artifacts: artifacts.rows,
+      containment: containment.rows,
+      directories: directories.rows,
+      nodes: nodes.rows,
+      todos: todos.rows,
+    };
   }
 
   it("the CLI path and the GitHub path yield the same plan and the same graph", async () => {
@@ -174,6 +204,8 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
     const graphA = await graphSnapshot(workspaceA, repositoryA);
     const graphB = await graphSnapshot(workspaceB, repositoryB);
     expect(graphA.artifacts.length).toBeGreaterThan(5);
+    expect(graphA.directories.length).toBeGreaterThan(0);
+    expect(graphA.containment.length).toBeGreaterThan(0);
     expect(graphA).toEqual(graphB);
   });
 

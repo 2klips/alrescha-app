@@ -172,6 +172,10 @@
   fill: var(--node-test);
 }
 
+.overview-mini-node.directory {
+  fill: var(--node-directory);
+}
+
 .overview-mini-node.unknown {
   fill: var(--border-muted);
 }

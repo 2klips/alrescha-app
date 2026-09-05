@@ -4,12 +4,11 @@ import { deriveBrainArea } from "@alrescha/core/artifact-facets";
 import type { ArtifactClassification } from "@alrescha/core";
 
 import {
-  clusterGraph,
-  forceDirectedLayout,
   type EdgeConfidenceTier,
   type EvidenceGrade,
   type GraphData,
   type GraphEdge,
+  type GraphEdgeFamily,
   type GraphEdgeProvenance,
   type GraphNode,
   type GraphNodeType,
@@ -67,11 +66,19 @@ export interface MapEvidenceRow {
 
 export interface MapEdgeRow {
   readonly confidence: number | string;
+  /** Absent only on rows written before the column existed (todo 2). */
+  readonly family?: string | null;
   readonly id: string;
   readonly provenance: unknown;
   readonly relation: string;
   readonly source_node_id: string;
   readonly target_node_id: string;
+}
+
+export interface MapDirectoryRow {
+  readonly id: string;
+  readonly path: string;
+  readonly role: string | null;
 }
 
 export interface MapFindingRow {
@@ -128,6 +135,7 @@ export interface WorkspaceMapRows {
   readonly assertions: readonly MapAssertionRow[];
   readonly coChanges: readonly MapCoChangeRow[];
   readonly concepts: readonly MapConceptRow[];
+  readonly directories: readonly MapDirectoryRow[];
   readonly edges: readonly MapEdgeRow[];
   readonly findings: readonly MapFindingRow[];
   readonly graphNodes: readonly MapGraphNodeRow[];
@@ -157,11 +165,14 @@ export interface WorkspaceMapModel {
 }
 
 /**
- * Above this the map clusters by type·grade. Aligned with the stage's
- * `HIT_TARGET_LIMIT` — up to here every node keeps a DOM hit target, so the
- * pilot-scale graph (370 nodes) renders as individual nodes, not clusters.
+ * Above this the client folds the graph by hierarchy assignment rather than
+ * drawing every node (Wave B todo 12 owns the folding itself).
+ *
+ * It replaces the old 600-node cluster threshold, which collapsed the whole
+ * graph into fifteen `type:grade` super-nodes joined in an arbitrary chain —
+ * the more a repository grew, the less its map said (R5 §2.2 D4).
  */
-export const MAP_CLUSTER_THRESHOLD = 600;
+export const MAP_HIERARCHY_FOLD_THRESHOLD = 3_000;
 
 /** A pair must co-change this often before it earns a coupling edge. */
 export const CO_CHANGE_MIN_COUNT = 3;
@@ -292,6 +303,21 @@ function edgeConfidenceTier(
   return parsed.sourcePath.length > 0 ? "resolved" : "inferred";
 }
 
+const EDGE_FAMILIES: readonly GraphEdgeFamily[] = [
+  "database",
+  "doc",
+  "evidence",
+  "hierarchy",
+  "route",
+  "semantic",
+  "statistical",
+  "structure",
+];
+
+function isEdgeFamily(value: unknown): value is GraphEdgeFamily {
+  return (EDGE_FAMILIES as readonly unknown[]).includes(value);
+}
+
 function isDisplayRelation(
   value: string,
 ): value is GraphEdgeProvenance["relation"] {
@@ -386,6 +412,8 @@ export function buildWorkspaceMapModel(
     return "inferred";
   }
 
+  const directoryById = new Map(rows.directories.map((row) => [row.id, row]));
+
   const nodes: GraphNode[] = [];
   for (const row of rows.graphNodes) {
     // Findings surface as counts on their source node, not as nodes.
@@ -406,6 +434,14 @@ export function buildWorkspaceMapModel(
       path = rationale
         ? `${rationale.source_path}:${rationale.source_line}`
         : "";
+    } else if (row.kind === "directory") {
+      // Derived by the scan SQL from the artifact paths (todo 3). The path
+      // is the anchor `graphNodeArea` derives the domain from, so a folder
+      // sits in the same band as the files it holds.
+      const directory = directoryById.get(row.id);
+      type = "directory";
+      path = directory?.path ?? row.label;
+      label = truncate(basename(path), 96);
     } else if (row.kind === "concept") {
       // AI-synthesized concept layer (Wave C todo 7) — always inferred;
       // the path anchors facets to the first member file.
@@ -449,6 +485,7 @@ export function buildWorkspaceMapModel(
     if (!nodeIds.has(row.source_node_id) || !nodeIds.has(row.target_node_id))
       continue;
     const broken = row.relation === "contradicts";
+    const family = isEdgeFamily(row.family) ? row.family : undefined;
     const grade: EvidenceGrade = broken
       ? "broken"
       : executionEvidenceIds.has(row.source_node_id)
@@ -457,8 +494,13 @@ export function buildWorkspaceMapModel(
     const provenance = parseEdgeProvenance(row.provenance);
     edges.push({
       broken,
+      ...(family ? { family } : {}),
       grade,
       id: row.id,
+      // Containment is a force-field input, not a relationship to draw: 885
+      // folder lines over this repository would bury the imports they exist
+      // to make legible (OQ-037).
+      ...(family === "hierarchy" ? { layoutOnly: true } : {}),
       provenance: {
         confidence: Number(row.confidence),
         endLine: provenance.endLine,
@@ -537,10 +579,12 @@ export function buildWorkspaceMapModel(
     });
   }
 
-  const isClustered = nodes.length > MAP_CLUSTER_THRESHOLD;
-  const graph = isClustered
-    ? clusterGraph({ edges, nodes }, MAP_CLUSTER_THRESHOLD)
-    : forceDirectedLayout({ edges, nodes });
+  // No server-side layout (MT-6). The renderer simulates in a Web Worker and
+  // discards whatever coordinates arrive, so computing an O(n²) layout here
+  // bought nothing but time-to-first-byte — 48 iterations over 730 nodes is
+  // ~12.8M distance calculations per request.
+  const isClustered = nodes.length > MAP_HIERARCHY_FOLD_THRESHOLD;
+  const graph: GraphData = { edges, nodes };
 
   const labelsById = new Map(nodes.map((node) => [node.id, node.path]));
   const feed: GraphAccessEvent[] = rows.accessEvents.map((event) => ({
@@ -584,6 +628,35 @@ const NODE_LIMIT = 2_000;
 const EDGE_LIMIT = 6_000;
 const FEED_LIMIT = 20;
 
+/**
+ * Hubs are read on their own budget (R5 §2.7, OQ-038).
+ *
+ * A directory node is worth more per byte than a file node — it is what makes
+ * a package read as a cluster — so it must not compete with files for the
+ * 2,000-node budget. Route, db_object and section hubs arrive in Wave A′ and
+ * get their own lines then.
+ */
+export const DIRECTORY_LIMIT = 300;
+
+/**
+ * Per-family read budgets (R5 §2.5). One shared 6,000-edge cap let whichever
+ * family happened to sort first fill it: on this repository the containment
+ * layer alone is ~890 edges and the structure layer ~1,700, so a single cap
+ * silently decided which half of the graph a user saw. `route` and `database`
+ * have no writer yet; their budgets are stated here so Wave A′ inherits a
+ * contract rather than inventing one.
+ */
+export const EDGE_FAMILY_LIMITS: Readonly<Record<GraphEdgeFamily, number>> = {
+  database: 3_000,
+  doc: 6_000,
+  evidence: 6_000,
+  hierarchy: 6_000,
+  route: 1_000,
+  semantic: 3_000,
+  statistical: 3_000,
+  structure: 6_000,
+};
+
 export async function loadWorkspaceMap(
   client: SupabaseClient,
   userId: string,
@@ -599,13 +672,29 @@ export async function loadWorkspaceMap(
   }
   const workspaceId = String(workspaceResult.data.id);
 
+  // One query per edge family, in parallel: the budgets are per family and a
+  // single query cannot express eight of them (R5 §2.5, OQ-038).
+  const familyQueries = Object.entries(EDGE_FAMILY_LIMITS).map(
+    ([family, limit]) =>
+      client
+        .from("edges")
+        .select(
+          "id,source_node_id,target_node_id,relation,family,confidence,provenance",
+        )
+        .eq("workspace_id", workspaceId)
+        .eq("family", family)
+        .limit(limit),
+  );
+
   const [
     accessEvents,
     artifacts,
     assertions,
     coChanges,
     concepts,
-    edges,
+    directories,
+    familyEdges,
+    legacyEdges,
     findings,
     graphNodes,
     rationales,
@@ -652,9 +741,23 @@ export async function loadWorkspaceMap(
       .eq("workspace_id", workspaceId)
       .limit(NODE_LIMIT),
     client
-      .from("edges")
-      .select("id,source_node_id,target_node_id,relation,confidence,provenance")
+      .from("directories")
+      .select("id,path,role")
       .eq("workspace_id", workspaceId)
+      .order("path", { ascending: true })
+      .limit(DIRECTORY_LIMIT),
+    Promise.all(familyQueries),
+    // Rows written before the column existed carry no family. The migration
+    // backfilled every one of them, so this is an empty set on a migrated
+    // database — and a visible one, rather than a silent omission, if it is
+    // ever not.
+    client
+      .from("edges")
+      .select(
+        "id,source_node_id,target_node_id,relation,family,confidence,provenance",
+      )
+      .eq("workspace_id", workspaceId)
+      .is("family", null)
       .limit(EDGE_LIMIT),
     client
       .from("findings")
@@ -700,7 +803,9 @@ export async function loadWorkspaceMap(
     assertions,
     coChanges,
     concepts,
-    edges,
+    directories,
+    ...familyEdges,
+    legacyEdges,
     findings,
     graphNodes,
     rationales,
@@ -714,13 +819,19 @@ export async function loadWorkspaceMap(
     }
   }
 
+  const edgeRows = [
+    ...familyEdges.flatMap((result) => (result.data ?? []) as MapEdgeRow[]),
+    ...((legacyEdges.data ?? []) as MapEdgeRow[]),
+  ];
+
   return buildWorkspaceMapModel(workspaceId, {
     accessEvents: (accessEvents.data ?? []) as MapAccessEventRow[],
     artifacts: (artifacts.data ?? []) as MapArtifactRow[],
     assertions: (assertions.data ?? []) as MapAssertionRow[],
     coChanges: (coChanges.data ?? []) as MapCoChangeRow[],
     concepts: (concepts.data ?? []) as MapConceptRow[],
-    edges: (edges.data ?? []) as MapEdgeRow[],
+    directories: (directories.data ?? []) as MapDirectoryRow[],
+    edges: edgeRows,
     evidence: (evidence.data ?? []) as MapEvidenceRow[],
     findings: (findings.data ?? []) as MapFindingRow[],
     graphNodes: (graphNodes.data ?? []) as MapGraphNodeRow[],

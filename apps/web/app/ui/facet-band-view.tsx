@@ -30,6 +30,9 @@ interface FacetBandViewProps {
 const NODE_TYPE_CLASS = {
   code: "code",
   concept: "concept",
+  // Folders are chrome: muted, so they read as structure rather than as a
+  // sixth category (their own sprite arrives with Wave B todo 12).
+  directory: "directory",
   document: "doc",
   // A rationale is a comment lifted out of a code file: it belongs with the
   // code, not with the specs (R5 §2.2 D5). `unknown` gets an inert swatch —

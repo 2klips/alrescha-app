@@ -33,8 +33,26 @@ export type GraphNodeType =
   | "code"
   | "test"
   | "concept"
+  | "directory"
   | "rationale"
   | "unknown";
+
+/**
+ * Which family an edge belongs to (R5 §2.5, `edges.family`).
+ *
+ * Read limits, force strength, draw policy and MCP defaults are decided per
+ * family rather than per relation, because the same relation means different
+ * things depending on who wrote it.
+ */
+export type GraphEdgeFamily =
+  | "database"
+  | "doc"
+  | "evidence"
+  | "hierarchy"
+  | "route"
+  | "semantic"
+  | "statistical"
+  | "structure";
 
 /**
  * How a link was derived (Phase 3 Wave A todo 2) — separate from the evidence
@@ -90,8 +108,17 @@ export interface GraphEdgeProvenance {
 
 export interface GraphEdge {
   broken: boolean;
+  /** Absent on demo fixtures; every stored edge carries one (todo 2). */
+  family?: GraphEdgeFamily;
   grade: EvidenceGrade;
   id: string;
+  /**
+   * An input to the layout that is not a relationship to draw (OQ-037).
+   * `contains` is the case: a folder pulls its files together, which is what
+   * makes a directory read as a cluster, but drawing 885 containment lines
+   * would bury the imports they are there to make legible.
+   */
+  layoutOnly?: boolean;
   provenance: GraphEdgeProvenance;
   source: string;
   target: string;
@@ -122,6 +149,8 @@ const NODE_TYPE_CLASSIFICATION: Readonly<
 > = {
   code: "code_metadata",
   concept: "spec",
+  // A folder's area is the area of what it holds, derived from its path.
+  directory: "code_metadata",
   document: "spec",
   // A rationale's path is the code file it was lifted from, so deriving its
   // area from that path puts it beside the code it explains.
@@ -133,7 +162,14 @@ const NODE_TYPE_CLASSIFICATION: Readonly<
 };
 
 export function graphNodeArea(node: GraphNode): BrainArea {
-  return deriveBrainArea(node.path, NODE_TYPE_CLASSIFICATION[node.type]);
+  // A directory's own path has no trailing slash, and the layout conventions
+  // are written in terms of prefixes (`spec/`, `apps/web/`). Reading `spec`
+  // as a root-level file would file the specs directory under backend.
+  const path =
+    node.type === "directory" && node.path.length > 0
+      ? `${node.path}/`
+      : node.path;
+  return deriveBrainArea(path, NODE_TYPE_CLASSIFICATION[node.type]);
 }
 
 export const DASHBOARD_STATES: readonly DashboardState[] = [

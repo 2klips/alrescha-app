@@ -37,6 +37,7 @@ const NODE_COLORS = {
 const TYPE_GLYPHS = {
   code: "C",
   concept: "K",
+  directory: "/",
   document: "D",
   rationale: "W",
   requirement: "R",

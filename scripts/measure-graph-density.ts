@@ -270,6 +270,13 @@ working tree, resolver generation ${report.linkSchemaVersion}, link scope
 measurements of the deterministic scan only: nothing here involved credits,
 AI output, or the database.
 
+Directory nodes and their \`contains\` edges are **not** counted here: the scan
+plan does not carry them, because \`apply_repository_scan\` derives the
+hierarchy from the stored paths so that both ingest paths cannot disagree
+about it (Phase 4 Wave A todo 3). Add them from the database, or from the
+artifact paths below, when comparing against a density target that includes
+the hierarchy layer.
+
 | Measure | Value |
 | --- | --- |
 | Nodes (file artifacts) | ${report.nodeCount} |

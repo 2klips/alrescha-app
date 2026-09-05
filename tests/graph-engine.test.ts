@@ -336,6 +336,85 @@ describe("deterministic force layout", () => {
     expect(meanEdgeLength(far)).toBeGreaterThan(meanEdgeLength(near) * 1.5);
   });
 
+  test("containment pulls a folder's files into a tighter cluster", () => {
+    // Phase 4 Wave A todo 3: `contains` is a layout input, not a line to
+    // draw. Its whole job is this — two folders' worth of files that import
+    // nothing sit in one undifferentiated cloud until the folder pulls its
+    // own together (R5 §2.2 D4, §2.6).
+    const members = (prefix: string, count: number) =>
+      Array.from({ length: count }, (_, index) => ({
+        findingCount: 0,
+        grade: "inferred" as const,
+        id: `${prefix}/file-${index}.ts`,
+        label: `file-${index}.ts`,
+        path: `${prefix}/file-${index}.ts`,
+        type: "code" as const,
+        x: 0,
+        y: 0,
+      }));
+    const folders = ["apps/web/src", "packages/core/src"];
+    const files = folders.flatMap((prefix) => members(prefix, 24));
+    const directories = folders.map((path) => ({
+      findingCount: 0,
+      grade: "inferred" as const,
+      id: path,
+      label: path,
+      path,
+      type: "directory" as const,
+      x: 0,
+      y: 0,
+    }));
+    const containment = files.map((file) => ({
+      broken: false,
+      family: "hierarchy" as const,
+      grade: "inferred" as const,
+      id: `contains:${file.id}`,
+      layoutOnly: true,
+      provenance: {
+        confidence: 1,
+        endLine: 0,
+        grade: "inferred" as const,
+        relation: "part_of" as const,
+        sourcePath: "",
+        startLine: 0,
+      },
+      source: file.path.slice(0, file.path.lastIndexOf("/")),
+      target: file.id,
+    }));
+
+    const radiusOf = (data: GraphData): number => {
+      const positions = runForceLayout(data, undefined, 200, 11);
+      const spreads = folders.map((prefix) => {
+        const points = data.nodes
+          .filter((node) => node.id.startsWith(`${prefix}/`))
+          .flatMap((node) => {
+            const position = positions.get(node.id);
+            return position ? [position] : [];
+          });
+        const centreX =
+          points.reduce((sum, point) => sum + point.x, 0) / points.length;
+        const centreY =
+          points.reduce((sum, point) => sum + point.y, 0) / points.length;
+        return (
+          points.reduce(
+            (sum, point) =>
+              sum + Math.hypot(point.x - centreX, point.y - centreY),
+            0,
+          ) / points.length
+        );
+      });
+      return spreads.reduce((sum, spread) => sum + spread, 0) / spreads.length;
+    };
+
+    const loose = radiusOf({ edges: [], nodes: [...files, ...directories] });
+    const held = radiusOf({
+      edges: containment,
+      nodes: [...files, ...directories],
+    });
+
+    expect(held).toBeLessThan(loose);
+  });
+
   test("setConfig on a live layout reheats it", () => {
     const layout = createForceLayout({
       links: [[0, 1]],
