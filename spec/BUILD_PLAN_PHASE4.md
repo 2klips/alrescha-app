@@ -39,6 +39,32 @@ Phase 3까지 "push → 스캔 → 그래프 → MCP 22툴 → enrich → 벤치
 
 성능: 프레임 플랜 p95 <16.7ms(vitest, 1,300/4k·5k 컬링 케이스 신설) · 워커 틱 p95 <33.3ms · **브라우저 팬/줌 p95 <16.7ms는 `scripts/bench-graph-browser.ts`(Playwright, 호스트·GPU 명시) 통과 전 미주장** · 정착 후 idle 0프레임 · `/app/map` TTFB 회귀 0 · 필터·토글 시 워커 `start` 0건 · 페이로드 ≤300KB gz 목표 · `apply_repository_scan` set-based 적용 시간과 `/api/ingest/local` 타임아웃 여유 기록 · MCP 기본 로드 = structure+evidence+semantic만. 수치는 전부 실측 전 "추정"(§3-8).
 
+## 보완 설계 접속 — Codex 인수인계 2026-09-06 (R-01~~R-03 · P0-A~~P0-D · S1~S6)
+
+[인수인계](../docs/reports/CODEX_TO_CLAUDE_HANDOFF_2026-09-06.md)와 [보완 설계](../docs/reports/REMEDY_DESIGN_2026-09-06.md)의 P0을 **기존 todo에 수용 기준으로 붙인다.** todo 번호·담당·순서·기존 문안은 그대로다. 근거는 격리 실험(메모리 PGlite + 후보 SQL)이지 제품 검증이 아니므로(HANDOFF §6), 여기 붙는 것은 "무엇을 통과해야 완료인가"이지 "이미 참인 사실"이 아니다.
+
+| 보완                           | 한 줄                                                                                                                                     | 붙는 todo                            |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **R-01 / P0-B** 읽기 완전성    | 무페이지 whole-workspace 조회를 scope별 bounded read로, 페이지마다 `hasMore`·coverage, 부정 질의의 unknown, 두 repo 같은 경로의 ambiguity | 22(loader 분리) · 21(부정 질의) · 19 |
+| **R-01 #4 / P0-D** 근거 무손실 | edge의 family·provenance·tier·방향을 DB→loader→core→MCP 출력까지 보존. `(source,target,relation)` 삼중키 dedup으로 증거를 지우지 않는다   | **8**(게이트가 단언) · 22(계약)      |
+| **R-02 / P0-A** 요약 최신성    | 읽기 freshness(`current`/`stale`/`unknown`/`missing`)와 **쓰기 CAS**(생성 시작 blob = 저장 시점 blob)를 함께. 실제 반영 건수를 반환       | 19 · 20 · 16                         |
+| **R-03 / P0-C** 영향 의미      | discovery와 dependency-impact 분리. 역방향은 imports/calls만, `mode`·`semanticsVersion`으로 호환 이행                                     | **8**(게이트가 단언) · 21 · 22       |
+
+**채택하지 않는 것과 그 이유:**
+
+- 새 graph DB · 범용 query planner · immutable 전체 이력 — 보완 설계 자신이 선행 조건이 아니라고 적었다(REMEDY §1·§10).
+- `loadWorkspace` 즉시 삭제 — 모든 caller가 옮기기 전에는 지우지 않는다(REMEDY §10).
+- 새 MCP 툴(`prepareChange` 포함) — 툴 ≤16은 todo 22가 잠그는 계약이다. 내부 조정 개념으로만 둔다.
+- 선택적 LSP/SCIP를 canonical 파서에 투명 추가 — 같은 커밋에서 실행 환경에 따라 출력이 달라진다(ADR-013/014 충돌, REMEDY §12-5).
+- 로컬 메타데이터에서 verified finding·receipt 생성 — ADR-015 graph-only 유지.
+- "11개 조회를 1개로" 같은 수치 목표 — 최신 loader에는 route·db_object 조회가 더 붙어 그 수치가 이미 낡았다(HANDOFF §3-B).
+
+**완료 판정에 추가되는 음성 테스트:** A→B←C에서 `impact(A)`에 C 없음 · 999/1,000/1,001행 경계의 마지막 행 · `current`/`stale`/null/empty digest · 늦게 끝난 A가 최신 B를 덮지 않음 · 삭제된 파일 반영 0건 · edge 근거의 DB→MCP 왕복 · 불완전 조회에서 "테스트 없음" 단정 금지 · 두 repo 같은 경로의 ambiguity · batch 입력별 결과 · cursor 만료·권한 철회.
+
+동봉된 probe(`docs/reports/research-upgrade-2026-09-05.probe.mjs`)는 **옛 동작을 확인하는 연구 코드**다. 제품 수정 뒤 실패할 수 있고, 통과시키려고 옛 동작을 복원하지 않는다(HANDOFF §5).
+
+---
+
 ## 유료 번들의 최소 정의 (R5 §4.6 — 판단이지 예측이 아님)
 
 "연결(또는 푸시)마다 갱신되는, 내 레포의 정직한 상태판": ① 내 코드가 보이는 은하수 그래프 + **라이브 발광**(todo 15) + HUD 실데이터 ② 오늘/이번 주 진행 원장(거짓 0% 제거·todo 정체성·`query_brain(kind:'todo')`·다이제스트) ③ 문서 없이도 뜨는 위험 지도(코드 노드 앵커·`untested-code`·팬인·공변경·링 3단계) ④ 배선층(예산 문서, todo 22). 번들에서 빼는 것: 토큰 절감 카피(v3 통과 전), AI 판정·코칭, doc_page, 영수증 피치, 팀, CI verified(상위 업셀 후보), 심볼.
@@ -165,6 +191,7 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
 - [ ] **8. section 노드(선택) · 4종 모양 문법 · 밀도 회귀 테스트** _(설계 ①·②)_
       ID 토큰 헤딩(`ADR-NNN`·`OQ-NNN`·`G\d+`·`MT-\d+`, `.alrescha.json`로 확장 가능)만 `section`으로 승격, doc/rationale(`adr_ref`)→section `references`(resolved). 4종 스프라이트(원/링/다이아몬드/사각)와 `unit` 필터 칩은 B(todo 12)에서 렌더. **`tests/graph-density.test.ts`**: 픽스처 2종에서 평균 차수 ≥3·contains 제외 고아 ≤10%·삼각형 >0·두 경로 플랜 바이트 동일·verified 승격 0·원문 비저장(scope 스캐너) 단언 + 이 레포 실측표 evidence.
       수용 기준: 위 테스트 green, 전형 레포(section 0)에서도 green, 두 테마 스크린샷(줌아웃 카테고리 라벨·줌인 파일 라벨).
+      보완(R-01 #4·R-03, 2026-09-06): 게이트가 **근거 무손실**도 단언한다 — 표시되는 모든 엣지가 family와 provenance(reason 또는 source span)를 갖고, 같은 `(source,target,relation)`에 근거가 둘이면 하나를 버리지 않는다. 그리고 **blast radius 분모에서 hierarchy(`contains`, layoutOnly)·doc `references`·통계 공변경을 제외**한 수가 별도로 기록된다 — 밀도는 이것들을 세지만 영향도는 세지 않는다(R-03 #5). `verified` 승격 0 단언은 그대로.
       Commit: `feat(ingest): add section nodes for id-token headings and lock the density regression gate`
 
 ## Wave B — Graph View 조작감·성능 "Obsidian 급" _(게이트 없음, Codex 권장, A와 병행)_
@@ -200,6 +227,7 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
 - [ ] **16. 연결 시 백필 스캔 · "다시 스캔" · MCP `request_rescan(mode)` · `run-local.ts` 지연 생성** _(D11, v1 todo 11 확장, OQ-029)_
       v1 todo 11 그대로(`enqueue_backfill_scan`, 멱등 키 `backfill:<repoId>:<headSha>`, 온보딩 진행 표시, 버튼, `request_rescan` — `readOnlyHint:false`) + `link_schema_version` 불일치 시 자동으로 `mode:'full'`, `request_rescan(repository_id?, mode?)` 인자, 워커 소스 팩토리를 잡 종류별 지연 생성(DB만 읽는 결정론 잡이 CLI 레포에서도 돌게 — ADR-013). 툴 수 순증 0 목표(todo 22의 통합으로 상쇄).
       수용 기준: v1 기준 + 재링크 잡이 0크레딧임을 원장 테스트로, e2e "레포 연결 → 진행 표시 → `/app/map` 노드 >0"(테스트 이메일 세션), T2FV(연결→의미 있는 첫 화면) 분 단위를 evidence에 기록.
+      보완(R-02, 2026-09-06): 백필·재스캔이 산문을 무효화하는 지점을 명시한다 — 새 blob이 들어오면 그 파일의 요약은 즉시 `stale`이고, 구조가 준비되면(structure-ready) 분석이 아직이어도(analysis-pending) 화면을 연다. 두 상태는 별개다.
       Commit: `feat(onboarding): backfill scan on connect with a full relink mode and an on-demand rescan tool`
 
 - [ ] **17. 로컬 서빙 모드 `alrescha serve --local` + 로컬 레포 분석 경로 판정** _(v1 todo 12 그대로, OQ-030)_
@@ -215,16 +243,19 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
 - [ ] **19. 0크레딧 표면 묶음 — 산문 노출 · 다이제스트 · finding 상세 · dismiss/verdict · 커밋 제목 · dead link** _(v1 todo 13 확장 + 진행 P5·P6, 위험 반박, todo 반박; Codex 웹 부분)_
       ⑴ v1 todo 13(인스펙터 파일 요약·concept 요약·모듈 카드, concept MCP 노출) ⑵ `buildProgressDashboard` `digest{today, thisWeek, sinceLastVisit}` + `attention{stale(in-progress 7일↑), blocked(사유 필수)}` 순수 함수, `workspace_screen_views`(마지막 방문), 보드 상단 정렬, `full` 상태 카피를 근거 등급 기준으로 정정 ⑶ 라이브 finding 상세(경로:라인·confidence·증거 체인·권장 조치 — 데모 `assurance-workspace.tsx` 컴포넌트 재사용 + 로더 select 확장) + 문서 todo 카드의 원문 링크를 라이브 경로로 ⑷ finding `dismissed` writer(사용자 액션) + `apply_successful_judgment`가 verdict rejected→dismissed, `reconcileFindings`가 dismissed를 open으로 복원하지 않음 ⑸ 진행 타임라인 커밋 항목 = receipt coverage 제목 + `/app/commits` 링크, 로컬 인제스트 런 "스캔됨(그래프 전용)" 표시 ⑹ write 툴 access_event 정렬(log_progress·record_note 발행; record_prompt는 스펙대로 미발행).
       수용 기준: 뷰모델 단위 테스트(다이제스트 refs dangling 0, stale/blocked 정렬), DB 테스트(dismiss 영속·재분석 복원 0), Playwright 두 테마 axe, Korean-first 스위프, 실스캔 픽스처 위 `/app/progress`·`/app/inspection` 라이브 e2e.
+      보완(R-02·R-01, 2026-09-06): 산문을 노출하는 **모든** caller(인스펙터·`get_artifact`·`get_node_content`·검색 excerpt·context pack)가 하나의 freshness 함수를 쓴다. `stale`·`unknown` 산문은 기본 답변에 최신 사실처럼 넣지 않고, 산문이 없어도 카드는 경로·domain/unit·export 이름·관계·TODO/test 상태·출처와 누락 이유를 갖는다. context pack의 `documentKinds`에 `code_metadata`가 없으므로 코드 카드는 **별도 lane**이며 문서 타입으로 위장하지 않는다.
       Commit: `feat(app): digests, live finding details, finding dismissal, and stored-prose surfaces at zero credits`
 
 - [ ] **20. `doc_page` — "페이지는 노드의 얼굴"** _(v1 todo 14 사양 보강, 설계 ④, OQ-033)_
       file/directory/concept은 `doc_pages.anchor_node_id`로 기존 노드에 붙이고 **module/feature/repo만** `graph_nodes(kind='doc_page')`. 슬러그 = md5(정렬된 멤버 디렉터리 집합) + `previous_slugs`. **`docskeleton` 잡(0크레딧, `enqueue_job` 결정론 목록 마이그레이션)**: 멤버·심볼 이름·관계·백링크(읽기 시점 역방향 조회, 저장 없음)·인용 후보 집합을 결정론으로 조립; `docpage` 잡(1크레딧/BYOK 0, enrich 라이프사이클): 저장 산문만 입력, 후보 집합 밖 인용 거부, 축자·펜스·줄 길이 검증기, `inferred` CHECK. module 페이지가 far 접힘 슈퍼노드의 라벨·산문. `/app/docs`·`/app/docs/[slug]`, MCP `get_doc_page`·`list_doc_pages`·`request_docs`(3상태; 툴 수는 todo 22 예산 안에서).
       수용 기준: v1 기준 + 스켈레톤 0크레딧 원장 테스트, 슬러그 불변 테스트(파일 1개 변동), 인용 노드 dangling 0, CLI 레포에서도 스켈레톤 생성(todo 16 지연 생성 전제), 실기 1회(repo 1 + module 5 + feature 3 산문).
+      보완(R-02, 2026-09-06): module·concept 산문도 입력 digest 조건부 저장이다 — 저장 시점의 member digest가 생성 시작의 것과 같을 때만 UPDATE하고, 반영 결과를 `applied`/`superseded`/`missing`/`invalid`로 구분한다. `superseded`를 무조건 AI 재호출로 되돌리지 않는다(무과금·멱등 규칙 유지). skip도 어느 blob의 실패인지 구분해 옛 실패가 최신 성공을 덮지 않게 한다.
       Commit: `feat(docs): attach skeleton pages to nodes and generate inferred prose pages from stored summaries`
 
 - [ ] **21. `query_brain` 확장 + 위험 지도 빌더 + 저장 질의** _(v1 todo 15 확장 + 위험 P2, 진행 P4, todo P3 통합)_
       필터 `domain`·`unit`·`family`·`kind`(directory/route/db_object/section/doc_page/**todo**)·`relation`/`withoutRelation`·`hasSummary`·`pathGlob`·`changedSince`, `format:'table'|'ids'`(행 50·열 6), `sortBy:'risk'`. **`packages/core/src/inspection/risk-map.ts`**: 파일별 `RiskEntry{path,nodeId,score,level,factors[],grade:'inferred'}` — 요인 = open findings(target/source; 심각도는 {medium,low}뿐이므로 가중 아닌 카운트)·`untested-code`·팬인(imports/calls 역방향, `importanceMap` PageRank 재사용)·공변경(`file_co_changes` change_count·updated_at 감쇠)·npm audit(있을 때만); 커버리지·감사 부재는 "증거 부족" 회색. `/app/inspection` 위젯 교체(도달 불가 "드리프트 의심" 제거) + 저장 질의 3종(테스트 없는 코드·문서 없는 모듈·요구사항 미구현·위험 상위 10). todo 읽기는 새 툴이 아니라 `query_brain(kind:'todo')`; `log_progress`에 `todo_id?`·`repository_id?`·`commit_sha?` 선택 필드 + 정규화 제목 매칭(SQL·InMemory 동등성 테스트). `.alrescha.json todoFiles/progressDocs`로 인식 범위 확장(spec-kit tasks.md·PLAN/BACKLOG·핸드오프·`.beads`).
       수용 기준: 필터 조합 단위 테스트, 표 토큰 상한, RiskEntry 계약(factors ≥1·provenance·grade), 문서 없는 픽스처에서 위험 상위 10 비어 있지 않음, 결정론 수렴·추가 본문 fetch 0·크레딧 0, 계약 테스트 하위 호환, todo 인식 픽스처 8종 중 ≥7.
+      보완(R-03·R-01, 2026-09-06): 위험 지도의 팬인은 **imports/calls 역방향**만 쓴다 — doc `references`·`contains`·유사도는 전파 통로가 아니다. `withoutRelation` 같은 **부정 질의는 조회가 불완전하면 "없음"이 아니라 unknown**을 반환하고, 그 사유를 coverage에 적는다. 정적 도달성은 후보이지 실행 증거가 아니므로 결과는 `candidate`로 이름 붙인다.
       Commit: `feat(brain): risk map, todo-aware query_brain with tabular output, and saved inspection queries`
 
 ## Wave E — 에이전트 표면 예산 · 텔레메트리 · 벤치 v3 _(G3 — todo 25)_
@@ -232,11 +263,13 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
 - [ ] **22. 예산 문서 — 툴 다이어트 · 단일 워크플로 문안 · 옵트인 훅 · impact 신뢰도 · families 필터 · loadWorkspace 분리** _(D13, v1 todo 16 재정의, OQ-032·OQ-024)_
       ⑴ 툴 카탈로그 ≤16: `search_nodes`→`search_index(include_excerpt=false, domain_filter, limit, excerpt_chars)` 흡수, `get_artifact`↔`get_node_content` 통합(path|id|ids 셀렉터, `max_chars`), `route_query`는 지시 문장 1줄로 이전, `record_note`·`record_prompt` 미노출 검토(스펙 §11 유지 여부 OQ 병기), `request_rescan` 추가; **`outputSchema` 제거**(선택 항목, 카탈로그 62%); `memory_read` limit; `toolResult` 이중 직렬화의 실클라이언트 호환 패스(Claude Code·Codex·Cursor) 후 정리. **count_tokens 실측 상한(≤1,500토큰)을 계약 테스트로** ⑵ 지시 블록·최소 인덱스·`get_graph_schema.text`·툴 설명이 같은 상수를 참조: "시작 시 `query_brain(kind:'todo')` 선택 1회 → 진입 `search_index` 1회 → 관계형(경로·영향·의존) 질문만 `get_neighbors/trace_path/impact_of` → 3회 조회 후 미해결이면 파일을 직접 읽어라 → 위험 후보 파일 편집 전 `impact_of` 1회 → 종료 `log_progress` 1회 + `memory_write` ≤1회(assert_link·record_ruled_out은 필요 시)"; 블록 ≤300토큰(count_tokens), 첫 파일 읽기 전 강제 호출 ≤2; Cursor `alwaysApply`와 §1.5 긴장을 문안에 명시 ⑶ 옵트인 훅 스니펫(Claude Code SessionEnd → `log_progress` 요약 1건; PreToolUse Grep/Read → `search_index` 권고, **차단 아님**), Codex·Cursor 대응 문서화 ⑷ `impact_of` 응답 `confidence{resolved,reference,inferred,agent_asserted}`·`bound:'exact'|'lower-bound'`·`affected{tests,docs,requirements,routes,tables}`·`targetRisk` ⑸ `get_neighbors/impact_of/query_brain/trace_path`에 `families` 필터·`includeHierarchy=false` 기본·결과 캡, `get_graph_schema`가 families 카운트 광고 ⑹ `loadWorkspace` 기본 로드 = structure+evidence+semantic, hierarchy/database/route는 부분 쿼리(`loadHierarchy(ids)`), 요청당 페이로드 전후 evidence(MT-5 정신).
       수용 기준: 계약 테스트(툴 목록·readOnlyHint·count_tokens 상한·families 필터 하위 호환), 문안 공통 상수 테스트·스니펫 스냅샷, 쓰기 툴이 graph_nodes에 없는 id 거부, `verify-scope-boundaries.ts` PASS, OQ-024 갱신.
+      보완(R-01·R-03, 2026-09-06): ⑹의 `loadWorkspace` 분리는 **모든 caller가 옮기기 전에 삭제하지 않는다.** 각 read가 `complete`/`truncated`/`unsupported`와 누락 사유를 반환하고, 999/1,000/1,001행 경계에서 마지막 아티팩트·마지막 엣지가 답에 들어오는지 단언한다. 같은 경로가 두 repo에 있으면 첫 repo를 임의 선택하지 않고 ambiguity를, batch는 입력별 결과를 돌려준다. ⑷의 `impact_of`는 `mode`·`semanticsVersion`으로 **opt-in 이행**이며 기존 `transitiveNodeIds`의 의미를 설명 없이 바꾸지 않는다. SECURITY INVOKER는 service-role 경로의 tenant 안전을 대신하지 않으므로 user-JWT와 service-role 경로를 각각 음성 테스트한다.
       Commit: `feat(mcp): budget the tool catalog and instructions, add families filters, and label impact confidence`
 
 - [ ] **23. 세션 텔레메트리 — 툴별 응답 크기 · 에이전트 보고 usage · 일 집계** _(토큰 감사 P4, 신규)_
       `emitAccessEvent`에 `response_chars`·`estimated_tokens`(4자/토큰 가정 컬럼 고정, 원문 없음), 경량 툴 또는 훅 수신 경로 `report_session_usage({input_tokens, cache_read_tokens, …})`(옵트인, 원문 없음, 실패 무시 — 툴 수 예산 안에서 `record_prompt` 자리 재검토), `usage_daily(workspace_id, repository_id, day)` 집계, 보존은 `access_event_retention_days` 준수.
       수용 기준: 이벤트 스키마·집계 SQL 테스트, 프라이버시(ADR-011) 음성 테스트(원문 0), `docs/PRIVACY.md` 갱신.
+      보완(R-01, 2026-09-06): `access_events`·`last_used_at` 같은 **읽기 부수 기록은 graph revision에 넣지 않는다** — 넣으면 읽기가 자기 자신을 무효화한다. workspace memory와 repo 데이터의 scope도 구분한다.
       Commit: `feat(telemetry): record response sizes and opt-in session usage per repository`
 
 - [ ] **24. 레포별 절감 미터 · 상시 로드 지시문 비용 표(§5.2-③) 실데이터화** _(토큰 감사 P5·P8, Codex 화면)_
@@ -279,6 +312,7 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
 - **그래프 성능 두 겹**: vitest 프레임 플랜(1,300/4k·5k 컬링 케이스) + 브라우저 실측(`bench-graph-browser.ts`, 호스트·GPU 명시). GPU 조각은 vitest가 볼 수 없다.
 - **실스캔 위 라이브 e2e**(D15): `local-ingest-card.spec.ts` 발판을 확장해 `/app/map`·`/app/progress`·`/app/inspection`을 실스캔 픽스처 위에서 단언 — 데모 라우트 단언은 유지(약화 아님).
 - **두 경로 동등성**은 매 웨이브 회귀: 같은 픽스처를 GitHub 소스 mock과 `alrescha push`로 넣어 플랜 바이트 비교(ignore 규칙 포함).
+- **보완 음성 테스트**(2026-09-06): 위 §보완 설계 접속의 목록은 해당 todo의 완료 판정에 포함된다. 테스트가 미구현 보완을 드러내면 기대값을 낮추지 않는다 — 저장소의 테스트 약화 금지 규칙이 우선한다.
 - **벤치는 프로덕션 형태**: v3 그래프군은 요약 전용 스토어 + 제품 `tools/list` 카탈로그로 구성. 사전등록 후 실행, 판정 무관 게시.
 - **화면은 두 테마 스크린샷 + axe**를 evidence에(1440 기준).
 

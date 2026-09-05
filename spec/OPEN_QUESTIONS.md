@@ -436,3 +436,19 @@
 - 임시 결정: 파일 단위 1엣지, span은 첫 호출 지점. 밀도가 먼저다.
 - 필요한 결정: ⑴ 현행 유지 + `provenance`에 호출 횟수만 추가(기본 후보) ⑵ 심볼 엔진이 있는 언어에서 심볼→테이블로 올린다(파일 노드가 아닌 심볼 노드가 그래프에 없어 선행 작업 필요) ⑶ `.rpc()`를 별도 관계로 분리.
 - 상태: open. 밀도 게이트(todo 8)가 실측치를 다시 잴 때 함께 판정.
+
+## OQ-052 — `impact_of`의 기본 의미를 언제 directional로 바꾸는가
+
+- 발견: Codex 보완 설계 P0-C / [REMEDY §7.3](../docs/reports/REMEDY_DESIGN_2026-09-06.md), `packages/mcp/src/graph-tools.ts`(`impactOf`), `spec/BUILD_PLAN_PHASE4.md` todo 22-⑷
+- 내용: 현재 `impactOf`는 **무방향 depth-2 이웃**을 "영향"이라고 부른다. `A imports B`, `C imports B`일 때 A를 고치면 C가 영향에 들어온다 — C는 A를 모른다. 올바른 dependency impact는 `imports`/`calls`의 **역방향 도달**이고, doc `references`·`contains`·유사도는 전파 통로가 아니다. 다만 기존 응답(`transitiveNodeIds`)의 의미를 설명 없이 바꾸면 이미 그 값을 쓰는 클라이언트·벤치·계약 테스트가 조용히 다른 답을 받는다.
+- 임시 결정: `mode`(`related-neighborhood` 기본 · `dependency-impact` opt-in)로 **호환 이행**한다. 새 UI·하네스는 새 mode를 쓰고, 기존 결과에는 related-neighborhood임을 응답에 적는다.
+- 필요한 결정: ⑴ 계약 테스트와 실클라이언트(Claude Code·Codex·Cursor) 관측 뒤 todo 22에서 기본값을 `dependency-impact`로 전환(기본 후보) ⑵ 두 mode를 영구히 유지하고 기본은 그대로(호출자가 계속 잘못된 기본을 받는다) ⑶ 즉시 전환하고 `semanticsVersion`으로만 알린다(기존 계약 테스트가 깨진다).
+- 상태: open. todo 22에서 판정.
+
+## OQ-053 — 읽기 일관성(`dataRevision`)을 도입할지, 도입하면 어느 writer가 증분하는가
+
+- 발견: Codex 보완 설계 P0-B / [REMEDY §5.3~§5.4](../docs/reports/REMEDY_DESIGN_2026-09-06.md), `apps/web/lib/mcp/supabase-store.ts`(`loadWorkspace`), `apps/web/lib/map/workspace-map.ts`
+- 내용: 페이지를 나눠 읽으면 페이지 사이에 데이터가 바뀔 수 있다. 단일 SELECT의 snapshot 보장은 그 페이지까지고, PG 17 기본 Read Committed에서는 같은 트랜잭션의 연속 SELECT도 다른 시점을 본다 — 기존 조회를 VOLATILE PL/pgSQL 함수로 감싸는 것으로는 해결되지 않는다. 해결책은 revision fence(읽기 전후 같은 revision 확인) 또는 immutable generation인데, 둘 다 **writer 쪽 규율**을 요구한다: read-visible 변경과 revision UPDATE가 같은 트랜잭션이어야 하고, `access_events`·`last_used_at` 같은 읽기 부수 기록은 넣으면 안 된다(읽기가 자기 자신을 무효화한다). 커밋 SHA는 대용이 될 수 없다 — 같은 커밋에서 enrich·CI·todo 상태가 바뀐다.
+- 임시 결정: 도입하지 않는다. 지금은 고정된 작은 읽기로 가고, 불완전한 조회는 `complete=false`와 사유로 **정직하게 보고**한다. 없는 revision을 커밋 SHA나 현재 시각으로 꾸며 채우지 않는다(null/unknown).
+- 필요한 결정: ⑴ repo 공통 revision 하나 + workspace memory revision 하나로 시작(기본 후보 — 종류별 counter를 늘리지 않는다) ⑵ generation 기반 immutable snapshot(큰 페이지 조회·과거 조회 수요가 확인될 때) ⑶ 계속 도입하지 않고 페이지 사이 변경은 재시작으로만 처리.
+- 상태: open. todo 22의 bounded read가 실제로 페이지를 나눌 때 판정.
