@@ -505,6 +505,7 @@ export class SupabaseMcpStore implements McpStore {
       moduleSummaries,
       routes,
       dbObjects,
+      sections,
     ] = await Promise.all([
       this.client
         .from("repositories")
@@ -567,6 +568,10 @@ export class SupabaseMcpStore implements McpStore {
         .from("db_objects")
         .select("id, repository_id, name, kind, source_path, source_line")
         .eq("workspace_id", workspaceId),
+      this.client
+        .from("sections")
+        .select("id, repository_id, token, heading, source_path")
+        .eq("workspace_id", workspaceId),
     ]);
     for (const [label, result] of [
       ["repositories", repositories],
@@ -582,6 +587,7 @@ export class SupabaseMcpStore implements McpStore {
       ["module summaries", moduleSummaries],
       ["routes", routes],
       ["database objects", dbObjects],
+      ["sections", sections],
     ] as const)
       queryError(`MCP ${label} query failed`, result.error);
 
@@ -601,6 +607,7 @@ export class SupabaseMcpStore implements McpStore {
     const moduleSummaryRows = rows(moduleSummaries.data);
     const routeRows = rows(routes.data);
     const dbObjectRows = rows(dbObjects.data);
+    const sectionRows = rows(sections.data);
 
     const artifactPathById = new Map(
       artifactRows.map((row) => [
@@ -807,6 +814,14 @@ export class SupabaseMcpStore implements McpStore {
               nodeId: requiredString(row, "id"),
               sourceLine: Number(row.source_line ?? 0),
               sourcePath: requiredString(row, "source_path"),
+            })),
+          sections: sectionRows
+            .filter((row) => row.repository_id === repositoryId)
+            .map((row) => ({
+              heading: requiredString(row, "heading"),
+              nodeId: requiredString(row, "id"),
+              sourcePath: requiredString(row, "source_path"),
+              token: requiredString(row, "token"),
             })),
         };
       }),

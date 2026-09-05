@@ -83,6 +83,20 @@ export type {
   SchemaLink,
   SchemaLinkKind,
 } from "./ingest/schema-links";
+export {
+  bestHome,
+  DEFAULT_SECTION_TOKEN_PREFIXES,
+  MAX_SECTION_HEADING,
+  MAX_SECTION_LINKS_PER_DOCUMENT,
+  parseDocumentSections,
+  parseSectionReferences,
+  resolveSectionLinks,
+} from "./ingest/section-links";
+export type {
+  DocumentSection,
+  ParsedSectionReference,
+  SectionLink,
+} from "./ingest/section-links";
 export type {
   NextRouteFile,
   ParsedRouteDeclaration,

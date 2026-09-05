@@ -82,6 +82,16 @@ function buildGraphView(workspace: McpWorkspaceData): GraphView {
         type: "route",
       });
     }
+    for (const section of repository.sections ?? []) {
+      nodes.set(section.nodeId, {
+        id: section.nodeId,
+        // The document that declares it: an agent asking about a decision
+        // wants that file opened at that heading.
+        path: section.sourcePath,
+        repositoryId: repository.id,
+        type: "section",
+      });
+    }
     for (const object of repository.dbObjects ?? []) {
       nodes.set(object.nodeId, {
         id: object.nodeId,

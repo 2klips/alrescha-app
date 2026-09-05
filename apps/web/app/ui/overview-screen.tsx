@@ -25,6 +25,7 @@ const NODE_TYPE_CLASS = {
   rationale: "code",
   requirement: "req",
   route: "route",
+  section: "doc",
   test: "test",
   unknown: "unknown",
 } as const;

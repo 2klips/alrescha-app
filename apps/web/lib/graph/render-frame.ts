@@ -122,6 +122,9 @@ const NODE_TOKEN_BY_TYPE = {
   // and an unresolved node paints as a line rather than claiming a kind.
   database: "node-database",
   directory: "node-directory",
+  // A named decision paints as the prose it lives in until Wave B todo 12
+  // gives the four shapes their own sprites.
+  section: "node-doc",
   rationale: "node-code",
   route: "node-route",
   requirement: "node-requirement",

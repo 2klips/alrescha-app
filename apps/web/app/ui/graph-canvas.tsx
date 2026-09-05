@@ -43,6 +43,7 @@ const TYPE_GLYPHS = {
   route: "→",
   rationale: "W",
   requirement: "R",
+  section: "§",
   test: "T",
   unknown: "?",
 } as const;

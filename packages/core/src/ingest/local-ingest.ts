@@ -152,6 +152,7 @@ const layoutConfigSchema = z.strictObject({
     shared: configListSchema.optional(),
   }),
   progressDocs: configListSchema,
+  sectionTokens: configListSchema,
   todoFiles: configListSchema,
 });
 
@@ -202,6 +203,33 @@ const schemaLinkSchema = z.strictObject({
   tier: z.enum(["reference", "resolved"]),
 });
 
+/**
+ * Sections and their citations (Phase 4 Wave A′ todo 8). The token, the
+ * heading line and the span — never the section's body.
+ */
+const sectionSchema = z.strictObject({
+  heading: z.string().min(1).max(200),
+  homeRank: z.number().int().nonnegative().max(199),
+  path: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  token: z.string().min(2).max(16),
+});
+
+const sectionLinkSchema = z.strictObject({
+  method: z.literal("id-token"),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  targetToken: z.string().min(2).max(16),
+  tier: z.literal("resolved"),
+  via: z.enum(["document", "rationale"]),
+});
+
 export const repositoryScanPlanSchema = z.strictObject({
   artifacts: z.array(scannedArtifactSchema).max(100_000),
   codeLinks: z.array(codeLinkSchema).max(200_000),
@@ -216,6 +244,7 @@ export const repositoryScanPlanSchema = z.strictObject({
     layersHidden: [],
     layout: {},
     progressDocs: [],
+    sectionTokens: [],
     todoFiles: [],
   }),
   // Defaulted rather than required: a CLI built before Phase 4 uploads a
@@ -229,6 +258,8 @@ export const repositoryScanPlanSchema = z.strictObject({
   routes: z.array(routeSchema).max(20_000).default([]),
   schemaLinks: z.array(schemaLinkSchema).max(100_000).default([]),
   schemaObjects: z.array(dbObjectSchema).max(20_000).default([]),
+  sectionLinks: z.array(sectionLinkSchema).max(100_000).default([]),
+  sections: z.array(sectionSchema).max(20_000).default([]),
   skipped: z
     .array(
       z.strictObject({

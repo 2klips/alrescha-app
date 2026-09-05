@@ -36,6 +36,7 @@ function emptyRows(): WorkspaceMapRows {
     concepts: [],
     dbObjects: [],
     directories: [],
+    sections: [],
     routes: [],
     edges: [],
     evidence: [],
@@ -706,6 +707,15 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
         `select id, name, kind, source_path, source_line
          from public.db_objects order by name`,
       );
+      const sections = await tx.query<{
+        heading: string;
+        id: string;
+        source_path: string;
+        token: string;
+      }>(
+        `select id, token, heading, source_path
+         from public.sections order by token`,
+      );
       const rationales = await tx.query<{
         artifact_id: string;
         id: string;
@@ -725,6 +735,7 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
         artifacts: artifacts.rows,
         dbObjects: dbObjects.rows,
         directories: directories.rows,
+        sections: sections.rows,
         edges: edges.rows,
         routes: routes.rows,
         graphNodes: graphNodes.rows,
@@ -746,6 +757,12 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
     // empty — and reaching it at all is what proves the new table's grants
     // and RLS policy exist for `authenticated` (Wave A′ todo 7).
     expect(seenByA.dbObjects).toEqual([]);
+    // Its ADRs do declare ID-token headings, so the owner's `sections` read
+    // proves the grant *and* returns rows (Wave A′ todo 8).
+    expect(seenByA.sections.map(({ token }) => token)).toEqual([
+      "ADR-001",
+      "ADR-002",
+    ]);
 
     const model = buildWorkspaceMapModel(workspaceA, {
       ...seenByA,

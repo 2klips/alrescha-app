@@ -473,10 +473,11 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
       rationale: 3,
       document: 4,
       concept: 5,
-      route: 6,
-      database: 7,
-      directory: 8,
-      unknown: 9,
+      section: 6,
+      route: 7,
+      database: 8,
+      directory: 9,
+      unknown: 10,
     };
     return model.graph.nodes
       .filter((node) => connected.has(node.id))

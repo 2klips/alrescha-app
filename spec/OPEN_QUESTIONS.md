@@ -452,3 +452,27 @@
 - 임시 결정: 도입하지 않는다. 지금은 고정된 작은 읽기로 가고, 불완전한 조회는 `complete=false`와 사유로 **정직하게 보고**한다. 없는 revision을 커밋 SHA나 현재 시각으로 꾸며 채우지 않는다(null/unknown).
 - 필요한 결정: ⑴ repo 공통 revision 하나 + workspace memory revision 하나로 시작(기본 후보 — 종류별 counter를 늘리지 않는다) ⑵ generation 기반 immutable snapshot(큰 페이지 조회·과거 조회 수요가 확인될 때) ⑶ 계속 도입하지 않고 페이지 사이 변경은 재시작으로만 처리.
 - 상태: open. todo 22의 bounded read가 실제로 페이지를 나눌 때 판정.
+
+## OQ-054 — `.alrescha.json`가 확장할 수 있는 것이 접두어인가 패턴인가
+
+- 발견: Phase 4 Wave A′ todo 8 / `packages/core/src/ingest/section-links.ts`(`DEFAULT_SECTION_TOKEN_PREFIXES`·`prefixesOf`), `packages/core/src/ingest/repository-config.ts`(`sectionTokens`), `spec/BUILD_PLAN_PHASE4.md` todo 8("`.alrescha.json`로 확장 가능")
+- 내용: 계획은 ID 토큰 집합을 레포 설정으로 넓힐 수 있다고만 말한다. 가장 표현력 있는 형태는 정규식이지만, `.alrescha.json`은 **스캔 대상 레포가 쓴 파일**이고 그 정규식은 트리의 모든 문서 위에서 돌아간다 — catastrophic backtracking 하나로 스캔이 멈춘다. 그래서 받는 것은 리터럴 접두어(`"RFC"`)뿐이고, 패턴은 `\bRFC-?\d{1,4}\b`로 이쪽이 조립한다. 대가는 `ISSUE_1234`나 `[JIRA-12]` 같은 다른 모양을 표현할 수 없다는 것이다.
+- 임시 결정: 리터럴 접두어만. `^[A-Z][A-Z0-9]{0,7}$`를 통과하지 못하는 값은 조용히 버린다(설정 오타가 스캔을 죽이지 않는다 — OQ-047의 규칙).
+- 필요한 결정: ⑴ 접두어 유지 + 필요하면 구분자(`_`·` `)만 옵션으로 추가(기본 후보) ⑵ 안전한 부분집합 DSL(문자 클래스·자릿수 범위만) ⑶ 타임아웃·길이 제한을 건 정규식 허용(재귀 백트래킹은 타임아웃으로 못 막는 경우가 있다 — 비추).
+- 상태: open. 다른 토큰 관례를 쓰는 실레포를 스캔할 때 판정.
+
+## OQ-055 — 증분 스캔이 소유 목록을 이번 플랜에서만 읽는다 (`queries` 엣지 누락)
+
+- 발견: Phase 4 Wave A′ todo 8 작업 중 todo 7 재검토 / `packages/core/src/ingest/schema-links.ts`(`resolveSchemaLinks`의 `owned` 필터)
+- 내용: `queries`는 "소유 테이블 목록에 있는 이름만"이고, 그 목록은 **이번 플랜의 `schemaObjects`**다. 증분 스캔에서 코드 파일만 바뀌면 마이그레이션은 다시 읽히지 않으므로 `schemaObjects`가 비고, `.from('findings')`는 필터에서 떨어진다 — 같은 커밋인데 full relink면 엣지가 있고 증분이면 없다(D2류 결함). todo 8의 section은 이 함정을 피해 설계했다: TS는 자기 홈만 걸러내고 소유 판정은 **SQL이 영속된 `sections`와 조인**해서 한다.
+- 임시 결정: todo 7 동작을 그대로 둔다. 완화책은 이미 있다 — todo 16이 `link_schema_version` 불일치에서 자동 full relink를 건다.
+- 필요한 결정: ⑴ `resolveSchemaLinks`의 `queries` 필터를 걷어내고 SQL 조인이 소유를 판정하게 한다(section과 같은 모양 — 플랜에 남의 테이블 이름이 실린다) ⑵ 증분 스캔이 schema 분류 파일을 항상 다시 읽는다(fetch 수·`scan-fetch-concurrency` 기대값 변경) ⑶ 현행 유지 + 밀도 게이트가 두 모드의 엣지 수 차이를 단언.
+- 상태: open. ⑴이 기본 후보. todo 16의 재스캔 작업에서 함께 판정.
+
+## OQ-056 — 밀도 임계값을 어디에 걸 것인가 (픽스처가 너무 작다)
+
+- 발견: Phase 4 Wave A′ todo 8 실측 / `tests/graph-density.test.ts`, `spec/BUILD_PLAN_PHASE4.md` 밀도 목표표
+- 내용: 계획은 "픽스처 2종에서 평균 차수 ≥3·고아 ≤10%"라고 적었지만, 실측하면 `drifted-demo`는 27노드/19엣지/차수 **1.41**·고아 12/17, `next-fastapi`는 34노드/47엣지/차수 **2.76**·고아 6/22이다. 15파일에 import 3개인 데모는 **작아서** 성긴 것이지 추출기가 망가져서가 아니다. 임계값을 픽스처가 통과하도록 낮추면 게이트가 아무것도 막지 못한다(테스트 약화 금지). 반면 같은 임계값의 출처인 이 레포는 **1,253노드/5,213엣지/차수 8.32/고아 4.2%/삼각형 2,533**으로 여유롭게 통과한다.
+- 임시 결정: 임계값(차수 ≥3·고아 ≤10%·삼각형 >0)은 **이 레포**에 건다. 픽스처는 ⑴ 실측값을 회귀 베이스라인으로 고정하고 ⑵ 내용상 있어야 할 엣지 패밀리 전수를 단언한다 — 34노드 평균이 못 잡는 추출기 고장을 이쪽이 잡는다.
+- 필요한 결정: ⑴ 현행 유지(기본 후보) ⑵ `next-fastapi`를 "전형 800파일" 규모에 가깝게 키운다(계획의 목표 열이 그 규모를 말한다 — 손으로 쓰면 비싸고, 생성하면 가짜다) ⑶ 실레포 스냅샷을 픽스처로 커밋(라이선스·크기·비밀 문제).
+- 상태: open. ⑵는 Wave C의 실레포 온보딩에서 실물 데이터가 생긴 뒤 재검토.

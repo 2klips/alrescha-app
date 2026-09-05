@@ -43,6 +43,8 @@ const NODE_TYPE_CLASS = {
   rationale: "code",
   requirement: "req",
   route: "route",
+  // A named decision is prose: it paints with the documents it lives among.
+  section: "doc",
   test: "test",
   unknown: "unknown",
 } as const;

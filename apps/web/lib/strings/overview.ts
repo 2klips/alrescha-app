@@ -35,6 +35,7 @@ export const OVERVIEW = {
       directory: "폴더",
       route: "라우트",
       database: "테이블·함수",
+      section: "결정 문단",
       unknown: "미분류",
     },
   },

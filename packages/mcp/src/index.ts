@@ -69,6 +69,7 @@ export type {
   McpRepositoryData,
   McpRequirementData,
   McpScope,
+  McpSectionData,
   McpSourceSpan,
   McpStore,
   McpTokenRecord,

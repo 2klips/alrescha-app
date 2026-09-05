@@ -20,6 +20,7 @@ import { GitHubRepositorySource } from "../../apps/worker/src/github-repository-
 export async function githubShapedPlan(
   rootDir: string,
   commitSha: string,
+  mode: "full" | "incremental" = "incremental",
 ): Promise<RepositoryScanPlan> {
   const { source: localSource } = await createLocalRepositorySource(rootDir);
   const tree = await localSource.listTree(commitSha);
@@ -46,5 +47,5 @@ export async function githubShapedPlan(
     "installation-token",
     fetchImplementation,
   );
-  return scanRepository({ commitSha, source });
+  return scanRepository({ commitSha, mode, source });
 }

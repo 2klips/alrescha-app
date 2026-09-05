@@ -38,7 +38,37 @@ export type GraphNodeType =
   | "directory"
   | "rationale"
   | "route"
+  | "section"
   | "unknown";
+
+/**
+ * The four-shape grammar (Wave A′ todo 8). Colour already carries the domain
+ * band, so shape carries what kind of thing a node is — a leaf, a container,
+ * a URL, a table — and a reader can tell them apart in a band of one colour.
+ *
+ * Defined here as data and **rendered in Wave B todo 12**, which owns the
+ * texture sprite pool. Stating the grammar in the data layer is what keeps
+ * the renderer, the legend and the overview from each inventing one.
+ */
+export type GraphNodeShape = "circle" | "diamond" | "ring" | "square";
+
+export const NODE_SHAPE: Readonly<Record<GraphNodeType, GraphNodeShape>> = {
+  // Leaves: a file, or something anchored to one.
+  code: "circle",
+  document: "circle",
+  rationale: "circle",
+  test: "circle",
+  unknown: "circle",
+  // Containers and abstractions: things other nodes hang off.
+  concept: "ring",
+  directory: "ring",
+  requirement: "ring",
+  section: "ring",
+  // A URL.
+  route: "diamond",
+  // A table, view or function.
+  database: "square",
+};
 
 /**
  * Which family an edge belongs to (R5 §2.5, `edges.family`).
@@ -88,32 +118,50 @@ export interface GraphNode {
   y: number;
 }
 
+/**
+ * The demo vocabulary (`declares`, `co_changed`) plus every value the
+ * `edges_relation` CHECK allows — `/app/map` renders stored rows verbatim
+ * (Phase 3 Wave A).
+ *
+ * One array, not a type beside a hand-written guard: a relation the database
+ * accepts but this list omits used to be relabelled `references` on the way
+ * to the screen, which is a silent loss of the thing the edge actually says
+ * (Codex remedy P0-D). `tests/graph-density.test.ts` asserts every stored
+ * relation survives the trip unchanged, so an added relation fails a test
+ * instead of quietly becoming a citation.
+ */
+export const DISPLAY_RELATIONS = [
+  "calls",
+  "co_changed",
+  "configures",
+  "contains",
+  "contradicts",
+  "declares",
+  "defines",
+  "depends_on",
+  "handles",
+  "implements",
+  "imports",
+  "modifies",
+  "part_of",
+  "produces",
+  "queries",
+  "references",
+  "requires",
+  "supersedes",
+  "supports",
+  "tests",
+  "uses",
+  "validates",
+] as const;
+
+export type GraphDisplayRelation = (typeof DISPLAY_RELATIONS)[number];
+
 export interface GraphEdgeProvenance {
   confidence: number;
   endLine: number;
   grade: EvidenceGrade;
-  /**
-   * The demo vocabulary (`declares`) plus the persisted `edges.relation`
-   * vocabulary — `/app/map` renders stored rows verbatim (Phase 3 Wave A).
-   */
-  relation:
-    | "calls"
-    | "co_changed"
-    | "configures"
-    | "contradicts"
-    | "declares"
-    | "depends_on"
-    | "implements"
-    | "imports"
-    | "part_of"
-    | "produces"
-    | "references"
-    | "requires"
-    | "supersedes"
-    | "supports"
-    | "tests"
-    | "uses"
-    | "validates";
+  relation: GraphDisplayRelation;
   sourcePath: string;
   startLine: number;
 }
@@ -166,6 +214,8 @@ const NODE_TYPE_CLASSIFICATION: Readonly<
   database: "code_metadata",
   // A folder's area is the area of what it holds, derived from its path.
   directory: "code_metadata",
+  // A section is a heading inside a document, so it belongs with the docs.
+  section: "spec",
   // A route is served by code, and its anchor path is one of its handlers.
   route: "code_metadata",
   document: "spec",

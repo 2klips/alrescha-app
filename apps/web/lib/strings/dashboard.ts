@@ -80,6 +80,8 @@ export const DASHBOARD = {
       route: "라우트",
       /** 마이그레이션이 선언한 테이블·함수·뷰 (Wave A′ todo 7). */
       database: "테이블·함수",
+      /** ADR·OQ처럼 이름을 가진 결정 하나 (Wave A′ todo 8). */
+      section: "결정 문단",
       /** 아티팩트 행을 못 찾은 노드. 분류를 지어내지 않는다. */
       unknown: "미분류",
     },

@@ -28,6 +28,14 @@ import {
   type SchemaLink,
 } from "./schema-links";
 import {
+  parseDocumentSections,
+  parseSectionReferences,
+  resolveSectionLinks,
+  type DocumentSection,
+  type ParsedSectionReference,
+  type SectionLink,
+} from "./section-links";
+import {
   buildModuleResolution,
   isIgnoredManifestPath,
   isManifestPath,
@@ -201,6 +209,8 @@ export interface RepositoryScanPlan {
    */
   readonly schemaLinks: readonly SchemaLink[];
   readonly schemaObjects: readonly DbObject[];
+  readonly sectionLinks: readonly SectionLink[];
+  readonly sections: readonly DocumentSection[];
   /** Resolver generation that produced `codeLinks` (see LINK_SCHEMA_VERSION). */
   readonly linkSchemaVersion: number;
   readonly linkScope: LinkScope;
@@ -822,6 +832,8 @@ export async function scanRepository(input: {
       routes: [],
       schemaLinks: [],
       schemaObjects: [],
+      sectionLinks: [],
+      sections: [],
       linkScope,
       removedPaths: [],
       skipped: [],
@@ -853,6 +865,16 @@ export async function scanRepository(input: {
   const parsedDocuments = new Map<string, ParsedMarkdownStructure>();
   const routes: RouteDeclaration[] = [];
   const schemaObjects: DbObject[] = [];
+  const sections: DocumentSection[] = [];
+  const sectionReferences = new Map<
+    string,
+    readonly ParsedSectionReference[]
+  >();
+  const citingRationales: {
+    adrRef: string | null;
+    line: number;
+    sourcePath: string;
+  }[] = [];
   const rawSchemaLinks: SchemaLink[] = [];
   const queryReferences = new Map<string, readonly ParsedQueryReference[]>();
   const knownCodePaths = new Set<string>();
@@ -1145,10 +1167,22 @@ export async function scanRepository(input: {
     }
 
     if (isMarkdownArtifact(classification)) {
-      parsedDocuments.set(
-        entry.path,
-        parseMarkdownStructure({ path: entry.path, source }),
+      const document = parseMarkdownStructure({ path: entry.path, source });
+      parsedDocuments.set(entry.path, document);
+      // ID-token headings become hubs, and every document that names one
+      // hangs off it (todo 8). Both halves read the body already in hand.
+      sections.push(
+        ...parseDocumentSections({
+          config: repositoryConfig,
+          document,
+          path: entry.path,
+        }),
       );
+      const cited = parseSectionReferences({
+        config: repositoryConfig,
+        source,
+      });
+      if (cited.length > 0) sectionReferences.set(entry.path, cited);
     }
 
     // Decorator routes, read from the body already in hand and reduced to
@@ -1156,6 +1190,25 @@ export async function scanRepository(input: {
     if (extraction?.engine === "python-structural") {
       for (const declaration of parsePythonRoutes(source)) {
         routes.push({ ...declaration, sourcePath: entry.path });
+      }
+    }
+
+    // A `WHY: … ADR-013` comment is a citation of a decision, so it hangs off
+    // the same section node a document's mention does (todo 8). Extracted
+    // here rather than at artifact-push time because a full relink re-reads
+    // the body without writing an artifact row, and a citation that appeared
+    // only on a first scan would make the two scan modes disagree.
+    const rationales =
+      classification === "code_metadata"
+        ? extractRationales(entry.path, source)
+        : [];
+    for (const rationale of rationales) {
+      if (rationale.adrRef) {
+        citingRationales.push({
+          adrRef: rationale.adrRef,
+          line: rationale.line,
+          sourcePath: entry.path,
+        });
       }
     }
 
@@ -1183,10 +1236,7 @@ export async function scanRepository(input: {
       exportedSymbols: extraction?.symbols ?? [],
       kind: persistedKind(classification),
       path: entry.path,
-      rationales:
-        classification === "code_metadata"
-          ? extractRationales(entry.path, source)
-          : [],
+      rationales,
       sizeBytes: bytes.byteLength,
       sourceBlobSha: entry.sha,
       sourceCommitSha: input.commitSha,
@@ -1279,6 +1329,12 @@ export async function scanRepository(input: {
       schemaLinks: rawSchemaLinks,
     }),
     schemaObjects,
+    sectionLinks: resolveSectionLinks({
+      rationales: citingRationales,
+      references: sectionReferences,
+      sections,
+    }),
+    sections,
     linkScope,
     removedPaths,
     skipped,

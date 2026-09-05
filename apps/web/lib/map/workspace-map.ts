@@ -9,6 +9,7 @@ import {
 import type { ArtifactClassification } from "@alrescha/core";
 
 import {
+  DISPLAY_RELATIONS,
   type EdgeConfidenceTier,
   type EvidenceGrade,
   type GraphData,
@@ -102,6 +103,13 @@ export interface MapDbObjectRow {
   readonly source_path: string;
 }
 
+export interface MapSectionRow {
+  readonly heading: string;
+  readonly id: string;
+  readonly source_path: string;
+  readonly token: string;
+}
+
 export interface MapFindingRow {
   readonly source_node_id: string | null;
   readonly status: string;
@@ -167,6 +175,7 @@ export interface WorkspaceMapRows {
   readonly rationales: readonly MapRationaleRow[];
   readonly repositories: readonly MapRepositoryRow[];
   readonly requirements: readonly MapRequirementRow[];
+  readonly sections: readonly MapSectionRow[];
   readonly evidence: readonly MapEvidenceRow[];
   readonly tokens: readonly MapTokenRow[];
 }
@@ -375,24 +384,7 @@ function isEdgeFamily(value: unknown): value is GraphEdgeFamily {
 function isDisplayRelation(
   value: string,
 ): value is GraphEdgeProvenance["relation"] {
-  return [
-    "calls",
-    "configures",
-    "contradicts",
-    "declares",
-    "depends_on",
-    "implements",
-    "imports",
-    "part_of",
-    "produces",
-    "references",
-    "requires",
-    "supersedes",
-    "supports",
-    "tests",
-    "uses",
-    "validates",
-  ].includes(value);
+  return (DISPLAY_RELATIONS as readonly string[]).includes(value);
 }
 
 function requirementPath(
@@ -469,6 +461,7 @@ export function buildWorkspaceMapModel(
   const directoryById = new Map(rows.directories.map((row) => [row.id, row]));
   const routeById = new Map(rows.routes.map((row) => [row.id, row]));
   const dbObjectById = new Map(rows.dbObjects.map((row) => [row.id, row]));
+  const sectionById = new Map(rows.sections.map((row) => [row.id, row]));
   /**
    * A route's anchor path: the file it is served by. Every non-file node
    * carries one so `graphNodeArea` can put it in the band of the code it
@@ -545,6 +538,14 @@ export function buildWorkspaceMapModel(
       type = "route";
       label = truncate(route?.url ?? row.label, 96);
       path = handlerPathByRoute.get(row.id) ?? "";
+    } else if (row.kind === "section") {
+      // An ID-token heading — a decision, an open question, a gate — is the
+      // hub everything that cites it hangs off (Wave A′ todo 8). Its anchor
+      // is the document that declares it, so it sits in the docs band.
+      const section = sectionById.get(row.id);
+      type = "section";
+      label = truncate(section?.heading ?? row.label, 96);
+      path = section?.source_path ?? "";
     } else if (row.kind === "db_object") {
       // A table is a hub the repository already had (Wave A′ todo 7). Its
       // anchor is the migration that declares it, so it lands in the
@@ -778,6 +779,13 @@ export const ROUTE_LIMIT = 100;
 export const DB_OBJECT_LIMIT = 400;
 
 /**
+ * Decision records, open questions and gates. This repository declares 86 of
+ * them and cites 79; 300 leaves room for a repository that documents more
+ * without letting the prose layer outweigh the code.
+ */
+export const SECTION_LIMIT = 300;
+
+/**
  * Per-family read budgets (R5 §2.5). One shared 6,000-edge cap let whichever
  * family happened to sort first fill it: on this repository the containment
  * layer alone is ~890 edges and the structure layer ~1,700, so a single cap
@@ -834,6 +842,7 @@ export async function loadWorkspaceMap(
     directories,
     routeRows,
     dbObjectRows,
+    sectionRows,
     familyEdges,
     legacyEdges,
     findings,
@@ -899,6 +908,12 @@ export async function loadWorkspaceMap(
       .eq("workspace_id", workspaceId)
       .order("name", { ascending: true })
       .limit(DB_OBJECT_LIMIT),
+    client
+      .from("sections")
+      .select("id,token,heading,source_path")
+      .eq("workspace_id", workspaceId)
+      .order("token", { ascending: true })
+      .limit(SECTION_LIMIT),
     Promise.all(familyQueries),
     // Rows written before the column existed carry no family. The migration
     // backfilled every one of them, so this is an empty set on a migrated
@@ -959,6 +974,7 @@ export async function loadWorkspaceMap(
     directories,
     routeRows,
     dbObjectRows,
+    sectionRows,
     ...familyEdges,
     legacyEdges,
     findings,
@@ -995,6 +1011,7 @@ export async function loadWorkspaceMap(
     rationales: (rationales.data ?? []) as MapRationaleRow[],
     repositories: (repositories.data ?? []) as MapRepositoryRow[],
     requirements: (requirements.data ?? []) as MapRequirementRow[],
+    sections: (sectionRows.data ?? []) as MapSectionRow[],
     tokens: (tokens.data ?? []) as MapTokenRow[],
   });
 }

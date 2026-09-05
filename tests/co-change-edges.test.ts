@@ -97,6 +97,7 @@ describe("co-change display edges (Wave B todo 4)", () => {
     concepts: [],
     dbObjects: [],
     directories: [],
+    sections: [],
     routes: [],
     edges: [],
     evidence: [],

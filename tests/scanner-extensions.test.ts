@@ -559,6 +559,10 @@ describe("repository layout config", () => {
     layers: { hidden: ["statistical", "semantic"] },
     layout: { backend: ["svc/"], database: ["store/"] },
     progressDocs: ["PROGRESS.md"],
+    // Literal prefixes, never patterns: this file is written by the
+    // repository being scanned (Wave A′ todo 8, OQ-054). `rfc` arrives
+    // lower-cased and `A-BAD-ONE` is not a prefix shape at all.
+    sectionTokens: ["rfc", "A-BAD-ONE"],
     todoFiles: ["BACKLOG.md"],
   };
 
@@ -576,16 +580,18 @@ describe("repository layout config", () => {
       layersHidden: ["statistical", "semantic"],
       layout: { backend: ["svc/"], database: ["store/"] },
       progressDocs: ["PROGRESS.md"],
+      sectionTokens: ["rfc", "A-BAD-ONE"],
       todoFiles: ["BACKLOG.md"],
     });
     // Parsed values travel; the document does not (WORK_SPEC §3-3). The
     // source file nests `hidden` under `layers`; what leaves the scan is
-    // the parser's own five keys, with no formatting and no unknown fields.
+    // the parser's own six keys, with no formatting and no unknown fields.
     expect(Object.keys(plan.layoutConfig).sort()).toEqual([
       "ignore",
       "layersHidden",
       "layout",
       "progressDocs",
+      "sectionTokens",
       "todoFiles",
     ]);
     expect(JSON.stringify(plan.layoutConfig)).not.toContain("hidden");
@@ -602,6 +608,7 @@ describe("repository layout config", () => {
       layersHidden: [],
       layout: {},
       progressDocs: [],
+      sectionTokens: [],
       todoFiles: [],
     });
   });

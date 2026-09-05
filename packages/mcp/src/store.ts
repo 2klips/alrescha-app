@@ -25,7 +25,14 @@ export type McpNodeType =
    * constantly and could not ask before. Not an `index_entries.entry_type`,
    * for the reason `route` is not.
    */
-  | "db_object";
+  | "db_object"
+  /**
+   * An ID-token heading — `ADR-013`, `OQ-041`, `MT-7` (Phase 4 Wave A′
+   * todo 8). "What cites this decision" is the question the token was always
+   * standing in for. Not an `index_entries.entry_type`, for the reason
+   * `route` and `db_object` are not.
+   */
+  | "section";
 
 export type McpEdgeRelation =
   | "requires"
@@ -90,6 +97,16 @@ export interface McpEdgeData {
   relation: McpEdgeRelation;
   sourceNodeId: string;
   targetNodeId: string;
+}
+
+/** An ID-token heading this repository's own documents declare. */
+export interface McpSectionData {
+  /** The declaring heading, as written. */
+  heading: string;
+  nodeId: string;
+  sourcePath: string;
+  /** `ADR-013`, upper-cased. */
+  token: string;
 }
 
 /** A table, view or function this repository's own migrations declare. */
@@ -208,6 +225,8 @@ export interface McpRepositoryData {
   requirements: McpRequirementData[];
   /** Absent on a workspace scanned before Wave A′ todo 6. */
   routes?: McpRouteData[];
+  /** Absent on a workspace scanned before Wave A′ todo 8. */
+  sections?: McpSectionData[];
 }
 
 /** Closed concept-relation vocabulary (Graft) — agents assert only these. */

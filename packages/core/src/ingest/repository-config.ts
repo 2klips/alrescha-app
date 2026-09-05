@@ -43,6 +43,13 @@ export interface RepositoryScanConfig {
   readonly layout: RepositoryLayout;
   /** Documents this repository keeps its progress ledger in. */
   readonly progressDocs: readonly string[];
+  /**
+   * Extra ID-token prefixes whose headings become section nodes, on top of
+   * `ADR`/`OQ`/`MT`/`G` (todo 8). Literal prefixes, never patterns: this file
+   * comes from the repository being scanned, and a regex from there would run
+   * over every document in the tree (OQ-054).
+   */
+  readonly sectionTokens: readonly string[];
   /** Documents this repository keeps its todo list in. */
   readonly todoFiles: readonly string[];
 }
@@ -52,6 +59,7 @@ export const EMPTY_REPOSITORY_CONFIG: RepositoryScanConfig = Object.freeze({
   layersHidden: [],
   layout: Object.freeze({}),
   progressDocs: [],
+  sectionTokens: [],
   todoFiles: [],
 });
 
@@ -108,6 +116,7 @@ export function parseRepositoryConfig(source: string): RepositoryScanConfig {
     ),
     layout: layoutOf(source_["layout"]),
     progressDocs: stringList(source_["progressDocs"]),
+    sectionTokens: stringList(source_["sectionTokens"]),
     todoFiles: stringList(source_["todoFiles"]),
   };
   return isEmptyRepositoryConfig(config) ? EMPTY_REPOSITORY_CONFIG : config;
@@ -119,6 +128,7 @@ export function isEmptyRepositoryConfig(config: RepositoryScanConfig): boolean {
     config.ignore.length === 0 &&
     config.layersHidden.length === 0 &&
     config.progressDocs.length === 0 &&
+    config.sectionTokens.length === 0 &&
     config.todoFiles.length === 0 &&
     Object.keys(config.layout).length === 0
   );

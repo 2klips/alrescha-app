@@ -188,7 +188,7 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
       수용 기준: 이 레포 실측(테이블 43·함수 59·queries ≥100) evidence, 픽스처 스냅샷, 동적 테이블명 미검출을 문서화, 두 경로 동등성.
       Commit: `feat(ingest): extract database objects, schema edges, and code→table query references`
 
-- [ ] **8. section 노드(선택) · 4종 모양 문법 · 밀도 회귀 테스트** _(설계 ①·②)_
+- [x] **8. section 노드(선택) · 4종 모양 문법 · 밀도 회귀 테스트** _(설계 ①·②)_
       ID 토큰 헤딩(`ADR-NNN`·`OQ-NNN`·`G\d+`·`MT-\d+`, `.alrescha.json`로 확장 가능)만 `section`으로 승격, doc/rationale(`adr_ref`)→section `references`(resolved). 4종 스프라이트(원/링/다이아몬드/사각)와 `unit` 필터 칩은 B(todo 12)에서 렌더. **`tests/graph-density.test.ts`**: 픽스처 2종에서 평균 차수 ≥3·contains 제외 고아 ≤10%·삼각형 >0·두 경로 플랜 바이트 동일·verified 승격 0·원문 비저장(scope 스캐너) 단언 + 이 레포 실측표 evidence.
       수용 기준: 위 테스트 green, 전형 레포(section 0)에서도 green, 두 테마 스크린샷(줌아웃 카테고리 라벨·줌인 파일 라벨).
       보완(R-01 #4·R-03, 2026-09-06): 게이트가 **근거 무손실**도 단언한다 — 표시되는 모든 엣지가 family와 provenance(reason 또는 source span)를 갖고, 같은 `(source,target,relation)`에 근거가 둘이면 하나를 버리지 않는다. 그리고 **blast radius 분모에서 hierarchy(`contains`, layoutOnly)·doc `references`·통계 공변경을 제외**한 수가 별도로 기록된다 — 밀도는 이것들을 세지만 영향도는 세지 않는다(R-03 #5). `verified` 승격 0 단언은 그대로.
