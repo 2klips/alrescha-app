@@ -1,5 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { MCP_WORKSPACE_READ_LIMIT } from "@alrescha/mcp";
+import {
+  MCP_EDGE_MAX_PAGES,
+  MCP_EDGE_PAGE_ROWS,
+  MCP_WORKSPACE_READ_LIMIT,
+} from "@alrescha/mcp";
 import type { McpAccessEvent } from "@alrescha/mcp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -102,10 +106,13 @@ class FakeChannel {
  */
 class FakeSupabaseClient {
   readonly fromCalls: string[] = [];
+  readonly rpcCalls: { args: unknown; name: string }[] = [];
   readonly builders: FakeQueryBuilder[] = [];
   readonly channels: FakeChannel[] = [];
   readonly removedChannels: FakeChannel[] = [];
   readonly #queues = new Map<string, TableResponse[]>();
+  /** Pages `read_edge_page` hands back, in request order. */
+  rpcPages: TableResponse[] = [];
 
   constructor(
     responses: Record<string, TableResponse | TableResponse[]>,
@@ -115,6 +122,16 @@ class FakeSupabaseClient {
     for (const [table, value] of Object.entries(responses)) {
       this.#queues.set(table, Array.isArray(value) ? [...value] : [value]);
     }
+  }
+
+  async rpc(name: string, args: unknown) {
+    this.rpcCalls.push({ args, name });
+    return (
+      this.rpcPages[this.rpcCalls.length - 1] ?? {
+        data: { edges: [], hasMore: false, nextCursor: null },
+        error: null,
+      }
+    );
   }
 
   from(table: string) {
@@ -433,9 +450,13 @@ describe("SupabaseMcpStore.loadWorkspace — edge provenance", () => {
   const SOURCE = "01K287J3D18V7A1MZG9E8D1Y11";
   const TARGET = "01K287J3D18V7A1MZG9E8D1Y12";
 
+  /**
+   * Edges arrive through `read_edge_page` since S3, so the fixture states a
+   * page rather than a table response — the decoder is the same either way,
+   * which is the point of testing it here.
+   */
   function clientWithEdges(edges: readonly Record<string, unknown>[]) {
-    return new FakeSupabaseClient({
-      edges: { data: [...edges], error: null },
+    const fake = new FakeSupabaseClient({
       repositories: {
         data: [
           {
@@ -447,6 +468,13 @@ describe("SupabaseMcpStore.loadWorkspace — edge provenance", () => {
         error: null,
       },
     });
+    fake.rpcPages = [
+      {
+        data: { edges: [...edges], hasMore: false, nextCursor: null },
+        error: null,
+      },
+    ];
+    return fake;
   }
 
   async function repositoryOf(client: FakeSupabaseClient) {
@@ -789,5 +817,110 @@ describe("SupabaseMcpStore.findArtifacts", () => {
       ),
     ).toEqual([]);
     expect(fake.fromCalls).toEqual([]);
+  });
+});
+
+/**
+ * Codex remedy S3. PostgREST could bound the edge read but not resume it, so
+ * a repository past the budget lost every edge after the cut with no way to
+ * continue. The read now walks `read_edge_page`'s keyset.
+ */
+describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
+  const REPOSITORY_ID = "01K287J3D18V7A1MZG9E8D1Y20";
+
+  function edge(id: string) {
+    return {
+      confidence: 1,
+      family: "structure",
+      id,
+      provenance: { reason: "fixture", tier: "resolved" },
+      relation: "imports",
+      repository_id: REPOSITORY_ID,
+      source_node_id: "01K287J3D18V7A1MZG9E8D1Y11",
+      target_node_id: "01K287J3D18V7A1MZG9E8D1Y12",
+    };
+  }
+
+  function client(pages: { edges: string[]; hasMore: boolean }[]) {
+    const fake = new FakeSupabaseClient({
+      repositories: {
+        data: [
+          {
+            default_branch: "main",
+            full_name: "2klips/alrescha-app",
+            id: REPOSITORY_ID,
+          },
+        ],
+        error: null,
+      },
+    });
+    fake.rpcPages = pages.map(({ edges, hasMore }) => ({
+      data: {
+        edges: edges.map(edge),
+        hasMore,
+        nextCursor: hasMore ? (edges.at(-1) ?? null) : null,
+      },
+      error: null,
+    }));
+    return fake;
+  }
+
+  async function workspaceOf(fake: FakeSupabaseClient) {
+    const store = new SupabaseMcpStore(asClient(fake));
+    return store.loadWorkspace({
+      scopes: ["mcp:read"],
+      tokenId: TOKEN_ID,
+      userId: USER_ID,
+      workspaceId: WORKSPACE_ID,
+    });
+  }
+
+  it("follows the cursor until a page says there is no more", async () => {
+    const fake = client([
+      { edges: ["e1", "e2"], hasMore: true },
+      { edges: ["e3"], hasMore: false },
+    ]);
+    const workspace = await workspaceOf(fake);
+
+    expect(workspace.repositories[0]?.edges.map(({ id }) => id)).toEqual([
+      "e1",
+      "e2",
+      "e3",
+    ]);
+    expect(fake.rpcCalls.map(({ name }) => name)).toEqual([
+      "read_edge_page",
+      "read_edge_page",
+    ]);
+    // The second request resumes from the first page's last row.
+    expect(fake.rpcCalls[0]?.args).toMatchObject({ after_edge_id: null });
+    expect(fake.rpcCalls[1]?.args).toMatchObject({ after_edge_id: "e2" });
+    expect(workspace.coverage).toEqual({ result: "complete", truncated: [] });
+  });
+
+  it("stops at its page budget and says so rather than reading forever", async () => {
+    const fake = client(
+      Array.from({ length: MCP_EDGE_MAX_PAGES + 2 }, (_unused, index) => ({
+        edges: [`e${index}`],
+        hasMore: true,
+      })),
+    );
+    const workspace = await workspaceOf(fake);
+
+    expect(fake.rpcCalls).toHaveLength(MCP_EDGE_MAX_PAGES);
+    expect(workspace.coverage).toEqual({
+      result: "partial",
+      truncated: [
+        { limit: MCP_EDGE_PAGE_ROWS * MCP_EDGE_MAX_PAGES, table: "edges" },
+      ],
+    });
+  });
+
+  it("stops when a page claims more but hands back no cursor", async () => {
+    const fake = client([{ edges: [], hasMore: true }]);
+    const workspace = await workspaceOf(fake);
+
+    // Unresumable is not a reason to loop on the same page forever.
+    expect(fake.rpcCalls).toHaveLength(1);
+    expect(workspace.coverage?.result).toBe("partial");
   });
 });

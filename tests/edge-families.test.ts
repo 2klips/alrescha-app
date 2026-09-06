@@ -319,8 +319,15 @@ describe("edge families", () => {
   it("backfills the rows that existed before the column did", async () => {
     // Run the repository up to the migration before this one, write the four
     // edge shapes production actually holds, then migrate.
-    const earlier = ALL_MIGRATIONS.filter(
-      (migration) => migration !== NOTES_AND_EDGE_FAMILIES_MIGRATION,
+    //
+    // `slice`, not `filter`: removing one migration from the middle while
+    // still running the later ones is a state production can never be in,
+    // and it broke as soon as a later migration declared a `language sql`
+    // function over `edges.family` — PostgreSQL validates those bodies at
+    // CREATE time, unlike the plpgsql ones that came before.
+    const earlier = ALL_MIGRATIONS.slice(
+      0,
+      ALL_MIGRATIONS.indexOf(NOTES_AND_EDGE_FAMILIES_MIGRATION),
     );
     const older = await createTestDatabase([...earlier]);
     try {

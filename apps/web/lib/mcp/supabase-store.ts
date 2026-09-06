@@ -1,8 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
-  MCP_EDGE_FAMILIES,
-  MCP_EDGE_RELATIONS,
   MCP_ARTIFACT_MATCH_LIMIT,
+  MCP_EDGE_FAMILIES,
+  MCP_EDGE_MAX_PAGES,
+  MCP_EDGE_PAGE_BYTES,
+  MCP_EDGE_PAGE_ROWS,
+  MCP_EDGE_RELATIONS,
   MCP_EDGE_TIERS,
   MCP_SCOPES,
   MCP_WORKSPACE_READ_LIMIT,
@@ -644,6 +647,45 @@ export class SupabaseMcpStore implements McpStore {
     });
   }
 
+  /**
+   * The edge read, paged through `public.read_edge_page` (step S3).
+   *
+   * PostgREST could bound the read but not resume it, so a repository past
+   * the budget lost every edge after the cut. The function walks a keyset
+   * and reports whether more remain, so this stops on a stated budget rather
+   * than on an invisible transport cap — and says which, and where it got to.
+   */
+  async #readEdgePages(
+    workspaceId: string,
+  ): Promise<{ rows: Row[]; truncation: McpReadTruncation | null }> {
+    const collected: Row[] = [];
+    let cursor: string | null = null;
+    for (let request = 0; request < MCP_EDGE_MAX_PAGES; request += 1) {
+      const response = await this.client.rpc("read_edge_page", {
+        after_edge_id: cursor,
+        byte_budget: MCP_EDGE_PAGE_BYTES,
+        row_budget: MCP_EDGE_PAGE_ROWS,
+        target_repository_id: null,
+        target_workspace_id: workspaceId,
+      });
+      queryError("MCP edge page query failed", response.error);
+      const page = record(response.data);
+      collected.push(...rows(page.edges));
+      if (page.hasMore !== true) return { rows: collected, truncation: null };
+      cursor = typeof page.nextCursor === "string" ? page.nextCursor : null;
+      // A page that claims more but hands back no cursor cannot be resumed;
+      // stopping is the only honest move.
+      if (cursor === null) break;
+    }
+    return {
+      rows: collected,
+      truncation: {
+        limit: MCP_EDGE_PAGE_ROWS * MCP_EDGE_MAX_PAGES,
+        table: "edges",
+      },
+    };
+  }
+
   async loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData> {
     const workspaceId = principal.workspaceId;
     /**
@@ -668,7 +710,7 @@ export class SupabaseMcpStore implements McpStore {
       artifacts,
       requirements,
       evidence,
-      edges,
+      edgePages,
       findings,
       receipts,
       indexEntries,
@@ -710,15 +752,7 @@ export class SupabaseMcpStore implements McpStore {
         .eq("workspace_id", workspaceId)
         .order("id", { ascending: true })
         .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.client
-        .from("edges")
-        .select(
-          "id, repository_id, source_node_id, target_node_id, relation, " +
-            "family, confidence, provenance",
-        )
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
+      this.#readEdgePages(workspaceId),
       this.client
         .from("findings")
         .select(
@@ -779,7 +813,7 @@ export class SupabaseMcpStore implements McpStore {
       ["artifacts", artifacts],
       ["requirements", requirements],
       ["evidence", evidence],
-      ["edges", edges],
+
       ["findings", findings],
       ["receipts", receipts],
       ["index entries", indexEntries],
@@ -800,7 +834,8 @@ export class SupabaseMcpStore implements McpStore {
     const artifactRows = kept("artifacts", artifacts.data);
     const requirementRows = kept("requirements", requirements.data);
     const evidenceRows = kept("evidence", evidence.data);
-    const edgeRows = kept("edges", edges.data);
+    const edgeRows = edgePages.rows;
+    if (edgePages.truncation) truncated.push(edgePages.truncation);
     /**
      * What the vocabulary filter left behind, per repository and relation.
      * A read that returns less than it found without saying so makes a

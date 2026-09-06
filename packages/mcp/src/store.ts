@@ -341,6 +341,19 @@ export const MCP_WORKSPACE_READ_LIMIT = 2_000;
  */
 export const MCP_ARTIFACT_MATCH_LIMIT = 25;
 
+/**
+ * The edge read pages through `public.read_edge_page` (step S3). Rows per
+ * request and requests per load are separate numbers on purpose: the first
+ * is what one round trip should carry, the second is how much of a large
+ * graph one workspace load is willing to walk before reporting that it
+ * stopped.
+ */
+export const MCP_EDGE_PAGE_ROWS = 2_000;
+export const MCP_EDGE_MAX_PAGES = 4;
+
+/** Serialized bytes one edge page may carry, matching the RPC ceiling. */
+export const MCP_EDGE_PAGE_BYTES = 4_194_304;
+
 /** Closed concept-relation vocabulary (Graft) — agents assert only these. */
 export const AGENT_ASSERTION_RELATIONS = [
   "part_of",
