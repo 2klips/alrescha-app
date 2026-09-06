@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { personalizedPageRank } from "../packages/core/src/index";
 import {
+  AGENT_FLOW_SENTENCE,
   buildGraphSchema,
   buildRepoMap,
   searchWorkspaceIndex,
@@ -211,7 +212,13 @@ describe("graph schema card (Wave B todo 5)", () => {
       references: 1,
     });
     expect(schema.text).toContain("2klips/map-fixture (4 files)");
-    expect(schema.text).toContain("search_nodes");
+    // The flow line is the one exported sentence, so the card cannot teach a
+    // tool the catalogue no longer has (todo 22 ⑵).
+    expect(schema.text).toContain(AGENT_FLOW_SENTENCE);
+    expect(schema.text).not.toContain("search_nodes");
+    // Families as well as relations, so a caller knows which bands to name.
+    expect(schema.familyCounts).toEqual({ structure: 4 });
+    expect(schema.text).toContain("families: structure:4");
   });
 });
 

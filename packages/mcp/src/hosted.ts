@@ -6,7 +6,7 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-import { deriveArtifactFacets, routeQuery } from "@alrescha/core";
+import { deriveArtifactFacets } from "@alrescha/core";
 
 import { buildRepoOverview, findModuleForNode } from "./module-tools";
 
@@ -21,7 +21,6 @@ import {
   collectNeighbors,
   getNodeContent,
   impactOf,
-  searchWorkspaceNodes,
   tracePath,
 } from "./graph-tools";
 import {
@@ -118,13 +117,12 @@ function unauthorized(): Response {
   );
 }
 
-const GRAPH_NODE_SCHEMA = z.object({
-  id: z.string(),
-  path: z.string().nullable(),
-  repositoryId: z.string(),
-  type: NODE_TYPE_SCHEMA,
-});
 /**
+ * The edge shape a tool answer carries. No longer an `outputSchema` —
+ * every one of those was removed in todo 22, where they were 65% of the
+ * catalogue's token cost — but still the one place the vocabulary is
+ * written down, and `hosted.test.ts` pins it against the source arrays.
+ *
  * An edge, with the reason it exists. `null` where the writer stated
  * nothing — a missing tier is reported as missing, never filled in.
  */
@@ -150,23 +148,6 @@ export const GRAPH_EDGE_SCHEMA = z.object({
   tier: EDGE_TIER_SCHEMA.nullable(),
 });
 
-/** What a read left out, so an absence can be told from an exclusion. */
-const EDGE_OMISSION_SCHEMA = z.object({
-  count: z.number(),
-  reason: z.string(),
-  relation: z.string(),
-});
-
-const MEMORY_ENTRY_SCHEMA = z.object({
-  anchorNodeId: z.string().nullable(),
-  anchorPath: z.string().nullable(),
-  entryKey: z.string(),
-  id: z.string(),
-  name: z.enum(MEMORY_BLOCK_NAMES),
-  text: z.string(),
-  updatedAt: z.string(),
-});
-
 /**
  * Tool definitions, hoisted to module scope (perf research MT-10).
  *
@@ -179,101 +160,53 @@ const MEMORY_ENTRY_SCHEMA = z.object({
 const ASSERT_LINK_TOOL = {
   annotations: WRITE_METADATA_TOOL,
   description:
-    "Assert a concept edge between two nodes (closed relation vocabulary). Bi-temporal: a conflicting assertion on the same pair is superseded, never deleted; an identical one is a noop.",
+    "Assert a concept edge between two nodes. A conflicting assertion supersedes; an identical one is a noop.",
   inputSchema: z.object({
     reason: z.string().trim().min(1).max(500),
     relation: z.enum(AGENT_ASSERTION_RELATIONS),
     source_node_id: z.string().trim().min(1),
     target_node_id: z.string().trim().min(1),
   }),
-  outputSchema: z.object({
-    assertion: z.object({
-      id: z.string().nullable(),
-      invalidatedId: z.string().nullable(),
-      outcome: z.enum(["added", "noop", "superseded", "unknown_node"]),
-    }),
-    workspaceId: z.string(),
-  }),
 };
 
 const EXPLAIN_MODULE_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "Explain the module (deterministic structure cluster) containing a node. Prose is lazy: 'ready' serves the cached inferred summary, 'pending'/'stale' enqueue one credit-lifecycle enrich job and return the member list now — ask again after the worker runs.",
+    "Explain the module containing a node. Cached prose when ready; the member list plus an enqueued job otherwise.",
   inputSchema: z.object({
     node_id: z.string().trim().min(1),
   }),
-  outputSchema: z.object({
-    memberPaths: z.array(z.string()),
-    moduleKey: z.string(),
-    name: z.string(),
-    refreshJobId: z.string().nullable(),
-    state: z.enum(["pending", "ready", "stale"]),
-    summary: z.string().nullable(),
-    summaryGrade: z.literal("inferred"),
-    workspaceId: z.string(),
-  }),
 };
 
+/**
+ * One reader for stored content (todo 22 ⑴).
+ *
+ * `get_node_content` read the same rows through a different door, so a caller
+ * holding an id had to know which of two tools to ask. One selector — `path`,
+ * `id`, or `ids` for a batch — and one answer shape.
+ */
 const GET_ARTIFACT_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description: "Read an artifact by path or id with its graph-neighbor summary",
+  description:
+    "Read stored content by path, id, or up to four ids. Summaries only — source bodies are never persisted.",
   inputSchema: z
     .object({
       id: z.string().trim().min(1).optional(),
+      ids: z.array(z.string().trim().min(1)).min(1).max(4).optional(),
+      max_chars: z.number().int().min(1).max(10_000).optional(),
       path: z.string().trim().min(1).optional(),
     })
     .refine(
-      ({ id, path }) => Boolean(id) !== Boolean(path),
-      "Provide exactly one of id or path",
+      ({ id, ids, path }) =>
+        [id, ids, path].filter((value) => value !== undefined).length === 1,
+      "Provide exactly one of path, id, or ids",
     ),
-  outputSchema: z.object({
-    /**
-     * Present when a path matched in more than one repository: the caller
-     * picks, and gets the candidates to pick from (Codex remedy §9.1).
-     */
-    ambiguous: z
-      .object({
-        candidates: z.array(
-          z.object({
-            artifactId: z.string(),
-            repositoryFullName: z.string(),
-            repositoryId: z.string(),
-          }),
-        ),
-        path: z.string(),
-      })
-      .optional(),
-    artifact: z
-      .object({
-        content: z.string(),
-        id: z.string(),
-        kind: z.string(),
-        path: z.string(),
-        repositoryId: z.string(),
-        status: z.string(),
-        summary: z.string(),
-        title: z.string(),
-      })
-      .nullable(),
-    neighbors: z.array(
-      z.object({
-        direction: z.enum(["incoming", "outgoing"]),
-        id: z.string(),
-        label: z.string(),
-        path: z.string().optional(),
-        relation: RELATION_SCHEMA,
-        type: NODE_TYPE_SCHEMA,
-      }),
-    ),
-    workspaceId: z.string(),
-  }),
 };
 
 const GET_FINDINGS_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "Get findings with explicit status, severity, and provenance. Open findings only unless status says otherwise; severity order, worst first.",
+    "Findings with status, severity and provenance. Open only unless status says otherwise.",
   inputSchema: z.object({
     filter: z
       .object({
@@ -286,117 +219,31 @@ const GET_FINDINGS_TOOL = {
       })
       .optional(),
   }),
-  outputSchema: z.object({
-    findings: z.array(
-      z.object({
-        confidence: z.number(),
-        evidenceGrade: z.enum(["inferred", "verified"]),
-        id: z.string(),
-        kind: z.string(),
-        provenance: z.unknown(),
-        repositoryId: z.string(),
-        severity: z.string(),
-        sourceNodeId: z.string().nullable(),
-        status: z.string(),
-        targetNodeId: z.string().nullish(),
-        title: z.string(),
-      }),
-    ),
-    workspaceId: z.string(),
-  }),
 };
 
 const GET_GRAPH_SCHEMA_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "Call first: this workspace's graph vocabulary — node kinds, edge relations and counts — so queries speak the stored graph instead of guessing one.",
+    "This workspace's node kinds, edge relations and families, with counts.",
   inputSchema: z.object({}),
-  outputSchema: z.object({
-    nodeCounts: z.record(z.string(), z.number().int().nonnegative()),
-    relationCounts: z.record(z.string(), z.number().int().nonnegative()),
-    repositories: z.array(
-      z.object({
-        artifactCount: z.number().int().nonnegative(),
-        fullName: z.string(),
-        id: z.string(),
-      }),
-    ),
-    text: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
 const GET_NEIGHBORS_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "ID-first neighborhood of a node (depth 1-2): node ids, types, paths, and connecting edges. No bodies — fetch content explicitly with get_node_content.",
+    "Neighbourhood of a node (depth 1-2): ids, types, paths and the connecting edges.",
   inputSchema: z.object({
     depth: z.union([z.literal(1), z.literal(2)]).optional(),
+    families: z.array(EDGE_FAMILY_SCHEMA).max(8).optional(),
     node_id: z.string().trim().min(1),
     relations: z.array(RELATION_SCHEMA).max(7).optional(),
-  }),
-  outputSchema: z.object({
-    edges: z.array(GRAPH_EDGE_SCHEMA),
-    found: z.boolean(),
-    nodes: z.array(GRAPH_NODE_SCHEMA),
-    omissions: z.array(EDGE_OMISSION_SCHEMA),
-    workspaceId: z.string(),
-  }),
-};
-
-const GET_NODE_CONTENT_TOOL = {
-  annotations: READ_ONLY_TOOL,
-  description:
-    "The explicit second step after ID-first traversal: stored content for one node id, or up to four at once via node_ids — batch related nodes into one call instead of one round-trip each (artifacts return their stored summary — raw source bodies are never persisted).",
-  inputSchema: z.object({
-    node_id: z.string().trim().min(1).optional(),
-    node_ids: z
-      .array(z.string().trim().min(1))
-      .min(1)
-      .max(4)
-      .optional()
-      .describe("Batch form: up to 4 node ids fetched in one call"),
-  }),
-  outputSchema: z.object({
-    node: z
-      .object({
-        content: z.string(),
-        id: z.string(),
-        kind: z.string(),
-        path: z.string().nullable(),
-        repositoryId: z.string(),
-        type: NODE_TYPE_SCHEMA,
-      })
-      .nullable(),
-    /**
-     * One entry per requested id, in the order asked (Codex remedy §9.1).
-     * A miss says `found: false` rather than vanishing: an id that never
-     * comes back is one the caller can neither retry nor report. Whether it
-     * was absent or out of scope is deliberately the same answer.
-     */
-    nodes: z.array(
-      z.union([
-        z.object({
-          content: z.string(),
-          found: z.literal(true),
-          id: z.string(),
-          kind: z.string(),
-          path: z.string().nullable(),
-          repositoryId: z.string(),
-          requestedId: z.string(),
-          type: NODE_TYPE_SCHEMA,
-        }),
-        z.object({ found: z.literal(false), requestedId: z.string() }),
-      ]),
-    ),
-    workspaceId: z.string(),
   }),
 };
 
 const IMPACT_OF_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "ID-first impact report for a node: direct dependents (edges into it), direct dependencies (edges out of it), and either the depth-limited undirected neighbourhood (default) or, with mode='dependency-impact', the consumers a change reaches backwards along imports and calls.",
+    "Nodes a change to this one could reach, with the confidence and bound of the answer.",
   inputSchema: z.object({
     depth: z.union([z.literal(1), z.literal(2)]).optional(),
     /**
@@ -407,80 +254,16 @@ const IMPACT_OF_TOOL = {
     mode: z.enum(["dependency-impact", "related-neighborhood"]).optional(),
     node_id: z.string().trim().min(1),
   }),
-  outputSchema: z.object({
-    found: z.boolean(),
-    impact: z
-      .object({
-        dependencies: z.object({
-          edges: z.array(GRAPH_EDGE_SCHEMA),
-          nodeIds: z.array(z.string()),
-        }),
-        /**
-         * The directional answer, and null unless it was asked for — which
-         * is a different statement from an empty one.
-         */
-        dependencyImpact: z
-          .object({
-            candidates: z.array(
-              z.object({
-                distance: z.number().int().positive(),
-                nodeId: z.string(),
-                path: z.string().nullable(),
-                via: z.array(GRAPH_EDGE_SCHEMA),
-              }),
-            ),
-            complete: z.boolean(),
-            relatedTests: z.array(z.string()),
-            stoppedBy: z.enum(["budget", "distance"]).nullable(),
-          })
-          .nullable(),
-        dependents: z.object({
-          edges: z.array(GRAPH_EDGE_SCHEMA),
-          nodeIds: z.array(z.string()),
-        }),
-        mode: z.enum(["dependency-impact", "related-neighborhood"]),
-        omissions: z.array(EDGE_OMISSION_SCHEMA),
-        semanticsVersion: z.number().int().positive(),
-        /** Proximity, not blast radius — the name says which. */
-        transitiveNodeIds: z.array(z.string()),
-        /**
-         * URLs this change reaches (Wave A′ todo 6, contract shared with the
-         * budget work in todo 22): the routes served by any affected file.
-         */
-        affectedRoutes: z.array(
-          z.object({
-            methods: z.array(z.string()),
-            nodeId: z.string(),
-            tier: z.enum(["reference", "resolved"]),
-            url: z.string(),
-          }),
-        ),
-      })
-      .nullable(),
-    workspaceId: z.string(),
-  }),
 };
 
 const LOG_PROGRESS_TOOL = {
   annotations: WRITE_METADATA_TOOL,
-  description:
-    "Record one compact structured progress update; never writes to the repository",
+  description: "Record one progress event against a task.",
   inputSchema: z.object({
     refs: z.array(z.string().trim().min(1).max(200)).max(10).optional(),
     status: z.enum(["started", "progress", "done", "blocked"]),
     summary: z.string().trim().min(1).max(200),
     task: z.string().trim().min(1).max(120),
-  }),
-  outputSchema: z.object({
-    event: z.object({
-      id: z.string(),
-      refs: z.array(z.string()),
-      status: z.enum(["started", "progress", "done", "blocked"]),
-      summary: z.string(),
-      task: z.string(),
-      todoId: z.string(),
-    }),
-    workspaceId: z.string(),
   }),
 };
 
@@ -495,40 +278,26 @@ const LOG_PROGRESS_TOOL = {
  */
 const REQUEST_RESCAN_TOOL = {
   annotations: WRITE_METADATA_TOOL,
-  description:
-    "Scan a connected repository again (free, deterministic). Defaults to an incremental pass; the server upgrades it to a full relink when the stored links come from an older resolver generation, and says so in `reason`.",
+  description: "Queue a free rescan of a repository. Returns the mode and why.",
   inputSchema: z.object({
     mode: z.enum(["full", "incremental"]).optional(),
     repository_id: z.string().trim().min(1).optional(),
-  }),
-  outputSchema: z.object({
-    jobId: z.string().nullable(),
-    mode: z.enum(["full", "incremental"]).nullable(),
-    reason: z.string(),
-    repositoryId: z.string().nullable(),
-    scheduled: z.boolean(),
-    workspaceId: z.string(),
   }),
 };
 
 const MEMORY_READ_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description:
-    "Read the workspace's bounded memory blocks (gotchas / conventions / decisions) — durable notes earlier agents distilled. Filter by block name or anchor node.",
+  description: "Read the workspace memory blocks.",
   inputSchema: z.object({
     anchor_node_id: z.string().trim().min(1).optional(),
     name: z.enum(MEMORY_BLOCK_NAMES).optional(),
-  }),
-  outputSchema: z.object({
-    entries: z.array(MEMORY_ENTRY_SCHEMA),
-    workspaceId: z.string(),
   }),
 };
 
 const MEMORY_WRITE_TOOL = {
   annotations: WRITE_METADATA_TOOL,
   description:
-    "Write one bounded memory entry (gotchas / conventions / decisions), keyed for reconciliation: same key + same text is a noop, a new text supersedes the old (never deleted), `remove` invalidates. At most 12 active entries per block — over the cap the write is rejected: distill, don't accumulate.",
+    "Write one memory entry. Reconciled: add, update, noop or remove.",
   inputSchema: z.object({
     anchor_node_id: z.string().trim().min(1).optional(),
     entry_key: z
@@ -539,27 +308,12 @@ const MEMORY_WRITE_TOOL = {
     remove: z.boolean().optional(),
     text: z.string().trim().min(1).max(500).optional(),
   }),
-  outputSchema: z.object({
-    entry: z.object({
-      id: z.string().nullable(),
-      invalidatedId: z.string().nullable(),
-      outcome: z.enum([
-        "added",
-        "invalidated",
-        "noop",
-        "rejected_cap",
-        "unknown_node",
-        "updated",
-      ]),
-    }),
-    workspaceId: z.string(),
-  }),
 };
 
 const QUERY_BRAIN_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "Run a deterministic structured query over graph types, statuses, and relations",
+    "Structured query over node types, statuses, relations, paths and risk.",
   inputSchema: z.object({
     filter: z.object({
       format: z.enum(["ids", "table"]).optional(),
@@ -573,61 +327,21 @@ const QUERY_BRAIN_TOOL = {
       withoutRelations: z.array(RELATION_SCHEMA).optional(),
     }),
   }),
-  outputSchema: z.object({
-    count: z.number().int().nonnegative(),
-    /**
-     * What this answer is worth. `partial` with a `withoutRelations` entry
-     * means the absence was not established, only not observed.
-     */
-    coverage: z.object({
-      result: z.enum(["complete", "partial"]),
-      unanswered: z.array(z.object({ filter: z.string(), reason: z.string() })),
-    }),
-    nodes: z.array(
-      z.object({
-        id: z.string(),
-        label: z.string(),
-        path: z.string().optional(),
-        relations: z.array(RELATION_SCHEMA),
-        repositoryId: z.string(),
-        status: z.string(),
-        type: NODE_TYPE_SCHEMA,
-      }),
-    ),
-    /** Present only for `format: "table"`; six columns, fifty rows. */
-    table: z
-      .object({
-        columns: z.array(z.string()),
-        rows: z.array(z.array(z.string())),
-        truncated: z.number().int().nonnegative(),
-      })
-      .optional(),
-    workspaceId: z.string(),
-  }),
 };
 
 const RECORD_NOTE_TOOL = {
   annotations: WRITE_METADATA_TOOL,
-  description:
-    "Record a private workspace note; never writes to the repository",
+  description: "Record one note, optionally anchored to a node.",
   inputSchema: z.object({
     target: z.string().trim().min(1).max(200).optional(),
     text: z.string().trim().min(1).max(2_000),
-  }),
-  outputSchema: z.object({
-    note: z.object({
-      id: z.string(),
-      target: z.string().nullable(),
-      text: z.string(),
-    }),
-    workspaceId: z.string(),
   }),
 };
 
 const RECORD_PROMPT_TOOL = {
   annotations: WRITE_METADATA_TOOL,
   description:
-    "Record one prompt for the authenticated member (ADR-011). Metadata by default; `raw_text` is stored only when the member's separate raw-sync switch is on, and the database rejects the write outright unless the workspace enabled capture AND the member consented.",
+    "Record one prompt for this member, subject to workspace consent.",
   inputSchema: z.object({
     raw_text: z.string().trim().min(1).max(20_000).optional(),
     rubric: z.record(z.string(), z.number().min(0).max(2)).optional(),
@@ -635,32 +349,22 @@ const RECORD_PROMPT_TOOL = {
     token_count: z.number().int().nonnegative().max(10_000_000),
     tool_name: z.string().trim().min(1).max(120),
   }),
-  outputSchema: z.object({
-    recordId: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
 const RECORD_RULED_OUT_TOOL = {
   annotations: WRITE_METADATA_TOOL,
-  description:
-    "Append one ruled-out attempt to the workspace log: a hypothesis that was tried and what happened. The log is append-only in the database, so a recorded dead end cannot later be edited or removed — that permanence is the point, since the next agent reads it to avoid repeating the attempt.",
+  description: "Append one ruled-out attempt to the inspection log.",
   inputSchema: z.object({
     hypothesis: z.string().trim().min(1).max(2000),
     outcome: z.string().trim().min(1).max(2000),
     refs: z.array(z.string().trim().min(1)).max(50).optional(),
     repository_id: z.string().trim().min(1).optional(),
   }),
-  outputSchema: z.object({
-    attemptId: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
 const REPO_MAP_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description:
-    "Token-budgeted orientation map: files ranked by personalized PageRank (seeded by focus terms), each line a path plus its exported symbols. Compact text, no bodies.",
+  description: "A token-budgeted minimal index of this repository.",
   inputSchema: z.object({
     focus: z
       .array(z.string().trim().min(1).max(400))
@@ -674,46 +378,17 @@ const REPO_MAP_TOOL = {
       .max(REPO_MAP_MAX_BUDGET)
       .optional(),
   }),
-  outputSchema: z.object({
-    focusMatched: z.array(z.string()),
-    omittedCount: z.number().int().nonnegative(),
-    text: z.string(),
-    tokenBudget: z.number().int().positive(),
-    tokenEstimate: z.number().int().nonnegative(),
-    workspaceId: z.string(),
-  }),
 };
 
 const REPO_OVERVIEW_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description:
-    "Architecture overview: deterministic module clusters with sizes, plus cached module prose where fresh. Zero model calls — the grep-can't-answer 'what is this repo' entry point.",
+  description: "Repository shape: modules, counts and where the evidence is.",
   inputSchema: z.object({}),
-  outputSchema: z.object({
-    repositories: z.array(
-      z.object({
-        artifactCount: z.number().int().nonnegative(),
-        fullName: z.string(),
-        modules: z.array(
-          z.object({
-            key: z.string(),
-            memberCount: z.number().int().positive(),
-            name: z.string(),
-            summary: z.string().nullable(),
-          }),
-        ),
-        repositoryId: z.string(),
-      }),
-    ),
-    text: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
 const REQUEST_CONTEXT_PACK_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description:
-    "Select a load-on-demand context pack for a task and token budget",
+  description: "Select stored documents for a task within a token budget.",
   inputSchema: z.object({
     target_agent: z
       .enum(["claude-code", "codex", "cursor", "generic"])
@@ -721,142 +396,39 @@ const REQUEST_CONTEXT_PACK_TOOL = {
     task_description: z.string().trim().min(1).max(1_000),
     token_budget: z.number().int().min(128).max(32_000).optional(),
   }),
-  outputSchema: z.object({
-    assumption: z.string(),
-    estimatedTokens: z.number().int().nonnegative(),
-    excluded: z.array(z.object({ path: z.string(), reason: z.string() })),
-    nodeIds: z.array(z.string()),
-    omitted: z.array(
-      z.object({
-        estimatedTokens: z.number().int().positive(),
-        path: z.string(),
-        rank: z.number().int().positive(),
-        reason: z.string(),
-        title: z.string(),
-      }),
-    ),
-    paths: z.array(z.string()),
-    readingOrder: z.array(
-      z.object({
-        estimatedTokens: z.number().int().positive(),
-        id: z.string(),
-        path: z.string(),
-        rank: z.number().int().positive(),
-        reason: z.string(),
-        title: z.string(),
-      }),
-    ),
-    targetAgent: z.enum(["claude-code", "codex", "cursor", "generic"]),
-    text: z.string(),
-    title: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
-const ROUTE_QUERY_TOOL = {
-  annotations: READ_ONLY_TOOL,
-  description:
-    "Deterministic query routing: simple lookups go to text search, multi-hop or relational questions go to the graph tools. The decision carries its matched signals and a fallback for when the chosen route returns nothing.",
-  inputSchema: z.object({
-    question: z.string().trim().min(1).max(1_000),
-  }),
-  outputSchema: z.object({
-    fallback: z.object({
-      reason: z.string(),
-      route: z.enum(["graph", "search"]),
-      tools: z.array(z.string()),
-    }),
-    matchedSignals: z.array(z.string()),
-    reason: z.string(),
-    recommendedTools: z.array(z.string()),
-    route: z.enum(["graph", "search"]),
-    workspaceId: z.string(),
-  }),
-};
-
+/**
+ * The one entry point (todo 22 ⑴).
+ *
+ * `search_nodes` was the same ranking with excerpts stripped, and two names
+ * for one query is a choice every caller had to make and nobody could make
+ * well. `include_excerpt: false` is that tool now.
+ */
 const SEARCH_INDEX_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description: "Search the deterministic Alrescha data index",
-  inputSchema: z.object({
-    query: z.string().trim().min(1),
-    type_filter: NODE_TYPE_SCHEMA.optional(),
-  }),
-  outputSchema: z.object({
-    query: z.string(),
-    results: z.array(
-      z.object({
-        excerpt: z.string(),
-        id: z.string(),
-        neighborIds: z.array(z.string()),
-        nodeId: z.string(),
-        path: z.string(),
-        rank: z.enum([
-          "exact",
-          "title-heading",
-          "path-symbol",
-          "graph-neighbor",
-        ]),
-        repositoryId: z.string(),
-        // Tier score plus the fractional connectivity bonus (todo 5).
-        score: z.number(),
-        title: z.string(),
-        type: NODE_TYPE_SCHEMA,
-      }),
-    ),
-    workspaceId: z.string(),
-  }),
-};
-
-const SEARCH_NODES_TOOL = {
-  annotations: READ_ONLY_TOOL,
   description:
-    "ID-first node search — the same deterministic ranking as search_index with excerpts stripped: node ids, types, paths, and neighbor ids only. search_index remains the text entry point; this is the graph entry point.",
+    "Search the deterministic index. include_excerpt=false returns ids, types and paths only.",
   inputSchema: z.object({
-    query: z.string().trim().min(1),
-    type_filter: NODE_TYPE_SCHEMA.optional(),
-    // Phase 2D todo 5 — optional facet filter, derived from the stored
-    // path (deterministic, ADR-013-equivalent). Backward compatible.
     domain_filter: z
       .enum(["frontend", "backend", "shared", "unclassified"])
       .optional(),
-  }),
-  outputSchema: z.object({
-    query: z.string(),
-    results: z.array(
-      z.object({
-        neighborIds: z.array(z.string()),
-        nodeId: z.string(),
-        path: z.string(),
-        rank: z.string(),
-        repositoryId: z.string(),
-        score: z.number(),
-        type: NODE_TYPE_SCHEMA,
-      }),
-    ),
-    workspaceId: z.string(),
+    excerpt_chars: z.number().int().min(0).max(1_000).optional(),
+    include_excerpt: z.boolean().optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    query: z.string().trim().min(1),
+    type_filter: NODE_TYPE_SCHEMA.optional(),
   }),
 };
 
 const TRACE_PATH_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "ID-first shortest evidence path between two nodes (max depth 6), with graphify-style explain lines per hop. Derived edges are marked with *.",
+    "Shortest evidence path between two nodes, one explain line per hop.",
   inputSchema: z.object({
     from_node_id: z.string().trim().min(1),
     max_depth: z.number().int().min(1).max(6).optional(),
     to_node_id: z.string().trim().min(1),
-  }),
-  outputSchema: z.object({
-    found: z.boolean(),
-    path: z
-      .object({
-        edges: z.array(GRAPH_EDGE_SCHEMA),
-        explain: z.array(z.string()),
-        hops: z.number(),
-        nodeIds: z.array(z.string()),
-      })
-      .nullable(),
-    workspaceId: z.string(),
   }),
 };
 
@@ -1152,6 +724,33 @@ function createServer(
   );
 
   server.registerTool("get_artifact", GET_ARTIFACT_TOOL, async (selector) => {
+    // The batch form is what `get_node_content` was: one result per input, in
+    // input order, misses included. A batch that dropped its misses came
+    // back shorter than it went out, and a caller cannot retry an id it was
+    // never handed back (Codex remedy 9.1).
+    if (selector.ids) {
+      const workspace = await readWorkspace();
+      const nodes = selector.ids.map((requestedId) => {
+        const node = getNodeContent(workspace, requestedId);
+        return node
+          ? {
+              ...node,
+              content: selector.max_chars
+                ? node.content.slice(0, selector.max_chars)
+                : node.content,
+              found: true as const,
+              requestedId,
+            }
+          : { found: false as const, requestedId };
+      });
+      emitAccessEvent(
+        store,
+        principal,
+        "get_artifact",
+        nodes.flatMap((entry) => (entry.found ? [entry.id] : [])),
+      );
+      return toolResult({ nodes, workspaceId: principal.workspaceId });
+    }
     const [workspace, found] = await Promise.all([
       readWorkspace(),
       // Targeted: the artifact is looked up by id or path rather than
@@ -1160,12 +759,29 @@ function createServer(
       store.findArtifacts(principal, selector),
     ]);
     const result = getWorkspaceArtifact(workspace, selector, found);
+    // An id that is not an artifact — a requirement, an evidence row, a
+    // finding — is what `get_node_content` used to answer, and a caller
+    // holding an id should not have to know which kind it has before
+    // choosing a tool (todo 22 ⑴). `artifact: null` still says which
+    // reader answered.
+    const node =
+      !result.artifact && selector.id
+        ? (getNodeContent(workspace, selector.id) ?? null)
+        : null;
     emitAccessEvent(store, principal, "get_artifact", [
       ...(result.artifact ? [result.artifact.id] : []),
+      ...(node ? [node.id] : []),
       ...result.neighbors.map(({ id }) => id),
     ]);
     return toolResult({
       ...result,
+      ...(node
+        ? {
+            node: selector.max_chars
+              ? { ...node, content: node.content.slice(0, selector.max_chars) }
+              : node,
+          }
+        : {}),
       workspaceId: principal.workspaceId,
     });
   });
@@ -1198,13 +814,14 @@ function createServer(
   server.registerTool(
     "get_neighbors",
     GET_NEIGHBORS_TOOL,
-    async ({ depth, node_id, relations }) => {
+    async ({ depth, families, node_id, relations }) => {
       const workspace = await readWorkspace();
       const result = collectNeighbors(
         workspace,
         node_id,
         depth ?? 1,
         relations,
+        families,
       );
       emitAccessEvent(
         store,
@@ -1219,39 +836,6 @@ function createServer(
         omissions: result?.omissions ?? [],
         workspaceId: principal.workspaceId,
       });
-    },
-  );
-
-  server.registerTool(
-    "get_node_content",
-    GET_NODE_CONTENT_TOOL,
-    async ({ node_id, node_ids }) => {
-      if (!node_id && (!node_ids || node_ids.length === 0)) {
-        throw new Error("get_node_content requires node_id or node_ids");
-      }
-      const workspace = await readWorkspace();
-      const requested = node_ids ?? (node_id ? [node_id] : []);
-      // One result per input, in input order (Codex remedy §9.1). The
-      // `flatMap` this replaced dropped the misses, so a batch of four came
-      // back as three with no way to tell which id had failed — and a
-      // caller cannot retry, or report, an id it was never handed back.
-      const nodes = requested.map((requestedId) => {
-        const found = getNodeContent(workspace, requestedId);
-        return found
-          ? { ...found, found: true as const, requestedId }
-          : { found: false as const, requestedId };
-      });
-      // `node` keeps the original single-node contract; `nodes` is the batch.
-      const node = node_id
-        ? (getNodeContent(workspace, node_id) ?? null)
-        : null;
-      emitAccessEvent(
-        store,
-        principal,
-        "get_node_content",
-        nodes.flatMap((entry) => (entry.found ? [entry.id] : [])),
-      );
-      return toolResult({ node, nodes, workspaceId: principal.workspaceId });
     },
   );
 
@@ -1536,63 +1120,60 @@ function createServer(
     },
   );
 
-  server.registerTool("route_query", ROUTE_QUERY_TOOL, async ({ question }) => {
-    requireScope("mcp:read");
-    const decision = routeQuery(question);
-    // The access event records only the tool name and timestamp — the
-    // question text itself is never stored (WORK_SPEC §11).
-    emitAccessEvent(store, principal, "route_query", []);
-    return toolResult({
-      ...decision,
-      workspaceId: principal.workspaceId,
-    });
-  });
-
   server.registerTool(
     "search_index",
     SEARCH_INDEX_TOOL,
-    async ({ query, type_filter }) => {
+    async ({
+      domain_filter,
+      excerpt_chars,
+      include_excerpt,
+      limit,
+      query,
+      type_filter,
+    }) => {
       const workspace = await readWorkspace();
-      const results = searchWorkspaceIndex(workspace, {
+      const ranked = searchWorkspaceIndex(workspace, {
         query,
         ...(type_filter ? { typeFilter: type_filter } : {}),
       });
-      emitAccessEvent(
-        store,
-        principal,
-        "search_index",
-        results.map(({ nodeId }) => nodeId),
-      );
-      return toolResult({
-        query,
-        results,
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
-
-  server.registerTool(
-    "search_nodes",
-    SEARCH_NODES_TOOL,
-    async ({ query, type_filter, domain_filter }) => {
-      const workspace = await readWorkspace();
-      const unfiltered = searchWorkspaceNodes(workspace, query, type_filter);
-      const results = domain_filter
-        ? unfiltered.filter(
+      const filtered = domain_filter
+        ? ranked.filter(
             (result) =>
               deriveArtifactFacets(result.path, "code_metadata").domain ===
               domain_filter,
           )
-        : unfiltered;
+        : ranked;
+      // `include_excerpt: false` is what `search_nodes` was — the same
+      // ranking with the prose *omitted*, not blanked. An empty string is
+      // still a key on the wire, and the point of the ID-first entry point
+      // is that a caller pays for ids and paths and nothing else (todo 22 ⑴).
+      const kept = filtered
+        .slice(0, limit ?? filtered.length)
+        .map(({ excerpt, excerptAbsence, title, ...rest }) =>
+          include_excerpt === false
+            ? rest
+            : {
+                ...rest,
+                excerpt:
+                  excerpt_chars === undefined
+                    ? excerpt
+                    : excerpt.slice(0, excerpt_chars),
+                ...(excerptAbsence ? { excerptAbsence } : {}),
+                title,
+              },
+        );
       emitAccessEvent(
         store,
         principal,
-        "search_nodes",
-        results.map(({ nodeId }) => nodeId),
+        "search_index",
+        kept.map(({ nodeId }) => nodeId),
       );
       return toolResult({
         query,
-        results,
+        results: kept,
+        // What the cap left out, so a caller narrows the query rather than
+        // reading the page it got as the whole answer.
+        truncated: Math.max(0, filtered.length - kept.length),
         workspaceId: principal.workspaceId,
       });
     },

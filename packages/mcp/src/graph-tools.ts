@@ -239,13 +239,19 @@ export function collectNeighbors(
   nodeId: string,
   depth: 1 | 2,
   relations?: readonly McpEdgeRelation[],
+  families?: readonly McpEdgeFamily[],
 ): NeighborhoodResult | null {
   const view = buildGraphView(workspace);
   if (!view.nodes.has(nodeId)) {
     return null;
   }
+  // A family filter narrows to the bands a caller asked about (todo 22 ⑸).
+  // Without one every band answers, which is why the hierarchy has to be
+  // excluded before it reaches the vocabulary filter — a folder containing a
+  // file is a real edge and a useless neighbour.
   const allowed = (edge: GraphEdgeRef): boolean =>
-    !relations || relations.includes(edge.relation);
+    (!relations || relations.includes(edge.relation)) &&
+    (!families || (edge.family !== null && families.includes(edge.family)));
 
   const visited = new Set([nodeId]);
   const collectedEdges = new Map<string, GraphEdgeRef>();

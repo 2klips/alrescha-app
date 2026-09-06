@@ -7,7 +7,11 @@ import {
 } from "@modelcontextprotocol/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { createHostedMcpEndpoint, InMemoryMcpStore } from "./index";
+import {
+  createHostedMcpEndpoint,
+  estimateTokens,
+  InMemoryMcpStore,
+} from "./index";
 import { GRAPH_EDGE_SCHEMA, NODE_TYPE_SCHEMA, RELATION_SCHEMA } from "./hosted";
 import { MCP_EDGE_RELATIONS, MCP_NODE_TYPES } from "./store";
 import type {
@@ -404,7 +408,6 @@ describe("hosted MCP contract", () => {
       "get_findings",
       "get_graph_schema",
       "get_neighbors",
-      "get_node_content",
       "impact_of",
       "log_progress",
       "memory_read",
@@ -417,18 +420,27 @@ describe("hosted MCP contract", () => {
       "repo_overview",
       "request_context_pack",
       "request_rescan",
-      "route_query",
       "search_index",
-      "search_nodes",
       "trace_path",
     ]);
     expect(
-      listed.tools.every(
-        (tool) =>
-          tool.inputSchema.type === "object" &&
-          tool.outputSchema?.type === "object",
-      ),
+      listed.tools.every((tool) => tool.inputSchema.type === "object"),
     ).toBe(true);
+    /**
+     * The catalogue is a payload every session pays for before it asks
+     * anything (todo 22 ⑴). `outputSchema` was 65% of it — 9,995 tokens down
+     * to 3,501 by dropping an optional field — and the three merged tools and
+     * one-line descriptions took it to 2,704.
+     *
+     * The cap is a ratchet just above the measured value, so the number can
+     * only go down. The plan's ≤1,500 is not reachable on this SDK: an empty
+     * tool still serialises its name, its `$schema` URL and its annotations,
+     * which is ~65 tokens before a single parameter (OQ-059).
+     */
+    expect(estimateTokens(JSON.stringify(listed.tools))).toBeLessThanOrEqual(
+      2_750,
+    );
+    expect(listed.tools).toHaveLength(20);
     expect(
       listed.tools.every((tool) => tool.annotations?.destructiveHint === false),
     ).toBe(true);
@@ -483,17 +495,17 @@ describe("hosted MCP contract", () => {
           description: tool.description,
           inputSchema: tool.inputSchema,
           name: tool.name,
-          outputSchema: tool.outputSchema,
         })),
       );
     }
 
     expect(catalogs[1]).toEqual(catalogs[0]);
     expect(catalogs[2]).toEqual(catalogs[0]);
-    // 23 since todo 16 added `request_rescan`. The catalogue is budgeted at
-    // ≤16 and todo 22's consolidation is where it comes back down; the plan
-    // budgets that trade rather than pretending the count did not move.
-    expect((catalogs[0] as unknown[]).length).toBe(23);
+    // 20 after todo 22 merged `search_nodes` into `search_index`,
+    // `get_node_content` into `get_artifact`, and moved `route_query` into
+    // the instruction block. The plan budgets ≤16; the remaining four are
+    // named in OQ-059 rather than removed by guesswork.
+    expect((catalogs[0] as unknown[]).length).toBe(20);
   });
 
   it("ranks index results deterministically and applies the type filter", async () => {
@@ -1054,8 +1066,8 @@ describe("hosted MCP contract", () => {
     const code = "01K287J3D18V7A1MZG9E8D1Y12";
 
     const search = await client.callTool({
-      arguments: { query: "CI evidence policy" },
-      name: "search_nodes",
+      arguments: { include_excerpt: false, query: "CI evidence policy" },
+      name: "search_index",
     });
     expect(search.structuredContent).toMatchObject({
       results: [
@@ -1067,8 +1079,12 @@ describe("hosted MCP contract", () => {
     // Phase 2D todo 5 — the optional facet filter narrows by derived domain
     // and stays backward compatible (the unfiltered call above is unchanged).
     const facetSearch = await client.callTool({
-      arguments: { domain_filter: "frontend", query: "CI evidence policy" },
-      name: "search_nodes",
+      arguments: {
+        domain_filter: "frontend",
+        include_excerpt: false,
+        query: "CI evidence policy",
+      },
+      name: "search_index",
     });
     const facetResults = (
       facetSearch.structuredContent as { results: { path: string }[] }
@@ -1169,8 +1185,8 @@ describe("hosted MCP contract", () => {
 
     // The explicit second step is where content appears.
     const content = await client.callTool({
-      arguments: { node_id: requirement },
-      name: "get_node_content",
+      arguments: { id: requirement },
+      name: "get_artifact",
     });
     expect(content.structuredContent).toMatchObject({
       node: {
@@ -1183,14 +1199,12 @@ describe("hosted MCP contract", () => {
     // The batch form fetches up to four nodes in one round-trip; an unknown
     // id does not error the whole batch.
     const batch = await client.callTool({
-      arguments: { node_ids: [requirement, "01K287J3D18V7A1MZG9E8D1Y11"] },
-      name: "get_node_content",
+      arguments: { ids: [requirement, "01K287J3D18V7A1MZG9E8D1Y11"] },
+      name: "get_artifact",
     });
     const batchContent = batch.structuredContent as {
-      node: unknown;
       nodes: { found: boolean; id?: string; requestedId: string }[];
     };
-    expect(batchContent.node).toBeNull();
     expect(batchContent.nodes.map(({ id }) => id)).toEqual([
       requirement,
       "01K287J3D18V7A1MZG9E8D1Y11",
@@ -1201,8 +1215,8 @@ describe("hosted MCP contract", () => {
     // one with no way to tell which id had failed — and a caller cannot
     // retry, or report, an id it was never handed back.
     const missing = await client.callTool({
-      arguments: { node_ids: [requirement, "unknown-node-id"] },
-      name: "get_node_content",
+      arguments: { ids: [requirement, "unknown-node-id"] },
+      name: "get_artifact",
     });
     expect(
       (
@@ -1235,12 +1249,8 @@ describe("hosted MCP contract", () => {
     const doc = "01K287J3D18V7A1MZG9E8D1Y11";
     const code = "01K287J3D18V7A1MZG9E8D1Y12";
     await client.callTool({
-      arguments: { question: "private routing question about spec/auth.md" },
-      name: "route_query",
-    });
-    await client.callTool({
       arguments: { query: "CI evidence" },
-      name: "search_nodes",
+      name: "search_index",
     });
     await client.callTool({
       arguments: { node_id: doc },
@@ -1252,27 +1262,26 @@ describe("hosted MCP contract", () => {
     });
     await client.callTool({ arguments: { node_id: code }, name: "impact_of" });
     await client.callTool({
-      arguments: { node_id: doc },
-      name: "get_node_content",
+      arguments: { id: doc },
+      name: "get_artifact",
     });
 
     await vi.waitFor(() =>
-      expect(store.accessEventsForWorkspace(WORKSPACE_ID)).toHaveLength(6),
+      expect(store.accessEventsForWorkspace(WORKSPACE_ID)).toHaveLength(5),
     );
     const events = store.accessEventsForWorkspace(WORKSPACE_ID);
     expect(events.map(({ tool }) => tool)).toEqual([
-      "route_query",
-      "search_nodes",
+      "search_index",
       "get_neighbors",
       "trace_path",
       "impact_of",
-      "get_node_content",
+      "get_artifact",
     ]);
-    expect(events[0]?.targetNodeIds).toEqual([]);
-    for (const event of events.slice(1)) {
+    for (const event of events) {
       expect(event.targetNodeIds.length).toBeGreaterThan(0);
     }
-    expect(JSON.stringify(events)).not.toContain("private routing question");
+    // The query text itself is never stored (WORK_SPEC §11).
+    expect(JSON.stringify(events)).not.toContain("CI evidence");
   });
 
   it("keeps graph traversal tenant-scoped: another workspace's node ids resolve to nothing", async () => {
@@ -1308,10 +1317,15 @@ describe("hosted MCP contract", () => {
       nodes: [],
     });
     const content = await client.callTool({
-      arguments: { node_id: foreignNode },
-      name: "get_node_content",
+      arguments: { id: foreignNode },
+      name: "get_artifact",
     });
-    expect(content.structuredContent).toMatchObject({ node: null });
+    // Neither reader answers for another tenant's id.
+    expect(content.structuredContent).toMatchObject({
+      artifact: null,
+      neighbors: [],
+    });
+    expect(content.structuredContent).not.toHaveProperty("node");
   });
 
   it("records a prompt without emitting an access event or leaking its text", async () => {
@@ -1443,7 +1457,14 @@ describe("hosted MCP contract", () => {
     expect(store.ruledOutForWorkspace(WORKSPACE_ID)).toEqual([]);
   });
 
-  it("routes by question shape and always carries a fallback", async () => {
+  /**
+   * `route_query` is gone (todo 22 ⑴). Choosing a route was one round trip
+   * spent deciding which round trip to spend next, and the decision is a
+   * sentence — it belongs in the instruction block, not in the catalogue
+   * every session pays for. `tests/query-router.test.ts` still holds the
+   * rule itself.
+   */
+  it("no longer spends a round trip choosing a route", async () => {
     const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
     const issued = await store.issueAccessToken({
       actorUserId: USER_ID,
@@ -1459,31 +1480,13 @@ describe("hosted MCP contract", () => {
     clients.push(client);
     await client.connect(transport);
 
-    const simple = await client.callTool({
-      arguments: { question: "크레딧 단가 문서 찾아줘" },
-      name: "route_query",
-    });
-    expect(simple.structuredContent).toMatchObject({
-      fallback: { route: "graph" },
-      route: "search",
-    });
-
-    const relational = await client.callTool({
-      arguments: { question: "spec/auth.md와 연결된 코드 영역은?" },
-      name: "route_query",
-    });
-    const decision = relational.structuredContent as {
-      fallback: { route: string; tools: string[] };
-      matchedSignals: string[];
-      recommendedTools: string[];
-      route: string;
-    };
-    expect(decision.route).toBe("graph");
-    expect(decision.matchedSignals).toContain("connection");
-    expect(decision.recommendedTools).toContain("trace_path");
-    // The misroute escape hatch: an empty graph result falls back to search.
-    expect(decision.fallback.route).toBe("search");
-    expect(decision.fallback.tools).toContain("search_index");
+    const names = (await client.listTools()).tools.map(({ name }) => name);
+    expect(names).not.toContain("route_query");
+    // The tools the sentence names are all still here, which is what makes
+    // the sentence usable without the tool.
+    for (const tool of ["search_index", "get_neighbors", "trace_path"]) {
+      expect(names).toContain(tool);
+    }
   });
 });
 
@@ -1795,5 +1798,151 @@ describe("write tools and the access stream", () => {
     expect(events[1]?.targetNodeIds).toEqual(["spec/WORK_SPEC.md"]);
     // And still nothing from `record_prompt`, after the other two arrived.
     expect(events.map(({ tool }) => tool)).not.toContain("record_prompt");
+  });
+});
+
+/**
+ * The budgeted surface (Phase 4 Wave E todo 22).
+ *
+ * A catalogue is a payload every session pays for before it asks anything,
+ * and this one had grown to 23 tools and 9,995 tokens — of which 65% was an
+ * optional `outputSchema` field. What the tests below hold is not the number
+ * but the properties behind it: two doors onto one query are one door now,
+ * a traversal can name the band it cares about, and the workflow sentence
+ * lives in one place rather than in a copy that outlived its tools.
+ */
+describe("the budgeted tool surface", () => {
+  const clients: Client[] = [];
+
+  afterEach(async () => {
+    await Promise.all(clients.splice(0).map((client) => client.close()));
+  });
+
+  async function connected() {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Budget",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+    return client;
+  }
+
+  it("answers the ID-first search without shipping prose", async () => {
+    const client = await connected();
+
+    const lean = await client.callTool({
+      arguments: { include_excerpt: false, query: "CI evidence policy" },
+      name: "search_index",
+    });
+    const rich = await client.callTool({
+      arguments: { query: "CI evidence policy" },
+      name: "search_index",
+    });
+
+    // Omitted, not blanked: an empty string is still a key on the wire, and
+    // the point of the ID-first entry point is paying for ids and paths.
+    expect(JSON.stringify(lean.structuredContent)).not.toContain("excerpt");
+    expect(JSON.stringify(lean.structuredContent)).not.toContain("title");
+    expect(JSON.stringify(rich.structuredContent)).toContain("excerpt");
+    // Same ranking either way — it was always one query behind two names.
+    const ids = (structured: unknown) =>
+      (structured as { results: { nodeId: string }[] }).results.map(
+        ({ nodeId }) => nodeId,
+      );
+    expect(ids(lean.structuredContent)).toEqual(ids(rich.structuredContent));
+  });
+
+  it("caps the result count and says what it left out", async () => {
+    const client = await connected();
+
+    const capped = await client.callTool({
+      arguments: { limit: 1, query: "CI evidence policy" },
+      name: "search_index",
+    });
+    expect(capped.structuredContent).toMatchObject({ truncated: 1 });
+    expect(
+      (capped.structuredContent as { results: unknown[] }).results,
+    ).toHaveLength(1);
+  });
+
+  it("clips an excerpt to the requested width", async () => {
+    const client = await connected();
+
+    const clipped = await client.callTool({
+      arguments: { excerpt_chars: 10, query: "CI evidence policy" },
+      name: "search_index",
+    });
+    for (const result of (
+      clipped.structuredContent as {
+        results: { excerpt: string }[];
+      }
+    ).results) {
+      expect(result.excerpt.length).toBeLessThanOrEqual(10);
+    }
+  });
+
+  /**
+   * todo 22 ⑸. A traversal that cannot name its band answers with every
+   * band, and most questions are about one.
+   */
+  it("narrows a traversal to the families asked for", async () => {
+    const client = await connected();
+    const requirement = "01K287J3D18V7A1MZG9E8D1Y21";
+
+    const all = await client.callTool({
+      arguments: { node_id: requirement },
+      name: "get_neighbors",
+    });
+    const evidenceOnly = await client.callTool({
+      arguments: { families: ["evidence"], node_id: requirement },
+      name: "get_neighbors",
+    });
+    const databaseOnly = await client.callTool({
+      arguments: { families: ["database"], node_id: requirement },
+      name: "get_neighbors",
+    });
+
+    const families = (structured: unknown) =>
+      (structured as { edges: { family: string | null }[] }).edges.map(
+        ({ family }) => family,
+      );
+    expect(families(all.structuredContent)).toContain("evidence");
+    expect(new Set(families(evidenceOnly.structuredContent))).toEqual(
+      new Set(["evidence"]),
+    );
+    // A band this workspace has no edges in answers with none — not with
+    // everything, which is what an ignored filter would do.
+    expect(families(databaseOnly.structuredContent)).toEqual([]);
+  });
+
+  it("advertises the families a traversal can name", async () => {
+    const client = await connected();
+
+    const schema = await client.callTool({
+      arguments: {},
+      name: "get_graph_schema",
+    });
+    const result = schema.structuredContent as {
+      familyCounts: Record<string, number>;
+      text: string;
+    };
+
+    expect(result.familyCounts).toMatchObject({ evidence: 1 });
+    expect(result.text).toContain("families: ");
+    // The flow line names tools that exist. It used to name three that had
+    // been removed, which is how a second copy of a rule fails.
+    for (const removed of ["search_nodes", "get_node_content", "route_query"]) {
+      expect(result.text).not.toContain(removed);
+    }
+    expect(result.text).toContain("search_index");
   });
 });

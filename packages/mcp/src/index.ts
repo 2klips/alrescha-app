@@ -13,6 +13,7 @@ export {
   selectWorkspaceContextPack,
 } from "./data-brain";
 export {
+  AGENT_FLOW_SENTENCE,
   REPO_MAP_DEFAULT_BUDGET,
   REPO_MAP_MAX_BUDGET,
   REPO_MAP_MIN_BUDGET,

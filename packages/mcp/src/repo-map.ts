@@ -16,6 +16,18 @@ import type { McpNodeType, McpWorkspaceData } from "./store";
  * agent speaks this graph's vocabulary instead of guessing one.
  */
 
+/**
+ * The workflow, in one sentence (todo 22 ⑵).
+ *
+ * `get_graph_schema.text` used to carry its own copy — and after the
+ * catalogue diet that copy named three tools that no longer exist
+ * (`search_nodes`, `get_node_content`, `route_query`), which is exactly how
+ * a second copy of a rule fails. One exported constant, so the schema card,
+ * the instruction block and the minimal-index PR all read the same line.
+ */
+export const AGENT_FLOW_SENTENCE =
+  "flow: search_index once → get_neighbors/trace_path/impact_of for relational questions → get_artifact last (ids first, bodies last); after three lookups, read the file";
+
 const CHARS_PER_TOKEN = 4;
 const MAX_SYMBOLS_PER_LINE = 12;
 export const REPO_MAP_MIN_BUDGET = 100;
@@ -160,6 +172,8 @@ export function buildRepoMap(
 }
 
 export interface GraphSchemaResult {
+  /** Edge counts by family — the bands a traversal filter can name. */
+  readonly familyCounts: Readonly<Record<string, number>>;
   readonly nodeCounts: Readonly<Partial<Record<McpNodeType, number>>>;
   readonly relationCounts: Readonly<Record<string, number>>;
   readonly repositories: readonly {
@@ -176,6 +190,10 @@ export function buildGraphSchema(
 ): GraphSchemaResult {
   const nodeCounts: Partial<Record<McpNodeType, number>> = {};
   const relationCounts: Record<string, number> = {};
+  // Families as well as relations (todo 22 ⑸): a caller narrowing a
+  // traversal by band needs to know which bands this workspace actually
+  // has, and a family with no edges should not be offered as a filter.
+  const familyCounts: Record<string, number> = {};
   const repositories: {
     artifactCount: number;
     fullName: string;
@@ -200,6 +218,9 @@ export function buildGraphSchema(
     add("context_pack", repository.contextPacks.length);
     for (const edge of repository.edges) {
       relationCounts[edge.relation] = (relationCounts[edge.relation] ?? 0) + 1;
+      if (edge.family) {
+        familyCounts[edge.family] = (familyCounts[edge.family] ?? 0) + 1;
+      }
     }
   }
 
@@ -211,6 +232,10 @@ export function buildGraphSchema(
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([relation, count]) => `${relation}:${count}`)
     .join(" ");
+  const familyLine = Object.entries(familyCounts)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([family, count]) => `${family}:${count}`)
+    .join(" ");
 
   const text = [
     `repositories: ${repositories
@@ -220,8 +245,9 @@ export function buildGraphSchema(
       .join(", ")}`,
     `nodes: ${nodeLine || "none"}`,
     `edges: ${relationLine || "none"}`,
-    "flow: search_nodes → get_neighbors/trace_path → get_node_content (ids first, bodies last)",
+    `families: ${familyLine || "none"}`,
+    AGENT_FLOW_SENTENCE,
   ].join("\n");
 
-  return { nodeCounts, relationCounts, repositories, text };
+  return { familyCounts, nodeCounts, relationCounts, repositories, text };
 }

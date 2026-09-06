@@ -492,3 +492,11 @@
 - 임시 결정: stdio는 `serve`, 호스티드는 `reject`. 차이를 숨기지 않고 여기에 적는다.
 - 필요한 결정: ⑴ 실클라이언트(Claude Code·Codex·Cursor)가 modern 개시를 보내기 시작하면 stdio도 `reject`로 올린다(기본 후보) ⑵ 지금 `reject`로 올리고 연결 불가를 감수한다(기각 후보 — 쓸 수 없는 기능이 된다) ⑶ 호스티드를 `serve`로 낮춘다(기각 — 하드룰 후퇴).
 - 상태: open. todo 22의 실클라이언트 호환 패스에서 `toolResult` 이중 직렬화와 함께 재측정.
+
+## OQ-059 — 툴 카탈로그 ≤1,500토큰·≤16개는 이 SDK에서 도달할 수 없다
+
+- 발견: Phase 4 Wave E todo 22 실측 / `packages/mcp/src/hosted.ts`, `packages/mcp/src/hosted.test.ts`(계약 테스트), `spec/BUILD_PLAN_PHASE4.md` todo 22 ⑴
+- 내용: 계획은 카탈로그를 **툴 ≤16개·`count_tokens` ≤1,500**으로 잡았다. 실측: 시작 23개 **9,995토큰** → `outputSchema` 전부 제거 **3,501**(65%가 그 필드였다 — 계획의 "62%" 추정이 맞았다) → 툴 3개 병합·설명 1줄화 **2,664** → `families` 필터 추가 **2,704**. 남은 비용의 대부분은 서버가 통제하지 않는 **SDK 봉투**다: 입력 스키마가 완전히 빈 툴(`get_graph_schema`)도 이름·`$schema` URL(`https://json-schema.org/draft/2020-12/schema`)·`annotations`로 259자 ≈ **65토큰**을 쓴다. 20개면 파라미터 하나 없이도 ~1,300토큰이고, 16개로 줄여도 ~~1,040이라 모든 입력 스키마에 460토큰만 남는다 — 타입 있는 파라미터를 4~~6개씩 가진 툴들에는 불가능하다.
+- 임시 결정: **측정값에 래칫**을 건다(현재 2,750 상한, 계약 테스트). 숫자는 내려갈 수만 있다. 계획의 1,500은 목표로 남기되 달성했다고 적지 않는다.
+- 필요한 결정: ⑴ 봉투를 줄인다 — `$schema`를 툴마다 반복하지 않는 SDK 옵션이나 `tools/list` 응답 압축이 있는지 확인(업스트림 질문, 기본 후보) ⑵ 16개까지 더 줄인다 — 남은 후보는 `get_findings`→`query_brain(types:['finding'])`, `repo_overview`→`repo_map(format)`, `memory_read`+`memory_write`→`memory(mode)`, `record_prompt` 미노출(단 ⑶의 훅 경로가 생긴 뒤 — 지금 빼면 WORK_SPEC §11에 호출자가 하나도 없다) ⑶ 상한을 실측 가능한 수로 고쳐 적는다(예: 툴당 ≤135토큰).
+- 상태: open. ⑴을 먼저 확인하고, 답이 "없다"면 ⑵와 ⑶을 함께 판정한다.
