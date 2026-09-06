@@ -1,4 +1,4 @@
-import { computePilotStats } from "@alrescha/core/stats";
+import { computePilotStats, type PilotUsageDay } from "@alrescha/core/stats";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
@@ -258,5 +258,149 @@ describe("pilot stats dashboard", () => {
     expect(html).toContain(STATS.insufficient.receiptsRecorded(1));
     expect(html).toContain("Receipt 2건");
     expect(html).not.toContain("0% improvement");
+  });
+});
+
+describe("three separated cards (todo 24)", () => {
+  const usageDay = (overrides: Partial<PilotUsageDay>): PilotUsageDay => ({
+    day: "2026-09-06",
+    repositoryId: "repo-1",
+    reportedCacheCreationTokens: 0,
+    reportedCacheReadTokens: 0,
+    reportedInputTokens: 0,
+    reportedOutputTokens: 0,
+    reportedReports: 0,
+    servedCalls: 0,
+    servedEstimatedTokens: 0,
+    servedMeasuredCalls: 0,
+    servedResponseChars: 0,
+    ...overrides,
+  });
+
+  const readyReport = () =>
+    computePilotStats({
+      enabled: true,
+      packs: [
+        {
+          baselineTokens: 2_000,
+          occurredAt: "2026-09-05T12:00:00Z",
+          selectedTokens: 600,
+        },
+        {
+          baselineTokens: 2_000,
+          occurredAt: "2026-09-06T12:00:00Z",
+          selectedTokens: 600,
+        },
+      ],
+      receipts: [
+        {
+          commitSha: "a".repeat(40),
+          createdAt: "2026-09-05T12:00:00Z",
+          findings: { opened: 2, openTotal: 2, resolved: 0 },
+          id: "r1",
+        },
+        {
+          commitSha: "b".repeat(40),
+          createdAt: "2026-09-06T12:00:00Z",
+          findings: { opened: 0, openTotal: 1, resolved: 1 },
+          id: "r2",
+        },
+      ],
+      repositories: [{ fullName: "2klips/alrescha-app", id: "repo-1" }],
+      repositoryFilter: "repo-1",
+      runs: [],
+      usage: [
+        usageDay({
+          reportedCacheReadTokens: 40_000,
+          reportedInputTokens: 6_000,
+          reportedOutputTokens: 900,
+          reportedReports: 7,
+          servedCalls: 26,
+          servedEstimatedTokens: 4_000,
+          servedMeasuredCalls: 24,
+          servedResponseChars: 16_000,
+        }),
+      ],
+    });
+
+  test("labels each number by the kind of number it is", () => {
+    const html = renderToStaticMarkup(
+      createElement(PilotStatsDashboard, { report: readyReport() }),
+    );
+
+    expect(html).toContain(STATS.served.label);
+    expect(html).toContain(STATS.reported.label);
+    expect(html).toContain(STATS.context.label);
+    // Each card carries its own one-line assumption, so a measured number
+    // and an estimate cannot be read as the same kind of claim.
+    expect(html).toContain(STATS.served.assumption);
+    expect(html).toContain(STATS.reported.assumption);
+    expect(html).toContain(STATS.context.assumption);
+    expect(html).toContain(STATS.served.tokens("4,000"));
+    expect(html).toContain(STATS.reported.reports(7));
+    // Two of the 26 served calls were never measured, and the card says so
+    // rather than counting them as zero-byte answers.
+    expect(html).toContain(STATS.served.unmeasured(2));
+  });
+
+  test("says benchmark numbers are not the reader's numbers", () => {
+    const html = renderToStaticMarkup(
+      createElement(PilotStatsDashboard, { report: readyReport() }),
+    );
+
+    expect(html).toContain(STATS.methodology.benchmarkCaveat);
+    expect(html).toContain("not yours");
+  });
+
+  test("offers the repository filter with the workspace as the default", () => {
+    const html = renderToStaticMarkup(
+      createElement(PilotStatsDashboard, { report: readyReport() }),
+    );
+
+    expect(html).toContain(STATS.filter.all);
+    expect(html).toContain("2klips/alrescha-app");
+    expect(html).toContain('name="repository"');
+    expect(html).toContain('value="repo-1"');
+  });
+
+  test("withholds a headline the evidence cannot support", () => {
+    const report = computePilotStats({
+      enabled: true,
+      packs: [],
+      receipts: [
+        {
+          commitSha: "a".repeat(40),
+          createdAt: "2026-09-05T12:00:00Z",
+          findings: { opened: 2, openTotal: 2, resolved: 0 },
+          id: "r1",
+        },
+        {
+          commitSha: "b".repeat(40),
+          createdAt: "2026-09-06T12:00:00Z",
+          findings: { opened: 0, openTotal: 1, resolved: 1 },
+          id: "r2",
+        },
+      ],
+      runs: [],
+      usage: [
+        usageDay({
+          reportedInputTokens: 300,
+          reportedReports: 1,
+          servedCalls: 3,
+          servedEstimatedTokens: 120,
+          servedMeasuredCalls: 3,
+          servedResponseChars: 480,
+        }),
+      ],
+    });
+    const html = renderToStaticMarkup(
+      createElement(PilotStatsDashboard, { report }),
+    );
+
+    expect(html).toContain(STATS.cards.insufficient(3, 20));
+    expect(html).toContain(STATS.cards.insufficient(1, 5));
+    // The total exists in the export; it is the headline that is withheld.
+    expect(report.served.estimatedTokens).toBe(120);
+    expect(html).not.toContain(STATS.served.tokens("120"));
   });
 });

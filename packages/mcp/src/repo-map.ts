@@ -1,4 +1,8 @@
-import { personalizedPageRank, type PageRankEdge } from "@alrescha/core";
+import {
+  estimateTokens,
+  personalizedPageRank,
+  type PageRankEdge,
+} from "@alrescha/core";
 
 import type { McpNodeType, McpWorkspaceData } from "./store";
 
@@ -28,15 +32,18 @@ import type { McpNodeType, McpWorkspaceData } from "./store";
 export const AGENT_FLOW_SENTENCE =
   "flow: search_index once → get_neighbors/trace_path/impact_of for relational questions → get_artifact last (ids first, bodies last); after three lookups, read the file";
 
-const CHARS_PER_TOKEN = 4;
 const MAX_SYMBOLS_PER_LINE = 12;
 export const REPO_MAP_MIN_BUDGET = 100;
 export const REPO_MAP_MAX_BUDGET = 8_000;
 export const REPO_MAP_DEFAULT_BUDGET = 1_200;
 
-export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / CHARS_PER_TOKEN);
-}
+/**
+ * The ratio moved to `@alrescha/core` in todo 24 so the repo map, the served
+ * -bytes column and the instruction cost table share one assumption instead
+ * of three. Re-exported here because every caller of this module already
+ * imports it from here, and a rename would have been churn with no reader.
+ */
+export { estimateTokens };
 
 interface WorkspaceGraph {
   readonly edges: readonly PageRankEdge[];

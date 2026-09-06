@@ -516,3 +516,19 @@
 - 임시 결정: 무조건 등록한다. `tools/list`는 토큰 단위 private 캐시라 워크스페이스별로 다른 카탈로그를 주는 것 자체는 가능하지만, **카탈로그가 상태에 따라 모양을 바꾸면 "이 서버에 무슨 툴이 있나"라는 질문에 답이 여러 개가 된다** — 없는 툴을 부른 에이전트는 스코프 거절과 구별되지 않는 오류를 받는다.
 - 필요한 결정: ⑴ 현행 유지 + 설명 한 줄에 "옵트인" 명시(기본 후보) ⑵ 옵트인한 워크스페이스에만 등록(`tools/list`마다 워크스페이스 읽기 1회 추가) ⑶ 훅 수신 경로(todo 22 ⑶)가 생기면 툴을 내리고 훅만 남긴다 — 툴 수 예산으로는 이쪽이 정답이지만 훅이 없는 클라이언트는 보고할 방법이 사라진다.
 - 상태: open. todo 22 ⑶의 훅 스니펫이 나온 뒤 ⑶을 재판정한다.
+
+## OQ-062 — Cursor `alwaysApply`는 프런트매터에 있고 스캔은 본문을 저장하지 않는다
+
+- 발견: Phase 4 Wave E todo 24 / `packages/core/src/inspection/instruction-cost.ts`, `packages/core/src/ingest/repository-scanner.ts`(`classifyArtifactPath`), WORK_SPEC §5.2-③ 표1
+- 내용: 상시 로드 비용 표의 로드 규칙 셋 중 둘(Claude Code `CLAUDE.md`·`.claude/rules`, Codex `AGENTS.md` 계층)은 **경로만으로** 판정된다. 세 번째 Cursor 규칙은 `.cursor/rules/*.mdc`의 `alwaysApply` 프런트매터에 달려 있는데, 스캔은 경로·분류·`size_bytes`만 저장하고 본문은 저장하지 않으므로(WORK_SPEC §3-3) 읽을 방법이 없다. `true`로 추측하면 상시 합계에 "아마도"가 들어가고 `false`로 추측하면 실제 비용이 숨는다.
+- 임시 결정: `unknown` 모드로 보고하고 **상시 합계에서 뺀다.** 표는 이유를 문장으로 같이 보여준다("frontmatter…the scan stores no file bodies to read it from"). 커버리지·감사 부재를 `unmeasured`로 보고하는 todo 21과 같은 규칙이다.
+- 필요한 결정: ⑴ 스캐너가 `.mdc` 프런트매터의 `alwaysApply`(그리고 `globs`)를 **메타데이터로** 뽑아 `artifacts.metadata`에 넣는다 — 불리언은 본문이 아니고 이미 저장하는 `headings`·`tags`와 같은 부류다(기본 후보, 스캐너 + 플랜 JSON + `apply_repository_scan` 변경) ⑵ 현행 유지 ⑶ `.cursor/rules` 전체를 표에서 뺀다(기각 — 비용은 실재한다).
+- 상태: open. ⑴은 `apply_repository_scan`을 건드리므로 Wave A로 되돌아가는 변경이다. 그전까지 Cursor 열은 "확인 불가"다.
+
+## OQ-063 — 상시 로드 비용은 바이트를 문자로 세고, 한글에서 3배 틀린다
+
+- 발견: Phase 4 Wave E todo 24 실측 / `packages/core/src/stats/token-estimate.ts`, `packages/core/src/inspection/instruction-cost.ts`
+- 내용: 표는 `size_bytes`밖에 못 쓰므로 `ceil(bytes / 4)`로 토큰을 추정한다. ASCII에서는 문자 수와 바이트 수가 같지만 **한글은 UTF-8에서 한 자가 3바이트**라, 한국어로 쓴 `AGENTS.md`는 문자 수 기준보다 약 3배 크게 읽힌다. 이 레포 실측이 바로 그 경우다: `AGENTS.md` 2,599바이트 → 650토큰으로 표시되지만 실제 문자 수는 그보다 훨씬 적다. OQ-060(4자/토큰 비율)과 별개의 오차이고, 둘이 곱해진다.
+- 임시 결정: 헤더에 **두 가정을 모두 적는다** — "4자/토큰 가정 · 파일 크기(바이트) 기준 … 한글은 UTF-8에서 한 자가 3바이트라 이 방식은 과대 추정합니다". 저장하는 값은 바이트(사실)이므로 나중에 문자 수가 생기면 다시 계산할 수 있다.
+- 필요한 결정: ⑴ 스캔이 `char_count`를 `size_bytes`와 함께 저장한다(본문이 아니라 수치 하나 — OQ-062 ⑴과 같은 변경에 묶을 수 있다, 기본 후보) ⑵ 바이트에서 UTF-8 다바이트 비율을 추정한다(추정 위의 추정 — 기각) ⑶ 현행 유지 + 가정 표기.
+- 상태: open. ⑴이 기본 후보. OQ-060·OQ-062와 함께 판정한다.

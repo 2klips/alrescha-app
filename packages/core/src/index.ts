@@ -472,6 +472,31 @@ export type {
   DocPageSkeletonInput,
 } from "./docs/doc-page";
 
+export {
+  CHARS_PER_TOKEN,
+  estimateTokens,
+  estimateTokensFromBytes,
+} from "./stats/token-estimate";
+export type {
+  TokenEstimateAssumption,
+  TokenEstimateBasis,
+} from "./stats/token-estimate";
+export {
+  INSTRUCTION_CLASSIFICATIONS,
+  INSTRUCTION_LOADERS,
+  buildInstructionCostTable,
+} from "./inspection/instruction-cost";
+export type {
+  InstructionArtifactInput,
+  InstructionClassification,
+  InstructionCostRow,
+  InstructionCostTable,
+  InstructionCostTotals,
+  InstructionLoadMode,
+  InstructionLoadRule,
+  InstructionLoader,
+  InstructionLoaderTotal,
+} from "./inspection/instruction-cost";
 export { buildRiskMap } from "./inspection/risk-map";
 export type {
   BuildRiskMapInput,

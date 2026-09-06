@@ -599,3 +599,107 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Phase 4 Wave E todo 24 — WORK_SPEC §5.2-③ 표1 상시 로드 비용. */
+.harness-cost {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.harness-cost h2 {
+  font-size: var(--text-sm);
+  margin: 0;
+}
+
+.harness-cost-assumption,
+.harness-cost-loaders {
+  color: var(--fg-muted);
+  font-size: var(--text-2xs);
+  margin: 0;
+}
+
+.harness-cost-table {
+  border-collapse: collapse;
+  font-size: var(--text-xs);
+  width: 100%;
+}
+
+.harness-cost-table th {
+  border-bottom: 1px solid var(--border-default);
+  color: var(--fg-muted);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 0.3rem 0.4rem 0.3rem 0;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.harness-cost-table td,
+.harness-cost-table tbody th {
+  border-bottom: 1px solid var(--border-muted);
+  padding: 0.35rem 0.4rem 0.35rem 0;
+  text-align: left;
+  text-transform: none;
+}
+
+.harness-cost-table tbody th {
+  font-weight: 500;
+  letter-spacing: normal;
+}
+
+.harness-cost-table small {
+  color: var(--fg-muted);
+  display: block;
+  font-size: var(--text-2xs);
+}
+
+/* Byte and token columns read as numbers. */
+.harness-cost-table th:nth-child(4),
+.harness-cost-table th:nth-child(5),
+.harness-cost-table td:nth-child(4),
+.harness-cost-table td:nth-child(5) {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.harness-cost-table tfoot th,
+.harness-cost-table tfoot td {
+  border-bottom: none;
+  border-top: 1px solid var(--border-default);
+  font-weight: 600;
+}
+
+.harness-cost-mode {
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.32rem;
+}
+
+.harness-cost-mode.always {
+  color: var(--attention-fg);
+}
+
+.harness-cost-mode.unknown {
+  color: var(--fg-muted);
+}
+
+.harness-cost-loaders {
+  list-style: none;
+  padding: 0;
+}
+
+.harness-demo-badge {
+  border: 1px solid currentColor;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  padding: 0.1rem 0.32rem;
+  text-transform: uppercase;
+  width: fit-content;
+}

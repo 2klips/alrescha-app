@@ -1,7 +1,13 @@
-import type { LibraryItemType } from "@alrescha/core";
+import {
+  buildInstructionCostTable,
+  type InstructionArtifactInput,
+  type InstructionClassification,
+  type LibraryItemType,
+} from "@alrescha/core";
 import { redirect } from "next/navigation";
 
 import { HarnessAssetCard } from "../../../ui/harness-asset-card";
+import { InstructionCostTable } from "../../../ui/instruction-cost-table";
 import { getCurrentUserId } from "../../../../lib/auth/current-user";
 import { HARNESS } from "../../../../lib/strings";
 import { createClient } from "../../../../lib/supabase/server";
@@ -14,8 +20,16 @@ interface ArtifactRow {
   id: string;
   path: string;
   repository_id: string;
+  size_bytes: number | null;
   source_commit_sha: string;
 }
+
+const COST_CLASSIFICATIONS = new Set([
+  "agents",
+  "claude",
+  "cursor_rule",
+  "skill",
+]);
 
 function itemType(classification: string): LibraryItemType | null {
   if (classification === "skill") return "skill";
@@ -54,7 +68,9 @@ export default async function HarnessPage() {
   const [artifacts, repositories] = await Promise.all([
     client
       .from("artifacts")
-      .select("id,repository_id,classification,path,digest,source_commit_sha")
+      .select(
+        "id,repository_id,classification,path,digest,size_bytes,source_commit_sha",
+      )
       .eq("workspace_id", workspaceId)
       .eq("kind", "instruction")
       .order("path"),
@@ -94,6 +110,27 @@ export default async function HarnessPage() {
     },
   );
 
+  // The cost table reads the same rows the cards do, plus `size_bytes` —
+  // never a body. A file with no recorded size is left out rather than
+  // counted as zero: an unmeasured file is not a free one (todo 24).
+  const costArtifacts = ((artifacts.data ?? []) as ArtifactRow[]).flatMap(
+    (artifact): InstructionArtifactInput[] =>
+      COST_CLASSIFICATIONS.has(artifact.classification) &&
+      typeof artifact.size_bytes === "number"
+        ? [
+            {
+              classification:
+                artifact.classification as InstructionClassification,
+              id: artifact.id,
+              path: artifact.path,
+              repositoryId: artifact.repository_id,
+              sizeBytes: artifact.size_bytes,
+            },
+          ]
+        : [],
+  );
+  const costTable = buildInstructionCostTable(costArtifacts);
+
   return (
     <main className="harness-shell product-page">
       <ProductPageHeader
@@ -101,6 +138,10 @@ export default async function HarnessPage() {
         description={HARNESS.live.lead}
         kicker={HARNESS.live.kicker}
         title={HARNESS.title}
+      />
+      <InstructionCostTable
+        repositoryNames={repositoryNames}
+        table={costTable}
       />
       <section className="harness-assets" aria-label={HARNESS.ariaAssets}>
         {assets.length === 0 ? (

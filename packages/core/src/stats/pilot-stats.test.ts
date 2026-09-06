@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { computePilotStats } from "./pilot-stats";
+import { computePilotStats, type PilotUsageDay } from "./pilot-stats";
 
 describe("pilot stats", () => {
   test("computes documented trends over a three-receipt chain", () => {
@@ -68,6 +68,7 @@ describe("pilot stats", () => {
       baselineTokens: 3_900,
       packRequests: 2,
       selectedTokens: 1_100,
+      state: "ready",
       tokenReductionPercent: 71.8,
     });
     expect(report.scans).toEqual({
@@ -80,6 +81,9 @@ describe("pilot stats", () => {
       completedRuns: 3,
       packMeasurements: 2,
       receipts: 3,
+      reportedReports: 0,
+      servedMeasuredCalls: 0,
+      usageDays: 0,
     });
     expect(report.methodology.tokenBaseline).toContain(
       "deterministic per-document estimates",
@@ -111,5 +115,140 @@ describe("pilot stats", () => {
     expect(report.findings.netOpenChange).toBeNull();
     expect(report.scans.durationChangePercent).toBeNull();
     expect(report.context.tokenReductionPercent).toBeNull();
+  });
+});
+
+describe("three kinds of number, kept apart (todo 24)", () => {
+  const usageDay = (
+    overrides: Partial<PilotUsageDay> & Pick<PilotUsageDay, "day">,
+  ): PilotUsageDay => ({
+    repositoryId: "repo-1",
+    reportedCacheCreationTokens: 0,
+    reportedCacheReadTokens: 0,
+    reportedInputTokens: 0,
+    reportedOutputTokens: 0,
+    reportedReports: 0,
+    servedCalls: 0,
+    servedEstimatedTokens: 0,
+    servedMeasuredCalls: 0,
+    servedResponseChars: 0,
+    ...overrides,
+  });
+
+  test("totals served bytes and agent-reported usage separately", () => {
+    const report = computePilotStats({
+      enabled: true,
+      packs: [],
+      receipts: [],
+      runs: [],
+      usage: [
+        usageDay({
+          day: "2026-09-05",
+          servedCalls: 14,
+          servedEstimatedTokens: 900,
+          servedMeasuredCalls: 12,
+          servedResponseChars: 3_600,
+        }),
+        usageDay({
+          day: "2026-09-06",
+          reportedCacheReadTokens: 40_000,
+          reportedInputTokens: 6_000,
+          reportedOutputTokens: 900,
+          reportedReports: 6,
+          servedCalls: 9,
+          servedEstimatedTokens: 300,
+          servedMeasuredCalls: 9,
+          servedResponseChars: 1_200,
+        }),
+      ],
+    });
+
+    expect(report.served).toEqual({
+      calls: 23,
+      days: 2,
+      estimatedTokens: 1_200,
+      measuredCalls: 21,
+      responseChars: 4_800,
+      state: "ready",
+    });
+    expect(report.reported).toEqual({
+      cacheCreationTokens: 0,
+      cacheReadTokens: 40_000,
+      days: 1,
+      inputTokens: 6_000,
+      outputTokens: 900,
+      reports: 6,
+      state: "ready",
+    });
+    // Two calls were served without being measured, and the card says so
+    // rather than folding them in as zero-byte answers.
+    expect(report.evidence.servedMeasuredCalls).toBe(21);
+    expect(report.served.calls - report.served.measuredCalls).toBe(2);
+  });
+
+  test("says 'not enough evidence' per card instead of showing a thin number", () => {
+    const report = computePilotStats({
+      enabled: true,
+      packs: [],
+      receipts: [],
+      runs: [],
+      usage: [
+        usageDay({
+          day: "2026-09-06",
+          reportedInputTokens: 500,
+          reportedReports: 1,
+          servedCalls: 3,
+          servedEstimatedTokens: 90,
+          servedMeasuredCalls: 3,
+          servedResponseChars: 360,
+        }),
+      ],
+    });
+
+    expect(report.served.state).toBe("insufficient-evidence");
+    expect(report.reported.state).toBe("insufficient-evidence");
+    expect(report.context.state).toBe("insufficient-evidence");
+    // The totals are still computed — the export keeps them; only the card
+    // withholds a headline it cannot support.
+    expect(report.served.estimatedTokens).toBe(90);
+    expect(report.thresholds).toEqual({
+      packMeasurements: 2,
+      reportedReports: 5,
+      servedMeasuredCalls: 20,
+    });
+  });
+
+  test("carries the repository choices and the one in force", () => {
+    const report = computePilotStats({
+      enabled: true,
+      packs: [],
+      receipts: [],
+      repositories: [
+        { fullName: "2klips/zeta", id: "repo-2" },
+        { fullName: "2klips/alpha", id: "repo-1" },
+      ],
+      repositoryFilter: "repo-1",
+      runs: [],
+    });
+
+    expect(report.repositories.map(({ fullName }) => fullName)).toEqual([
+      "2klips/alpha",
+      "2klips/zeta",
+    ]);
+    expect(report.repositoryFilter).toBe("repo-1");
+  });
+
+  test("states that benchmark numbers are not the reader's numbers", () => {
+    const report = computePilotStats({
+      enabled: true,
+      packs: [],
+      receipts: [],
+      runs: [],
+    });
+
+    expect(report.methodology.benchmarkCaveat).toContain("not yours");
+    expect(report.methodology.servedTokens).toContain("assumption");
+    expect(report.methodology.reportedUsage).toContain("unverified");
+    expect(report.methodology.packEstimate).toContain("An estimate");
   });
 });

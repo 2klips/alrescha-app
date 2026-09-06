@@ -41,6 +41,54 @@ export const STATS = {
 
   grid: { aria: "측정된 파일럿 통계" },
 
+  /**
+   * 레포 필터 (Phase 4 Wave E todo 24). 필터는 브라우저가 아니라 질의에서
+   * 걸린다 — 화면에서만 좁힌 합계는 여전히 전체를 더한 합계다.
+   */
+  filter: {
+    label: "레포지토리",
+    all: "워크스페이스 전체",
+    aria: "레포지토리별 통계 필터",
+    apply: "적용",
+  },
+
+  /**
+   * 카드 3종은 서로 다른 종류의 숫자다 (todo 24). 실측 / 자가보고 / 추정을
+   * 한 그리드에 섞어 놓고 라벨을 빼면 셋 다 실측처럼 읽힌다.
+   */
+  cards: {
+    /** `증거 부족 — <n>/<임계>` */
+    insufficient: (count: number, threshold: number) =>
+      `증거 부족 — ${count}/${threshold}`,
+    assumptionLabel: "가정",
+  },
+
+  served: {
+    label: "서빙 토큰 (실측)",
+    /** `<n> 토큰` */
+    tokens: (tokens: string) => `${tokens} 토큰`,
+    /** `<n>자 · 호출 <n>회` */
+    charsCalls: (chars: string, calls: number) =>
+      `${chars}자 · 호출 ${calls}회`,
+    /** null 아님: 측정 안 된 호출은 0자가 아니라 "안 잼"이다 */
+    unmeasured: (count: number) =>
+      count === 0 ? "전 호출 측정됨" : `측정 안 된 호출 ${count}회 제외`,
+    assumption: "문자 수는 실측, 4자/토큰 비율은 가정입니다.",
+  },
+
+  reported: {
+    label: "에이전트 보고 사용량 (자가보고)",
+    /** `입력 <n> · 출력 <n>` */
+    inputOutput: (input: string, output: string) =>
+      `입력 ${input} · 출력 ${output}`,
+    /** `캐시 읽기 <n> · 캐시 생성 <n>` */
+    cache: (read: string, creation: string) =>
+      `캐시 읽기 ${read} · 캐시 생성 ${creation}`,
+    /** `보고 <n>건` */
+    reports: (count: number) => `보고 ${count}건`,
+    assumption: "클라이언트가 옵트인으로 보낸 값이며 검증하지 않습니다.",
+  },
+
   findings: {
     label: "Findings 변화",
     /** `<n>건 open` */
@@ -56,7 +104,9 @@ export const STATS = {
   },
 
   context: {
-    label: "컨텍스트 토큰",
+    label: "팩 예산 (추정)",
+    assumption:
+      "아무도 실행하지 않은 전체 덤프와의 비교입니다. 측정이 아니라 추정입니다.",
     /** null이면 "비교 데이터 없음", 아니면 `<n>% 감소` */
     reduction: (percent: number | null) =>
       percent === null ? "비교 데이터 없음" : `${percent}% 감소`,
@@ -86,5 +136,8 @@ export const STATS = {
     summary: "이 지표는 이렇게 계산됩니다",
     benchmarkPrefix: "교차 실험군 정확도와 모델 응답 토큰 결과: ",
     benchmarkLink: "Data Brain 효율 벤치마크 전체 보기",
+    /** 벤치 수치 ≠ 내 수치 (todo 24) — 링크 옆에 반드시 함께 나온다. */
+    benchmarkCaveat:
+      "벤치마크 수치는 우리 코퍼스·모델에서 나온 값이며 이 화면의 숫자와 무관합니다.",
   },
 } as const;
