@@ -356,6 +356,66 @@ export interface AffectedRoute {
   readonly url: string;
 }
 
+/**
+ * How `impact_of` was asked to traverse (Codex remedy P0-C / R-03, step S4).
+ *
+ * `related-neighborhood` is what the tool has always computed: an undirected
+ * walk of every relation, depth 1 or 2. It answers "what is near this", which
+ * is a useful question and **not** the question "what does changing this
+ * break". With `A imports B` and `C imports B`, changing A reaches C in an
+ * undirected walk — and C has never heard of A.
+ *
+ * `dependency-impact` is the directional answer: consumers reached backwards
+ * along `imports` and `calls`, transitively. It is opt-in, and the default
+ * stays where it was, because the existing field means what it has always
+ * meant and changing that silently would hand every current caller a
+ * different answer to the same call (REMEDY §7.3, OQ-052).
+ */
+export type ImpactMode = "dependency-impact" | "related-neighborhood";
+
+/** Bumped when the meaning of a mode's answer changes, never in place. */
+export const IMPACT_SEMANTICS_VERSION = 2;
+
+/** Edges a directional walk will expand before it reports itself stopped. */
+export const IMPACT_EDGE_BUDGET = 5_000;
+
+/** Hops a directional walk will take. Deep enough to be a blast radius. */
+export const IMPACT_MAX_DISTANCE = 10;
+
+/**
+ * Relations a change actually travels along. A folder containing a file, a
+ * README naming it and a statistical co-change are all real edges, and none
+ * of them means "editing this breaks that" (REMEDY §7.1).
+ */
+const DEPENDENCY_RELATIONS = new Set<McpEdgeRelation>(["calls", "imports"]);
+
+export interface ImpactCandidate {
+  /** Hops from the changed node. 1 is a direct consumer. */
+  readonly distance: number;
+  readonly nodeId: string;
+  readonly path: string | null;
+  /** One minimal path back to the change, nearest edge first. */
+  readonly via: readonly GraphEdgeRef[];
+}
+
+export interface DependencyImpact {
+  /**
+   * Consumers that would have to be looked at, **not** things proven broken:
+   * structural reachability is a candidate, and only running something is
+   * evidence (REMEDY §7.2).
+   */
+  readonly candidates: readonly ImpactCandidate[];
+  /** True only when the walk ended because it ran out of graph. */
+  readonly complete: boolean;
+  /**
+   * Tests that reach the change. Collected, never expanded through: a test
+   * importing a file makes the test related, not everything the test touches
+   * (REMEDY §7.1, the test-terminal rule).
+   */
+  readonly relatedTests: readonly string[];
+  readonly stoppedBy: "budget" | "distance" | null;
+}
+
 export interface ImpactReport {
   /**
    * URLs this change reaches (Phase 4 Wave A′ todo 6): every route served by
@@ -372,7 +432,102 @@ export interface ImpactReport {
     readonly edges: readonly GraphEdgeRef[];
     readonly nodeIds: readonly string[];
   };
+  /**
+   * The directional answer, and `null` in `related-neighborhood` mode — the
+   * tool did not compute one, which is a different statement from computing
+   * an empty one.
+   */
+  readonly dependencyImpact: DependencyImpact | null;
+  readonly mode: ImpactMode;
+  /** What the read could not carry (S2a); an absence here is not proof. */
+  readonly omissions: readonly McpEdgeOmission[];
+  readonly semanticsVersion: number;
+  /**
+   * The undirected neighbourhood, depth-limited. Named for what it is: this
+   * is proximity, not blast radius.
+   */
   readonly transitiveNodeIds: readonly string[];
+}
+
+/**
+ * Consumers reached backwards along `imports` and `calls`.
+ *
+ * The adjacency is built once, target to source, and the walk is a BFS with a
+ * visited set, so a cycle terminates and a re-export chain is followed once.
+ * A file nobody imports has no consumers, whatever else it sits next to.
+ */
+function dependencyImpactOf(view: GraphView, nodeId: string): DependencyImpact {
+  const consumers = new Map<string, GraphEdgeRef[]>();
+  const seenEdges = new Set<string>();
+  for (const edges of view.adjacency.values()) {
+    for (const edge of edges) {
+      if (!DEPENDENCY_RELATIONS.has(edge.relation)) continue;
+      const key = `${edge.sourceNodeId}|${edge.relation}|${edge.targetNodeId}`;
+      if (seenEdges.has(key)) continue;
+      seenEdges.add(key);
+      const held = consumers.get(edge.targetNodeId);
+      if (held) held.push(edge);
+      else consumers.set(edge.targetNodeId, [edge]);
+    }
+  }
+
+  const candidates: ImpactCandidate[] = [];
+  const visited = new Set([nodeId]);
+  let frontier: { id: string; path: GraphEdgeRef[] }[] = [
+    { id: nodeId, path: [] },
+  ];
+  let expanded = 0;
+  let stoppedBy: DependencyImpact["stoppedBy"] = null;
+
+  for (let distance = 1; distance <= IMPACT_MAX_DISTANCE; distance += 1) {
+    const next: { id: string; path: GraphEdgeRef[] }[] = [];
+    for (const current of frontier) {
+      for (const edge of consumers.get(current.id) ?? []) {
+        expanded += 1;
+        if (expanded > IMPACT_EDGE_BUDGET) {
+          stoppedBy = "budget";
+          break;
+        }
+        const consumer = edge.sourceNodeId;
+        if (visited.has(consumer)) continue;
+        visited.add(consumer);
+        const via = [edge, ...current.path];
+        candidates.push({
+          distance,
+          nodeId: consumer,
+          path: view.nodes.get(consumer)?.path ?? null,
+          via,
+        });
+        next.push({ id: consumer, path: via });
+      }
+      if (stoppedBy) break;
+    }
+    if (stoppedBy || next.length === 0) break;
+    frontier = next;
+    if (distance === IMPACT_MAX_DISTANCE) stoppedBy = "distance";
+  }
+
+  // Tests are collected across the reached set and never expanded from.
+  const reached = new Set([nodeId, ...candidates.map((entry) => entry.nodeId)]);
+  const tests = new Set<string>();
+  for (const edges of view.adjacency.values()) {
+    for (const edge of edges) {
+      if (edge.relation === "tests" && reached.has(edge.targetNodeId)) {
+        tests.add(edge.sourceNodeId);
+      }
+    }
+  }
+
+  return {
+    candidates: candidates.sort(
+      (left, right) =>
+        left.distance - right.distance ||
+        left.nodeId.localeCompare(right.nodeId),
+    ),
+    complete: stoppedBy === null,
+    relatedTests: [...tests].sort((left, right) => left.localeCompare(right)),
+    stoppedBy,
+  };
 }
 
 function affectedRoutesFor(
@@ -398,12 +553,20 @@ function affectedRoutesFor(
 
 /**
  * Direct dependents (edges pointing at the node), direct dependencies (edges
- * leaving it), and the depth-limited transitive closure beyond both.
+ * leaving it), and — depending on `mode` — either the depth-limited
+ * undirected neighbourhood beyond both, or the directional set of consumers a
+ * change would reach.
+ *
+ * The legacy fields compute exactly what they always did in both modes. The
+ * mode decides what the *new* field carries, so an existing caller gets the
+ * same answer to the same call and a new one can ask the right question
+ * (REMEDY §7.3).
  */
 export function impactOf(
   workspace: McpWorkspaceData,
   nodeId: string,
   depth: 1 | 2,
+  mode: ImpactMode = "related-neighborhood",
 ): ImpactReport | null {
   const view = buildGraphView(workspace);
   if (!view.nodes.has(nodeId)) {
@@ -426,11 +589,23 @@ export function impactOf(
     .map(({ id }) => id)
     .filter((id) => id !== nodeId && !direct.has(id));
 
+  const dependencyImpact =
+    mode === "dependency-impact" ? dependencyImpactOf(view, nodeId) : null;
+  // Routes are a projection of whatever set the caller asked about: the
+  // neighbourhood in the old mode, the consumers in the new one.
+  const affected = dependencyImpact
+    ? new Set([
+        nodeId,
+        ...dependencyImpact.candidates.map((entry) => entry.nodeId),
+      ])
+    : new Set([nodeId, ...direct, ...transitive]);
+
   return {
-    affectedRoutes: affectedRoutesFor(
-      workspace,
-      new Set([nodeId, ...direct, ...transitive]),
-    ),
+    affectedRoutes: affectedRoutesFor(workspace, affected),
+    dependencyImpact,
+    mode,
+    omissions: workspaceEdgeOmissions(workspace),
+    semanticsVersion: IMPACT_SEMANTICS_VERSION,
     dependencies: {
       edges: dependencyEdges,
       nodeIds: [

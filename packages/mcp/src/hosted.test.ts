@@ -1112,8 +1112,45 @@ describe("hosted MCP contract", () => {
     });
     expect(impact.structuredContent).toMatchObject({
       found: true,
-      impact: { dependents: { nodeIds: [requirement] } },
+      impact: {
+        // The default answer is unchanged, and now says which answer it is
+        // (Codex remedy §7.3, OQ-052).
+        dependencyImpact: null,
+        dependents: { nodeIds: [requirement] },
+        mode: "related-neighborhood",
+      },
     });
+
+    // The directional answer is opt-in and arrives labelled, with a path
+    // back to the change for every consumer it names.
+    const directional = await client.callTool({
+      arguments: { mode: "dependency-impact", node_id: code },
+      name: "impact_of",
+    });
+    const report = (
+      directional.structuredContent as {
+        impact: {
+          dependencyImpact: {
+            candidates: { nodeId: string; via: unknown[] }[];
+            complete: boolean;
+            stoppedBy: string | null;
+          };
+          mode: string;
+          semanticsVersion: number;
+        };
+      }
+    ).impact;
+    expect(report.mode).toBe("dependency-impact");
+    expect(report.semanticsVersion).toBeGreaterThan(1);
+    expect(report.dependencyImpact.complete).toBe(true);
+    expect(report.dependencyImpact.stoppedBy).toBeNull();
+    for (const candidate of report.dependencyImpact.candidates) {
+      expect([candidate.nodeId, candidate.via.length]).toEqual([
+        candidate.nodeId,
+        expect.any(Number),
+      ]);
+      expect(candidate.via.length).toBeGreaterThan(0);
+    }
 
     // ID-first: none of the traversal responses carries stored text.
     const traversalJson = JSON.stringify([

@@ -396,9 +396,15 @@ const GET_NODE_CONTENT_TOOL = {
 const IMPACT_OF_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "ID-first impact report for a node: direct dependents (edges into it), direct dependencies (edges out of it), and the depth-limited transitive closure.",
+    "ID-first impact report for a node: direct dependents (edges into it), direct dependencies (edges out of it), and either the depth-limited undirected neighbourhood (default) or, with mode='dependency-impact', the consumers a change reaches backwards along imports and calls.",
   inputSchema: z.object({
     depth: z.union([z.literal(1), z.literal(2)]).optional(),
+    /**
+     * Opt-in, because the default answer is one existing callers already
+     * depend on. `related-neighborhood` is proximity; `dependency-impact` is
+     * what a change reaches (REMEDY §7.3, OQ-052).
+     */
+    mode: z.enum(["dependency-impact", "related-neighborhood"]).optional(),
     node_id: z.string().trim().min(1),
   }),
   outputSchema: z.object({
@@ -409,10 +415,33 @@ const IMPACT_OF_TOOL = {
           edges: z.array(GRAPH_EDGE_SCHEMA),
           nodeIds: z.array(z.string()),
         }),
+        /**
+         * The directional answer, and null unless it was asked for — which
+         * is a different statement from an empty one.
+         */
+        dependencyImpact: z
+          .object({
+            candidates: z.array(
+              z.object({
+                distance: z.number().int().positive(),
+                nodeId: z.string(),
+                path: z.string().nullable(),
+                via: z.array(GRAPH_EDGE_SCHEMA),
+              }),
+            ),
+            complete: z.boolean(),
+            relatedTests: z.array(z.string()),
+            stoppedBy: z.enum(["budget", "distance"]).nullable(),
+          })
+          .nullable(),
         dependents: z.object({
           edges: z.array(GRAPH_EDGE_SCHEMA),
           nodeIds: z.array(z.string()),
         }),
+        mode: z.enum(["dependency-impact", "related-neighborhood"]),
+        omissions: z.array(EDGE_OMISSION_SCHEMA),
+        semanticsVersion: z.number().int().positive(),
+        /** Proximity, not blast radius — the name says which. */
         transitiveNodeIds: z.array(z.string()),
         /**
          * URLs this change reaches (Wave A′ todo 6, contract shared with the
@@ -1190,9 +1219,9 @@ function createServer(
   server.registerTool(
     "impact_of",
     IMPACT_OF_TOOL,
-    async ({ depth, node_id }) => {
+    async ({ depth, mode, node_id }) => {
       const workspace = await readWorkspace();
-      const impact = impactOf(workspace, node_id, depth ?? 2);
+      const impact = impactOf(workspace, node_id, depth ?? 2, mode);
       emitAccessEvent(
         store,
         principal,
@@ -1203,6 +1232,9 @@ function createServer(
               ...impact.dependents.nodeIds,
               ...impact.dependencies.nodeIds,
               ...impact.transitiveNodeIds,
+              ...(impact.dependencyImpact?.candidates ?? []).map(
+                ({ nodeId }) => nodeId,
+              ),
             ]
           : [],
       );
