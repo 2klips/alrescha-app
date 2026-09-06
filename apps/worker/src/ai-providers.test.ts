@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   AnthropicCoachingProvider,
+  AnthropicEnrichProvider,
   AnthropicJudgmentProvider,
   OpenAiJudgmentProvider,
 } from "./ai-providers";
@@ -132,7 +133,12 @@ describe("AI judgment provider adapters", () => {
       new Response(
         JSON.stringify({
           content: [
-            { id: "toolu_1", input: {}, name: "record_judgment", type: "tool_use" },
+            {
+              id: "toolu_1",
+              input: {},
+              name: "record_judgment",
+              type: "tool_use",
+            },
           ],
           stop_reason: "max_tokens",
         }),
@@ -216,5 +222,71 @@ describe("AI coaching provider adapters", () => {
       stopCondition: 0,
       verifiability: 2,
     });
+  });
+});
+
+/**
+ * The provider's explanation, kept (2026-09-06 live enrich run).
+ *
+ * Every failure here used to read "failed with status 400", which sounds
+ * like a malformed request. The first live run's 400 was a billing message —
+ * the account had run out of credit mid-pass — and finding that out cost an
+ * edit and a second paid call. The body is the only place the reason lives.
+ */
+describe("provider failures carry the reason", () => {
+  const batch = [{ path: "src/a.ts", summary: "does a thing" }];
+
+  it("includes the provider's own message", async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            message: "Your credit balance is too low to access the API.",
+            type: "invalid_request_error",
+          },
+          type: "error",
+        }),
+        { status: 400 },
+      ),
+    );
+    const provider = new AnthropicEnrichProvider({
+      apiKey: "k",
+      fetch,
+      model: "claude-sonnet-5",
+    });
+
+    await expect(provider.synthesizeConcepts(batch)).rejects.toThrow(
+      /status 400\..*credit balance is too low/,
+    );
+  });
+
+  it("still fails cleanly when the body cannot be read", async () => {
+    const unreadable = new Response("", { status: 500 });
+    vi.spyOn(unreadable, "text").mockRejectedValue(new Error("socket closed"));
+    const provider = new AnthropicEnrichProvider({
+      apiKey: "k",
+      fetch: vi.fn().mockResolvedValue(unreadable),
+      model: "claude-sonnet-5",
+    });
+
+    // A provider that dies mid-body must still produce the status, not a
+    // stack trace about reading it.
+    await expect(provider.synthesizeConcepts(batch)).rejects.toThrow(
+      "Anthropic concept request failed with status 500.",
+    );
+  });
+
+  it("bounds the detail so an error stays an error", async () => {
+    const provider = new AnthropicEnrichProvider({
+      apiKey: "k",
+      fetch: vi
+        .fn()
+        .mockResolvedValue(new Response("x".repeat(4_000), { status: 413 })),
+      model: "claude-sonnet-5",
+    });
+
+    await expect(provider.synthesizeConcepts(batch)).rejects.toThrow(
+      /^Anthropic concept request failed with status 413\. x{500}$/,
+    );
   });
 });
