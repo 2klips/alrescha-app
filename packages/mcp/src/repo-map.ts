@@ -1,4 +1,5 @@
 import {
+  AGENT_FLOW_SENTENCE,
   estimateTokens,
   personalizedPageRank,
   type PageRankEdge,
@@ -21,16 +22,15 @@ import type { McpNodeType, McpWorkspaceData } from "./store";
  */
 
 /**
- * The workflow, in one sentence (todo 22 ⑵).
+ * The workflow, in one sentence.
  *
- * `get_graph_schema.text` used to carry its own copy — and after the
- * catalogue diet that copy named three tools that no longer exist
- * (`search_nodes`, `get_node_content`, `route_query`), which is exactly how
- * a second copy of a rule fails. One exported constant, so the schema card,
- * the instruction block and the minimal-index PR all read the same line.
+ * Todo 22 found `get_graph_schema.text` carrying its own copy, which after
+ * the catalogue diet named three tools that no longer existed. Todo 22 ⑵
+ * finished the job: the sentence and the instruction block are now rendered
+ * from one array of steps in `@alrescha/core`, so there is no second copy to
+ * fall behind. Re-exported here because every caller imports it from here.
  */
-export const AGENT_FLOW_SENTENCE =
-  "flow: search_index once → get_neighbors/trace_path/impact_of for relational questions → get_artifact last (ids first, bodies last); after three lookups, read the file";
+export { AGENT_FLOW_SENTENCE };
 
 const MAX_SYMBOLS_PER_LINE = 12;
 export const REPO_MAP_MIN_BUDGET = 100;

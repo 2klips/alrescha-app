@@ -14,6 +14,7 @@ import {
 } from "./index";
 import { GRAPH_EDGE_SCHEMA, NODE_TYPE_SCHEMA, RELATION_SCHEMA } from "./hosted";
 import { MCP_EDGE_RELATIONS, MCP_NODE_TYPES } from "./store";
+import { agentFlowTools } from "@alrescha/core";
 import type {
   McpEdgeData,
   McpEdgeFamily,
@@ -438,9 +439,13 @@ describe("hosted MCP contract", () => {
      * only go down. The plan's ≤1,500 is not reachable on this SDK: an empty
      * tool still serialises its name, its `$schema` URL and its annotations,
      * which is ~65 tokens before a single parameter (OQ-059).
+     *
+     * 2,704 → 2,890 when `report_session_usage` arrived (todo 23) → 2,914
+     * when `memory_read` gained its cap (todo 22 ⑴). Each rise was caught
+     * here first, which is the whole point of a ratchet.
      */
     expect(estimateTokens(JSON.stringify(listed.tools))).toBeLessThanOrEqual(
-      2_900,
+      2_950,
     );
     expect(listed.tools).toHaveLength(21);
     expect(
@@ -450,6 +455,11 @@ describe("hosted MCP contract", () => {
       "create_pull_request",
     );
     expect(listed.tools.map(({ name }) => name)).not.toContain("write_file");
+    // Todo 22 ⑵: the shared flow may only name tools that exist. The copy
+    // that outlived its tools is the failure this pin prevents from
+    // happening a second time, from the other direction.
+    const names = new Set(listed.tools.map(({ name }) => name));
+    for (const tool of agentFlowTools()) expect(names.has(tool)).toBe(true);
   });
 
   it("serves two tenants from one process with identical, unmutated tool schemas", async () => {
@@ -2098,5 +2108,176 @@ describe("the budgeted tool surface", () => {
       expect(result.text).not.toContain(removed);
     }
     expect(result.text).toContain("search_index");
+  });
+});
+
+/**
+ * The rest of the budget work (Phase 4 Wave E todo 22 ⑷⑹).
+ *
+ * `impact_of` says how it reached its set and whether the set is the answer
+ * or a floor; the workspace read carries only the bands a call needs, and a
+ * band it cannot answer for says so instead of answering empty.
+ */
+describe("impact confidence and the banded read", () => {
+  const clients: Client[] = [];
+
+  afterEach(async () => {
+    await Promise.all(clients.splice(0).map((client) => client.close()));
+  });
+
+  async function connected(workspace = workspaceFixture()) {
+    const store = new InMemoryMcpStore({ workspaces: [workspace] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Impact",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+    return client;
+  }
+
+  it("says how it reached the set, and whether the set is a floor", async () => {
+    const client = await connected();
+    const answer = await client.callTool({
+      arguments: { node_id: "01K287J3D18V7A1MZG9E8D1Y11" },
+      name: "impact_of",
+    });
+    const { impact: report } = answer.structuredContent as {
+      impact: {
+        affected: Record<string, string[]>;
+        bound: string;
+        boundReasons: string[];
+        confidence: Record<string, number>;
+        targetRisk: unknown;
+      };
+    };
+
+    // Tiers, counted from the edges that carried the walk. A set reached
+    // through one resolved import and one agent assertion is not one claim.
+    expect(Object.keys(report.confidence).sort()).toEqual([
+      "agent_asserted",
+      "inferred",
+      "reference",
+      "resolved",
+      "unstated",
+    ]);
+    expect(
+      Object.values(report.confidence).reduce((sum, count) => sum + count, 0),
+    ).toBeGreaterThan(0);
+    // Nothing was omitted and nothing truncated in this fixture, so the set
+    // is the answer rather than a floor under it.
+    expect(report.bound).toBe("exact");
+    expect(report.boundReasons).toEqual([]);
+    expect(Object.keys(report.affected).sort()).toEqual([
+      "docs",
+      "requirements",
+      "routes",
+      "tables",
+      "tests",
+    ]);
+    // Absent from the risk map is not "safe": it is `null`, not a zero.
+    expect(
+      report.targetRisk === null || typeof report.targetRisk === "object",
+    ).toBe(true);
+  });
+
+  it("calls the set a lower bound when the read left something out", async () => {
+    const fixture = workspaceFixture();
+    const withOmission = {
+      ...fixture,
+      repositories: fixture.repositories.map((repository) => ({
+        ...repository,
+        edgeOmissions: [
+          {
+            count: 3,
+            reason: "the directory hierarchy is excluded from graph answers",
+            relation: "contains",
+          },
+        ],
+      })),
+    };
+    const client = await connected(withOmission);
+    const answer = await client.callTool({
+      arguments: { node_id: "01K287J3D18V7A1MZG9E8D1Y11" },
+      name: "impact_of",
+    });
+    const { impact: report } = answer.structuredContent as {
+      impact: { bound: string; boundReasons: string[] };
+    };
+
+    // An agent that reads a truncated impact set as complete concludes the
+    // change is safe because it could not see what it would break.
+    expect(report.bound).toBe("lower-bound");
+    expect(report.boundReasons[0]).toContain("contains");
+  });
+
+  it("asks for a band by naming it, and answers `none` for a band with no edges", async () => {
+    const client = await connected();
+    const answer = await client.callTool({
+      arguments: {
+        families: ["route"],
+        node_id: "01K287J3D18V7A1MZG9E8D1Y11",
+      },
+      name: "get_neighbors",
+    });
+
+    // The fixture has no route edges, so a filter that was being ignored
+    // would answer with the structure edges instead of with none.
+    expect(answer.structuredContent).toMatchObject({ edges: [] });
+    expect(answer.isError).not.toBe(true);
+  });
+
+  it("names two repositories rather than picking one", async () => {
+    const fixture = workspaceFixture();
+    const [first] = fixture.repositories;
+    const twin = {
+      ...first!,
+      fullName: "2klips/twin",
+      id: "01K287J3D18V7A1MZG9E8D1Y90",
+      artifacts: first!.artifacts.map((artifact) => ({
+        ...artifact,
+        id: `${artifact.id.slice(0, -1)}9`,
+      })),
+    };
+    const client = await connected({
+      ...fixture,
+      repositories: [...fixture.repositories, twin],
+    });
+    const answer = await client.callTool({
+      arguments: { path: "spec/WORK_SPEC.md" },
+      name: "get_artifact",
+    });
+    const result = answer.structuredContent as {
+      ambiguous?: { candidates: { repositoryFullName: string }[] };
+      artifact: unknown;
+    };
+
+    // `src/index.ts` is not a name one project owns. Answering for the
+    // lexicographically first repository answers a different question and
+    // says nothing about having chosen (보완 R-01, todo 22 ⑹).
+    expect(result.artifact).toBeNull();
+    expect(
+      result.ambiguous?.candidates.map(
+        ({ repositoryFullName }) => repositoryFullName,
+      ),
+    ).toEqual(["2klips/alrescha-app", "2klips/twin"]);
+  });
+
+  it("caps a memory read and says how many it left out", async () => {
+    const client = await connected();
+    const answer = await client.callTool({
+      arguments: { limit: 1 },
+      name: "memory_read",
+    });
+
+    // An answer shorter than the store is only honest if it says so.
+    expect(answer.structuredContent).toMatchObject({ truncated: 0 });
   });
 });

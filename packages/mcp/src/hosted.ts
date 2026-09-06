@@ -36,17 +36,27 @@ import {
   MCP_EDGE_FAMILIES,
   MCP_EDGE_RELATIONS,
   MCP_EDGE_TIERS,
+  MCP_DEFAULT_READ_BANDS,
   MCP_NODE_TYPES,
+  MCP_READ_BANDS,
   MEMORY_BLOCK_NAMES,
   MODEL_IDENTIFIER_PATTERN,
   createUlid,
   type McpAccessEvent,
   type McpPackMeasurement,
+  type McpReadBand,
   type McpPrincipal,
   type McpStore,
 } from "./store";
 
 const SERVER_INFO = { name: "alrescha", version: "0.1.0" } as const;
+/**
+ * Memory entries one read will carry (todo 22 ⑴). Uncapped, a workspace that
+ * had been writing memory for a year answered with all of it, and the block
+ * that made a session expensive was the one meant to make it cheap.
+ */
+export const MEMORY_READ_DEFAULT_LIMIT = 25;
+export const MEMORY_READ_MAX_LIMIT = 200;
 const PRIVATE_TTL_MS = 60_000;
 const READ_ONLY_TOOL = { destructiveHint: false, readOnlyHint: true } as const;
 const WRITE_METADATA_TOOL = {
@@ -330,9 +340,11 @@ const REQUEST_RESCAN_TOOL = {
 
 const MEMORY_READ_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description: "Read the workspace memory blocks.",
+  description:
+    "Read the workspace memory blocks. Newest first; says how many the cap left out.",
   inputSchema: z.object({
     anchor_node_id: z.string().trim().min(1).optional(),
+    limit: z.number().int().min(1).max(MEMORY_READ_MAX_LIMIT).optional(),
     name: z.enum(MEMORY_BLOCK_NAMES).optional(),
   }),
 };
@@ -548,10 +560,33 @@ function createServer(
       });
     }
   };
-  const readWorkspace = async () => {
+  /**
+   * The workspace, in the bands this call needs (todo 22 ⑹).
+   *
+   * The default read stopped carrying `route` and `database` when the bands
+   * landed, and the 보완's rule is that nothing is dropped before its callers
+   * move — so every tool whose answer is *about* routes or database objects
+   * names them here. A tool that does not name a band is a tool whose answer
+   * never mentioned it.
+   */
+  const readWorkspace = async (bands?: readonly McpReadBand[]) => {
     requireScope("mcp:read");
-    return store.loadWorkspace(principal);
+    return store.loadWorkspace(principal, bands ? { bands } : {});
   };
+  /** Every band, for the answers that are a census rather than a lookup. */
+  const ALL_BANDS = [...MCP_READ_BANDS];
+  /**
+   * The bands a families filter implies. Two of the eight edge families are
+   * about nodes the default read no longer carries, so asking about one is
+   * how a caller asks for it.
+   */
+  const bandsFor = (
+    families: readonly string[] | undefined,
+  ): readonly McpReadBand[] => [
+    ...MCP_DEFAULT_READ_BANDS,
+    ...(families?.includes("database") ? (["database"] as const) : []),
+    ...(families?.includes("route") ? (["route"] as const) : []),
+  ];
   const registerJsonResource = (
     name: string,
     title: string,
@@ -871,7 +906,10 @@ function createServer(
   });
 
   server.registerTool("get_graph_schema", GET_GRAPH_SCHEMA_TOOL, async () => {
-    const workspace = await readWorkspace();
+    // The card is a census of what exists, so it reads every band. A schema
+    // that under-counted because the default read is narrower would teach a
+    // caller the workspace has no routes.
+    const workspace = await readWorkspace(ALL_BANDS);
     const schema = buildGraphSchema(workspace);
     const sized = emitAccessEvent(store, principal, "get_graph_schema", []);
     return toolResult(
@@ -887,7 +925,10 @@ function createServer(
     "get_neighbors",
     GET_NEIGHBORS_TOOL,
     async ({ depth, families, node_id, relations }) => {
-      const workspace = await readWorkspace();
+      // Naming a band is asking for it (todo 22 ⑹): a `families` filter for
+      // a band the default read does not carry would otherwise answer
+      // "none", which is what an ignored filter looks like.
+      const workspace = await readWorkspace(bandsFor(families));
       const result = collectNeighbors(
         workspace,
         node_id,
@@ -918,7 +959,13 @@ function createServer(
     "impact_of",
     IMPACT_OF_TOOL,
     async ({ depth, mode, node_id }) => {
-      const workspace = await readWorkspace();
+      // `affected.routes` and `affected.tables` are the answer, not a
+      // by-product, so the two partial bands are part of this read.
+      const workspace = await readWorkspace([
+        ...MCP_DEFAULT_READ_BANDS,
+        "database",
+        "route",
+      ]);
       const impact = impactOf(workspace, node_id, depth ?? 2, mode);
       const sized = emitAccessEvent(
         store,
@@ -974,13 +1021,18 @@ function createServer(
   server.registerTool(
     "memory_read",
     MEMORY_READ_TOOL,
-    async ({ anchor_node_id, name }) => {
+    async ({ anchor_node_id, limit, name }) => {
       const workspace = await readWorkspace();
-      const entries = (workspace.memoryEntries ?? []).filter(
-        (entry) =>
-          (!name || entry.name === name) &&
-          (!anchor_node_id || entry.anchorNodeId === anchor_node_id),
-      );
+      const matched = [...(workspace.memoryEntries ?? [])]
+        .filter(
+          (entry) =>
+            (!name || entry.name === name) &&
+            (!anchor_node_id || entry.anchorNodeId === anchor_node_id),
+        )
+        // Newest first, so a cap keeps what a session is most likely to
+        // still be acting on rather than an arbitrary slice.
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+      const entries = matched.slice(0, limit ?? MEMORY_READ_DEFAULT_LIMIT);
       const sized = emitAccessEvent(
         store,
         principal,
@@ -992,6 +1044,9 @@ function createServer(
       return toolResult(
         {
           entries,
+          // An answer shorter than the store is only honest if it says so
+          // (todo 22 ⑴). Zero means the cap left nothing out.
+          truncated: matched.length - entries.length,
           workspaceId: principal.workspaceId,
         },
         sized,
@@ -1031,7 +1086,13 @@ function createServer(
   );
 
   server.registerTool("query_brain", QUERY_BRAIN_TOOL, async ({ filter }) => {
-    const workspace = await readWorkspace();
+    // Same rule as `get_neighbors`: a `types` filter naming a partial band
+    // is how a caller asks for that band.
+    const workspace = await readWorkspace([
+      ...MCP_DEFAULT_READ_BANDS,
+      ...(filter?.types?.includes("db_object") ? (["database"] as const) : []),
+      ...(filter?.types?.includes("route") ? (["route"] as const) : []),
+    ]);
     const { coverage, nodes, table } = queryWorkspaceBrain(workspace, filter);
     const sized = emitAccessEvent(
       store,
@@ -1149,7 +1210,7 @@ function createServer(
   );
 
   server.registerTool("repo_overview", REPO_OVERVIEW_TOOL, async () => {
-    const workspace = await readWorkspace();
+    const workspace = await readWorkspace(ALL_BANDS);
     const overview = buildRepoOverview(workspace);
     const sized = emitAccessEvent(store, principal, "repo_overview", []);
     return toolResult(

@@ -31,6 +31,7 @@ export {
   MCP_SCOPES,
   createAccessTokenSecret,
   createUlid,
+  bandUnsupportedReason,
   edgeOmissionReason,
   hashAccessToken,
 } from "./store";
@@ -58,7 +59,9 @@ export type {
 export {
   AGENT_ASSERTION_RELATIONS,
   MCP_EDGE_FAMILIES,
+  MCP_DEFAULT_READ_BANDS,
   MCP_EDGE_RELATIONS,
+  MCP_READ_BANDS,
   MCP_EDGE_TIERS,
   MCP_NODE_TYPES,
   MCP_ARTIFACT_MATCH_LIMIT,
@@ -105,6 +108,8 @@ export type {
   McpRequirementData,
   McpRescanResult,
   McpScope,
+  McpBandRead,
+  McpReadBand,
   McpSectionData,
   McpSessionUsageInput,
   McpSessionUsageResult,

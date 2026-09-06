@@ -3,6 +3,9 @@ import {
   buildMinimalIndexProposalFiles,
   PROGRESS_LOGGING_INSTRUCTION,
   renderManagedIndex,
+  CURSOR_ALWAYS_APPLY_NOTE,
+  estimateTokens,
+  renderAgentInstructionBlock,
 } from "../packages/core/src/index";
 import { describe, expect, it } from "vitest";
 
@@ -33,8 +36,17 @@ describe("minimal agent index", () => {
       true,
     );
     expect(once.endsWith("\n\nKeep this exact suffix.\n")).toBe(true);
-    expect(section.split("\n")).toHaveLength(9);
+    // Eight lines longer since todo 22 ⑵ folded the shared flow block in,
+    // and the guard is now the thing a line count was standing in for: a
+    // long line costs a session as much as three short ones, so the section
+    // is held to a token budget as well as the 30-line cap.
+    expect(section.split("\n")).toHaveLength(17);
     expect(section.split("\n").length).toBeLessThanOrEqual(30);
+    expect(estimateTokens(section)).toBeLessThanOrEqual(400);
+    // One flow, four surfaces: the index installs the same block the schema
+    // card renders, rather than a paraphrase that can fall behind it.
+    expect(section).toContain(renderAgentInstructionBlock());
+    expect(section).toContain(CURSOR_ALWAYS_APPLY_NOTE);
     expect(once).toContain("call MCP tool `request_context_pack`");
     expect(once).toContain("Project context via Alrescha");
     expect(once).toContain("<!-- ALRESCHA:BEGIN");

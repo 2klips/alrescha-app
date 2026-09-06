@@ -246,6 +246,12 @@ export interface McpReadCoverage {
    * behaviour, only about the rows this read carried.
    */
   result: "complete" | "partial";
+  /**
+   * What each requested band did (todo 22 ⑹). A caller that asked for
+   * `route` and got nothing can tell "this workspace has none" from "this
+   * read does not carry them" without guessing.
+   */
+  bands?: readonly McpBandRead[];
   truncated: McpReadTruncation[];
 }
 
@@ -407,6 +413,69 @@ export interface McpRepositoryData {
 
 /** How many rows one workspace read carries per table before it truncates. */
 export const MCP_WORKSPACE_READ_LIMIT = 2_000;
+
+/**
+ * What a workspace read is asked to carry (Phase 4 Wave E todo 22 ⑹).
+ *
+ * A read used to be one thing: every table, every time, whether the caller
+ * was answering "what does this file import" or "which routes exist". The
+ * bands split it by what a question actually needs.
+ *
+ * - `structure` — repositories, nodes, artifacts, the search index.
+ * - `evidence` — requirements, evidence, findings, receipts.
+ * - `semantic` — module summaries, sections, workspace memory.
+ * - `database` — `db_object` nodes.
+ * - `route` — `route` nodes.
+ * - `hierarchy` — directories and `contains`. **Unsupported here**: the
+ *   hierarchy is excluded from graph answers entirely (`edgeOmissionReason`),
+ *   so a read that claimed to carry it would be claiming something no reader
+ *   could use. It is in the vocabulary so that asking for it gets an answer
+ *   with a reason rather than an empty band that reads as "there is none".
+ */
+export const MCP_READ_BANDS = [
+  "database",
+  "evidence",
+  "hierarchy",
+  "route",
+  "semantic",
+  "structure",
+] as const;
+
+export type McpReadBand = (typeof MCP_READ_BANDS)[number];
+
+/**
+ * What a read carries when the caller says nothing (todo 22 ⑹).
+ *
+ * The three the plan names. `database` and `route` are a partial query now —
+ * every caller that needs them asks, and `hosted.ts` is where they ask.
+ */
+export const MCP_DEFAULT_READ_BANDS: readonly McpReadBand[] = [
+  "evidence",
+  "semantic",
+  "structure",
+];
+
+/**
+ * What one band's read did, and why (보완 R-01, todo 22 ⑹).
+ *
+ * Three states, never two: `complete` is the rows, `truncated` is some of
+ * them with the budget named, and `unsupported` is a band this reader cannot
+ * answer for. Collapsing `unsupported` into an empty `complete` is how a
+ * caller concludes a repository has no routes when nobody looked.
+ */
+export interface McpBandRead {
+  readonly band: McpReadBand;
+  /** Stated for `truncated` and `unsupported`; null when there is nothing to explain. */
+  readonly reason: string | null;
+  readonly result: "complete" | "truncated" | "unsupported";
+}
+
+/** Why a band cannot be answered for, when it cannot. */
+export function bandUnsupportedReason(band: McpReadBand): string | null {
+  return band === "hierarchy"
+    ? "directory nodes and `contains` edges are excluded from graph answers, so no read carries them"
+    : null;
+}
 
 /**
  * How many repositories a single path lookup will report. A path answered by
@@ -705,7 +774,15 @@ export interface McpStore {
     principal: McpPrincipal,
     selector: { id?: string | undefined; path?: string | undefined },
   ): Promise<readonly McpArtifactMatch[]>;
-  loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData>;
+  /**
+   * The workspace, in the bands the caller asked for (todo 22 ⑹). Omitting
+   * `bands` reads `MCP_DEFAULT_READ_BANDS`; the answer says what each
+   * requested band did, so a narrower read never reads as an empty one.
+   */
+  loadWorkspace(
+    principal: McpPrincipal,
+    options?: { bands?: readonly McpReadBand[] },
+  ): Promise<McpWorkspaceData>;
   publishAccessEvent(channel: string, event: McpAccessEvent): Promise<void>;
   /**
    * Record one prompt for the authenticated member (ADR-011). The store is
@@ -1304,11 +1381,28 @@ export class InMemoryMcpStore implements McpStore {
     );
   }
 
-  async loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData> {
+  /**
+   * The same band contract as the hosted store (todo 22 ⑹). It has no row
+   * budget, so nothing here is ever `truncated` — but a band the caller did
+   * not ask for is withheld here too, because the local serving mode and the
+   * hosted one answering differently is the failure todo 17 spent a whole
+   * equivalence suite preventing.
+   */
+  async loadWorkspace(
+    principal: McpPrincipal,
+    options?: { bands?: readonly McpReadBand[] },
+  ): Promise<McpWorkspaceData> {
     const workspace = this.#workspaces.get(principal.workspaceId);
     if (!workspace || workspace.ownerUserId !== principal.userId) {
       throw new Error("Workspace access denied");
     }
+    const requested = new Set(options?.bands ?? MCP_DEFAULT_READ_BANDS);
+    const bands: McpBandRead[] = [...requested].sort().map((band) => {
+      const unsupported = bandUnsupportedReason(band);
+      return unsupported
+        ? { band, reason: unsupported, result: "unsupported" as const }
+        : { band, reason: null, result: "complete" as const };
+    });
     const artifactPaths = new Map(
       workspace.repositories.flatMap((repository) =>
         repository.artifacts.map(({ id, path }) => [id, path] as const),
@@ -1332,7 +1426,20 @@ export class InMemoryMcpStore implements McpStore {
       }));
     return {
       ...workspace,
+      coverage: {
+        ...(workspace.coverage ?? {
+          readConsistency: "single-statement" as const,
+          result: "complete" as const,
+          truncated: [],
+        }),
+        bands,
+      },
       memoryEntries: [...(workspace.memoryEntries ?? []), ...written],
+      repositories: workspace.repositories.map((repository) => ({
+        ...repository,
+        ...(requested.has("database") ? {} : { dbObjects: [] }),
+        ...(requested.has("route") ? {} : { routes: [] }),
+      })),
     };
   }
 

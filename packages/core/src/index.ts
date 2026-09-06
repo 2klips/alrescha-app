@@ -473,6 +473,23 @@ export type {
 } from "./docs/doc-page";
 
 export {
+  AGENT_FLOW_SENTENCE,
+  AGENT_FLOW_STEPS,
+  AGENT_FORCED_CALL_CEILING,
+  AGENT_INSTRUCTION_BLOCK_TOKEN_BUDGET,
+  CURSOR_ALWAYS_APPLY_NOTE,
+  agentFlowTools,
+  forcedCallsBeforeFirstRead,
+  renderAgentInstructionBlock,
+} from "./context/agent-instructions";
+export type { AgentFlowStep } from "./context/agent-instructions";
+export {
+  AGENT_HOOK_AGENTS,
+  AGENT_HOOK_SNIPPETS,
+  agentHookSnippets,
+} from "./context/agent-hooks";
+export type { AgentHookAgent, AgentHookSnippet } from "./context/agent-hooks";
+export {
   CHARS_PER_TOKEN,
   estimateTokens,
   estimateTokensFromBytes,

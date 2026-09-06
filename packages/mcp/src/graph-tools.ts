@@ -9,7 +9,13 @@
  * are marked so a caller can tell them from stored rows.
  */
 
-import { summaryAbsence, type SummaryAbsence } from "@alrescha/core";
+import {
+  summaryAbsence,
+  type RiskEntry,
+  type SummaryAbsence,
+} from "@alrescha/core";
+
+import { workspaceRiskEntries } from "./workspace-risk";
 
 import type {
   McpEdgeFamily,
@@ -424,7 +430,59 @@ export interface DependencyImpact {
   readonly stoppedBy: "budget" | "distance" | null;
 }
 
+/**
+ * How the impact set was reached, counted by the tier of the edges that
+ * carried it (todo 22 ⑷).
+ *
+ * A blast radius assembled from `resolved` import edges and one an agent
+ * asserted by hand are not the same claim, and a single number in front of
+ * both hides which one this is. `unstated` is edges whose writer named no
+ * tier: counted apart, never folded into a tier it did not claim.
+ */
+export interface ImpactConfidence {
+  readonly agent_asserted: number;
+  readonly inferred: number;
+  readonly reference: number;
+  readonly resolved: number;
+  readonly unstated: number;
+}
+
+/**
+ * Whether the set is the answer or a floor under it (todo 22 ⑷).
+ *
+ * `exact` requires three things at once: the walk ran out of graph rather
+ * than out of budget, the read carried every relation, and no table hit its
+ * row limit. Any one of them missing makes the honest word `lower-bound` —
+ * an agent that treats a truncated answer as complete will conclude the
+ * change is safe because it could not see what it would break.
+ */
+export type ImpactBound = "exact" | "lower-bound";
+
+/**
+ * What the change reaches, by the kind of thing it is (todo 22 ⑷).
+ *
+ * Ids, not bodies — the same ID-first contract as everything else here. A
+ * caller asking "what does editing this break" is usually asking about one
+ * of these five and would otherwise re-derive them from the node list.
+ */
+export interface ImpactAffected {
+  /** Docs, specs, ADRs, todo files and instruction files. */
+  readonly docs: readonly string[];
+  readonly requirements: readonly string[];
+  /** Route node ids; `affectedRoutes` carries the same routes with URLs. */
+  readonly routes: readonly string[];
+  /** Database objects — tables, views and functions alike. */
+  readonly tables: readonly string[];
+  /**
+   * Test files that reach the set. Collected, never expanded through: a test
+   * importing a file makes the test related, not everything it touches.
+   */
+  readonly tests: readonly string[];
+}
+
 export interface ImpactReport {
+  /** Nodes in the impact set, grouped by what they are (todo 22 ⑷). */
+  readonly affected: ImpactAffected;
   /**
    * URLs this change reaches (Phase 4 Wave A′ todo 6): every route served by
    * a file in the impact set, plus the node itself when it is a route. The
@@ -432,6 +490,12 @@ export interface ImpactReport {
    * this break" is a question about screens and endpoints, not about files.
    */
   readonly affectedRoutes: readonly AffectedRoute[];
+  /** Whether this set is the answer or a floor under it (todo 22 ⑷). */
+  readonly bound: ImpactBound;
+  /** Why it is a floor, when it is. Empty exactly when `bound` is `exact`. */
+  readonly boundReasons: readonly string[];
+  /** Edge tiers behind the set — how it was reached, not how big it is. */
+  readonly confidence: ImpactConfidence;
   readonly dependencies: {
     readonly edges: readonly GraphEdgeRef[];
     readonly nodeIds: readonly string[];
@@ -450,6 +514,13 @@ export interface ImpactReport {
   /** What the read could not carry (S2a); an absence here is not proof. */
   readonly omissions: readonly McpEdgeOmission[];
   readonly semanticsVersion: number;
+  /**
+   * The changed node's own risk entry, or `null` when nothing put it on the
+   * map (todo 22 ⑷ → todo 21). Absent from the map is not "safe": a file
+   * with no open findings, no fan-in and no coverage signal has no entry,
+   * and `null` says that rather than printing a zero.
+   */
+  readonly targetRisk: RiskEntry | null;
   /**
    * The undirected neighbourhood, depth-limited. Named for what it is: this
    * is proximity, not blast radius.
@@ -559,6 +630,104 @@ function affectedRoutesFor(
   return routes.sort((left, right) => left.url.localeCompare(right.url));
 }
 
+const DOC_ARTIFACT_KINDS = new Set([
+  "adr",
+  "doc",
+  "instruction",
+  "spec",
+  "todo",
+]);
+
+/** Node ids in the set, grouped by what each one is (todo 22 ⑷). */
+function affectedFor(
+  workspace: McpWorkspaceData,
+  view: GraphView,
+  affected: ReadonlySet<string>,
+): ImpactAffected {
+  const docs: string[] = [];
+  const requirements: string[] = [];
+  const routes: string[] = [];
+  const tables: string[] = [];
+  const tests = new Set<string>();
+
+  for (const repository of workspace.repositories) {
+    for (const artifact of repository.artifacts) {
+      if (affected.has(artifact.id) && DOC_ARTIFACT_KINDS.has(artifact.kind)) {
+        docs.push(artifact.id);
+      }
+    }
+    for (const requirement of repository.requirements) {
+      if (affected.has(requirement.id)) requirements.push(requirement.id);
+    }
+    for (const route of repository.routes ?? []) {
+      const serves =
+        affected.has(route.nodeId) ||
+        repository.edges.some(
+          (edge) =>
+            edge.relation === "handles" &&
+            edge.sourceNodeId === route.nodeId &&
+            affected.has(edge.targetNodeId),
+        );
+      if (serves) routes.push(route.nodeId);
+    }
+    for (const object of repository.dbObjects ?? []) {
+      const touched =
+        affected.has(object.nodeId) ||
+        repository.edges.some(
+          (edge) =>
+            affected.has(edge.sourceNodeId) &&
+            edge.targetNodeId === object.nodeId,
+        );
+      if (touched) tables.push(object.nodeId);
+    }
+  }
+
+  // The test-terminal rule again: a `tests` edge into the set makes the test
+  // file related, and the walk never continues through it.
+  for (const edges of view.adjacency.values()) {
+    for (const edge of edges) {
+      if (edge.relation === "tests" && affected.has(edge.targetNodeId)) {
+        tests.add(edge.sourceNodeId);
+      }
+    }
+  }
+
+  const sorted = (ids: string[]): string[] =>
+    [...new Set(ids)].sort((left, right) => left.localeCompare(right));
+  return {
+    docs: sorted(docs),
+    requirements: sorted(requirements),
+    routes: sorted(routes),
+    tables: sorted(tables),
+    tests: sorted([...tests]),
+  };
+}
+
+/**
+ * The tiers of the edges the set was reached through (todo 22 ⑷).
+ *
+ * In `dependency-impact` mode those are the edges on each candidate's path;
+ * otherwise they are the edges of the neighbourhood the answer describes. A
+ * tier the writer never stated is counted as `unstated` rather than promoted
+ * into one it did not claim.
+ */
+function confidenceOf(edges: readonly GraphEdgeRef[]): ImpactConfidence {
+  const tally: Record<McpEdgeTier | "unstated", number> = {
+    agent_asserted: 0,
+    inferred: 0,
+    reference: 0,
+    resolved: 0,
+    unstated: 0,
+  };
+  const seen = new Set<string>();
+  for (const edge of edges) {
+    if (seen.has(edge.id)) continue;
+    seen.add(edge.id);
+    tally[edge.tier ?? "unstated"] += 1;
+  }
+  return tally;
+}
+
 /**
  * Direct dependents (edges pointing at the node), direct dependencies (edges
  * leaving it), and — depending on `mode` — either the depth-limited
@@ -608,12 +777,40 @@ export function impactOf(
       ])
     : new Set([nodeId, ...direct, ...transitive]);
 
+  const omissions = workspaceEdgeOmissions(workspace);
+  const truncated = workspace.coverage?.truncated ?? [];
+  const boundReasons = [
+    ...(dependencyImpact?.stoppedBy === "budget"
+      ? [`the walk stopped after ${IMPACT_EDGE_BUDGET} edges`]
+      : []),
+    ...(dependencyImpact?.stoppedBy === "distance"
+      ? [`the walk stopped at ${IMPACT_MAX_DISTANCE} hops`]
+      : []),
+    ...omissions.map(
+      ({ count, reason, relation }) =>
+        `${count} ${relation} edges were not carried: ${reason}`,
+    ),
+    ...truncated.map(
+      ({ limit, table }) =>
+        `the ${table} read stopped at its ${limit}-row budget`,
+    ),
+  ];
+
   return {
+    affected: affectedFor(workspace, view, affected),
     affectedRoutes: affectedRoutesFor(workspace, affected),
+    bound: boundReasons.length === 0 ? "exact" : "lower-bound",
+    boundReasons,
+    confidence: confidenceOf(
+      dependencyImpact
+        ? dependencyImpact.candidates.flatMap(({ via }) => via)
+        : (neighborhood?.edges ?? []),
+    ),
     dependencyImpact,
     mode,
-    omissions: workspaceEdgeOmissions(workspace),
+    omissions,
     semanticsVersion: IMPACT_SEMANTICS_VERSION,
+    targetRisk: workspaceRiskEntries(workspace).get(nodeId) ?? null,
     dependencies: {
       edges: dependencyEdges,
       nodeIds: [

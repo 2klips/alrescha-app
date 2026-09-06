@@ -7,8 +7,10 @@ import {
   MCP_EDGE_PAGE_ROWS,
   MCP_EDGE_RELATIONS,
   MCP_EDGE_TIERS,
+  MCP_DEFAULT_READ_BANDS,
   MCP_SCOPES,
   MCP_WORKSPACE_READ_LIMIT,
+  bandUnsupportedReason,
   createAccessTokenSecret,
   createUlid,
   edgeOmissionReason,
@@ -39,6 +41,8 @@ import {
   type McpPrincipal,
   type McpProgressEvent,
   type McpProgressStatus,
+  type McpBandRead,
+  type McpReadBand,
   type McpScope,
   type McpSessionUsageInput,
   type McpSessionUsageResult,
@@ -716,8 +720,20 @@ export class SupabaseMcpStore implements McpStore {
     };
   }
 
-  async loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData> {
+  async loadWorkspace(
+    principal: McpPrincipal,
+    options?: { bands?: readonly McpReadBand[] },
+  ): Promise<McpWorkspaceData> {
     const workspaceId = principal.workspaceId;
+    /**
+     * Which bands this read carries (todo 22 ⑹). The two partial ones are
+     * skipped unless asked for, and the skip is reported rather than
+     * answered with an empty list — "this workspace has no routes" and
+     * "this read did not look for routes" are different facts.
+     */
+    const requested = new Set(options?.bands ?? MCP_DEFAULT_READ_BANDS);
+    const wants = (band: McpReadBand): boolean => requested.has(band);
+    const empty = { data: [] as unknown, error: null };
     /**
      * Every read below orders by `id` and asks for one row more than it will
      * use, so "there is more" becomes an observation instead of an
@@ -826,18 +842,22 @@ export class SupabaseMcpStore implements McpStore {
         .eq("workspace_id", workspaceId)
         .order("id", { ascending: true })
         .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.client
-        .from("routes")
-        .select("id, repository_id, url, tier, methods")
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.client
-        .from("db_objects")
-        .select("id, repository_id, name, kind, source_path, source_line")
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
+      wants("route")
+        ? this.client
+            .from("routes")
+            .select("id, repository_id, url, tier, methods")
+            .eq("workspace_id", workspaceId)
+            .order("id", { ascending: true })
+            .limit(MCP_WORKSPACE_READ_LIMIT + 1)
+        : empty,
+      wants("database")
+        ? this.client
+            .from("db_objects")
+            .select("id, repository_id, name, kind, source_path, source_line")
+            .eq("workspace_id", workspaceId)
+            .order("id", { ascending: true })
+            .limit(MCP_WORKSPACE_READ_LIMIT + 1)
+        : empty,
       this.client
         .from("sections")
         .select("id, repository_id, token, heading, source_path")
@@ -931,8 +951,38 @@ export class SupabaseMcpStore implements McpStore {
       revisionAfter !== null &&
       revisionBefore === revisionAfter;
 
+    // Per band, in three states (todo 22 ⑹ / 보완 R-01). A band nobody asked
+    // for is absent from this list; a band that was asked for and cannot be
+    // answered says so with its reason.
+    const bandTables: Partial<Record<McpReadBand, readonly string[]>> = {
+      database: ["db_objects"],
+      evidence: ["requirements", "evidence", "findings", "receipts"],
+      route: ["routes"],
+      semantic: ["sections", "module_summaries", "memory_block_entries"],
+      structure: ["repositories", "graph_nodes", "artifacts", "index_entries"],
+    };
+    const bands: McpBandRead[] = [...requested].sort().map((band) => {
+      const unsupported = bandUnsupportedReason(band);
+      if (unsupported) {
+        return { band, reason: unsupported, result: "unsupported" as const };
+      }
+      const short = truncated.filter(({ table }) =>
+        (bandTables[band] ?? []).includes(table),
+      );
+      return short.length === 0
+        ? { band, reason: null, result: "complete" as const }
+        : {
+            band,
+            reason: short
+              .map(({ limit, table }) => `${table} stopped at ${limit} rows`)
+              .join("; "),
+            result: "truncated" as const,
+          };
+    });
+
     return {
       coverage: {
+        bands,
         readConsistency: fenceHeld ? "revision-fenced" : "unproven",
         result: truncated.length === 0 ? "complete" : "partial",
         truncated,

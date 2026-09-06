@@ -1,9 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  MCP_DEFAULT_READ_BANDS,
   MCP_EDGE_MAX_PAGES,
   MCP_EDGE_PAGE_ROWS,
+  MCP_READ_BANDS,
   MCP_WORKSPACE_READ_LIMIT,
 } from "@alrescha/mcp";
+import type { McpReadBand } from "@alrescha/mcp";
 import type { McpAccessEvent } from "@alrescha/mcp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -643,19 +646,29 @@ describe("SupabaseMcpStore.loadWorkspace — read coverage", () => {
     });
   }
 
-  async function workspaceOf(fake: FakeSupabaseClient) {
+  async function workspaceOf(
+    fake: FakeSupabaseClient,
+    bands?: readonly McpReadBand[],
+  ) {
     const store = new SupabaseMcpStore(asClient(fake));
-    return store.loadWorkspace({
-      scopes: ["mcp:read"],
-      tokenId: TOKEN_ID,
-      userId: USER_ID,
-      workspaceId: WORKSPACE_ID,
-    });
+    return store.loadWorkspace(
+      {
+        scopes: ["mcp:read"],
+        tokenId: TOKEN_ID,
+        userId: USER_ID,
+        workspaceId: WORKSPACE_ID,
+      },
+      bands ? { bands } : {},
+    );
   }
 
   it("orders every read and asks for one row past the budget", async () => {
     const fake = client([]);
-    await workspaceOf(fake);
+    // Every band, so this still covers every table the store can read —
+    // the default set is two narrower since todo 22 ⑹, and a bound-read
+    // assertion that quietly stopped covering `routes` and `db_objects`
+    // would be the weaker test, not the smaller one.
+    await workspaceOf(fake, [...MCP_READ_BANDS]);
 
     const bounded = fake.builders.filter((builder) =>
       builder.calls.some(({ method }) => method === "limit"),
@@ -686,15 +699,95 @@ describe("SupabaseMcpStore.loadWorkspace — read coverage", () => {
       MCP_WORKSPACE_READ_LIMIT,
     );
     expect(workspace.coverage).toEqual({
+      // The band the short table belongs to is `truncated`, and the other
+      // two are still `complete` — a read that ran out of artifacts has not
+      // run out of findings, and one flag for the whole load would say it
+      // had (todo 22 ⑹).
+      bands: [
+        { band: "evidence", reason: null, result: "complete" },
+        { band: "semantic", reason: null, result: "complete" },
+        {
+          band: "structure",
+          reason: `artifacts stopped at ${MCP_WORKSPACE_READ_LIMIT} rows`,
+          result: "truncated",
+        },
+      ],
       readConsistency: "revision-fenced",
       result: "partial",
       truncated: [{ limit: MCP_WORKSPACE_READ_LIMIT, table: "artifacts" }],
     });
   });
 
+  /**
+   * Phase 4 Wave E todo 22 ⑹ / 보완 R-01. The rule the bands exist for: a
+   * narrower read must never read as an empty one, and the boundary the row
+   * budget sits on must be asserted from both sides.
+   */
+  it("keeps the last row at the budget and reports the one past it", async () => {
+    for (const count of [
+      MCP_WORKSPACE_READ_LIMIT - 1,
+      MCP_WORKSPACE_READ_LIMIT,
+      MCP_WORKSPACE_READ_LIMIT + 1,
+    ]) {
+      const workspace = await workspaceOf(client(artifactRows(count)));
+      const artifacts = workspace.repositories[0]?.artifacts ?? [];
+      const kept = Math.min(count, MCP_WORKSPACE_READ_LIMIT);
+
+      expect(artifacts).toHaveLength(kept);
+      // The last row inside the budget is in the answer — an off-by-one here
+      // silently drops a file and nothing says so.
+      expect(artifacts.at(-1)?.path).toBe(`src/file-${kept - 1}.ts`);
+      expect(workspace.coverage?.result).toBe(
+        count > MCP_WORKSPACE_READ_LIMIT ? "partial" : "complete",
+      );
+      expect(workspace.coverage?.truncated).toEqual(
+        count > MCP_WORKSPACE_READ_LIMIT
+          ? [{ limit: MCP_WORKSPACE_READ_LIMIT, table: "artifacts" }]
+          : [],
+      );
+    }
+  });
+
+  it("reports a band it cannot answer for rather than answering empty", async () => {
+    const workspace = await workspaceOf(client([]), [
+      ...MCP_DEFAULT_READ_BANDS,
+      "hierarchy",
+    ]);
+
+    // The third state. `hierarchy` is excluded from graph answers entirely,
+    // so a read that returned an empty list would be telling a caller this
+    // repository has no directories.
+    expect(
+      workspace.coverage?.bands?.find(({ band }) => band === "hierarchy"),
+    ).toEqual({
+      band: "hierarchy",
+      reason: expect.stringContaining("excluded from graph answers"),
+      result: "unsupported",
+    });
+  });
+
+  it("does not read a band nobody asked for", async () => {
+    const fake = client([]);
+    await workspaceOf(fake);
+
+    // The partial bands are the point of the split: the default read makes
+    // two fewer round trips, and the answer says which two it skipped.
+    expect(fake.fromCalls).not.toContain("routes");
+    expect(fake.fromCalls).not.toContain("db_objects");
+
+    await workspaceOf(fake, [...MCP_DEFAULT_READ_BANDS, "route"]);
+    expect(fake.fromCalls).toContain("routes");
+    expect(fake.fromCalls).not.toContain("db_objects");
+  });
+
   it("calls a read that fit complete", async () => {
     const workspace = await workspaceOf(client(artifactRows(3)));
     expect(workspace.coverage).toEqual({
+      bands: [
+        { band: "evidence", reason: null, result: "complete" },
+        { band: "semantic", reason: null, result: "complete" },
+        { band: "structure", reason: null, result: "complete" },
+      ],
       readConsistency: "revision-fenced",
       result: "complete",
       truncated: [],
@@ -884,14 +977,20 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
     return fake;
   }
 
-  async function workspaceOf(fake: FakeSupabaseClient) {
+  async function workspaceOf(
+    fake: FakeSupabaseClient,
+    bands?: readonly McpReadBand[],
+  ) {
     const store = new SupabaseMcpStore(asClient(fake));
-    return store.loadWorkspace({
-      scopes: ["mcp:read"],
-      tokenId: TOKEN_ID,
-      userId: USER_ID,
-      workspaceId: WORKSPACE_ID,
-    });
+    return store.loadWorkspace(
+      {
+        scopes: ["mcp:read"],
+        tokenId: TOKEN_ID,
+        userId: USER_ID,
+        workspaceId: WORKSPACE_ID,
+      },
+      bands ? { bands } : {},
+    );
   }
 
   it("follows the cursor until a page says there is no more", async () => {
@@ -912,6 +1011,11 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
     expect(pages[0]?.args).toMatchObject({ after_edge_id: null });
     expect(pages[1]?.args).toMatchObject({ after_edge_id: "e2" });
     expect(workspace.coverage).toEqual({
+      bands: [
+        { band: "evidence", reason: null, result: "complete" },
+        { band: "semantic", reason: null, result: "complete" },
+        { band: "structure", reason: null, result: "complete" },
+      ],
       readConsistency: "revision-fenced",
       result: "complete",
       truncated: [],
@@ -929,6 +1033,11 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
 
     expect(fake.callsTo("read_edge_page")).toHaveLength(MCP_EDGE_MAX_PAGES);
     expect(workspace.coverage).toEqual({
+      bands: [
+        { band: "evidence", reason: null, result: "complete" },
+        { band: "semantic", reason: null, result: "complete" },
+        { band: "structure", reason: null, result: "complete" },
+      ],
       readConsistency: "revision-fenced",
       result: "partial",
       truncated: [
