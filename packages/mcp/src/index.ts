@@ -106,6 +106,8 @@ export type {
   McpRescanResult,
   McpScope,
   McpSectionData,
+  McpSessionUsageInput,
+  McpSessionUsageResult,
   McpSourceSpan,
   McpStore,
   McpTokenRecord,

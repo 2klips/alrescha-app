@@ -40,6 +40,8 @@ import {
   type McpProgressEvent,
   type McpProgressStatus,
   type McpScope,
+  type McpSessionUsageInput,
+  type McpSessionUsageResult,
   type McpStore,
   type McpWorkspaceData,
   type PublicMcpTokenRecord,
@@ -1253,12 +1255,42 @@ export class SupabaseMcpStore implements McpStore {
       occurred_at: event.occurredAt,
       pack_baseline_tokens: measurement?.baselineTokens ?? null,
       pack_selected_tokens: measurement?.selectedTokens ?? null,
+      // The length only. `estimated_tokens` is a generated column, so the
+      // 4 chars/token assumption stays the schema's and this writer cannot
+      // report a ratio of its own (todo 23).
+      response_chars: event.responseChars ?? null,
       target_node_ids: event.targetNodeIds,
       token_id: event.tokenId,
       tool: event.tool,
       workspace_id: event.workspaceId,
     });
     queryError("Access event write failed", result.error);
+  }
+
+  /**
+   * Phase 4 Wave E todo 23. The workspace opt-in and the tenant check both
+   * live in the SQL function, which answers with a status rather than
+   * raising — an agent that volunteers its own usage numbers should never
+   * lose a call for having done so.
+   */
+  async reportSessionUsage(
+    principal: McpPrincipal,
+    input: McpSessionUsageInput,
+  ): Promise<McpSessionUsageResult> {
+    const result = await this.client.rpc("report_session_usage", {
+      target_cache_creation_tokens: input.cacheCreationTokens ?? 0,
+      target_cache_read_tokens: input.cacheReadTokens ?? 0,
+      target_input_tokens: input.inputTokens ?? 0,
+      target_model: input.model ?? null,
+      target_output_tokens: input.outputTokens ?? 0,
+      target_repository_id: input.repositoryId ?? null,
+      target_token_id: principal.tokenId,
+      target_workspace_id: principal.workspaceId,
+    });
+    if (result.error || typeof result.data !== "string") {
+      throw new Error(result.error?.message ?? "Session usage report failed");
+    }
+    return { status: result.data as McpSessionUsageResult["status"] };
   }
 
   async revokeAccessToken(input: {

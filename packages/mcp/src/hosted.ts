@@ -29,6 +29,7 @@ import {
   REPO_MAP_MIN_BUDGET,
   buildGraphSchema,
   buildRepoMap,
+  estimateTokens,
 } from "./repo-map";
 import {
   AGENT_ASSERTION_RELATIONS,
@@ -37,7 +38,9 @@ import {
   MCP_EDGE_TIERS,
   MCP_NODE_TYPES,
   MEMORY_BLOCK_NAMES,
+  MODEL_IDENTIFIER_PATTERN,
   createUlid,
+  type McpAccessEvent,
   type McpPackMeasurement,
   type McpPrincipal,
   type McpStore,
@@ -63,16 +66,33 @@ export const RELATION_SCHEMA = z.enum(MCP_EDGE_RELATIONS);
 const EDGE_FAMILY_SCHEMA = z.enum(MCP_EDGE_FAMILIES);
 const EDGE_TIER_SCHEMA = z.enum(MCP_EDGE_TIERS);
 
-function toolResult(payload: Record<string, unknown>) {
+/**
+ * A call's own size, handed back to the access event it belongs to.
+ *
+ * The event is emitted before the payload exists — it names the nodes the
+ * handler resolved — so the measurement arrives afterwards, synchronously,
+ * in the same tick. `emitAccessEvent` only dispatches the write in a
+ * microtask or in `after()`, so the number is always set by the time the row
+ * is written.
+ */
+type ResponseSizer = (responseChars: number) => void;
+
+function toolResult(payload: Record<string, unknown>, sized?: ResponseSizer) {
   // QW-10 proposed dropping the JSON-as-text duplicate, but the MCP spec's
   // backward-compat SHOULD (structured results also carry equivalent
   // unstructured content) is load-bearing for real agent clients that only
   // read text content — keep the duplicate until a real-client compat pass
   // proves otherwise.
-  return {
+  const result = {
     content: [{ text: JSON.stringify(payload), type: "text" as const }],
     structuredContent: payload,
   };
+  // The whole result, not the payload: the duplicate above is on the wire
+  // too, and a meter that hid it would report a saving nobody received
+  // (todo 23). When the compat pass retires the duplicate, this number is
+  // where it shows up.
+  sized?.(JSON.stringify(result).length);
+  return result;
 }
 
 export interface HostedMcpEndpoint {
@@ -276,6 +296,29 @@ const LOG_PROGRESS_TOOL = {
  * The tool count goes up by one here and comes back down in todo 22's
  * consolidation; the plan budgets that trade explicitly.
  */
+/**
+ * The other half of the meter (todo 23).
+ *
+ * The server can measure what it served; only the client can see what the
+ * model charged for it, and after prompt caching those are different
+ * numbers. So this tool exists — opt-in, counters only — and it costs the
+ * catalogue budget todo 22 measured, which is the trade it is worth making
+ * once rather than guessing about forever.
+ */
+const REPORT_SESSION_USAGE_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description:
+    "Report this session's provider token counts. Opt-in, numbers only; answers with whether it was kept and why.",
+  inputSchema: z.object({
+    cache_creation_tokens: z.number().int().min(0).optional(),
+    cache_read_tokens: z.number().int().min(0).optional(),
+    input_tokens: z.number().int().min(0).optional(),
+    model: z.string().trim().regex(MODEL_IDENTIFIER_PATTERN).optional(),
+    output_tokens: z.number().int().min(0).optional(),
+    repository_id: z.string().trim().min(1).optional(),
+  }),
+};
+
 const REQUEST_RESCAN_TOOL = {
   annotations: WRITE_METADATA_TOOL,
   description: "Queue a free rescan of a repository. Returns the mode and why.",
@@ -453,9 +496,9 @@ function createServer(
     tool: string,
     targetNodeIds: readonly string[],
     packTokens?: Pick<McpPackMeasurement, "baselineTokens" | "selectedTokens">,
-  ): void {
+  ): ResponseSizer {
     const occurredAt = new Date();
-    const event = {
+    const event: McpAccessEvent = {
       id: createUlid(occurredAt),
       occurredAt: occurredAt.toISOString(),
       targetNodeIds: [...new Set(targetNodeIds)],
@@ -482,6 +525,10 @@ function createServer(
     };
     if (scheduleAfterResponse) scheduleAfterResponse(dispatch);
     else queueMicrotask(() => void dispatch());
+    return (responseChars) => {
+      event.responseChars = responseChars;
+      event.estimatedTokens = estimateTokens("x".repeat(responseChars));
+    };
   }
 
   const server = new McpServer(SERVER_INFO, {
@@ -522,21 +569,23 @@ function createServer(
       },
       async (uri) => {
         const result = await read();
-        emitAccessEvent(
+        const sized = emitAccessEvent(
           store,
           principal,
           `resource:${name}`,
           result.targetNodeIds,
         );
-        return {
-          contents: [
-            {
-              mimeType: "application/json",
-              text: JSON.stringify(result.payload),
-              uri: uri.href,
-            },
-          ],
-        };
+        // Resources are served bytes too. A meter that counted only tools
+        // would report a session as cheaper than it was.
+        const contents = [
+          {
+            mimeType: "application/json",
+            text: JSON.stringify(result.payload),
+            uri: uri.href,
+          },
+        ];
+        sized(JSON.stringify({ contents }).length);
+        return { contents };
       },
     );
   };
@@ -668,14 +717,17 @@ function createServer(
         sourceNodeId: source_node_id,
         targetNodeId: target_node_id,
       });
-      emitAccessEvent(store, principal, "assert_link", [
+      const sized = emitAccessEvent(store, principal, "assert_link", [
         source_node_id,
         target_node_id,
       ]);
-      return toolResult({
-        assertion,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          assertion,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -709,17 +761,25 @@ function createServer(
           explanation.cluster.members.includes(artifact.path),
         )
         .map(({ id }) => id);
-      emitAccessEvent(store, principal, "explain_module", memberIds);
-      return toolResult({
-        memberPaths: [...explanation.cluster.members],
-        moduleKey: explanation.cluster.key,
-        name: explanation.cluster.name,
-        refreshJobId,
-        state: explanation.state,
-        summary: explanation.summary?.summary ?? null,
-        summaryGrade: "inferred" as const,
-        workspaceId: principal.workspaceId,
-      });
+      const sized = emitAccessEvent(
+        store,
+        principal,
+        "explain_module",
+        memberIds,
+      );
+      return toolResult(
+        {
+          memberPaths: [...explanation.cluster.members],
+          moduleKey: explanation.cluster.key,
+          name: explanation.cluster.name,
+          refreshJobId,
+          state: explanation.state,
+          summary: explanation.summary?.summary ?? null,
+          summaryGrade: "inferred" as const,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -743,13 +803,13 @@ function createServer(
             }
           : { found: false as const, requestedId };
       });
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "get_artifact",
         nodes.flatMap((entry) => (entry.found ? [entry.id] : [])),
       );
-      return toolResult({ nodes, workspaceId: principal.workspaceId });
+      return toolResult({ nodes, workspaceId: principal.workspaceId }, sized);
     }
     const [workspace, found] = await Promise.all([
       readWorkspace(),
@@ -768,47 +828,59 @@ function createServer(
       !result.artifact && selector.id
         ? (getNodeContent(workspace, selector.id) ?? null)
         : null;
-    emitAccessEvent(store, principal, "get_artifact", [
+    const sized = emitAccessEvent(store, principal, "get_artifact", [
       ...(result.artifact ? [result.artifact.id] : []),
       ...(node ? [node.id] : []),
       ...result.neighbors.map(({ id }) => id),
     ]);
-    return toolResult({
-      ...result,
-      ...(node
-        ? {
-            node: selector.max_chars
-              ? { ...node, content: node.content.slice(0, selector.max_chars) }
-              : node,
-          }
-        : {}),
-      workspaceId: principal.workspaceId,
-    });
+    return toolResult(
+      {
+        ...result,
+        ...(node
+          ? {
+              node: selector.max_chars
+                ? {
+                    ...node,
+                    content: node.content.slice(0, selector.max_chars),
+                  }
+                : node,
+            }
+          : {}),
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
 
   server.registerTool("get_findings", GET_FINDINGS_TOOL, async ({ filter }) => {
     const workspace = await readWorkspace();
     const findings = getWorkspaceFindings(workspace, filter);
-    emitAccessEvent(
+    const sized = emitAccessEvent(
       store,
       principal,
       "get_findings",
       findings.map((finding) => finding.sourceNodeId ?? finding.id),
     );
-    return toolResult({
-      findings,
-      workspaceId: principal.workspaceId,
-    });
+    return toolResult(
+      {
+        findings,
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
 
   server.registerTool("get_graph_schema", GET_GRAPH_SCHEMA_TOOL, async () => {
     const workspace = await readWorkspace();
     const schema = buildGraphSchema(workspace);
-    emitAccessEvent(store, principal, "get_graph_schema", []);
-    return toolResult({
-      ...schema,
-      workspaceId: principal.workspaceId,
-    });
+    const sized = emitAccessEvent(store, principal, "get_graph_schema", []);
+    return toolResult(
+      {
+        ...schema,
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
 
   server.registerTool(
@@ -823,19 +895,22 @@ function createServer(
         relations,
         families,
       );
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "get_neighbors",
         result ? result.nodes.map(({ id }) => id) : [],
       );
-      return toolResult({
-        edges: result?.edges ?? [],
-        found: result !== null,
-        nodes: result?.nodes ?? [],
-        omissions: result?.omissions ?? [],
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          edges: result?.edges ?? [],
+          found: result !== null,
+          nodes: result?.nodes ?? [],
+          omissions: result?.omissions ?? [],
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -845,7 +920,7 @@ function createServer(
     async ({ depth, mode, node_id }) => {
       const workspace = await readWorkspace();
       const impact = impactOf(workspace, node_id, depth ?? 2, mode);
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "impact_of",
@@ -861,11 +936,14 @@ function createServer(
             ]
           : [],
       );
-      return toolResult({
-        found: impact !== null,
-        impact,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          found: impact !== null,
+          impact,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -876,18 +954,21 @@ function createServer(
     // A write that changed the graph and left no trace in the access stream
     // was invisible to the live map and to the telemetry that counts what a
     // session did — only the reads were.
-    emitAccessEvent(store, principal, "log_progress", event.refs);
-    return toolResult({
-      event: {
-        id: event.id,
-        refs: event.refs,
-        status: event.status,
-        summary: event.summary,
-        task: event.task,
-        todoId: event.todoId,
+    const sized = emitAccessEvent(store, principal, "log_progress", event.refs);
+    return toolResult(
+      {
+        event: {
+          id: event.id,
+          refs: event.refs,
+          status: event.status,
+          summary: event.summary,
+          task: event.task,
+          todoId: event.todoId,
+        },
+        workspaceId: principal.workspaceId,
       },
-      workspaceId: principal.workspaceId,
-    });
+      sized,
+    );
   });
 
   server.registerTool(
@@ -900,7 +981,7 @@ function createServer(
           (!name || entry.name === name) &&
           (!anchor_node_id || entry.anchorNodeId === anchor_node_id),
       );
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "memory_read",
@@ -908,10 +989,13 @@ function createServer(
           entry.anchorNodeId ? [entry.anchorNodeId] : [],
         ),
       );
-      return toolResult({
-        entries,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          entries,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -930,35 +1014,41 @@ function createServer(
         remove,
         text,
       });
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "memory_write",
         anchor_node_id ? [anchor_node_id] : [],
       );
-      return toolResult({
-        entry,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          entry,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
   server.registerTool("query_brain", QUERY_BRAIN_TOOL, async ({ filter }) => {
     const workspace = await readWorkspace();
     const { coverage, nodes, table } = queryWorkspaceBrain(workspace, filter);
-    emitAccessEvent(
+    const sized = emitAccessEvent(
       store,
       principal,
       "query_brain",
       nodes.map(({ id }) => id),
     );
-    return toolResult({
-      count: nodes.length,
-      coverage,
-      nodes,
-      ...(table ? { table } : {}),
-      workspaceId: principal.workspaceId,
-    });
+    return toolResult(
+      {
+        count: nodes.length,
+        coverage,
+        nodes,
+        ...(table ? { table } : {}),
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
 
   server.registerTool(
@@ -970,16 +1060,19 @@ function createServer(
       // The node the note is about, when it names one (todo 19 ⑹). A note
       // with no target touched nothing, and an event with no nodes is still
       // the record that the session wrote here.
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "record_note",
         note.target ? [note.target] : [],
       );
-      return toolResult({
-        note: { id: note.id, target: note.target, text: note.text },
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          note: { id: note.id, target: note.target, text: note.text },
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -1035,38 +1128,75 @@ function createServer(
         ...(focus ? { focus } : {}),
         tokenBudget: token_budget ?? REPO_MAP_DEFAULT_BUDGET,
       });
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "repo_map",
         map.entries.map(({ nodeId }) => nodeId),
       );
-      return toolResult({
-        focusMatched: map.focusMatched,
-        omittedCount: map.omittedCount,
-        text: map.text,
-        tokenBudget: map.tokenBudget,
-        tokenEstimate: map.tokenEstimate,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          focusMatched: map.focusMatched,
+          omittedCount: map.omittedCount,
+          text: map.text,
+          tokenBudget: map.tokenBudget,
+          tokenEstimate: map.tokenEstimate,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
   server.registerTool("repo_overview", REPO_OVERVIEW_TOOL, async () => {
     const workspace = await readWorkspace();
     const overview = buildRepoOverview(workspace);
-    emitAccessEvent(store, principal, "repo_overview", []);
-    return toolResult({
-      repositories: overview.repositories.map((repository) => ({
-        artifactCount: repository.artifactCount,
-        fullName: repository.fullName,
-        modules: repository.modules.map((module) => ({ ...module })),
-        repositoryId: repository.repositoryId,
-      })),
-      text: overview.text,
-      workspaceId: principal.workspaceId,
-    });
+    const sized = emitAccessEvent(store, principal, "repo_overview", []);
+    return toolResult(
+      {
+        repositories: overview.repositories.map((repository) => ({
+          artifactCount: repository.artifactCount,
+          fullName: repository.fullName,
+          modules: repository.modules.map((module) => ({ ...module })),
+          repositoryId: repository.repositoryId,
+        })),
+        text: overview.text,
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
+
+  server.registerTool(
+    "report_session_usage",
+    REPORT_SESSION_USAGE_TOOL,
+    async ({
+      cache_creation_tokens,
+      cache_read_tokens,
+      input_tokens,
+      model,
+      output_tokens,
+      repository_id,
+    }) => {
+      requireScope("mcp:write");
+      const result = await store.reportSessionUsage(principal, {
+        ...(cache_creation_tokens === undefined
+          ? {}
+          : { cacheCreationTokens: cache_creation_tokens }),
+        ...(cache_read_tokens === undefined
+          ? {}
+          : { cacheReadTokens: cache_read_tokens }),
+        ...(input_tokens === undefined ? {} : { inputTokens: input_tokens }),
+        ...(model === undefined ? {} : { model }),
+        ...(output_tokens === undefined ? {} : { outputTokens: output_tokens }),
+        ...(repository_id === undefined ? {} : { repositoryId: repository_id }),
+      });
+      // No access event: a meter that counted its own traffic would make a
+      // session look more expensive for having been measured, and the glow
+      // stream would light up nodes nobody read.
+      return toolResult({ ...result, workspaceId: principal.workspaceId });
+    },
+  );
 
   server.registerTool(
     "request_context_pack",
@@ -1084,7 +1214,7 @@ function createServer(
           (total, omitted) => total + omitted.estimatedTokens,
           0,
         );
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "request_context_pack",
@@ -1096,10 +1226,13 @@ function createServer(
             }
           : undefined,
       );
-      return toolResult({
-        ...contextPack,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          ...contextPack,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -1115,8 +1248,11 @@ function createServer(
         ...(mode === undefined ? {} : { mode }),
         ...(repository_id === undefined ? {} : { repositoryId: repository_id }),
       });
-      emitAccessEvent(store, principal, "request_rescan", []);
-      return toolResult({ ...result, workspaceId: principal.workspaceId });
+      const sized = emitAccessEvent(store, principal, "request_rescan", []);
+      return toolResult(
+        { ...result, workspaceId: principal.workspaceId },
+        sized,
+      );
     },
   );
 
@@ -1162,20 +1298,23 @@ function createServer(
                 title,
               },
         );
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "search_index",
         kept.map(({ nodeId }) => nodeId),
       );
-      return toolResult({
-        query,
-        results: kept,
-        // What the cap left out, so a caller narrows the query rather than
-        // reading the page it got as the whole answer.
-        truncated: Math.max(0, filtered.length - kept.length),
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          query,
+          results: kept,
+          // What the cap left out, so a caller narrows the query rather than
+          // reading the page it got as the whole answer.
+          truncated: Math.max(0, filtered.length - kept.length),
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -1190,17 +1329,20 @@ function createServer(
         to_node_id,
         max_depth ?? 4,
       );
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "trace_path",
         path ? [...path.nodeIds] : [],
       );
-      return toolResult({
-        found: path !== null,
-        path,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          found: path !== null,
+          path,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 

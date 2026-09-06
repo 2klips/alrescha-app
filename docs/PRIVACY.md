@@ -7,17 +7,19 @@ Alrescha's pilot uses metadata-only persistence. Repository files are fetched tr
 - Repository identity, branch, paths, digests, source spans, and exported-symbol metadata.
 - Extracted requirements, evidence relationships, deterministic findings, parsed CI test reports, and signed receipt data.
 - Job status, credit-ledger entries, MCP access events, and minimal security audit events.
+- The size of each MCP answer we serve: a character count and a token estimate derived from it at a fixed 4 characters per token. A length, never the content.
 - An encrypted BYOK value when a user opts in to a provider key.
 
 ## Not stored or sent by default
 
 - Raw repository source, GitHub installation tokens, GitHub App private keys, or plaintext BYOK provider keys.
-- Third-party analytics. Pilot instrumentation is off until workspace consent.
+- Third-party analytics. Pilot instrumentation is off until workspace consent, and that one switch also gates agent-reported session usage: until it is on, a report is declined and no row is written, on every path including our own service role.
+- Prompt or response text in any telemetry. Agent-reported usage carries provider token counts and a model identifier constrained to have no whitespace, so the field cannot hold a sentence.
 - AI inputs for deterministic scans. AI judgment runs only after explicit platform-credit or BYOK selection.
 
 ## Retention and deletion
 
-Pilot MCP access events are retained for 30 days and pruned daily. Security audit events, evidence metadata, receipts, and credit records remain until workspace deletion for traceability. `access_event_retention_days = null` is reserved for an explicitly configured unlimited-retention plan; the pilot default is 30.
+Pilot MCP access events and agent-reported session usage are retained for 30 days under the same setting and pruned daily by the same job. The per-day usage totals at `/app/stats` are computed from those rows rather than kept beside them, so a pruned day disappears from the totals too. Security audit events, evidence metadata, receipts, and credit records remain until workspace deletion for traceability. `access_event_retention_days = null` is reserved for an explicitly configured unlimited-retention plan; the pilot default is 30.
 
 Revoking or suspending the GitHub App immediately pauses new scans and cancels queued or running repository jobs. Existing evidence remains read-only so the user can inspect prior receipts and reconnect safely. Workspace deletion cascades tenant data from the application database; provider/GitHub secrets are removed from their separate secret stores.
 

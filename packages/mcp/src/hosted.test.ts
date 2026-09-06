@@ -20,6 +20,7 @@ import type {
   McpEdgeRelation,
   McpEdgeTier,
   McpFindingData,
+  McpScope,
   McpWorkspaceData,
 } from "./index";
 
@@ -418,6 +419,7 @@ describe("hosted MCP contract", () => {
       "record_ruled_out",
       "repo_map",
       "repo_overview",
+      "report_session_usage",
       "request_context_pack",
       "request_rescan",
       "search_index",
@@ -438,9 +440,9 @@ describe("hosted MCP contract", () => {
      * which is ~65 tokens before a single parameter (OQ-059).
      */
     expect(estimateTokens(JSON.stringify(listed.tools))).toBeLessThanOrEqual(
-      2_750,
+      2_900,
     );
-    expect(listed.tools).toHaveLength(20);
+    expect(listed.tools).toHaveLength(21);
     expect(
       listed.tools.every((tool) => tool.annotations?.destructiveHint === false),
     ).toBe(true);
@@ -505,7 +507,7 @@ describe("hosted MCP contract", () => {
     // `get_node_content` into `get_artifact`, and moved `route_query` into
     // the instruction block. The plan budgets ≤16; the remaining four are
     // named in OQ-059 rather than removed by guesswork.
-    expect((catalogs[0] as unknown[]).length).toBe(20);
+    expect((catalogs[0] as unknown[]).length).toBe(21);
   });
 
   it("ranks index results deterministically and applies the type filter", async () => {
@@ -890,8 +892,10 @@ describe("hosted MCP contract", () => {
         (event) =>
           JSON.stringify(Object.keys(event).sort()) ===
           JSON.stringify([
+            "estimatedTokens",
             "id",
             "occurredAt",
+            "responseChars",
             "targetNodeIds",
             "tokenId",
             "tool",
@@ -899,6 +903,16 @@ describe("hosted MCP contract", () => {
           ]),
       ),
     ).toBe(true);
+    // Two keys wider than it was, and the reason it can be: the size is a
+    // number. This loop is also the guard on the wiring — the sizer is passed
+    // per handler, so a new tool that forgets it fails here rather than
+    // quietly recording nothing (todo 23).
+    for (const event of events) {
+      expect(event.responseChars).toBeGreaterThan(0);
+      expect(event.estimatedTokens).toBe(
+        Math.ceil((event.responseChars ?? 0) / 4),
+      );
+    }
     expect(JSON.stringify(events)).not.toContain("private prompt content");
     expect(JSON.stringify(events)).not.toContain("private search query");
     const packEvent = events.find(
@@ -1798,6 +1812,146 @@ describe("write tools and the access stream", () => {
     expect(events[1]?.targetNodeIds).toEqual(["spec/WORK_SPEC.md"]);
     // And still nothing from `record_prompt`, after the other two arrived.
     expect(events.map(({ tool }) => tool)).not.toContain("record_prompt");
+  });
+});
+
+/**
+ * The session meter (Phase 4 Wave E todo 23).
+ *
+ * Todo 22 measured what a session pays before it asks anything. This is the
+ * other line of the bill — what the answers weigh — and the rule that keeps
+ * it honest: the number is the wire, not a flattering projection of it.
+ */
+describe("the session meter", () => {
+  const clients: Client[] = [];
+
+  afterEach(async () => {
+    await Promise.all(clients.splice(0).map((client) => client.close()));
+  });
+
+  async function connected(scopes: McpScope[] = ["mcp:read", "mcp:write"]) {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Meter",
+      scopes,
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+    return { client, store };
+  }
+
+  it("records the bytes the client actually received, duplicate included", async () => {
+    const { client, store } = await connected();
+    const answer = await client.callTool({
+      arguments: { path: "spec/WORK_SPEC.md" },
+      name: "get_artifact",
+    });
+
+    await vi.waitFor(() =>
+      expect(store.accessEventsForWorkspace(WORKSPACE_ID)).toHaveLength(1),
+    );
+    const [event] = store.accessEventsForWorkspace(WORKSPACE_ID);
+    // Reconstructed from what the client was handed: the JSON text block and
+    // the structured copy of the same payload. The server still sends both
+    // (the compat pass is todo 22's open item), and a meter that counted one
+    // of them would advertise a saving nobody received.
+    const payload = answer.structuredContent as Record<string, unknown>;
+    const onTheWire = JSON.stringify({
+      content: [{ text: JSON.stringify(payload), type: "text" }],
+      structuredContent: payload,
+    });
+    expect(event?.responseChars).toBe(onTheWire.length);
+    expect(event?.estimatedTokens).toBe(Math.ceil(onTheWire.length / 4));
+  });
+
+  it("sizes a resource read as well as a tool call", async () => {
+    const { client, store } = await connected(["mcp:read"]);
+    const resources = await client.listResources();
+    const overview = resources.resources.find(({ uri }) =>
+      uri.endsWith("/overview"),
+    );
+    await client.readResource({ uri: overview?.uri ?? "" });
+
+    await vi.waitFor(() =>
+      expect(store.accessEventsForWorkspace(WORKSPACE_ID)).toHaveLength(1),
+    );
+    const [event] = store.accessEventsForWorkspace(WORKSPACE_ID);
+    expect(event?.tool).toBe("resource:overview");
+    expect(event?.responseChars).toBeGreaterThan(0);
+  });
+
+  it("answers report_session_usage with a status instead of an error", async () => {
+    const { client } = await connected();
+    const answer = await client.callTool({
+      arguments: {
+        cache_read_tokens: 8_000,
+        input_tokens: 1_200,
+        model: "claude-opus-5",
+        output_tokens: 340,
+      },
+      name: "report_session_usage",
+    });
+
+    // The in-memory store has nowhere to put it and says so. What matters is
+    // that a client reporting its own cost is never punished with a failure.
+    expect(answer.isError).not.toBe(true);
+    expect(answer.structuredContent).toMatchObject({
+      status: "unavailable",
+      workspaceId: WORKSPACE_ID,
+    });
+    expect(
+      await client.callTool({
+        arguments: { input_tokens: 1, repository_id: "not-a-repository" },
+        name: "report_session_usage",
+      }),
+    ).toMatchObject({ structuredContent: { status: "unknown_repository" } });
+  });
+
+  it("does not meter itself", async () => {
+    const { client, store } = await connected();
+    await client.callTool({
+      arguments: { input_tokens: 10 },
+      name: "report_session_usage",
+    });
+    await client.callTool({ arguments: { filter: {} }, name: "get_findings" });
+
+    // One event, from the read. A meter that logged its own traffic would
+    // make a session look more expensive for having been measured.
+    await vi.waitFor(() =>
+      expect(store.accessEventsForWorkspace(WORKSPACE_ID)).toHaveLength(1),
+    );
+    expect(
+      store.accessEventsForWorkspace(WORKSPACE_ID).map(({ tool }) => tool),
+    ).toEqual(["get_findings"]);
+  });
+
+  it("needs the write scope, like every other tool that stores something", async () => {
+    const { client } = await connected(["mcp:read"]);
+    expect(
+      await client.callTool({
+        arguments: { input_tokens: 10 },
+        name: "report_session_usage",
+      }),
+    ).toMatchObject({ isError: true });
+  });
+
+  it("refuses a model field that is a sentence rather than an identifier", async () => {
+    const { client } = await connected();
+    // The same rule as the database CHECK, one layer earlier: this field can
+    // never become somewhere to put a sentence.
+    expect(
+      await client.callTool({
+        arguments: { input_tokens: 10, model: "fix the auth bug" },
+        name: "report_session_usage",
+      }),
+    ).toMatchObject({ isError: true });
   });
 });
 

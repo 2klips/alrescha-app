@@ -548,12 +548,56 @@ export interface McpNote {
 }
 
 export interface McpAccessEvent {
+  /**
+   * `responseChars` at the fixed 4 chars/token ratio. Carried so a realtime
+   * consumer does not re-derive it and quietly pick a different ratio; the
+   * database computes the stored column from `responseChars` itself.
+   */
+  estimatedTokens?: number;
   id: string;
   occurredAt: string;
+  /**
+   * Characters of the serialised result this call handed back — a length,
+   * never content. Absent when the call produced no sized result, which is
+   * not the same fact as a zero-length one.
+   */
+  responseChars?: number;
   targetNodeIds: string[];
   tokenId: string;
   tool: string;
   workspaceId: string;
+}
+
+/**
+ * A model identifier, not prose. The same rule as the
+ * `session_usage_reports_model_identifier` CHECK, written once here and
+ * pinned against the database in `tests/session-telemetry.test.ts`: the
+ * point of the constraint is that this field can never become somewhere to
+ * put a sentence.
+ */
+export const MODEL_IDENTIFIER_PATTERN = /^[A-Za-z0-9._:/-]{1,120}$/;
+
+/**
+ * What the agent's own provider says the session cost (Phase 4 Wave E todo
+ * 23). The served side is measurable here; the paid side is only visible to
+ * the client, and after caching the two are not the same number.
+ */
+export interface McpSessionUsageInput {
+  cacheCreationTokens?: number | undefined;
+  cacheReadTokens?: number | undefined;
+  inputTokens?: number | undefined;
+  model?: string | undefined;
+  outputTokens?: number | undefined;
+  repositoryId?: string | undefined;
+}
+
+export interface McpSessionUsageResult {
+  /**
+   * Why the report was or was not kept. A status, never a thrown error:
+   * telemetry that can fail an agent's session costs more than it measures.
+   * `unavailable` is a store with nowhere to put it.
+   */
+  status: "not_enabled" | "recorded" | "unavailable" | "unknown_repository";
 }
 
 export interface McpPackMeasurement {
@@ -728,6 +772,16 @@ export interface McpStore {
       repositoryId?: string | undefined;
     },
   ): Promise<McpRescanResult>;
+  /**
+   * Accept one opt-in usage report (Phase 4 Wave E todo 23). The workspace
+   * switch is enforced in the database, so this path cannot write around
+   * consent, and the answer is a status rather than an exception — a caller
+   * that reports its own cost must never be punished for it.
+   */
+  reportSessionUsage(
+    principal: McpPrincipal,
+    input: McpSessionUsageInput,
+  ): Promise<McpSessionUsageResult>;
   revokeAccessToken(input: {
     actorUserId: string;
     tokenId: string;
@@ -1356,6 +1410,28 @@ export class InMemoryMcpStore implements McpStore {
       targetNodeIds: [...event.targetNodeIds],
     });
     if (measurement) this.#packMeasurements.push({ ...measurement });
+  }
+
+  /**
+   * The in-memory store keeps no telemetry — the local serving mode has no
+   * workspace to consent for and nowhere to send it. It still checks the
+   * repository, so a caller sees the same rejection it would get hosted.
+   */
+  async reportSessionUsage(
+    principal: McpPrincipal,
+    input: McpSessionUsageInput,
+  ): Promise<McpSessionUsageResult> {
+    const workspace = this.#workspaces.get(principal.workspaceId);
+    if (!workspace || workspace.ownerUserId !== principal.userId) {
+      throw new Error("Workspace access denied");
+    }
+    if (
+      input.repositoryId !== undefined &&
+      !workspace.repositories.some(({ id }) => id === input.repositoryId)
+    ) {
+      return { status: "unknown_repository" };
+    }
+    return { status: "unavailable" };
   }
 
   async requestModuleSummary(

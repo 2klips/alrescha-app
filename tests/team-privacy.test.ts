@@ -153,6 +153,38 @@ describe("prompt capture privacy (ADR-011)", () => {
     ]) {
       expect(names).not.toContain(forbidden);
     }
+
+    // The session meter (Phase 4 todo 23) joined this side of the boundary:
+    // it counts characters and provider tokens, so it must be as unable to
+    // hold a prompt as `access_events` is. `usage_daily` is an aggregate of
+    // both and inherits the property only because its sources have it.
+    const telemetry = await database.query<{
+      column_name: string;
+      table_name: string;
+    }>(
+      `select table_name, column_name from information_schema.columns
+       where table_schema = 'public'
+         and table_name in ('session_usage_reports', 'usage_daily')
+         and data_type in ('text', 'character varying')`,
+    );
+    expect(
+      telemetry.rows
+        .map(({ column_name, table_name }) => `${table_name}.${column_name}`)
+        .sort(),
+    ).toEqual([
+      "session_usage_reports.id",
+      "session_usage_reports.model",
+      "session_usage_reports.repository_id",
+      "session_usage_reports.token_id",
+      "session_usage_reports.workspace_id",
+      "usage_daily.repository_id",
+      "usage_daily.workspace_id",
+    ]);
+    const reports = await database.query(
+      "select id from public.session_usage_reports where workspace_id = $1",
+      [workspace],
+    );
+    expect(reports.rows).toEqual([]);
   });
 
   it("ADR-011:no-consent-status-exposure — consent rows are visible to their subject only", async () => {
