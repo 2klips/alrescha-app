@@ -1,5 +1,6 @@
 import {
   buildArtifactCard,
+  buildRiskMap,
   composeContextPack,
   personalizedPageRank,
   summaryAbsence,
@@ -10,6 +11,7 @@ import {
   type ContextTargetAgent,
   type ArtifactCardRelation,
   type PageRankEdge,
+  type RiskEntry,
   type SummaryAbsence,
 } from "@alrescha/core";
 
@@ -67,8 +69,23 @@ export interface BrainNode {
 }
 
 export interface BrainQueryFilter {
+  /** `table` renders the same nodes for a reader; `ids` is the default. */
+  format?: "ids" | "table" | undefined;
+  /**
+   * Files that do or do not carry a description the freshness rule accepts
+   * as current (todo 21). Stale prose reads as *no* summary here, because
+   * that is what every reader is served.
+   */
+  hasSummary?: boolean | undefined;
   path?: string | undefined;
+  /** `src/**\/*.ts` — segment-wise, with `*` and `**`. No regex (OQ-054). */
+  pathGlob?: string | undefined;
   relations?: McpEdgeRelation[] | undefined;
+  /**
+   * `risk` ranks by the same builder `/app/inspection` uses, over what this
+   * read carries. The signals it could not see are named in `coverage`.
+   */
+  sortBy?: "risk" | undefined;
   statuses?: string[] | undefined;
   types?: McpNodeType[] | undefined;
   withoutRelations?: McpEdgeRelation[] | undefined;
@@ -497,7 +514,29 @@ export interface BrainQueryCoverage {
 export interface BrainQueryResult {
   readonly coverage: BrainQueryCoverage;
   readonly nodes: BrainNode[];
+  /**
+   * A fixed-width rendering of the same nodes (todo 21), present only when
+   * the caller asked for `format: "table"`. Six columns and fifty rows,
+   * because a table is for reading and an unbounded one is a payload.
+   */
+  readonly table?: {
+    readonly columns: readonly string[];
+    readonly rows: readonly (readonly string[])[];
+    /** Rows the cap left out. Zero when the table is the whole answer. */
+    readonly truncated: number;
+  };
 }
+
+/** A table is for reading; past this it is a payload pretending to be one. */
+export const BRAIN_TABLE_ROWS = 50;
+export const BRAIN_TABLE_COLUMNS = [
+  "type",
+  "path",
+  "label",
+  "status",
+  "relations",
+  "risk",
+] as const;
 
 /** Reads that decide whether a relation filter can be trusted. */
 const RELATION_TABLES = new Set(["edges", "graph_nodes"]);
@@ -532,6 +571,83 @@ function queryCoverage(
   };
 }
 
+/**
+ * A path glob, as a matcher (todo 21).
+ *
+ * Literal segments, `*` inside one, `**` across many — the shape people
+ * already write for file paths, and nothing that can backtrack
+ * catastrophically over a repository's worth of paths (OQ-054's rule, and
+ * the reason this is not a regex the caller supplies).
+ */
+function globMatcher(glob: string): (path: string) => boolean {
+  const pattern = glob
+    .split("/")
+    .map((segment) =>
+      segment === "**"
+        ? "(?:.*)"
+        : segment.replace(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", "[^/]*"),
+    )
+    .join("/")
+    .replaceAll("(?:.*)/", "(?:.*/)?");
+  const expression = new RegExp(`^${pattern}$`);
+  return (path) => expression.test(path);
+}
+
+/**
+ * The risk map, over what this read carries (todo 21).
+ *
+ * The screen builds the same map from more: co-change history is not part of
+ * a workspace read. Rather than silently ranking on a smaller set of
+ * signals, the missing one is named in `coverage.unanswered` — two answers
+ * to one question is the failure this codebase keeps repairing, and saying
+ * which signals each answer used is how the two stay comparable.
+ */
+function riskFor(workspace: McpWorkspaceData): Map<string, RiskEntry> {
+  const artifacts = workspace.repositories.flatMap((repository) =>
+    repository.artifacts.map((artifact) => ({
+      classification: artifact.kind,
+      nodeId: artifact.id,
+      path: artifact.path,
+    })),
+  );
+  const pathById = new Map(
+    artifacts.map((artifact) => [artifact.nodeId, artifact.path]),
+  );
+  const measured = workspace.repositories.flatMap((repository) =>
+    repository.evidence
+      .filter((evidence) => evidence.kind === "ci")
+      .flatMap((evidence) => {
+        const path = pathById.get(evidence.sourceArtifactId);
+        return path ? [path] : [];
+      }),
+  );
+  const map = buildRiskMap({
+    artifacts,
+    coverage: measured.length === 0 ? null : measured,
+    edges: workspace.repositories.flatMap((repository) =>
+      repository.edges.flatMap((edge) => {
+        const sourcePath = pathById.get(edge.sourceNodeId);
+        const targetPath = pathById.get(edge.targetNodeId);
+        return sourcePath && targetPath
+          ? [{ relation: edge.relation, sourcePath, targetPath }]
+          : [];
+      }),
+    ),
+    findings: workspace.repositories.flatMap((repository) =>
+      repository.findings.map((finding) => ({
+        kind: finding.kind,
+        sourcePath:
+          "span" in finding.provenance ? finding.provenance.span.path : null,
+        status: finding.status,
+        targetPath: finding.targetNodeId
+          ? (pathById.get(finding.targetNodeId) ?? null)
+          : null,
+      })),
+    ),
+  });
+  return new Map(map.entries.map((entry) => [entry.nodeId, entry]));
+}
+
 export function queryWorkspaceBrain(
   workspace: McpWorkspaceData,
   filter: BrainQueryFilter,
@@ -539,7 +655,26 @@ export function queryWorkspaceBrain(
   const normalizedPath = filter.path
     ? normalizeSearchText(filter.path)
     : undefined;
+  const matchesGlob = filter.pathGlob ? globMatcher(filter.pathGlob) : null;
+  const summaryByNodeId = new Map(
+    workspace.repositories.flatMap((repository) =>
+      repository.artifacts.map(
+        (artifact) =>
+          [
+            artifact.id,
+            (artifact.summaryState?.state ?? "missing") === "current",
+          ] as const,
+      ),
+    ),
+  );
+  const risk = filter.sortBy === "risk" ? riskFor(workspace) : null;
   const nodes = repositoryNodes(workspace)
+    .filter(
+      (node) =>
+        filter.hasSummary === undefined ||
+        (summaryByNodeId.get(node.id) ?? false) === filter.hasSummary,
+    )
+    .filter((node) => !matchesGlob || matchesGlob(node.path ?? ""))
     .filter((node) => !filter.types || filter.types.includes(node.type))
     .filter((node) => !filter.statuses || filter.statuses.includes(node.status))
     .filter(
@@ -559,13 +694,57 @@ export function queryWorkspaceBrain(
         !normalizedPath ||
         normalizeSearchText(node.path ?? "").includes(normalizedPath),
     )
-    .sort(
-      (left, right) =>
-        left.type.localeCompare(right.type) ||
-        (left.path ?? "").localeCompare(right.path ?? "") ||
-        left.id.localeCompare(right.id),
+    .sort((left, right) =>
+      risk
+        ? (risk.get(right.id)?.score ?? 0) - (risk.get(left.id)?.score ?? 0) ||
+          left.id.localeCompare(right.id)
+        : left.type.localeCompare(right.type) ||
+          (left.path ?? "").localeCompare(right.path ?? "") ||
+          left.id.localeCompare(right.id),
     );
-  return { coverage: queryCoverage(workspace, filter), nodes };
+
+  const coverage = queryCoverage(workspace, filter);
+  const unanswered = [
+    ...coverage.unanswered,
+    // The screen's map counts co-change; a workspace read does not carry it.
+    // Saying so is what keeps the two rankings comparable instead of
+    // quietly different.
+    ...(risk
+      ? [
+          {
+            filter: "sortBy",
+            reason:
+              "co-change history is not part of a workspace read, so this ranking omits the coupling factor the inspection screen includes",
+          },
+        ]
+      : []),
+  ];
+
+  return {
+    coverage: {
+      result: unanswered.length === 0 ? "complete" : "partial",
+      unanswered,
+    },
+    nodes,
+    ...(filter.format === "table"
+      ? {
+          table: {
+            columns: [...BRAIN_TABLE_COLUMNS],
+            rows: nodes.slice(0, BRAIN_TABLE_ROWS).map((node) => [
+              node.type,
+              node.path ?? "",
+              // One line per cell: a table with a wrapped label is not a
+              // table, and the full label is in `nodes` either way.
+              node.label.replace(/\s+/g, " ").slice(0, 80),
+              node.status,
+              node.relations.join(","),
+              risk ? String(risk.get(node.id)?.score ?? 0) : "",
+            ]),
+            truncated: Math.max(0, nodes.length - BRAIN_TABLE_ROWS),
+          },
+        }
+      : {}),
+  };
 }
 
 /**

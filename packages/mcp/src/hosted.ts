@@ -562,8 +562,12 @@ const QUERY_BRAIN_TOOL = {
     "Run a deterministic structured query over graph types, statuses, and relations",
   inputSchema: z.object({
     filter: z.object({
+      format: z.enum(["ids", "table"]).optional(),
+      hasSummary: z.boolean().optional(),
       path: z.string().trim().min(1).optional(),
+      pathGlob: z.string().trim().min(1).max(200).optional(),
       relations: z.array(RELATION_SCHEMA).optional(),
+      sortBy: z.enum(["risk"]).optional(),
       statuses: z.array(z.string().trim().min(1)).optional(),
       types: z.array(NODE_TYPE_SCHEMA).optional(),
       withoutRelations: z.array(RELATION_SCHEMA).optional(),
@@ -590,6 +594,14 @@ const QUERY_BRAIN_TOOL = {
         type: NODE_TYPE_SCHEMA,
       }),
     ),
+    /** Present only for `format: "table"`; six columns, fifty rows. */
+    table: z
+      .object({
+        columns: z.array(z.string()),
+        rows: z.array(z.array(z.string())),
+        truncated: z.number().int().nonnegative(),
+      })
+      .optional(),
     workspaceId: z.string(),
   }),
 };
@@ -1349,7 +1361,7 @@ function createServer(
 
   server.registerTool("query_brain", QUERY_BRAIN_TOOL, async ({ filter }) => {
     const workspace = await readWorkspace();
-    const { coverage, nodes } = queryWorkspaceBrain(workspace, filter);
+    const { coverage, nodes, table } = queryWorkspaceBrain(workspace, filter);
     emitAccessEvent(
       store,
       principal,
@@ -1360,6 +1372,7 @@ function createServer(
       count: nodes.length,
       coverage,
       nodes,
+      ...(table ? { table } : {}),
       workspaceId: principal.workspaceId,
     });
   });

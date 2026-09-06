@@ -96,6 +96,18 @@ export function buildDemoInspectionDashboard(
         title: "README의 성능 주장에 실행 증거가 없습니다",
       },
       {
+        // The span is what names the drifted document (todo 21). The demo
+        // used to lean on the title containing the path, which is how the
+        // freshness rule worked and why it never fired on real data — a
+        // stale-doc title names the *referenced* file, not the document.
+        detail: {
+          confidence: 0.98,
+          evidenceGrade: "inferred",
+          evidenceLinks: [],
+          reason: "deterministic stale-doc rule",
+          spans: [{ endLine: 12, path: "docs/auth.md", startLine: 12 }],
+          suggestedAction: "문서의 경로·심볼 참조를 갱신하거나 지우세요.",
+        },
         id: "finding-stale",
         kind: "stale-doc",
         severity: "medium",

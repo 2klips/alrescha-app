@@ -456,6 +456,21 @@ export type {
   DependencyFixAvailability,
 } from "./inspection/dependency-audit";
 
+export { buildRiskMap } from "./inspection/risk-map";
+export type {
+  BuildRiskMapInput,
+  RiskArtifactInput,
+  RiskCoChangeInput,
+  RiskEdgeInput,
+  RiskEntry,
+  RiskFactor,
+  RiskFactorKind,
+  RiskFindingInput,
+  RiskLevel,
+  RiskMap,
+  UnmeasuredSignal,
+} from "./inspection/risk-map";
+
 export { buildInspectionDashboard } from "./inspection/dashboard";
 export type {
   BuildInspectionDashboardInput,

@@ -14,16 +14,25 @@ import {
   parseNpmAuditReport,
   type DependencyAuditReport,
 } from "./dependency-audit";
+import type { RiskEntry, RiskMap, UnmeasuredSignal } from "./risk-map";
 
 export type InspectionSectionState = "insufficient-evidence" | "ok";
 
+/**
+ * Every type the assurance engine emits — `AssuranceFindingType` verbatim.
+ *
+ * `untested-code` was missing, and the loader drops a row whose kind this
+ * list does not know. The rule has fired since Phase 4 Wave A todo 1 and
+ * every one of its findings was discarded on the way to the screen (todo 21).
+ */
 export type InspectionFindingKind =
   | "contradicting-instructions"
   | "missing-implementation"
   | "missing-test"
   | "orphan-doc"
   | "stale-doc"
-  | "unproven-claim";
+  | "unproven-claim"
+  | "untested-code";
 
 export type InspectionSeverity = "critical" | "high" | "low" | "medium";
 
@@ -97,6 +106,12 @@ export interface BuildInspectionDashboardInput {
   readonly documents: readonly InspectionDocumentInput[];
   readonly findings: readonly InspectionFindingInput[];
   readonly headCommitSha: string | null;
+  /**
+   * Which files to look at first, built by the caller from rows this
+   * builder does not read (edges, co-changes, coverage). Null when the
+   * caller did not build one — an absent map, not an empty one.
+   */
+  readonly riskMap?: RiskMap | null | undefined;
   readonly ruledOutAttempts: readonly RuledOutAttemptInput[];
   readonly todos: { readonly done: number; readonly total: number } | null;
 }
@@ -149,6 +164,17 @@ export interface InspectionDashboard {
     readonly openBySeverity: Readonly<Record<InspectionSeverity, number>>;
     readonly sourceLabel: string;
     readonly state: InspectionSectionState;
+  };
+  /**
+   * The ranked list of files worth opening first (todo 21). `unmeasured`
+   * names the signals nobody has measured, so the screen greys them out
+   * instead of reading an absence as a clean bill of health.
+   */
+  readonly risk: {
+    readonly entries: readonly RiskEntry[];
+    readonly sourceLabel: string;
+    readonly state: InspectionSectionState;
+    readonly unmeasured: readonly UnmeasuredSignal[];
   };
   readonly progress: {
     readonly done: number;
@@ -209,16 +235,27 @@ export function buildInspectionDashboard(
     DRIFT_RISK_KINDS.includes(kind),
   );
 
-  const staleDocTitles = new Set(
+  /**
+   * The documents a `stale-doc` finding actually fired on (todo 21).
+   *
+   * This used to match a finding's **title** against a document's path, and
+   * a stale-doc title names the *referenced* file — "The documented
+   * `src/auth.ts` source reference does not exist" — not the document that
+   * references it. So the two strings were about different files and
+   * `drift-suspected` was, in practice, unreachable: the widget existed and
+   * never appeared. The finding's span says which document drifted, and
+   * todo 19 ⑶ is what put the span within reach here.
+   */
+  const driftedDocumentPaths = new Set(
     openFindings
       .filter(({ kind }) => kind === "stale-doc")
-      .map(({ title }) => title),
+      .flatMap(({ detail }) => (detail?.spans ?? []).map(({ path }) => path)),
   );
   const documents = [...input.documents]
     .sort((left, right) => left.path.localeCompare(right.path))
     .map((document): InspectionDocumentEntry => {
-      const freshness: DocumentFreshness = [...staleDocTitles].some((title) =>
-        title.includes(document.path),
+      const freshness: DocumentFreshness = driftedDocumentPaths.has(
+        document.path,
       )
         ? "drift-suspected"
         : input.headCommitSha !== null &&
@@ -266,6 +303,17 @@ export function buildInspectionDashboard(
       entries: dismissedFindings,
       sourceLabel: "findings dismissed by a workspace member or a judgment",
       state: dismissedFindings.length === 0 ? "insufficient-evidence" : "ok",
+    },
+    risk: {
+      entries: input.riskMap?.entries ?? [],
+      sourceLabel: "open findings, test edges, imports/calls fan-in, co-change",
+      // A map with no entry is not evidence of safety, and neither is no map
+      // at all: both read as "not enough to rank anything".
+      state:
+        (input.riskMap?.entries.length ?? 0) === 0
+          ? "insufficient-evidence"
+          : "ok",
+      unmeasured: input.riskMap?.unmeasured ?? [],
     },
     findings: {
       entries: openFindings,

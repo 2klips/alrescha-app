@@ -3,14 +3,18 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   buildArtifactCard,
   buildInspectionDashboard,
+  buildRiskMap,
+  parseNpmAuditReport,
   currentSummaryText,
   summaryState,
   type ArtifactCard,
   type ArtifactClassification,
+  type DependencyAuditReport,
   type InspectionDashboard,
   type InspectionDocumentInput,
   type InspectionFindingDetail,
   type InspectionFindingInput,
+  type RiskMap,
   type RuledOutAttemptInput,
 } from "@alrescha/core";
 
@@ -195,13 +199,104 @@ export interface InspectionTodoRow {
   readonly status: string;
 }
 
+/**
+ * The rows the risk map ranks over (Phase 4 Wave D todo 21).
+ *
+ * Separate from `artifacts` above because that set is documents only — the
+ * freshness widget's input. Risk ranks *every* file, so it reads its own
+ * narrow projection: id, path and kind, plus the edges and history that put
+ * a file above another one.
+ */
+export interface InspectionRiskRows {
+  readonly artifacts: readonly {
+    readonly id: string;
+    readonly kind: string;
+    readonly path: string;
+  }[];
+  readonly coChanges: readonly {
+    readonly change_count: number;
+    readonly path_a: string;
+    readonly path_b: string;
+    readonly updated_at: string;
+  }[];
+  /**
+   * `ci` evidence rows recording that a coverage report executed a file
+   * (todo 18), by artifact id. **Null** when nothing has been measured —
+   * which is a different fact from "measured, and nothing was covered".
+   */
+  readonly coveredArtifactIds: readonly string[] | null;
+  readonly edges: readonly {
+    readonly relation: string;
+    readonly source_node_id: string;
+    readonly target_node_id: string;
+  }[];
+}
+
 export interface WorkspaceInspectionRows {
   readonly artifacts: readonly InspectionArtifactRow[];
   readonly dependencyAuditJson: unknown;
   readonly findings: readonly InspectionFindingRow[];
   readonly headCommitSha: string | null;
+  /** Absent on a caller that has not moved onto the risk widget yet. */
+  readonly risk?: InspectionRiskRows | undefined;
   readonly ruledOut: readonly InspectionRuledOutRow[];
   readonly todos: readonly InspectionTodoRow[];
+}
+
+/**
+ * The risk map for one workspace, from stored rows only.
+ *
+ * Edges are stored by node id and the map ranks paths, so the artifact set is
+ * the translation table. An edge whose endpoint is not an artifact — a
+ * requirement, a route, an evidence node — has no path here and drops out;
+ * `buildRiskMap` would ignore it anyway, and dropping it early keeps the two
+ * from disagreeing about what a path is.
+ */
+function riskMapFor(
+  rows: WorkspaceInspectionRows,
+  findings: readonly InspectionFindingInput[],
+  audit: DependencyAuditReport | null,
+): RiskMap | null {
+  if (!rows.risk) return null;
+  const pathById = new Map(
+    rows.risk.artifacts.map((row) => [row.id, row.path]),
+  );
+  return buildRiskMap({
+    artifacts: rows.risk.artifacts.map((row) => ({
+      classification: row.kind,
+      nodeId: row.id,
+      path: row.path,
+    })),
+    coChanges: rows.risk.coChanges.map((row) => ({
+      changeCount: row.change_count,
+      observedAt: row.updated_at,
+      pathA: row.path_a,
+      pathB: row.path_b,
+    })),
+    coverage:
+      rows.risk.coveredArtifactIds === null
+        ? null
+        : rows.risk.coveredArtifactIds.flatMap((id) => {
+            const path = pathById.get(id);
+            return path ? [path] : [];
+          }),
+    dependencyAudit: audit,
+    edges: rows.risk.edges.flatMap((row) => {
+      const sourcePath = pathById.get(row.source_node_id);
+      const targetPath = pathById.get(row.target_node_id);
+      return sourcePath && targetPath
+        ? [{ relation: row.relation, sourcePath, targetPath }]
+        : [];
+    }),
+    // A finding's anchors are its spans (the document it fired on) and, for
+    // the code-anchored rules, the file itself. Both ends count.
+    findings: findings.map((finding) => ({
+      kind: finding.kind,
+      sourcePath: finding.detail?.spans[0]?.path ?? null,
+      status: finding.status,
+      targetPath: null,
+    })),
+  });
 }
 
 const FINDING_KINDS = [
@@ -300,6 +395,11 @@ export function buildWorkspaceInspectionDashboard(
     documents,
     findings,
     headCommitSha: rows.headCommitSha,
+    riskMap: riskMapFor(
+      rows,
+      findings,
+      parseNpmAuditReport(rows.dependencyAuditJson),
+    ),
     ruledOutAttempts,
     // No todos stored is a different fact from "0 of 0 done": the widget
     // must say "증거 부족", so the absent case stays null.
@@ -328,44 +428,88 @@ export async function loadWorkspaceInspectionDashboard(
   }
   const workspaceId = String(workspaceResult.data.id);
 
-  const [findings, artifacts, ruledOut, todos, audit, head] = await Promise.all(
-    [
-      client
-        .from("findings")
-        .select(
-          "id,kind,severity,status,title,confidence,evidence_grade,provenance,dismissed_reason",
-        )
-        .eq("workspace_id", workspaceId),
-      client
-        .from("artifacts")
-        .select(
-          "path,kind,last_seen_commit_sha,source_blob_sha,exported_symbols," +
-            "summary:metadata->summary,summary_blob_sha:metadata->summaryBlobSha",
-        )
-        .eq("workspace_id", workspaceId)
-        .in("kind", DOCUMENT_KINDS),
-      client
-        .from("ruled_out_attempts")
-        .select("id,hypothesis,outcome,refs,recorded_at")
-        .eq("workspace_id", workspaceId)
-        .order("recorded_at", { ascending: false })
-        .limit(50),
-      client.from("todos").select("status").eq("workspace_id", workspaceId),
-      client
-        .from("dependency_audit_reports")
-        .select("report")
-        .eq("workspace_id", workspaceId)
-        .order("uploaded_at", { ascending: false })
-        .limit(1),
-      client
-        .from("runs")
-        .select("commit_sha")
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false })
-        .limit(1),
-    ],
-  );
-  for (const result of [findings, artifacts, ruledOut, todos, audit, head]) {
+  const [
+    findings,
+    artifacts,
+    ruledOut,
+    todos,
+    audit,
+    head,
+    riskArtifacts,
+    riskEdges,
+    coChanges,
+    coverage,
+  ] = await Promise.all([
+    client
+      .from("findings")
+      .select(
+        "id,kind,severity,status,title,confidence,evidence_grade,provenance,dismissed_reason",
+      )
+      .eq("workspace_id", workspaceId),
+    client
+      .from("artifacts")
+      .select(
+        "path,kind,last_seen_commit_sha,source_blob_sha,exported_symbols," +
+          "summary:metadata->summary,summary_blob_sha:metadata->summaryBlobSha",
+      )
+      .eq("workspace_id", workspaceId)
+      .in("kind", DOCUMENT_KINDS),
+    client
+      .from("ruled_out_attempts")
+      .select("id,hypothesis,outcome,refs,recorded_at")
+      .eq("workspace_id", workspaceId)
+      .order("recorded_at", { ascending: false })
+      .limit(50),
+    client.from("todos").select("status").eq("workspace_id", workspaceId),
+    client
+      .from("dependency_audit_reports")
+      .select("report")
+      .eq("workspace_id", workspaceId)
+      .order("uploaded_at", { ascending: false })
+      .limit(1),
+    client
+      .from("runs")
+      .select("commit_sha")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: false })
+      .limit(1),
+    // The risk map's own rows (todo 21). Every artifact, not just the
+    // documents above: risk ranks code, and code is most of a repository.
+    client
+      .from("artifacts")
+      .select("id,kind,path")
+      .eq("workspace_id", workspaceId),
+    client
+      .from("edges")
+      .select("relation,source_node_id,target_node_id")
+      .eq("workspace_id", workspaceId)
+      .in("relation", ["calls", "imports", "tests"]),
+    client
+      .from("file_co_changes")
+      .select("change_count,path_a,path_b,updated_at")
+      .eq("workspace_id", workspaceId)
+      .order("change_count", { ascending: false })
+      .limit(500),
+    // Coverage evidence (todo 18). No row anywhere means nothing has been
+    // measured, which the map reports as unmeasured rather than untested.
+    client
+      .from("evidence")
+      .select("source_artifact_id")
+      .eq("workspace_id", workspaceId)
+      .eq("kind", "ci"),
+  ]);
+  for (const result of [
+    findings,
+    artifacts,
+    ruledOut,
+    todos,
+    audit,
+    head,
+    riskArtifacts,
+    riskEdges,
+    coChanges,
+    coverage,
+  ]) {
     if (result.error) throw new Error(result.error.message);
   }
 
@@ -382,6 +526,22 @@ export async function loadWorkspaceInspectionDashboard(
       dependencyAuditJson: latestAudit?.report ?? null,
       findings: (findings.data ?? []) as InspectionFindingRow[],
       headCommitSha: latestRun?.commit_sha ?? null,
+      risk: {
+        artifacts: (riskArtifacts.data ??
+          []) as InspectionRiskRows["artifacts"],
+        coChanges: (coChanges.data ?? []) as InspectionRiskRows["coChanges"],
+        // No coverage row anywhere is "nobody measured", not "nothing is
+        // covered" — the map greys the signal out instead of scoring it.
+        coveredArtifactIds:
+          (coverage.data ?? []).length === 0
+            ? null
+            : (coverage.data ?? []).map((row) =>
+                String(
+                  (row as { source_artifact_id: string }).source_artifact_id,
+                ),
+              ),
+        edges: (riskEdges.data ?? []) as InspectionRiskRows["edges"],
+      },
       ruledOut: (ruledOut.data ?? []) as InspectionRuledOutRow[],
       todos: (todos.data ?? []) as InspectionTodoRow[],
     }),

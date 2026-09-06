@@ -4,6 +4,8 @@ export { createHostedMcpEndpoint } from "./hosted";
 export { prepareChange } from "./prepare-change";
 export type { ChangeBrief } from "./prepare-change";
 export {
+  BRAIN_TABLE_COLUMNS,
+  BRAIN_TABLE_ROWS,
   getWorkspaceArtifact,
   getWorkspaceFindings,
   queryWorkspaceBrain,
