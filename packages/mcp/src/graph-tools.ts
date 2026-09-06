@@ -9,7 +9,15 @@
  * are marked so a caller can tell them from stored rows.
  */
 
-import type { McpEdgeRelation, McpNodeType, McpWorkspaceData } from "./store";
+import type {
+  McpEdgeFamily,
+  McpEdgeOmission,
+  McpEdgeProvenance,
+  McpEdgeRelation,
+  McpEdgeTier,
+  McpNodeType,
+  McpWorkspaceData,
+} from "./store";
 import { searchWorkspaceIndex } from "./data-brain";
 
 export interface GraphNodeRef {
@@ -19,11 +27,28 @@ export interface GraphNodeRef {
   readonly type: McpNodeType;
 }
 
+/**
+ * An edge as a tool answer carries it (Codex remedy P0-D).
+ *
+ * It used to be four fields, and the family, the tier, the confidence and the
+ * reason were dropped between the database and the agent — so "these two
+ * files are connected" arrived with no way to ask how anyone knows. Storage
+ * direction stays `sourceNodeId`/`targetNodeId` whichever way a traversal
+ * walked it.
+ *
+ * `derived` marks an edge this layer computed rather than read: it has an id
+ * of its own making and its `reason` says so.
+ */
 export interface GraphEdgeRef {
+  readonly confidence: number | null;
   readonly derived: boolean;
+  readonly family: McpEdgeFamily | null;
+  readonly id: string;
+  readonly provenance: McpEdgeProvenance;
   readonly relation: McpEdgeRelation;
   readonly sourceNodeId: string;
   readonly targetNodeId: string;
+  readonly tier: McpEdgeTier | null;
 }
 
 interface GraphView {
@@ -121,21 +146,25 @@ function buildGraphView(workspace: McpWorkspaceData): GraphView {
 
     for (const edge of repository.edges) {
       if (nodes.has(edge.sourceNodeId) && nodes.has(edge.targetNodeId)) {
-        edges.push({
-          derived: false,
-          relation: edge.relation,
-          sourceNodeId: edge.sourceNodeId,
-          targetNodeId: edge.targetNodeId,
-        });
+        edges.push({ ...edge, derived: false });
       }
     }
     for (const requirement of repository.requirements) {
       if (nodes.has(requirement.sourceArtifactId)) {
         edges.push({
+          confidence: 1,
           derived: true,
+          family: "doc",
+          id: `derived:${requirement.sourceArtifactId}:${requirement.id}`,
+          provenance: {
+            method: "requirement-source",
+            reason: "the document this requirement was read from",
+            span: null,
+          },
           relation: "references",
           sourceNodeId: requirement.sourceArtifactId,
           targetNodeId: requirement.id,
+          tier: "resolved",
         });
       }
     }
@@ -174,6 +203,32 @@ function otherEnd(edge: GraphEdgeRef, nodeId: string): string {
 export interface NeighborhoodResult {
   readonly edges: readonly GraphEdgeRef[];
   readonly nodes: readonly GraphNodeRef[];
+  /**
+   * Relations the read did not carry, and why. An empty list means the view
+   * carried everything the store held; it never means "there is nothing
+   * else" about the repository.
+   */
+  readonly omissions: readonly McpEdgeOmission[];
+}
+
+/** Everything the workspace read left out, merged across repositories. */
+export function workspaceEdgeOmissions(
+  workspace: McpWorkspaceData,
+): readonly McpEdgeOmission[] {
+  const merged = new Map<string, McpEdgeOmission>();
+  for (const repository of workspace.repositories) {
+    for (const omission of repository.edgeOmissions ?? []) {
+      const held = merged.get(omission.relation);
+      merged.set(omission.relation, {
+        count: (held?.count ?? 0) + omission.count,
+        reason: omission.reason,
+        relation: omission.relation,
+      });
+    }
+  }
+  return [...merged.values()].sort((left, right) =>
+    left.relation.localeCompare(right.relation),
+  );
 }
 
 /** Bidirectional frontier expansion, depth 1 or 2, optional relation filter. */
@@ -217,6 +272,10 @@ export function collectNeighbors(
       .sort((left, right) => left.localeCompare(right))
       .map((id) => view.nodes.get(id))
       .filter((node): node is GraphNodeRef => node !== undefined),
+    // What this view could not carry. A neighbourhood with no `contains`
+    // edge is not a file in no folder; it is a view that does not carry
+    // folders, and the difference is the caller's to know.
+    omissions: workspaceEdgeOmissions(workspace),
   };
 }
 

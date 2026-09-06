@@ -4,63 +4,96 @@ export const MCP_SCOPES = ["mcp:read", "mcp:write"] as const;
 
 export type McpScope = (typeof MCP_SCOPES)[number];
 
-export type McpNodeType =
-  | "artifact"
-  | "requirement"
-  | "evidence"
-  | "finding"
-  | "receipt"
-  | "context_pack"
-  | "memory"
-  /**
-   * A URL (Phase 4 Wave A′ todo 6). Traversable — "what does `/auth` touch"
-   * is a question an agent should be able to ask — but not an
-   * `index_entries.entry_type`: the search index keeps its own six-value
-   * vocabulary until a migration widens that CHECK.
-   */
-  | "route"
-  /**
-   * A table, view or function this repository declares (Phase 4 Wave A′
-   * todo 7). "What touches `findings`" is a question an agent asks
-   * constantly and could not ask before. Not an `index_entries.entry_type`,
-   * for the reason `route` is not.
-   */
-  | "db_object"
-  /**
-   * An ID-token heading — `ADR-013`, `OQ-041`, `MT-7` (Phase 4 Wave A′
-   * todo 8). "What cites this decision" is the question the token was always
-   * standing in for. Not an `index_entries.entry_type`, for the reason
-   * `route` and `db_object` are not.
-   */
-  | "section";
+/**
+ * The node vocabulary, as one array (Codex remedy P0-D / R-01 #4).
+ *
+ * It was a union, and three other places copied it by hand: the Supabase
+ * decoder's guard, the hosted output schema, and the display maps. Every
+ * copy drifted — by the end of Wave A′ the decoder was silently dropping
+ * every `db_object` edge and the hosted schema would have rejected a
+ * `section` node. A vocabulary with four hand-maintained copies is a
+ * vocabulary that is wrong somewhere.
+ *
+ * Beyond the seven original kinds:
+ * - `route` — a URL (todo 6). Traversable, because "what does `/auth` touch"
+ *   is a question an agent should be able to ask.
+ * - `db_object` — a table, view or function this repository declares
+ *   (todo 7).
+ * - `section` — an ID-token heading: `ADR-013`, `OQ-041`, `MT-7` (todo 8).
+ *
+ * None of the three is an `index_entries.entry_type`: the search index keeps
+ * its own six-value vocabulary until a migration widens that CHECK.
+ */
+export const MCP_NODE_TYPES = [
+  "artifact",
+  "context_pack",
+  "db_object",
+  "evidence",
+  "finding",
+  "memory",
+  "receipt",
+  "requirement",
+  "route",
+  "section",
+] as const;
 
-export type McpEdgeRelation =
-  | "requires"
-  | "implements"
-  | "tests"
-  | "supports"
-  | "contradicts"
-  | "supersedes"
-  | "references"
-  | "imports"
-  | "calls"
-  /**
-   * A route and the files that serve it (Phase 4 Wave A′ todo 6). `contains`
-   * — the directory hierarchy — deliberately stays out until todo 22 gives
-   * the graph tools a hierarchy flag: 885 containment edges would bury every
-   * `get_neighbors` answer they appear in.
-   */
-  | "handles"
-  /**
-   * The database family (Phase 4 Wave A′ todo 7): the migration that
-   * declares an object, the one that alters it, the foreign keys between
-   * objects, and the code that names one in a query literal. `queries` is
-   * `reference` — a string that matches a table name is not proof the call
-   * reaches it.
-   */
-  | "defines"
-  | "modifies"
-  | "queries";
+export type McpNodeType = (typeof MCP_NODE_TYPES)[number];
+
+/**
+ * The relation vocabulary, as one array, for the reason `MCP_NODE_TYPES` is.
+ *
+ * `handles` is a route and the files that serve it (todo 6). `defines`,
+ * `modifies` and `queries` are the database family (todo 7): the migration
+ * that declares an object, the one that alters it, and the code that names
+ * one in a query literal.
+ *
+ * **`contains` is deliberately absent.** The directory hierarchy would bury
+ * every `get_neighbors` answer it appeared in, and the flag that would make
+ * it safe is todo 22's. Absent is not the same as hidden: the decoder
+ * reports what it left out and why, so a caller asking "does this file have
+ * a `contains` edge" gets `unknown` rather than a confident no.
+ */
+export const MCP_EDGE_RELATIONS = [
+  "calls",
+  "contradicts",
+  "defines",
+  "handles",
+  "implements",
+  "imports",
+  "modifies",
+  "queries",
+  "references",
+  "requires",
+  "supersedes",
+  "supports",
+  "tests",
+] as const;
+
+export type McpEdgeRelation = (typeof MCP_EDGE_RELATIONS)[number];
+
+/** Read limits, force strength and traversal policy are decided per family. */
+export const MCP_EDGE_FAMILIES = [
+  "database",
+  "doc",
+  "evidence",
+  "hierarchy",
+  "route",
+  "semantic",
+  "statistical",
+  "structure",
+] as const;
+
+export type McpEdgeFamily = (typeof MCP_EDGE_FAMILIES)[number];
+
+/** How a link was derived — separate from what it proves. */
+export const MCP_EDGE_TIERS = [
+  "agent_asserted",
+  "inferred",
+  "reference",
+  "resolved",
+] as const;
+
+export type McpEdgeTier = (typeof MCP_EDGE_TIERS)[number];
 
 export interface McpArtifactData {
   /** Source blob sha as last scanned — module freshness input (todo 8). */
@@ -92,11 +125,46 @@ export interface McpEvidenceData {
   verdict: string;
 }
 
+/**
+ * Why an edge says what it says, as stored (Codex remedy P0-D).
+ *
+ * A `reason` or a `span` — the writer states at least one, and an edge with
+ * neither is an edge nobody can check. Nothing is invented here: a missing
+ * field arrives as `null` rather than as a plausible default, because
+ * `resolved` written over an absent tier is exactly the dressing-up the
+ * remedy forbids.
+ */
+export interface McpEdgeProvenance {
+  /** The extractor that produced it, when the writer named one. */
+  method: string | null;
+  reason: string | null;
+  span: McpSourceSpan | null;
+}
+
 export interface McpEdgeData {
+  confidence: number | null;
+  family: McpEdgeFamily | null;
   id: string;
+  provenance: McpEdgeProvenance;
   relation: McpEdgeRelation;
   sourceNodeId: string;
   targetNodeId: string;
+  tier: McpEdgeTier | null;
+}
+
+/**
+ * An edge the decoder did not pass on, and why.
+ *
+ * A read that quietly returns less than it found makes a caller confident
+ * about an absence it never checked. `contains` is the live case: the
+ * hierarchy is excluded on purpose, and saying so is what separates "this
+ * file is in no folder" from "this view does not carry folders".
+ */
+export interface McpEdgeOmission {
+  count: number;
+  reason: string;
+  /** The stored relation, as written — it is outside the vocabulary. */
+  relation: string;
 }
 
 /** An ID-token heading this repository's own documents declare. */
@@ -222,6 +290,8 @@ export interface McpRepositoryData {
   indexEntries: McpIndexEntryData[];
   overview: string;
   receipts: McpReceiptData[];
+  /** What the edge read left out, per stored relation. */
+  edgeOmissions?: McpEdgeOmission[];
   requirements: McpRequirementData[];
   /** Absent on a workspace scanned before Wave A′ todo 6. */
   routes?: McpRouteData[];

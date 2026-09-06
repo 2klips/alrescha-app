@@ -40,7 +40,14 @@ export type {
   SelectedContextPack,
   WorkspaceFinding,
 } from "./data-brain";
-export { AGENT_ASSERTION_RELATIONS, MEMORY_BLOCK_NAMES } from "./store";
+export {
+  AGENT_ASSERTION_RELATIONS,
+  MCP_EDGE_FAMILIES,
+  MCP_EDGE_RELATIONS,
+  MCP_EDGE_TIERS,
+  MCP_NODE_TYPES,
+  MEMORY_BLOCK_NAMES,
+} from "./store";
 export type {
   AgentAssertionRelation,
   IssueAccessTokenInput,
@@ -54,7 +61,11 @@ export type {
   McpContextPackData,
   McpDbObjectData,
   McpEdgeData,
+  McpEdgeFamily,
+  McpEdgeOmission,
+  McpEdgeProvenance,
   McpEdgeRelation,
+  McpEdgeTier,
   McpEvidenceData,
   McpFindingData,
   McpFindingProvenance,

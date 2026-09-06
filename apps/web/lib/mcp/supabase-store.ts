@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
+  MCP_EDGE_FAMILIES,
+  MCP_EDGE_RELATIONS,
+  MCP_EDGE_TIERS,
   MCP_SCOPES,
   createAccessTokenSecret,
   createUlid,
@@ -12,7 +15,11 @@ import {
   type McpMemoryBlockName,
   type McpWriteMemoryResult,
   type McpDbObjectData,
+  type McpEdgeFamily,
+  type McpEdgeOmission,
+  type McpEdgeProvenance,
   type McpEdgeRelation,
+  type McpEdgeTier,
   type McpFindingProvenance,
   type McpNodeType,
   type McpSourceSpan,
@@ -93,21 +100,44 @@ function isNodeType(value: unknown): value is McpNodeType {
   ].includes(String(value));
 }
 
+/**
+ * The vocabulary, read from the package rather than copied (Codex remedy
+ * P0-D). The copy this replaced was ten values behind: `defines`, `modifies`
+ * and `queries` reached the database in Wave A′ todo 7 and never reached an
+ * agent, because a relation the list did not know was dropped here without a
+ * word. `contains` is still excluded — the hierarchy would bury every
+ * neighbour answer until todo 22 gives the tools a flag — but exclusion is
+ * now reported rather than silent.
+ */
 function isRelation(value: unknown): value is McpEdgeRelation {
-  return [
-    "requires",
-    "implements",
-    "tests",
-    "supports",
-    "contradicts",
-    "supersedes",
-    "references",
-    "imports",
-    "calls",
-    // `contains` is deliberately absent until the graph tools can turn the
-    // hierarchy off (todo 22): it would bury every neighbour answer.
-    "handles",
-  ].includes(String(value));
+  return (MCP_EDGE_RELATIONS as readonly string[]).includes(String(value));
+}
+
+function edgeFamily(value: unknown): McpEdgeFamily | null {
+  return (MCP_EDGE_FAMILIES as readonly string[]).includes(String(value))
+    ? (value as McpEdgeFamily)
+    : null;
+}
+
+function edgeTier(value: unknown): McpEdgeTier | null {
+  return (MCP_EDGE_TIERS as readonly string[]).includes(String(value))
+    ? (value as McpEdgeTier)
+    : null;
+}
+
+/**
+ * The stored `edges.provenance`, decoded without invention. A writer that
+ * stated no reason and no span leaves both null; nothing here fills a gap
+ * with a plausible default, because a made-up `resolved` is exactly the
+ * dressing-up the remedy forbids.
+ */
+function edgeProvenance(value: unknown): McpEdgeProvenance {
+  const stored = record(value);
+  return {
+    method: typeof stored.method === "string" ? stored.method : null,
+    reason: typeof stored.reason === "string" ? stored.reason : null,
+    span: sourceSpan(stored.span),
+  };
 }
 
 function sourceSpan(value: unknown): McpSourceSpan | null {
@@ -532,7 +562,10 @@ export class SupabaseMcpStore implements McpStore {
         .eq("workspace_id", workspaceId),
       this.client
         .from("edges")
-        .select("id, repository_id, source_node_id, target_node_id, relation")
+        .select(
+          "id, repository_id, source_node_id, target_node_id, relation, " +
+            "family, confidence, provenance",
+        )
         .eq("workspace_id", workspaceId),
       this.client
         .from("findings")
@@ -602,6 +635,32 @@ export class SupabaseMcpStore implements McpStore {
     const requirementRows = rows(requirements.data);
     const evidenceRows = rows(evidence.data);
     const edgeRows = rows(edges.data);
+    /**
+     * What the vocabulary filter left behind, per repository and relation.
+     * A read that returns less than it found without saying so makes a
+     * caller confident about an absence it never checked (Codex remedy
+     * P0-D #5).
+     */
+    const edgeOmissionsFor = (repositoryId: string): McpEdgeOmission[] => {
+      const counts = new Map<string, number>();
+      for (const row of edgeRows) {
+        if (row.repository_id !== repositoryId || isRelation(row.relation)) {
+          continue;
+        }
+        const relation = String(row.relation);
+        counts.set(relation, (counts.get(relation) ?? 0) + 1);
+      }
+      return [...counts]
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([relation, count]) => ({
+          count,
+          reason:
+            relation === "contains"
+              ? "the directory hierarchy is excluded from graph answers until the tools can filter it (todo 22)"
+              : "relation is outside the MCP vocabulary",
+          relation,
+        }));
+    };
     const findingRows = rows(findings.data);
     const receiptRows = rows(receipts.data);
     const indexRows = rows(indexEntries.data);
@@ -727,16 +786,24 @@ export class SupabaseMcpStore implements McpStore {
                   },
                 ],
           defaultBranch: requiredString(repository, "default_branch"),
+          edgeOmissions: edgeOmissionsFor(repositoryId),
           edges: edgeRows
             .filter((row) => row.repository_id === repositoryId)
             .flatMap((row) =>
               isRelation(row.relation)
                 ? [
                     {
+                      confidence:
+                        row.confidence === null || row.confidence === undefined
+                          ? null
+                          : Number(row.confidence),
+                      family: edgeFamily(row.family),
                       id: requiredString(row, "id"),
+                      provenance: edgeProvenance(row.provenance),
                       relation: row.relation,
                       sourceNodeId: requiredString(row, "source_node_id"),
                       targetNodeId: requiredString(row, "target_node_id"),
+                      tier: edgeTier(record(row.provenance).tier),
                     },
                   ]
                 : [],

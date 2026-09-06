@@ -8,7 +8,46 @@ import {
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createHostedMcpEndpoint, InMemoryMcpStore } from "./index";
-import type { McpFindingData, McpWorkspaceData } from "./index";
+import { GRAPH_EDGE_SCHEMA, NODE_TYPE_SCHEMA, RELATION_SCHEMA } from "./hosted";
+import { MCP_EDGE_RELATIONS, MCP_NODE_TYPES } from "./store";
+import type {
+  McpEdgeData,
+  McpEdgeFamily,
+  McpEdgeRelation,
+  McpEdgeTier,
+  McpFindingData,
+  McpWorkspaceData,
+} from "./index";
+
+/**
+ * A stored edge as the decoder delivers it (Codex remedy P0-D): the relation
+ * plus the family, tier, confidence and provenance that used to be dropped
+ * between the database and the tool answer.
+ */
+function edge(input: {
+  readonly family?: McpEdgeFamily;
+  readonly id: string;
+  readonly reason?: string;
+  readonly relation: McpEdgeRelation;
+  readonly sourceNodeId: string;
+  readonly targetNodeId: string;
+  readonly tier?: McpEdgeTier;
+}): McpEdgeData {
+  return {
+    confidence: 1,
+    family: input.family ?? "evidence",
+    id: input.id,
+    provenance: {
+      method: null,
+      reason: input.reason ?? "fixture",
+      span: null,
+    },
+    relation: input.relation,
+    sourceNodeId: input.sourceNodeId,
+    targetNodeId: input.targetNodeId,
+    tier: input.tier ?? "resolved",
+  };
+}
 
 const WORKSPACE_ID = "01K287J3D18V7A1MZG9E8D1Y01";
 const USER_ID = "user-owner";
@@ -62,12 +101,12 @@ function workspaceFixture(): McpWorkspaceData {
         ],
         defaultBranch: "main",
         edges: [
-          {
+          edge({
             id: "01K287J3D18V7A1MZG9E8D1Y51",
             relation: "implements",
             sourceNodeId: "01K287J3D18V7A1MZG9E8D1Y21",
             targetNodeId: "01K287J3D18V7A1MZG9E8D1Y12",
-          },
+          }),
         ],
         evidence: [],
         findings: [
@@ -1575,6 +1614,67 @@ describe("get_findings contract", () => {
       structured.findings.every(
         ({ evidenceGrade }) => evidenceGrade === "inferred",
       ),
+    ).toBe(true);
+  });
+});
+
+/**
+ * Codex remedy P0-D. Four copies of one vocabulary had drifted apart: the
+ * source union, the Supabase decoder's guard, and these two output enums.
+ * Both enums are now built from the source arrays, and this pins them there —
+ * a value added to the graph fails a test instead of a live request.
+ */
+describe("the tool output vocabulary tracks the source of truth", () => {
+  it("accepts every node type and relation the graph can produce", () => {
+    for (const type of MCP_NODE_TYPES) {
+      expect([type, NODE_TYPE_SCHEMA.safeParse(type).success]).toEqual([
+        type,
+        true,
+      ]);
+    }
+    for (const relation of MCP_EDGE_RELATIONS) {
+      expect([relation, RELATION_SCHEMA.safeParse(relation).success]).toEqual([
+        relation,
+        true,
+      ]);
+    }
+    // And nothing beyond it: `contains` is excluded from graph answers on
+    // purpose, so the schema must not quietly start accepting it.
+    expect(RELATION_SCHEMA.safeParse("contains").success).toBe(false);
+  });
+
+  it("validates a full edge, including the reason it exists", () => {
+    expect(
+      GRAPH_EDGE_SCHEMA.safeParse({
+        confidence: 0.6,
+        derived: false,
+        family: "database",
+        id: "01K287J3D18V7A1MZG9E8D1Y40",
+        provenance: {
+          method: "table-literal",
+          reason: "code names the object in a literal",
+          span: { endLine: 22, path: "lib/store.ts", startLine: 22 },
+        },
+        relation: "queries",
+        sourceNodeId: "a",
+        targetNodeId: "b",
+        tier: "reference",
+      }).success,
+    ).toBe(true);
+
+    // A writer that stated nothing reports nothing, and that is valid.
+    expect(
+      GRAPH_EDGE_SCHEMA.safeParse({
+        confidence: null,
+        derived: true,
+        family: null,
+        id: "derived:a:b",
+        provenance: { method: null, reason: null, span: null },
+        relation: "references",
+        sourceNodeId: "a",
+        targetNodeId: "b",
+        tier: null,
+      }).success,
     ).toBe(true);
   });
 });

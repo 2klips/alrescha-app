@@ -73,6 +73,10 @@ export function deriveCorpusEdges(corpus: RepositoryCorpus): McpEdgeData[] {
     if (seen.has(key)) return;
     seen.add(key);
     edges.push({
+      confidence: 1,
+      family: "structure",
+      provenance: { method: null, reason: "fixture", span: null },
+      tier: "resolved",
       id: `edge-${edges.length.toString().padStart(5, "0")}`,
       relation,
       sourceNodeId: nodeId(sourceIndex),

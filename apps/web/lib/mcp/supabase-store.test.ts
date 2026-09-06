@@ -417,3 +417,145 @@ describe("SupabaseMcpStore.loadWorkspace — finding provenance", () => {
     });
   });
 });
+
+/**
+ * Codex remedy P0-D. The decoder used to select four columns and drop, with
+ * no word to the caller, every edge whose relation its hand-copied allowlist
+ * did not know — which by the end of Wave A′ was the entire database family.
+ */
+describe("SupabaseMcpStore.loadWorkspace — edge provenance", () => {
+  const REPOSITORY_ID = "01K287J3D18V7A1MZG9E8D1Y20";
+  const SOURCE = "01K287J3D18V7A1MZG9E8D1Y11";
+  const TARGET = "01K287J3D18V7A1MZG9E8D1Y12";
+
+  function clientWithEdges(edges: readonly Record<string, unknown>[]) {
+    return new FakeSupabaseClient({
+      edges: { data: [...edges], error: null },
+      repositories: {
+        data: [
+          {
+            default_branch: "main",
+            full_name: "2klips/alrescha-app",
+            id: REPOSITORY_ID,
+          },
+        ],
+        error: null,
+      },
+    });
+  }
+
+  async function repositoryOf(client: FakeSupabaseClient) {
+    const store = new SupabaseMcpStore(asClient(client));
+    const workspace = await store.loadWorkspace({
+      scopes: ["mcp:read"],
+      tokenId: TOKEN_ID,
+      userId: USER_ID,
+      workspaceId: WORKSPACE_ID,
+    });
+    return workspace.repositories[0];
+  }
+
+  it("carries the family, tier, confidence and reason of a stored edge", async () => {
+    const repository = await repositoryOf(
+      clientWithEdges([
+        {
+          confidence: "0.60",
+          family: "database",
+          id: "01K287J3D18V7A1MZG9E8D1Y40",
+          provenance: {
+            method: "table-literal",
+            reason: "code names the object in a literal",
+            span: { endLine: 22, path: "lib/store.ts", startLine: 22 },
+            tier: "reference",
+          },
+          relation: "queries",
+          repository_id: REPOSITORY_ID,
+          source_node_id: SOURCE,
+          target_node_id: TARGET,
+        },
+      ]),
+    );
+
+    expect(repository?.edges).toEqual([
+      {
+        confidence: 0.6,
+        family: "database",
+        id: "01K287J3D18V7A1MZG9E8D1Y40",
+        provenance: {
+          method: "table-literal",
+          reason: "code names the object in a literal",
+          span: { endLine: 22, path: "lib/store.ts", startLine: 22 },
+        },
+        relation: "queries",
+        sourceNodeId: SOURCE,
+        targetNodeId: TARGET,
+        tier: "reference",
+      },
+    ]);
+    expect(repository?.edgeOmissions).toEqual([]);
+  });
+
+  it("reports what the vocabulary left out instead of dropping it silently", async () => {
+    const repository = await repositoryOf(
+      clientWithEdges([
+        {
+          confidence: "1.00",
+          family: "hierarchy",
+          id: "01K287J3D18V7A1MZG9E8D1Y41",
+          provenance: { reason: "path containment", tier: "resolved" },
+          relation: "contains",
+          repository_id: REPOSITORY_ID,
+          source_node_id: SOURCE,
+          target_node_id: TARGET,
+        },
+        {
+          confidence: "1.00",
+          family: "hierarchy",
+          id: "01K287J3D18V7A1MZG9E8D1Y42",
+          provenance: { reason: "path containment", tier: "resolved" },
+          relation: "contains",
+          repository_id: REPOSITORY_ID,
+          source_node_id: TARGET,
+          target_node_id: SOURCE,
+        },
+      ]),
+    );
+
+    // Still excluded — the hierarchy would bury every neighbour answer until
+    // todo 22 gives the tools a flag — but the caller can now tell an
+    // exclusion from an absence.
+    expect(repository?.edges).toEqual([]);
+    expect(repository?.edgeOmissions).toEqual([
+      {
+        count: 2,
+        reason:
+          "the directory hierarchy is excluded from graph answers until the tools can filter it (todo 22)",
+        relation: "contains",
+      },
+    ]);
+  });
+
+  it("states a missing tier as missing rather than inventing one", async () => {
+    const repository = await repositoryOf(
+      clientWithEdges([
+        {
+          confidence: null,
+          family: "not-a-family",
+          id: "01K287J3D18V7A1MZG9E8D1Y43",
+          provenance: { tier: "made-up" },
+          relation: "imports",
+          repository_id: REPOSITORY_ID,
+          source_node_id: SOURCE,
+          target_node_id: TARGET,
+        },
+      ]),
+    );
+
+    expect(repository?.edges[0]).toMatchObject({
+      confidence: null,
+      family: null,
+      provenance: { method: null, reason: null, span: null },
+      tier: null,
+    });
+  });
+});

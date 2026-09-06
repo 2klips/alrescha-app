@@ -33,6 +33,10 @@ import {
 } from "./repo-map";
 import {
   AGENT_ASSERTION_RELATIONS,
+  MCP_EDGE_FAMILIES,
+  MCP_EDGE_RELATIONS,
+  MCP_EDGE_TIERS,
+  MCP_NODE_TYPES,
   MEMORY_BLOCK_NAMES,
   createUlid,
   type McpPackMeasurement,
@@ -47,28 +51,18 @@ const WRITE_METADATA_TOOL = {
   destructiveHint: false,
   readOnlyHint: false,
 } as const;
-const NODE_TYPE_SCHEMA = z.enum([
-  "artifact",
-  "requirement",
-  "evidence",
-  "finding",
-  "receipt",
-  "context_pack",
-  "memory",
-  "route",
-]);
-const RELATION_SCHEMA = z.enum([
-  "requires",
-  "implements",
-  "tests",
-  "supports",
-  "contradicts",
-  "supersedes",
-  "references",
-  "imports",
-  "calls",
-  "handles",
-]);
+/**
+ * The output vocabulary, read from the package rather than copied (Codex
+ * remedy P0-D). Both of these were hand-maintained duplicates and both had
+ * fallen behind: the node enum would have rejected a `db_object` or
+ * `section`, and the relation enum omitted the whole database family.
+ * `packages/mcp/src/hosted.test.ts` pins them against the source arrays so a
+ * new value fails a test instead of a request.
+ */
+export const NODE_TYPE_SCHEMA = z.enum(MCP_NODE_TYPES);
+export const RELATION_SCHEMA = z.enum(MCP_EDGE_RELATIONS);
+const EDGE_FAMILY_SCHEMA = z.enum(MCP_EDGE_FAMILIES);
+const EDGE_TIER_SCHEMA = z.enum(MCP_EDGE_TIERS);
 
 function toolResult(payload: Record<string, unknown>) {
   // QW-10 proposed dropping the JSON-as-text duplicate, but the MCP spec's
@@ -130,11 +124,37 @@ const GRAPH_NODE_SCHEMA = z.object({
   repositoryId: z.string(),
   type: NODE_TYPE_SCHEMA,
 });
-const GRAPH_EDGE_SCHEMA = z.object({
+/**
+ * An edge, with the reason it exists. `null` where the writer stated
+ * nothing — a missing tier is reported as missing, never filled in.
+ */
+export const GRAPH_EDGE_SCHEMA = z.object({
+  confidence: z.number().nullable(),
   derived: z.boolean(),
+  family: EDGE_FAMILY_SCHEMA.nullable(),
+  id: z.string(),
+  provenance: z.object({
+    method: z.string().nullable(),
+    reason: z.string().nullable(),
+    span: z
+      .object({
+        endLine: z.number(),
+        path: z.string(),
+        startLine: z.number(),
+      })
+      .nullable(),
+  }),
   relation: RELATION_SCHEMA,
   sourceNodeId: z.string(),
   targetNodeId: z.string(),
+  tier: EDGE_TIER_SCHEMA.nullable(),
+});
+
+/** What a read left out, so an absence can be told from an exclusion. */
+const EDGE_OMISSION_SCHEMA = z.object({
+  count: z.number(),
+  reason: z.string(),
+  relation: z.string(),
 });
 
 const MEMORY_ENTRY_SCHEMA = z.object({
@@ -303,6 +323,7 @@ const GET_NEIGHBORS_TOOL = {
     edges: z.array(GRAPH_EDGE_SCHEMA),
     found: z.boolean(),
     nodes: z.array(GRAPH_NODE_SCHEMA),
+    omissions: z.array(EDGE_OMISSION_SCHEMA),
     workspaceId: z.string(),
   }),
 };
@@ -1087,6 +1108,7 @@ function createServer(
         edges: result?.edges ?? [],
         found: result !== null,
         nodes: result?.nodes ?? [],
+        omissions: result?.omissions ?? [],
         workspaceId: principal.workspaceId,
       });
     },

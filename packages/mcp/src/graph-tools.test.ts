@@ -7,7 +7,44 @@ import {
   searchWorkspaceNodes,
   tracePath,
 } from "./graph-tools";
-import type { McpRepositoryData, McpWorkspaceData } from "./store";
+import type {
+  McpEdgeData,
+  McpEdgeFamily,
+  McpEdgeRelation,
+  McpEdgeTier,
+  McpRepositoryData,
+  McpWorkspaceData,
+} from "./store";
+
+/**
+ * A stored edge as the decoder delivers it (Codex remedy P0-D): the relation
+ * plus the family, tier, confidence and provenance that used to be dropped
+ * between the database and the tool answer.
+ */
+function edge(input: {
+  readonly family?: McpEdgeFamily;
+  readonly id: string;
+  readonly reason?: string;
+  readonly relation: McpEdgeRelation;
+  readonly sourceNodeId: string;
+  readonly targetNodeId: string;
+  readonly tier?: McpEdgeTier;
+}): McpEdgeData {
+  return {
+    confidence: 1,
+    family: input.family ?? "evidence",
+    id: input.id,
+    provenance: {
+      method: null,
+      reason: input.reason ?? "fixture",
+      span: null,
+    },
+    relation: input.relation,
+    sourceNodeId: input.sourceNodeId,
+    targetNodeId: input.targetNodeId,
+    tier: input.tier ?? "resolved",
+  };
+}
 
 const WORKSPACE_ID = "01K200000000000000000000W1";
 const USER_ID = "10000000-0000-4000-8000-000000000001";
@@ -60,18 +97,18 @@ function repository(): McpRepositoryData {
     contextPacks: [],
     defaultBranch: "main",
     edges: [
-      {
+      edge({
         id: "01K200000000000000000000E1",
         relation: "implements",
         sourceNodeId: REQ,
         targetNodeId: CODE,
-      },
-      {
+      }),
+      edge({
         id: "01K200000000000000000000E2",
         relation: "tests",
         sourceNodeId: TEST,
         targetNodeId: CODE,
-      },
+      }),
     ],
     evidence: [],
     findings: [],
@@ -179,12 +216,12 @@ describe("tracePath", () => {
             ...base.repositories[0]!.edges,
             // A second, id-later route REQ -supports-> TEST making REQ→TEST
             // reachable in 1 hop two ways at depth 2 from DOC.
-            {
+            edge({
               id: "01K200000000000000000000E9",
               relation: "supports",
               sourceNodeId: REQ,
               targetNodeId: TEST,
-            },
+            }),
           ],
         },
       ],
@@ -289,18 +326,18 @@ describe("impactOf affectedRoutes (Phase 4 Wave A′ todo 6)", () => {
           ],
           edges: [
             ...base.edges,
-            {
+            edge({
               id: "01K200000000000000000000E2",
               relation: "handles",
               sourceNodeId: ROUTE,
               targetNodeId: CODE,
-            },
-            {
+            }),
+            edge({
               id: "01K200000000000000000000E3",
               relation: "handles",
               sourceNodeId: ROUTE,
               targetNodeId: LAYOUT,
-            },
+            }),
           ],
           routes: [
             { methods: [], nodeId: ROUTE, tier: "resolved", url: "/auth" },
@@ -340,5 +377,65 @@ describe("impactOf affectedRoutes (Phase 4 Wave A′ todo 6)", () => {
     const impact = impactOf(workspace(), CODE, 2)!;
 
     expect(impact.affectedRoutes).toEqual([]);
+  });
+});
+
+/**
+ * Codex remedy P0-D. A neighbourhood used to answer with four fields per
+ * edge, so "these two nodes are connected" arrived with no way to ask how
+ * anyone knows — and with no way to tell an absence from an exclusion.
+ */
+describe("neighbourhood provenance", () => {
+  it("carries each edge's family, tier, confidence and reason", () => {
+    const result = collectNeighbors(workspace(), CODE, 1);
+    expect(result?.edges.length).toBeGreaterThan(0);
+    for (const edge of result?.edges ?? []) {
+      expect([edge.id, edge.family]).toEqual([edge.id, expect.any(String)]);
+      expect([edge.id, edge.tier]).toEqual([edge.id, expect.any(String)]);
+      expect([
+        edge.id,
+        edge.provenance.reason !== null || edge.provenance.span !== null,
+      ]).toEqual([edge.id, true]);
+    }
+  });
+
+  it("reports what the read left out, so an absence is not assumed", () => {
+    const base = workspace();
+    const withHierarchy: McpWorkspaceData = {
+      ...base,
+      repositories: [
+        {
+          ...base.repositories[0]!,
+          edgeOmissions: [
+            {
+              count: 875,
+              reason: "the directory hierarchy is excluded",
+              relation: "contains",
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(collectNeighbors(withHierarchy, CODE, 1)?.omissions).toEqual([
+      {
+        count: 875,
+        reason: "the directory hierarchy is excluded",
+        relation: "contains",
+      },
+    ]);
+    // A workspace that omitted nothing says so with an empty list, which is
+    // a different statement from "there is nothing else".
+    expect(collectNeighbors(base, CODE, 1)?.omissions).toEqual([]);
+  });
+
+  it("labels a derived edge as derived and says what derived it", () => {
+    const derived = collectNeighbors(workspace(), REQ, 1)?.edges.find(
+      (edge) => edge.derived,
+    );
+    expect(derived?.provenance.reason).toBe(
+      "the document this requirement was read from",
+    );
+    expect(derived?.tier).toBe("resolved");
   });
 });
