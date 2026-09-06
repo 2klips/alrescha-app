@@ -267,7 +267,7 @@
 - 내용: 로컬 경로는 `apply_repository_scan`으로 artifacts·graph_nodes·index_entries·imports/calls까지는 채우지만, 워커의 소스 팩토리가 GitHub 설치를 전제하므로 analyze(요구사항·findings)와 enrich(요약·concept)는 영원히 돌지 않는다. ADR-015는 receipt 부재를 이미 확정했지만, **요약·concept 부재**는 ADR-015의 범위(보증) 밖이며 판정된 적이 없다.
 - 임시 결정: 현행 유지. CLI 출력의 "GitHub 연결 시 보증이 열린다" 안내를 "분석·요약도 열린다"로 정확히 하는 것만 허용.
 - 필요한 결정: ⑴ **로컬 서빙 모드** — `alrescha serve --local <dir>`: 로컬 스캔 → `InMemoryMcpStore`(이미 export) → stdio MCP, enrich는 BYOK 키가 있을 때만 프로바이더 직접 호출(산문 검증기 동일). 서버 본문 전송 없음 → 하드룰 ③ 준수 ⑵ 호스티드 워커가 로컬 레포를 분석 — 본문 전송이 필요해 하드룰 ③·ADR-013 위반 위험, 기각 후보 ⑶ 현행 유지(로컬 경로는 그래프 전용 가교).
-- 상태: open. 기본 후보 ⑴ — Wave C todo 12.
+- 상태: **resolved(Wave C todo 17, 2026-09-06)** — ⑴ 채택, ⑵ 기각. `alrescha serve --local [디렉터리]`가 로컬 스캔을 그 자리에서 `InMemoryMcpStore`로 투영해 stdio MCP로 서빙한다. 서버·토큰·네트워크가 없고 본문은 머신을 떠나지 않는다(하드룰 ③). 툴 표면은 호스티드와 같은 팩토리를 쓰고(`createMcpServerFor`), 투영은 `apply_repository_scan`과 실DB에서 픽스처 2종 전수 비교로 묶어 둔다 — 두 번째 구현이 조용히 어긋나는 것이 이 방식의 유일한 위험이기 때문이다. ⑵는 본문 업로드가 필요해 기각했고, 그 판정을 큐가 말하게 했다: `enqueue_repository_rescan`이 installation 없는 레포의 스캔 잡을 **만들기 전에** 거절하고 CLI를 가리킨다(todo 16의 `request_rescan`이 열어 둔, 워커가 3회 실패하던 경로). 쓰기 도구는 `mcp:read`만 주어 거절한다 — 세션과 함께 사라지는 저장소에 기록이 남은 것처럼 보이면 안 된다. **BYOK enrich는 미구현**: 프로바이더 클라이언트가 `apps/worker`에 있어 옮기는 것이 별도 변경이다 — [evidence](../.omo/evidence/phase4/todo-17.md).
 
 ## OQ-031 — 심볼(함수·클래스) 노드 1급화는 읽기 상한·클러스터 임계와 충돌한다
 
@@ -476,3 +476,19 @@
 - 임시 결정: 임계값(차수 ≥3·고아 ≤10%·삼각형 >0)은 **이 레포**에 건다. 픽스처는 ⑴ 실측값을 회귀 베이스라인으로 고정하고 ⑵ 내용상 있어야 할 엣지 패밀리 전수를 단언한다 — 34노드 평균이 못 잡는 추출기 고장을 이쪽이 잡는다.
 - 필요한 결정: ⑴ 현행 유지(기본 후보) ⑵ `next-fastapi`를 "전형 800파일" 규모에 가깝게 키운다(계획의 목표 열이 그 규모를 말한다 — 손으로 쓰면 비싸고, 생성하면 가짜다) ⑶ 실레포 스냅샷을 픽스처로 커밋(라이선스·크기·비밀 문제).
 - 상태: open. ⑵는 Wave C의 실레포 온보딩에서 실물 데이터가 생긴 뒤 재검토.
+
+## OQ-057 — 이웃 캐시는 계층·라우트·데이터베이스·section 엣지를 못 본다
+
+- 발견: Phase 4 Wave C todo 17 동등성 비교 / `supabase/migrations/202609060005_repository_revision.sql`(`apply_repository_scan`의 `index_entries.neighbor_ids` UPDATE 위치), `packages/mcp/src/local-workspace.ts`
+- 내용: `apply_repository_scan`은 이웃 캐시를 **문서 링크 직후**에 채운다. 디렉터리·라우트·테이블·section 노드는 그보다 **뒤**에 만들어지므로, 저장된 `neighbor_ids`에는 파일과 rationale만 들어간다. `search_index`가 히트마다 돌려주는 `neighborIds`는 그래서 그래프의 일부만 말하고, 같은 노드를 `get_neighbors`로 물으면 더 많이 나온다 — 같은 질문에 두 답이다.
+- 임시 결정: 현행 유지. 로컬 투영도 **똑같이** 앞의 세 writer만 세도록 맞췄다 — 여기서 더 채우면 개선처럼 보이지만 두 경로가 갈라진다(todo 17 동등성 테스트가 그 차이를 잡는다).
+- 필요한 결정: ⑴ 이웃 캐시 UPDATE를 함수 맨 끝으로 옮긴다(한 줄 이동이지만 `search_index` 응답 크기가 커진다 — todo 22 예산과 함께 판정) ⑵ 캐시를 없애고 읽는 시점에 역방향 조회 ⑶ 현행 유지 + `search_index` 문서에 "구조 이웃만"이라고 적는다.
+- 상태: open. ⑴이 기본 후보. todo 22의 읽기 예산 작업에서 함께 판정.
+
+## OQ-058 — stdio는 2025 핸드셰이크를 받아들이고 호스티드는 거절한다
+
+- 발견: Phase 4 Wave C todo 17 실측 / `packages/mcp/src/local-serve.ts`(`serveStdio`의 `legacy`), `packages/mcp/src/hosted.ts`(`createMcpHandler`의 `legacy: "reject"`)
+- 내용: 호스티드 엔드포인트는 2025년 개시를 지원 리비전 오류로 거절한다. stdio에서 같게 하면 **SDK의 기준 클라이언트조차 연결하지 못한다** — 측정했다: `StdioClientTransport` + `Client.connect` 기본값은 2025 `initialize`로 열고, HTTP에서 modern 개시를 만드는 헤더 봉투가 stdio에는 없어 형제 프로세스 probe가 필요하다. 그래서 `legacy: "serve"`다. 표면은 갈라지지 않는다(같은 팩토리가 두 시대를 서빙하고, 세션·샘플링·로깅 capability 자체가 없다).
+- 임시 결정: stdio는 `serve`, 호스티드는 `reject`. 차이를 숨기지 않고 여기에 적는다.
+- 필요한 결정: ⑴ 실클라이언트(Claude Code·Codex·Cursor)가 modern 개시를 보내기 시작하면 stdio도 `reject`로 올린다(기본 후보) ⑵ 지금 `reject`로 올리고 연결 불가를 감수한다(기각 후보 — 쓸 수 없는 기능이 된다) ⑶ 호스티드를 `serve`로 낮춘다(기각 — 하드룰 후퇴).
+- 상태: open. todo 22의 실클라이언트 호환 패스에서 `toolResult` 이중 직렬화와 함께 재측정.

@@ -11,6 +11,7 @@ import {
   MCP_WORKSPACE_READ_LIMIT,
   createAccessTokenSecret,
   createUlid,
+  edgeOmissionReason,
   hashAccessToken,
   type AgentAssertionRelation,
   type McpArtifactData,
@@ -903,10 +904,7 @@ export class SupabaseMcpStore implements McpStore {
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([relation, count]) => ({
           count,
-          reason:
-            relation === "contains"
-              ? "the directory hierarchy is excluded from graph answers until the tools can filter it (todo 22)"
-              : "relation is outside the MCP vocabulary",
+          reason: edgeOmissionReason(relation),
           relation,
         }));
     };

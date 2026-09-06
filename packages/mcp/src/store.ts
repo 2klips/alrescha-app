@@ -177,6 +177,21 @@ export interface McpEdgeOmission {
 }
 
 /**
+ * Why a stored relation did not reach the answer.
+ *
+ * Both readers — the hosted one decoding rows and the local one projecting a
+ * scan plan (todo 17) — report the same absences, so the sentence lives here
+ * rather than in whichever of them was written first. An agent that hears
+ * two different reasons for the same missing hierarchy is being told the
+ * transport matters, and it does not.
+ */
+export function edgeOmissionReason(relation: string): string {
+  return relation === "contains"
+    ? "the directory hierarchy is excluded from graph answers until the tools can filter it (todo 22)"
+    : "relation is outside the MCP vocabulary";
+}
+
+/**
  * A read that reached its row budget (Codex remedy P0-B / R-01).
  *
  * PostgREST answers with at most `max_rows` and says nothing about it, so a

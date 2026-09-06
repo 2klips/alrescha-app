@@ -148,7 +148,16 @@ function createSourceFactory(sql: postgres.Sql) {
       limit 1
     `;
     const row = rows[0];
-    if (!row) throw new Error(`repository ${repositoryId} is not connected`);
+    // A repository with no installation was ingested locally, and its bodies
+    // are on someone's machine. `enqueue_repository_rescan` refuses to queue
+    // one (todo 17); this is the message for a job that predates that guard,
+    // and it names where the work actually happens instead of describing the
+    // plumbing that failed.
+    if (!row) {
+      throw new Error(
+        `repository ${repositoryId} has no GitHub installation: it was ingested locally, so the server cannot read its files — use \`alrescha push\` or \`alrescha serve --local\``,
+      );
+    }
 
     const [owner, repository] = row.full_name.split("/");
     if (!owner || !repository) {

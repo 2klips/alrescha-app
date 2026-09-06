@@ -241,6 +241,7 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
       Commit: `feat(onboarding): backfill scan on connect with a full relink mode and an on-demand rescan tool`
 
 - [ ] **17. 로컬 서빙 모드 `alrescha serve --local` + 로컬 레포 분석 경로 판정** _(v1 todo 12 그대로, OQ-030)_
+      **진행(2026-09-06, 미완):** 서빙 모드와 판정 완료 — [evidence](../.omo/evidence/phase4/todo-17.md). `alrescha serve --local [디렉터리]`가 로컬 스캔을 `InMemoryMcpStore`로 투영해 stdio MCP로 서빙(서버·토큰·네트워크 없음), 툴 표면은 호스티드와 같은 팩토리(`createMcpServerFor`, 23개), `mcp:read`만 부여해 쓰기는 거절, 사람 대상 출력은 전부 stderr. **투영은 실DB에서 `apply_repository_scan`과 픽스처 2종 전수 비교**로 묶었다(엣지·누락 사유·인덱스·라우트·객체·section) — 두 번째 구현이 어긋나는 것이 이 방식의 유일한 위험이라서다. OQ-030 판정: ⑴ 채택·⑵ 기각, 그 결과로 `enqueue_repository_rescan`이 installation 없는 레포를 잡 생성 **전에** 거절하고 CLI를 가리킨다(todo 16이 열어 둔 3회 실패 경로). 부수 발견 OQ-057(이웃 캐시가 계층·라우트·DB·section을 못 봄 — 투영도 동일하게 맞춤)·OQ-058(stdio는 2025 핸드셰이크 수용, 호스티드는 거절 — SDK 기준 클라이언트로 실측). **체크박스는 열어 둔다:** OQ-030 ⑴이 명시한 **BYOK enrich 미구현**(프로바이더 클라이언트가 `apps/worker`에 있어 이관이 별도 변경), 빌드 산출물이 워크스페이스 패키지를 external로 남겨 `tsx` 없이는 실행 불가(`push`도 동일한 기존 상태). 워커 소스 팩토리 종류별 분리는 todo 20의 `docskeleton`(본문 없이 도는 첫 잡)으로 다시 미룬다.
       Commit: `feat(cli): serve a local repository graph over stdio MCP`
 
 - [ ] **18. CI 증거 배선 — verified 경로 개통** _(D12, 위험 감사 P3, ADR-015 §6 정합: 서버 fetch만)_

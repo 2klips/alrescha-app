@@ -1599,6 +1599,29 @@ function createServer(
   return server;
 }
 
+/**
+ * The same tool surface, for a transport that authenticates once rather than
+ * per request (Wave C todo 17).
+ *
+ * `createHostedMcpEndpoint` derives the principal from a bearer token on
+ * every HTTP request. A stdio connection has no such header: the process was
+ * started by the person it serves, and the principal is decided before the
+ * first message. Exporting the factory rather than a second server keeps
+ * that the *only* difference — every tool, hint and schema below is shared,
+ * so a tool cannot exist on one transport and not the other.
+ */
+export function createMcpServerFor(options: {
+  cacheTtlMs?: number;
+  principal: McpPrincipal;
+  store: McpStore;
+}): McpServer {
+  return createServer(
+    options.store,
+    options.principal,
+    options.cacheTtlMs ?? PRIVATE_TTL_MS,
+  );
+}
+
 export function createHostedMcpEndpoint(options: {
   cacheTtlMs?: number;
   /**

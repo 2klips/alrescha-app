@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@alrescha/core": "workspace:*",
+    "@alrescha/mcp": "workspace:^",
     "zod": "4.4.3"
   },
   "devDependencies": {

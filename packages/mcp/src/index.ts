@@ -28,8 +28,18 @@ export {
   MCP_SCOPES,
   createAccessTokenSecret,
   createUlid,
+  edgeOmissionReason,
   hashAccessToken,
 } from "./store";
+export {
+  LOCAL_USER_ID,
+  LOCAL_WORKSPACE_ID,
+  buildLocalWorkspace,
+  localRepositoryId,
+} from "./local-workspace";
+export type { LocalWorkspaceInput } from "./local-workspace";
+export { LOCAL_SERVE_SCOPES, serveLocalWorkspace } from "./local-serve";
+export type { LocalServeHandle, LocalServeOptions } from "./local-serve";
 export type { HostedMcpEndpoint } from "./hosted";
 export type {
   ArtifactNeighbor,

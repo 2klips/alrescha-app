@@ -25,6 +25,8 @@ import {
 const USER = "77000000-0000-4000-8000-000000000001";
 const HEAD = "a".repeat(40);
 const OTHER_HEAD = "b".repeat(40);
+const INSTALLATION_ID = "01K200000000000000000000N1";
+const REPOSITORY_ID = "01K200000000000000000000R1";
 
 describe("backfill and rescan", () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -41,11 +43,22 @@ describe("backfill and rescan", () => {
       "select id from public.workspaces",
     );
     workspaceId = workspaces.rows[0]?.id ?? "";
-    const repository = await database.query<{ id: string }>(
-      "select public.ensure_local_repository($1, 'local/rescan') as id",
-      [workspaceId],
+    // Connected, because that is the only state the hosted scan path can
+    // serve: the worker mints an installation token to read bodies, and
+    // todo 17 makes a repository without one refuse rather than queue.
+    await database.query(
+      `insert into public.github_installations
+        (id, workspace_id, github_installation_id, account_id, account_login)
+       values ($1, $2, 707, 7070, 'alrescha')`,
+      [INSTALLATION_ID, workspaceId],
     );
-    repositoryId = repository.rows[0]?.id ?? "";
+    await database.query(
+      `insert into public.repositories
+        (id, workspace_id, full_name, installation_id, github_repository_id, selected_at)
+       values ($1, $2, 'alrescha/rescan', $3, 707707, now())`,
+      [REPOSITORY_ID, workspaceId, INSTALLATION_ID],
+    );
+    repositoryId = REPOSITORY_ID;
   });
 
   afterEach(async () => {
@@ -152,6 +165,43 @@ describe("backfill and rescan", () => {
         ]),
       ),
     ).rejects.toThrow(/is not in workspace/);
+  });
+
+  /**
+   * OQ-030, decided in todo 17: the hosted worker never analyses a
+   * local-ingest repository, because doing so would mean uploading bodies.
+   * `request_rescan` opened that path for agents in todo 16 — the queue
+   * accepted the job and the worker failed it three times with a message
+   * about installation tokens. It is refused before a job exists now, and
+   * the refusal names where the work actually happens.
+   */
+  it("refuses to schedule server work for a repository the server cannot read", async () => {
+    const local = await database.query<{ id: string }>(
+      "select public.ensure_local_repository($1, 'local/pushed') as id",
+      [workspaceId],
+    );
+    const localId = local.rows[0]?.id ?? "";
+    await database.query(
+      "update public.repositories set last_scanned_commit_sha = $2 where id = $1",
+      [localId, HEAD],
+    );
+
+    const result = await asServiceRole(database, async (transaction) =>
+      transaction.query<{
+        result: { jobId: string | null; reason: string; scheduled: boolean };
+      }>("select public.enqueue_repository_rescan($1, $2, $3, $4) as result", [
+        workspaceId,
+        localId,
+        "full",
+        LINK_SCHEMA_VERSION,
+      ]),
+    );
+    expect(result.rows[0]?.result).toMatchObject({
+      jobId: null,
+      scheduled: false,
+    });
+    expect(result.rows[0]?.result.reason).toMatch(/alrescha serve --local/);
+    expect(await jobs()).toEqual([]);
   });
 
   it("says so rather than guessing when there is nothing to rescan against", async () => {

@@ -163,6 +163,9 @@ importers:
       '@alrescha/core':
         specifier: workspace:*
         version: link:../core
+      '@alrescha/mcp':
+        specifier: workspace:^
+        version: link:../mcp
       zod:
         specifier: 4.4.3
         version: 4.4.3
