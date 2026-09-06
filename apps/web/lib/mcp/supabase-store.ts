@@ -41,7 +41,7 @@ import {
   type McpWorkspaceData,
   type PublicMcpTokenRecord,
 } from "@alrescha/mcp";
-import { currentSummaryText } from "@alrescha/core";
+import { summaryState } from "@alrescha/core";
 
 type Row = Record<string, unknown>;
 
@@ -165,7 +165,7 @@ function artifactData(
   // is merged on rescan, so a stale summary survives every scan until enrich
   // replaces it — and until then every excerpt, pack and `get_artifact`
   // answer built from it described a file that had already changed.
-  const fresh = currentSummaryText({
+  const state = summaryState({
     currentBlobSha: nullableString(row.source_blob_sha),
     summary: typeof metadata.summary === "string" ? metadata.summary : null,
     summaryBlobSha:
@@ -173,6 +173,7 @@ function artifactData(
         ? metadata.summaryBlobSha
         : null,
   });
+  const fresh = state.state === "current" ? state.text : null;
   return {
     blobSha: nullableString(row.source_blob_sha) ?? "",
     content: fresh ?? "",
@@ -182,6 +183,7 @@ function artifactData(
     path,
     status: typeof metadata.status === "string" ? metadata.status : "active",
     summary: fresh ?? labels.get(id) ?? path,
+    summaryState: state,
     symbols: strings(metadata.symbols),
     tags: strings(metadata.tags),
     title:

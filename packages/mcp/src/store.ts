@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
+import type { SummaryState } from "@alrescha/core";
+
 export const MCP_SCOPES = ["mcp:read", "mcp:write"] as const;
 
 export type McpScope = (typeof MCP_SCOPES)[number];
@@ -96,6 +98,13 @@ export const MCP_EDGE_TIERS = [
 export type McpEdgeTier = (typeof MCP_EDGE_TIERS)[number];
 
 export interface McpArtifactData {
+  /**
+   * The freshness rule's answer for this row (S1), decided once where the
+   * row was read. `content` and `summary` above already respect it; this
+   * carries *which* state produced them, so a card can say "stale" instead
+   * of "missing" (Codex remedy §6.1).
+   */
+  summaryState?: SummaryState;
   /** Source blob sha as last scanned — module freshness input (todo 8). */
   blobSha?: string;
   content: string;

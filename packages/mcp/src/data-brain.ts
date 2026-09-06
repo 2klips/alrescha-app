@@ -1,11 +1,20 @@
 import {
+  buildArtifactCard,
   composeContextPack,
   personalizedPageRank,
+  type ArtifactCard,
+  type ArtifactClassification,
   type ContextDocument,
   type ContextDocumentKind,
   type ContextTargetAgent,
+  type ArtifactCardRelation,
   type PageRankEdge,
 } from "@alrescha/core";
+
+import { estimateTokens } from "./repo-map";
+
+/** Code cards one pack will carry, whatever the budget allows beyond it. */
+const MAX_CONTEXT_CODE_CARDS = 20;
 
 import type {
   McpArtifactData,
@@ -77,6 +86,11 @@ export interface AmbiguousArtifactTarget {
 
 export interface ArtifactWithNeighbors {
   /**
+   * The same card the map inspector builds, from the same facts (Codex
+   * remedy §6.1, step S5). Null when no artifact matched.
+   */
+  card: ArtifactCard | null;
+  /**
    * Set when a path matched in more than one repository. The caller picks;
    * this layer does not pick for them and call it an answer.
    */
@@ -95,8 +109,30 @@ export interface WorkspaceFinding extends McpFindingData {
   repositoryId: string;
 }
 
+/**
+ * A file the pack carries as a **card**, not as a document (Codex remedy
+ * §9.1, step S5).
+ *
+ * `documentKinds` has no `code_metadata`, and casting a file into it would
+ * have presented the deterministic facts about a file as if they were a
+ * document somebody wrote. Code travels in its own lane, so a reader can tell
+ * "this is what the scan knows about this file" from "this is what the spec
+ * says".
+ */
+export interface ContextCodeCard {
+  readonly card: ArtifactCard;
+  readonly estimatedTokens: number;
+  readonly id: string;
+  readonly path: string;
+}
+
 export interface SelectedContextPack {
   assumption: string;
+  /**
+   * Cards for the code the selected documents point at. Counted against the
+   * same budget as the prose, because a caller pays for the whole payload.
+   */
+  codeCards: ContextCodeCard[];
   estimatedTokens: number;
   excluded: Array<{ path: string; reason: string }>;
   nodeIds: string[];
@@ -544,11 +580,12 @@ export function getWorkspaceArtifact(
         path: selector.path ?? "",
       },
       artifact: null,
+      card: null,
       neighbors: [],
     };
   }
   const match = matches[0];
-  if (!match) return { artifact: null, neighbors: [] };
+  if (!match) return { artifact: null, card: null, neighbors: [] };
   const repository = workspace.repositories.find(
     ({ id }) => id === match.repositoryId,
   );
@@ -588,6 +625,19 @@ export function getWorkspaceArtifact(
 
   return {
     artifact: { ...match.artifact, repositoryId: match.repositoryId },
+    // Stored facts, not prose: a repository that has never paid for enrich
+    // still gets path, kind, domain, unit, exported names and relations, and
+    // `missing` says what is absent.
+    card: buildArtifactCard({
+      classification: match.artifact.kind as ArtifactClassification,
+      exportedSymbols: match.artifact.symbols,
+      path: match.artifact.path,
+      relations: neighbors.map(({ direction, relation }) => ({
+        direction,
+        relation,
+      })),
+      summary: match.artifact.summaryState ?? { state: "missing" },
+    }),
     neighbors: neighbors.sort(
       (left, right) =>
         left.relation.localeCompare(right.relation) ||
@@ -732,6 +782,53 @@ export function selectWorkspaceContextPack(
     }
   }
 
+  /**
+   * Code the pack's documents actually point at, as cards. Bounded by what
+   * is left of the budget after the prose, and by a hard count — a pack that
+   * carried every file it touched would be a repository dump.
+   */
+  const codeCards: ContextCodeCard[] = [];
+  let cardTokens = 0;
+  for (const repository of workspace.repositories) {
+    const neighbours = new Map<string, ArtifactCardRelation[]>();
+    for (const edge of repository.edges) {
+      const outgoing = neighbours.get(edge.sourceNodeId) ?? [];
+      outgoing.push({ direction: "outgoing", relation: edge.relation });
+      neighbours.set(edge.sourceNodeId, outgoing);
+      const incoming = neighbours.get(edge.targetNodeId) ?? [];
+      incoming.push({ direction: "incoming", relation: edge.relation });
+      neighbours.set(edge.targetNodeId, incoming);
+    }
+    for (const artifact of repository.artifacts) {
+      if (documentKinds.has(artifact.kind as ContextDocumentKind)) continue;
+      if (!selectedNodeIds.has(artifact.id)) continue;
+      if (codeCards.length >= MAX_CONTEXT_CODE_CARDS) break;
+      const card = buildArtifactCard({
+        classification: artifact.kind as ArtifactClassification,
+        exportedSymbols: artifact.symbols,
+        path: artifact.path,
+        relations: neighbours.get(artifact.id) ?? [],
+        summary: artifact.summaryState ?? { state: "missing" },
+      });
+      // The estimate is of the serialized card, not of its prose: the
+      // omissions and the relation counts are payload too (REMEDY §9.1).
+      const estimatedTokens = estimateTokens(JSON.stringify(card));
+      if (
+        pack.estimatedTokens + cardTokens + estimatedTokens >
+        input.tokenBudget
+      ) {
+        break;
+      }
+      cardTokens += estimatedTokens;
+      codeCards.push({
+        card,
+        estimatedTokens,
+        id: artifact.id,
+        path: artifact.path,
+      });
+    }
+  }
+
   const omitted = pack.omitted.map(
     ({ estimatedTokens, path, rank, reason, title }) => ({
       estimatedTokens,
@@ -744,7 +841,9 @@ export function selectWorkspaceContextPack(
 
   return {
     assumption: pack.assumption,
-    estimatedTokens: pack.estimatedTokens,
+    codeCards,
+    // What the caller pays for is the whole payload, prose and cards alike.
+    estimatedTokens: pack.estimatedTokens + cardTokens,
     excluded: omitted.map(({ path, reason }) => ({ path, reason })),
     nodeIds: [...selectedNodeIds],
     omitted,

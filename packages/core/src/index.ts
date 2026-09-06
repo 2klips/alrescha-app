@@ -525,6 +525,12 @@ export type {
   FacetUnit,
 } from "./ingest/artifact-facets";
 
+export { buildArtifactCard } from "./brain/artifact-card";
+export type {
+  ArtifactCard,
+  ArtifactCardBasis,
+  ArtifactCardRelation,
+} from "./brain/artifact-card";
 export {
   EnrichValidationError,
   SUMMARY_INPUT_MAX_CHARS,

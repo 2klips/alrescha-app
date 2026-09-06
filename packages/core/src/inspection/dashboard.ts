@@ -9,6 +9,7 @@
  * renders as absence, never as a fabricated zero.
  */
 
+import type { ArtifactCard } from "../brain/artifact-card";
 import {
   parseNpmAuditReport,
   type DependencyAuditReport,
@@ -35,6 +36,12 @@ export interface InspectionFindingInput {
 }
 
 export interface InspectionDocumentInput {
+  /**
+   * The shared card (Codex remedy §6.1, step S5) — the same builder the MCP
+   * artifact answer uses, so the screen and the agent describe a file the
+   * same way. Optional while callers move onto it.
+   */
+  readonly card?: ArtifactCard | undefined;
   readonly lastSeenCommitSha: string;
   readonly path: string;
   /** AI-written summary, if a judgment job produced one. Always `inferred`. */
@@ -62,6 +69,8 @@ export interface BuildInspectionDashboardInput {
 export type DocumentFreshness = "current" | "drift-suspected" | "outdated";
 
 export interface InspectionDocumentEntry {
+  /** Null until the caller supplies one; never invented here. */
+  readonly card: ArtifactCard | null;
   readonly freshness: DocumentFreshness;
   readonly path: string;
   /** grade is the literal evidence label the UI must render. */
@@ -164,6 +173,7 @@ export function buildInspectionDashboard(
           ? "current"
           : "outdated";
       return {
+        card: document.card ?? null,
         freshness,
         path: document.path,
         summary:

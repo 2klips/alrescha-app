@@ -68,6 +68,7 @@ describe("artifactRowFromQuery", () => {
    */
   it("re-wraps the projected summary so artifactSummary still reads it", () => {
     const row = artifactRowFromQuery({
+      exported_symbols: [],
       kind: "spec",
       last_seen_commit_sha: "a".repeat(40),
       path: "spec/WORK_SPEC.md",
@@ -82,6 +83,7 @@ describe("artifactRowFromQuery", () => {
 
   it("keeps a non-string summary rejected, matching the full-object path", () => {
     const row = artifactRowFromQuery({
+      exported_symbols: [],
       kind: "adr",
       last_seen_commit_sha: null,
       path: "docs/adr/ADR-001.md",
@@ -94,6 +96,7 @@ describe("artifactRowFromQuery", () => {
 
   it("treats an absent summary key (SQL NULL) as no summary", () => {
     const row = artifactRowFromQuery({
+      exported_symbols: [],
       kind: "adr",
       last_seen_commit_sha: null,
       path: "docs/adr/ADR-001.md",
@@ -106,6 +109,7 @@ describe("artifactRowFromQuery", () => {
 
   it("carries the digests the freshness rule needs", () => {
     const row = artifactRowFromQuery({
+      exported_symbols: [],
       kind: "spec",
       last_seen_commit_sha: null,
       path: "spec/WORK_SPEC.md",

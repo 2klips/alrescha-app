@@ -1,8 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
+  buildArtifactCard,
   buildInspectionDashboard,
   currentSummaryText,
+  summaryState,
+  type ArtifactCard,
+  type ArtifactClassification,
   type InspectionDashboard,
   type InspectionDocumentInput,
   type InspectionFindingInput,
@@ -28,6 +32,8 @@ export interface InspectionFindingRow {
 }
 
 export interface InspectionArtifactRow {
+  /** Symbol names as stored — the card carries names, never signatures. */
+  readonly exported_symbols?: unknown;
   readonly kind: string;
   readonly last_seen_commit_sha: string | null;
   readonly metadata: unknown;
@@ -49,6 +55,7 @@ export interface InspectionArtifactRow {
  * strings, so the reason the metadata blob stays out still holds.
  */
 interface InspectionArtifactQueryRow {
+  readonly exported_symbols: unknown;
   readonly kind: string;
   readonly last_seen_commit_sha: string | null;
   readonly path: string;
@@ -68,12 +75,51 @@ export function artifactRowFromQuery(
   row: InspectionArtifactQueryRow,
 ): InspectionArtifactRow {
   return {
+    exported_symbols: row.exported_symbols,
     kind: row.kind,
     last_seen_commit_sha: row.last_seen_commit_sha,
     metadata: { summary: row.summary, summaryBlobSha: row.summary_blob_sha },
     path: row.path,
     source_blob_sha: row.source_blob_sha,
   };
+}
+
+/**
+ * The shared card for one stored row (Codex remedy §6.1, step S5).
+ *
+ * The same builder `get_artifact` uses, fed from this screen's own row shape.
+ * Two mappings into one builder is the risk this replaces two builders with,
+ * and `tests/artifact-card.test.ts` pins them against each other.
+ */
+export function inspectionArtifactCard(
+  row: InspectionArtifactRow,
+): ArtifactCard {
+  const metadata =
+    typeof row.metadata === "object" && row.metadata !== null
+      ? (row.metadata as Record<string, unknown>)
+      : {};
+  const symbols = Array.isArray(row.exported_symbols)
+    ? row.exported_symbols.filter(
+        (entry): entry is { name: string } =>
+          typeof entry === "object" &&
+          entry !== null &&
+          typeof (entry as { name?: unknown }).name === "string",
+      )
+    : [];
+  return buildArtifactCard({
+    classification: row.kind as ArtifactClassification,
+    exportedSymbols: symbols,
+    path: row.path,
+    summary: summaryState({
+      currentBlobSha: row.source_blob_sha ?? null,
+      summary:
+        typeof metadata["summary"] === "string" ? metadata["summary"] : null,
+      summaryBlobSha:
+        typeof metadata["summaryBlobSha"] === "string"
+          ? metadata["summaryBlobSha"]
+          : null,
+    }),
+  });
 }
 
 export interface InspectionRuledOutRow {
@@ -167,6 +213,7 @@ export function buildWorkspaceInspectionDashboard(
     isOneOf(DOCUMENT_KINDS, row.kind) && row.last_seen_commit_sha
       ? [
           {
+            card: inspectionArtifactCard(row),
             lastSeenCommitSha: row.last_seen_commit_sha,
             path: row.path,
             summary: artifactSummary(row.metadata, row.source_blob_sha),
@@ -225,7 +272,7 @@ export async function loadWorkspaceInspectionDashboard(
       client
         .from("artifacts")
         .select(
-          "path,kind,last_seen_commit_sha,source_blob_sha," +
+          "path,kind,last_seen_commit_sha,source_blob_sha,exported_symbols," +
             "summary:metadata->summary,summary_blob_sha:metadata->summaryBlobSha",
         )
         .eq("workspace_id", workspaceId)
