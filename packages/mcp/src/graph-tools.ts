@@ -9,6 +9,8 @@
  * are marked so a caller can tell them from stored rows.
  */
 
+import { summaryAbsence, type SummaryAbsence } from "@alrescha/core";
+
 import type {
   McpEdgeFamily,
   McpEdgeOmission,
@@ -628,6 +630,16 @@ export interface NodeContent {
   readonly kind: string;
   readonly path: string | null;
   readonly repositoryId: string;
+  /**
+   * Why `content` is empty, when it is (Wave D todo 19 보완 R-02).
+   *
+   * The one freshness rule runs at the store boundary, so prose written for
+   * an older blob never arrives here — it arrives as `""`. An empty string
+   * with no explanation reads as "this file has nothing to say", and an
+   * agent acts on that differently than on "nobody has described this file
+   * yet" or "the description is out of date". Absent when there is content.
+   */
+  readonly contentAbsence?: SummaryAbsence;
   readonly type: McpNodeType;
 }
 
@@ -646,8 +658,15 @@ export function getNodeContent(
     );
     const artifact = repository.artifacts.find(({ id }) => id === nodeId);
     if (artifact) {
+      // One rule, one sentence: the same helper the inspector card and the
+      // search excerpt use, so three surfaces cannot give three accounts of
+      // the same absence (todo 19 보완 R-02).
+      const absence = artifact.content
+        ? null
+        : summaryAbsence(artifact.summaryState ?? { state: "missing" });
       return {
         content: artifact.content,
+        ...(absence ? { contentAbsence: absence } : {}),
         id: artifact.id,
         kind: artifact.kind,
         path: artifact.path,

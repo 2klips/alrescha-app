@@ -229,13 +229,23 @@ export type {
   LibrarySnapshot,
 } from "./library/items";
 
-export { buildProgressDashboard } from "./progress/dashboard";
+export {
+  LOCAL_SCAN_SUMMARY,
+  NO_STATED_BLOCKER,
+  STALE_AFTER_DAYS,
+  buildProgressDashboard,
+} from "./progress/dashboard";
 export type {
   BuildProgressDashboardInput,
+  ProgressAttention,
+  ProgressAttentionItem,
   ProgressCommitInput,
   ProgressDashboard,
+  ProgressDigest,
+  ProgressDigestWindow,
   ProgressEventInput,
   ProgressFindingInput,
+  ProgressLocalScanInput,
   ProgressMetric,
   ProgressMetricBasis,
   ProgressTodo,
@@ -453,6 +463,7 @@ export type {
   InspectionDashboard,
   InspectionDocumentEntry,
   InspectionDocumentInput,
+  InspectionFindingDetail,
   InspectionFindingInput,
   InspectionFindingKind,
   InspectionSectionState,
@@ -539,12 +550,14 @@ export {
   clipSummaryInput,
   currentSummaryText,
   selectFilesForSummarization,
+  summaryAbsence,
   summaryState,
   validateProseSummary,
 } from "./enrich/prose-summary";
 export type {
   ClippedSummaryInput,
   SummaryCandidate,
+  SummaryAbsence,
   SummaryState,
 } from "./enrich/prose-summary";
 export {

@@ -41,15 +41,28 @@ interface ReceiptRow {
   created_at: string;
   summary: unknown;
 }
+interface LocalScanRow {
+  commit_sha: string | null;
+  completed_at: string | null;
+  trigger_key: string;
+}
 interface FindingRow {
   id: string;
   resolved_at: string | null;
   title: string;
 }
 
+/** The digest's inputs that do not come from a table (todo 19 ②). */
+export interface ProgressSession {
+  /** Null means this member has never opened the screen. */
+  readonly lastVisitedAt: string | null;
+}
+
 export interface WorkspaceProgressRows {
   readonly edges: readonly EdgeRow[];
   readonly findings: readonly FindingRow[];
+  /** Runs the CLI applied, which write no receipt (todo 19 ⑸). */
+  readonly localScans?: readonly LocalScanRow[];
   readonly progressEvents: readonly ProgressEventRow[];
   readonly receipts: readonly ReceiptRow[];
   readonly requirements: readonly RequirementRow[];
@@ -125,6 +138,7 @@ function receiptSummary(row: ReceiptRow): string {
 
 export function buildWorkspaceProgressReport(
   rows: WorkspaceProgressRows,
+  session: { lastVisitedAt?: string | null; now?: string } = {},
 ): ProgressDashboard {
   const activeRequirementIds = new Set(
     rows.requirements
@@ -140,11 +154,20 @@ export function buildWorkspaceProgressReport(
       .map(({ source_node_id }) => source_node_id),
   );
   return buildProgressDashboard({
+    ...(session.lastVisitedAt === undefined
+      ? {}
+      : { lastVisitedAt: session.lastVisitedAt }),
+    ...(session.now === undefined ? {} : { now: session.now }),
     commits: rows.receipts.map((receipt) => ({
       occurredAt: receipt.created_at,
       sha: receipt.commit_sha,
       summary: receiptSummary(receipt),
     })),
+    localScans: (rows.localScans ?? []).flatMap((run) =>
+      run.commit_sha && run.completed_at
+        ? [{ occurredAt: run.completed_at, sha: run.commit_sha }]
+        : [],
+    ),
     findings: rows.findings.flatMap((finding) =>
       finding.resolved_at
         ? [
@@ -202,7 +225,7 @@ export async function loadWorkspaceProgressReport(
     throw new Error("Personal workspace is unavailable.");
   }
   const workspaceId = String(workspaceResult.data.id);
-  const [requirements, edges, todos, events, receipts, findings] =
+  const [requirements, edges, todos, events, receipts, findings, localScans] =
     await Promise.all([
       client
         .from("requirements")
@@ -239,23 +262,51 @@ export async function loadWorkspaceProgressReport(
         .not("resolved_at", "is", null)
         .order("resolved_at", { ascending: false })
         .limit(100),
+      // `alrescha push` records a `manual` run keyed `local:<sha>` and writes
+      // no receipt, so a repository maintained entirely through the CLI had
+      // an empty ledger while its graph was updated daily (todo 19 ⑸).
+      client
+        .from("runs")
+        .select("commit_sha,completed_at,trigger_key")
+        .eq("workspace_id", workspaceId)
+        .like("trigger_key", "local:%")
+        .not("completed_at", "is", null)
+        .order("completed_at", { ascending: false })
+        .limit(100),
     ]);
   if (
-    [requirements, edges, todos, events, receipts, findings].some(
+    [requirements, edges, todos, events, receipts, findings, localScans].some(
       ({ error }) => error,
     )
   ) {
     throw new Error("Progress dashboard is unavailable.");
   }
+  /**
+   * Read the previous visit and stamp this one, in that order (todo 19 ⑵).
+   * A failure here costs the digest's third window and nothing else: a
+   * screen that would not render because it could not remember being opened
+   * would be a worse trade than a missing line.
+   */
+  const visit = await client.rpc("touch_screen_view", {
+    target_screen: "progress",
+    target_workspace_id: workspaceId,
+  });
+  const lastVisitedAt =
+    !visit.error && typeof visit.data === "string" ? visit.data : null;
+
   return {
-    report: buildWorkspaceProgressReport({
-      edges: (edges.data ?? []) as EdgeRow[],
-      findings: (findings.data ?? []) as FindingRow[],
-      progressEvents: (events.data ?? []) as ProgressEventRow[],
-      receipts: (receipts.data ?? []) as ReceiptRow[],
-      requirements: (requirements.data ?? []) as RequirementRow[],
-      todos: (todos.data ?? []) as TodoRow[],
-    }),
+    report: buildWorkspaceProgressReport(
+      {
+        edges: (edges.data ?? []) as EdgeRow[],
+        findings: (findings.data ?? []) as FindingRow[],
+        localScans: (localScans.data ?? []) as LocalScanRow[],
+        progressEvents: (events.data ?? []) as ProgressEventRow[],
+        receipts: (receipts.data ?? []) as ReceiptRow[],
+        requirements: (requirements.data ?? []) as RequirementRow[],
+        todos: (todos.data ?? []) as TodoRow[],
+      },
+      { lastVisitedAt },
+    ),
     workspaceId,
   };
 }

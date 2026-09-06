@@ -125,6 +125,47 @@ export function summaryState(input: {
   };
 }
 
+/** Why a reader is showing no prose, when it is showing none. */
+export interface SummaryAbsence {
+  readonly reason: string;
+  readonly state: Exclude<SummaryState["state"], "current">;
+}
+
+/**
+ * The sentence for an absent description (Wave D todo 19 보완 R-02).
+ *
+ * Every surface that hides stale prose leaves the same hole, and a hole with
+ * no explanation reads as "this file has nothing to say" — which an agent
+ * acts on differently than "nobody has described it yet" or "the description
+ * is out of date". One function so the three surfaces that report it (the
+ * inspector card, `get_node_content`, the search excerpt) cannot drift into
+ * three different accounts of the same state.
+ *
+ * `null` for `current`: there is nothing absent to explain.
+ */
+export function summaryAbsence(state: SummaryState): SummaryAbsence | null {
+  switch (state.state) {
+    case "current":
+      return null;
+    case "stale":
+      return {
+        reason:
+          "a description exists but was written for an older version of this file, so it is not served as current",
+        state: "stale",
+      };
+    case "unknown":
+      return {
+        reason: `a description exists but ${state.reason}, so it is not served as current`,
+        state: "unknown",
+      };
+    case "missing":
+      return {
+        reason: "no description has been generated for this file yet",
+        state: "missing",
+      };
+  }
+}
+
 /**
  * The prose a reader may present as a description of the file *now* — and
  * `null` for every other state. Stale and unknown prose is kept in the row

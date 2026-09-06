@@ -131,7 +131,14 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
             target_node_id = excluded.target_node_id,
             kind = excluded.kind,
             severity = excluded.severity,
-            status = 'open',
+            -- A dismissal is a decision somebody made about this finding, and
+            -- the rule reproducing again is not news to them — it is why they
+            -- dismissed it. Re-opening here undid the decision on the next
+            -- push, silently (todo 19 ⑷).
+            status = case
+              when public.findings.status = 'dismissed' then 'dismissed'
+              else 'open'
+            end,
             provenance = excluded.provenance,
             confidence = excluded.confidence,
             evidence_grade = excluded.evidence_grade,
@@ -152,8 +159,19 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
         returning fingerprint
       `;
 
+      // Counted from the table, not from the input. Since todo 19 ⑷ a
+      // re-derived finding can land dismissed, so "how many the analysis
+      // produced" and "how many are open" are different numbers — and the
+      // receipt reports the second one, which is what the board shows.
+      const open = await tx<{ count: string }[]>`
+        select count(*)::text as count from public.findings
+        where workspace_id = ${input.workspaceId}
+          and repository_id = ${input.repositoryId}
+          and status = 'open'
+      `;
+
       return {
-        openTotal: fingerprints.length,
+        openTotal: Number(open[0]?.count ?? 0),
         opened: fingerprints.filter((fingerprint) => !wasOpen.has(fingerprint)),
         resolved: resolved.map(({ fingerprint }) => fingerprint),
       };

@@ -292,3 +292,109 @@ describe("workspace inspection dashboard", () => {
     });
   });
 });
+
+/**
+ * The detail the analysis already stored (Phase 4 Wave D todo 19 ⑶).
+ *
+ * `findings.provenance` has carried `{reason, spans, suggestedAction,
+ * evidenceLinks}` since the analyze job first ran, and this screen read a
+ * title and a severity — enough to know something is wrong and not enough to
+ * do anything about it.
+ */
+describe("finding detail", () => {
+  const finding = {
+    confidence: "0.62",
+    evidence_grade: "inferred",
+    id: "finding-1",
+    kind: "stale-doc",
+    provenance: {
+      evidenceLinks: ["node-a", 7, "node-b"],
+      reason: "deterministic stale-doc rule",
+      spans: [
+        { endLine: 12, path: "spec/auth.md", startLine: 9 },
+        { path: "spec/auth.md" },
+      ],
+      suggestedAction: "문서를 다시 읽고 갱신하세요",
+    },
+    severity: "medium",
+    status: "open",
+    title: "문서가 코드보다 오래됐습니다",
+  };
+
+  it("carries the path, the line, the confidence and the recommendation", () => {
+    const dashboard = buildWorkspaceInspectionDashboard({
+      ...EMPTY,
+      findings: [finding],
+    });
+
+    expect(dashboard.findings.entries[0]?.detail).toEqual({
+      confidence: 0.62,
+      evidenceGrade: "inferred",
+      // A non-string link is dropped; the two real ones survive.
+      evidenceLinks: ["node-a", "node-b"],
+      reason: "deterministic stale-doc rule",
+      // A span with no lines is dropped, and the complete one is kept —
+      // field by field, so a malformed part never costs the whole finding.
+      spans: [{ endLine: 12, path: "spec/auth.md", startLine: 9 }],
+      suggestedAction: "문서를 다시 읽고 갱신하세요",
+    });
+  });
+
+  it("still describes a finding whose provenance is the older shape", () => {
+    const dashboard = buildWorkspaceInspectionDashboard({
+      ...EMPTY,
+      findings: [{ ...finding, provenance: { reason: "old shape" } }],
+    });
+
+    expect(dashboard.findings.entries[0]?.detail).toMatchObject({
+      evidenceLinks: [],
+      reason: "old shape",
+      spans: [],
+      suggestedAction: null,
+    });
+  });
+
+  /**
+   * A grade is a claim about execution evidence. A row whose grade is
+   * missing or malformed does not get the benefit of the doubt (ADR-001).
+   */
+  it("reads anything but the stored word `verified` as inferred", () => {
+    const dashboard = buildWorkspaceInspectionDashboard({
+      ...EMPTY,
+      findings: [
+        { ...finding, evidence_grade: "VERIFIED", id: "a" },
+        { ...finding, evidence_grade: null, id: "b" },
+        { ...finding, evidence_grade: "verified", id: "c" },
+      ],
+    });
+
+    expect(
+      dashboard.findings.entries.map(({ detail }) => detail?.evidenceGrade),
+    ).toEqual(["inferred", "inferred", "verified"]);
+  });
+
+  /** todo 19 ⑷: why it left the board, on the board. */
+  it("carries a dismissal's reason and nothing when there is none", () => {
+    const dashboard = buildWorkspaceInspectionDashboard({
+      ...EMPTY,
+      findings: [
+        {
+          ...finding,
+          dismissed_reason: "설계상 의도된 차이",
+          id: "dismissed",
+          status: "dismissed",
+        },
+        { ...finding, id: "open" },
+      ],
+    });
+
+    // A dismissal leaves the open list and joins its own, so the decision
+    // stays reviewable instead of looking like a deletion.
+    expect(dashboard.findings.entries.map(({ id }) => id)).toEqual(["open"]);
+    expect(dashboard.dismissed.entries).toHaveLength(1);
+    expect(dashboard.dismissed.entries[0]?.dismissedReason).toBe(
+      "설계상 의도된 차이",
+    );
+    expect(dashboard.dismissed.state).toBe("ok");
+  });
+});

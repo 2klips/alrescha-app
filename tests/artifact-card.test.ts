@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildArtifactCard } from "../packages/core/src/index";
+import { buildArtifactCard, summaryAbsence } from "../packages/core/src/index";
 import {
   artifactRowFromQuery,
   inspectionArtifactCard,
@@ -129,8 +129,13 @@ describe("the shared artifact card", () => {
       unit: "lib",
     });
     // And `missing` says what is absent instead of leaving an empty string
-    // to be read as "nothing to say".
-    expect(card.missing).toContain("no summary has been written");
+    // to be read as "nothing to say" — in the shared sentence rather than one
+    // of this module's own, so the card cannot drift away from
+    // `get_node_content` and the search excerpt (todo 19 보완 R-02).
+    expect(card.missing).toContain(
+      summaryAbsence({ state: "missing" })?.reason,
+    );
+    expect(card.missing.join(" ")).toMatch(/no description/);
     expect(card.missing).toContain("no test edge points at this file");
   });
 
@@ -149,8 +154,15 @@ describe("the shared artifact card", () => {
 
     expect(card.summary.state).toBe("stale");
     expect(card.missing).toContain(
-      "the summary describes an older version of this file",
+      summaryAbsence({
+        currentBlobSha: BLOB,
+        sourceBlobSha: OLDER,
+        state: "stale",
+        text: "the old description",
+      })?.reason,
     );
+    // The sentence is about the version, not about absence of prose.
+    expect(card.missing.join(" ")).toMatch(/older version/);
     expect(card.tested).toBe(true);
   });
 

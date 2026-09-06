@@ -27,7 +27,42 @@ export type InspectionFindingKind =
 
 export type InspectionSeverity = "critical" | "high" | "low" | "medium";
 
+/**
+ * What the analysis stated about one finding (Phase 4 Wave D todo 19 ⑶).
+ *
+ * The screen showed a title, a severity and a kind — enough to know
+ * something is wrong and not enough to do anything about it. All of this was
+ * already stored: `findings.provenance` carries the spans, the reason and
+ * the suggested action, and the analyze job has written them since Phase 2C.
+ * Reading them is the whole change.
+ *
+ * `evidenceLinks` are node ids the rule pointed at. Rendering them is the
+ * caller's; a dangling one is a rendering decision, not a reason to drop the
+ * finding.
+ */
+export interface InspectionFindingDetail {
+  readonly confidence: number;
+  /** ADR-001: a deterministic rule states `inferred` unless CI says more. */
+  readonly evidenceGrade: "inferred" | "verified";
+  readonly evidenceLinks: readonly string[];
+  /** Why the rule fired, in the rule's words. */
+  readonly reason: string | null;
+  readonly spans: readonly {
+    readonly endLine: number;
+    readonly path: string;
+    readonly startLine: number;
+  }[];
+  readonly suggestedAction: string | null;
+}
+
 export interface InspectionFindingInput {
+  readonly detail?: InspectionFindingDetail | undefined;
+  /**
+   * Why somebody took this off the board (todo 19 ⑷). Present only on a
+   * `dismissed` finding, where the schema requires it — a dismissal with no
+   * reason is indistinguishable from a finding nobody looked at.
+   */
+  readonly dismissedReason?: string | undefined;
   readonly id: string;
   readonly kind: InspectionFindingKind;
   readonly severity: InspectionSeverity;
@@ -96,6 +131,19 @@ export interface InspectionDashboard {
     readonly sourceLabel: string;
     readonly state: InspectionSectionState;
   };
+  /**
+   * Findings somebody took off the board, and why (todo 19 ⑷).
+   *
+   * `findings.entries` is open findings only, so a dismissal used to make a
+   * finding vanish — indistinguishable from a deletion, and unreviewable. A
+   * decision that cannot be looked at again is not a decision, it is a
+   * disappearance.
+   */
+  readonly dismissed: {
+    readonly entries: readonly InspectionFindingInput[];
+    readonly sourceLabel: string;
+    readonly state: InspectionSectionState;
+  };
   readonly findings: {
     readonly entries: readonly InspectionFindingInput[];
     readonly openBySeverity: Readonly<Record<InspectionSeverity, number>>;
@@ -146,6 +194,11 @@ export function buildInspectionDashboard(
 ): InspectionDashboard {
   const openFindings = input.findings
     .filter(({ status }) => status === "open")
+    .sort(bySeverityThenTitle);
+  // Newest decisions are the ones worth reviewing, and the input carries no
+  // timestamp, so severity-then-title keeps the order stable and readable.
+  const dismissedFindings = input.findings
+    .filter(({ status }) => status === "dismissed")
     .sort(bySeverityThenTitle);
   const openBySeverity = { critical: 0, high: 0, low: 0, medium: 0 };
   for (const finding of openFindings) {
@@ -208,6 +261,11 @@ export function buildInspectionDashboard(
       entries: driftRisks,
       sourceLabel: "deterministic drift rules",
       state: driftRisks.length === 0 ? "insufficient-evidence" : "ok",
+    },
+    dismissed: {
+      entries: dismissedFindings,
+      sourceLabel: "findings dismissed by a workspace member or a judgment",
+      state: dismissedFindings.length === 0 ? "insufficient-evidence" : "ok",
     },
     findings: {
       entries: openFindings,

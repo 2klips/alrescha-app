@@ -1276,6 +1276,11 @@ function createServer(
   server.registerTool("log_progress", LOG_PROGRESS_TOOL, async (input) => {
     requireScope("mcp:write");
     const event = await store.appendProgress(principal, input);
+    // The nodes the entry names light up like any other touch (todo 19 ⑹).
+    // A write that changed the graph and left no trace in the access stream
+    // was invisible to the live map and to the telemetry that counts what a
+    // session did — only the reads were.
+    emitAccessEvent(store, principal, "log_progress", event.refs);
     return toolResult({
       event: {
         id: event.id,
@@ -1365,6 +1370,15 @@ function createServer(
     async ({ target, text }) => {
       requireScope("mcp:write");
       const note = await store.appendNote(principal, { target, text });
+      // The node the note is about, when it names one (todo 19 ⑹). A note
+      // with no target touched nothing, and an event with no nodes is still
+      // the record that the session wrote here.
+      emitAccessEvent(
+        store,
+        principal,
+        "record_note",
+        note.target ? [note.target] : [],
+      );
       return toolResult({
         note: { id: note.id, target: note.target, text: note.text },
         workspaceId: principal.workspaceId,

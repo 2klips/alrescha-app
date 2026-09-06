@@ -9,6 +9,7 @@ import {
   type ArtifactClassification,
   type InspectionDashboard,
   type InspectionDocumentInput,
+  type InspectionFindingDetail,
   type InspectionFindingInput,
   type RuledOutAttemptInput,
 } from "@alrescha/core";
@@ -24,11 +25,71 @@ import {
  */
 
 export interface InspectionFindingRow {
+  readonly confidence?: number | string | null;
+  readonly dismissed_reason?: string | null;
+  readonly evidence_grade?: string | null;
   readonly id: string;
   readonly kind: string;
+  readonly provenance?: unknown;
   readonly severity: string;
   readonly status: string;
   readonly title: string;
+}
+
+/**
+ * The detail the analysis already stored (todo 19 ⑶).
+ *
+ * `findings.provenance` is written by `analysis-job.ts` as
+ * `{reason, spans, suggestedAction, evidenceLinks}` and the screen read none
+ * of it, so a finding arrived as a title and a severity — enough to know
+ * something is wrong and not enough to do anything. Shapes that do not match
+ * are dropped field by field rather than dropping the finding: a
+ * hand-written or older row still shows what it has.
+ */
+function findingDetail(
+  row: InspectionFindingRow,
+): InspectionFindingDetail | undefined {
+  const provenance =
+    typeof row.provenance === "object" &&
+    row.provenance !== null &&
+    !Array.isArray(row.provenance)
+      ? (row.provenance as Record<string, unknown>)
+      : {};
+  const spans = Array.isArray(provenance.spans)
+    ? provenance.spans.flatMap((value) => {
+        const span = value as Record<string, unknown>;
+        return typeof span?.path === "string" &&
+          typeof span.startLine === "number" &&
+          typeof span.endLine === "number"
+          ? [
+              {
+                endLine: span.endLine,
+                path: span.path,
+                startLine: span.startLine,
+              },
+            ]
+          : [];
+      })
+    : [];
+  const confidence = Number(row.confidence ?? Number.NaN);
+  return {
+    confidence: Number.isFinite(confidence) ? confidence : 0,
+    // Anything but the stored word `verified` reads as `inferred`: a grade
+    // is a claim about execution evidence, and a malformed row does not get
+    // the benefit of the doubt (ADR-001).
+    evidenceGrade: row.evidence_grade === "verified" ? "verified" : "inferred",
+    evidenceLinks: Array.isArray(provenance.evidenceLinks)
+      ? provenance.evidenceLinks.filter(
+          (value): value is string => typeof value === "string",
+        )
+      : [],
+    reason: typeof provenance.reason === "string" ? provenance.reason : null,
+    spans,
+    suggestedAction:
+      typeof provenance.suggestedAction === "string"
+        ? provenance.suggestedAction
+        : null,
+  };
 }
 
 export interface InspectionArtifactRow {
@@ -199,6 +260,10 @@ export function buildWorkspaceInspectionDashboard(
     isOneOf(STATUSES, row.status)
       ? [
           {
+            detail: findingDetail(row),
+            ...(row.dismissed_reason
+              ? { dismissedReason: row.dismissed_reason }
+              : {}),
             id: row.id,
             kind: row.kind,
             severity: row.severity,
@@ -267,7 +332,9 @@ export async function loadWorkspaceInspectionDashboard(
     [
       client
         .from("findings")
-        .select("id,kind,severity,status,title")
+        .select(
+          "id,kind,severity,status,title,confidence,evidence_grade,provenance,dismissed_reason",
+        )
         .eq("workspace_id", workspaceId),
       client
         .from("artifacts")

@@ -1731,3 +1731,69 @@ describe("the tool output vocabulary tracks the source of truth", () => {
     ).toBe(true);
   });
 });
+
+/**
+ * Write tools leave a trace too (Wave D todo 19 ⑹).
+ *
+ * `log_progress` and `record_note` changed the workspace and emitted
+ * nothing, so the live map never lit up for them and the telemetry that
+ * counts what a session did counted only its reads. `record_prompt` stays
+ * silent on purpose — a separate store with separate consent, and the glow
+ * stream must never carry prompt text (ADR-004).
+ */
+describe("write tools and the access stream", () => {
+  const clients: Client[] = [];
+
+  afterEach(async () => {
+    await Promise.all(clients.splice(0).map((client) => client.close()));
+  });
+
+  it("emits an event for the write tools that touch the graph, and not for prompts", async () => {
+    const store = new InMemoryMcpStore({ workspaces: [workspaceFixture()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Writer",
+      scopes: ["mcp:read", "mcp:write"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    await client.callTool({
+      arguments: {
+        refs: ["spec/WORK_SPEC.md"],
+        status: "done",
+        summary: "wrote it down",
+        task: "Task 19",
+      },
+      name: "log_progress",
+    });
+    await client.callTool({
+      arguments: { target: "spec/WORK_SPEC.md", text: "a note" },
+      name: "record_note",
+    });
+    await client.callTool({
+      arguments: { token_count: 12, tool_name: "search_index" },
+      name: "record_prompt",
+    });
+
+    await vi.waitFor(() =>
+      expect(store.accessEventsForWorkspace(WORKSPACE_ID)).toHaveLength(2),
+    );
+    const events = store.accessEventsForWorkspace(WORKSPACE_ID);
+    expect(events.map(({ tool }) => tool)).toEqual([
+      "log_progress",
+      "record_note",
+    ]);
+    // The nodes each one named, so the live map lights the right ones.
+    expect(events[0]?.targetNodeIds).toEqual(["spec/WORK_SPEC.md"]);
+    expect(events[1]?.targetNodeIds).toEqual(["spec/WORK_SPEC.md"]);
+    // And still nothing from `record_prompt`, after the other two arrived.
+    expect(events.map(({ tool }) => tool)).not.toContain("record_prompt");
+  });
+});

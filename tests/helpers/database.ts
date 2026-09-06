@@ -23,6 +23,8 @@ const SUPABASE_TEST_BOOTSTRAP = `
   as $$
     select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
   $$;
+  grant usage on schema auth to anon, authenticated, service_role;
+  grant execute on function auth.uid() to anon, authenticated, service_role;
 `;
 
 export const AUTH_TENANCY_MIGRATION =
@@ -135,6 +137,10 @@ export const BACKFILL_AND_RESCAN_MIGRATION =
   "supabase/migrations/202609060006_backfill_and_rescan.sql";
 export const LOCAL_REPOSITORY_RESCAN_MIGRATION =
   "supabase/migrations/202609060007_local_repository_rescan.sql";
+export const SCREEN_VIEWS_MIGRATION =
+  "supabase/migrations/202609060008_screen_views.sql";
+export const FINDING_DISMISSAL_MIGRATION =
+  "supabase/migrations/202609060009_finding_dismissal.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -193,6 +199,8 @@ export const ALL_MIGRATIONS = [
   REPOSITORY_REVISION_MIGRATION,
   BACKFILL_AND_RESCAN_MIGRATION,
   LOCAL_REPOSITORY_RESCAN_MIGRATION,
+  SCREEN_VIEWS_MIGRATION,
+  FINDING_DISMISSAL_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

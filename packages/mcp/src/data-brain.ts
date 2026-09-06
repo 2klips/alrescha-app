@@ -2,6 +2,7 @@ import {
   buildArtifactCard,
   composeContextPack,
   personalizedPageRank,
+  summaryAbsence,
   type ArtifactCard,
   type ArtifactClassification,
   type ContextDocument,
@@ -9,6 +10,7 @@ import {
   type ContextTargetAgent,
   type ArtifactCardRelation,
   type PageRankEdge,
+  type SummaryAbsence,
 } from "@alrescha/core";
 
 import { estimateTokens } from "./repo-map";
@@ -31,6 +33,13 @@ export type SearchRank =
 
 export interface SearchIndexResult {
   excerpt: string;
+  /**
+   * Why the excerpt is empty, when it is (Wave D todo 19 보완 R-02). Prose
+   * written for an older blob never reaches a reader, so a file whose only
+   * description is stale looks identical to one nobody has ever described —
+   * unless the result says which. Absent when there is an excerpt.
+   */
+  excerptAbsence?: SummaryAbsence;
   id: string;
   neighborIds: string[];
   nodeId: string;
@@ -204,22 +213,47 @@ function directRank(
   return null;
 }
 
+interface Excerpt {
+  readonly absence?: SummaryAbsence;
+  readonly text: string;
+}
+
 function excerptFor(
   workspace: McpWorkspaceData,
   nodeId: string,
   fallback: string,
-): string {
+): Excerpt {
   for (const repository of workspace.repositories) {
     const artifact = repository.artifacts.find(({ id }) => id === nodeId);
-    if (artifact) return artifact.content.slice(0, 280);
+    if (artifact) {
+      const text = artifact.content.slice(0, 280);
+      // The same rule and the same sentence `get_node_content` gives: an
+      // empty excerpt with no explanation reads as "this file has nothing to
+      // say", which is a different fact from every state that produces one.
+      if (text.length > 0) return { text };
+      const absence = summaryAbsence(
+        artifact.summaryState ?? { state: "missing" },
+      );
+      return { ...(absence ? { absence } : {}), text };
+    }
     const requirement = repository.requirements.find(({ id }) => id === nodeId);
-    if (requirement) return requirement.statement.slice(0, 280);
+    if (requirement) return { text: requirement.statement.slice(0, 280) };
     const evidence = repository.evidence.find(({ id }) => id === nodeId);
-    if (evidence) return `${evidence.kind}: ${evidence.verdict}`;
+    if (evidence) return { text: `${evidence.kind}: ${evidence.verdict}` };
     const finding = repository.findings.find(({ id }) => id === nodeId);
-    if (finding) return finding.title;
+    if (finding) return { text: finding.title };
   }
-  return fallback.slice(0, 280);
+  return { text: fallback.slice(0, 280) };
+}
+
+/** Spread an excerpt into a result: the absence key exists only when set. */
+function excerptResult(
+  excerpt: Excerpt,
+): Pick<SearchIndexResult, "excerpt" | "excerptAbsence"> {
+  return {
+    excerpt: excerpt.text,
+    ...(excerpt.absence ? { excerptAbsence: excerpt.absence } : {}),
+  };
 }
 
 function scoreFor(rank: SearchRank): number {
@@ -339,7 +373,9 @@ export function searchWorkspaceIndex(
         return [];
       return [
         {
-          excerpt: excerptFor(workspace, entry.nodeId, entry.searchKey),
+          ...excerptResult(
+            excerptFor(workspace, entry.nodeId, entry.searchKey),
+          ),
           id: entry.id,
           neighborIds: [...entry.neighborIds],
           nodeId: entry.nodeId,

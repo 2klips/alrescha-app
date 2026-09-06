@@ -6,7 +6,7 @@ import {
   type LayoutConventions,
 } from "../ingest/artifact-facets";
 import type { ArtifactClassification } from "../ingest/repository-scanner";
-import type { SummaryState } from "../enrich/prose-summary";
+import { summaryAbsence, type SummaryState } from "../enrich/prose-summary";
 
 /**
  * One file, described from what is stored (Codex remedy P0-A §6.1, step S5).
@@ -104,11 +104,13 @@ export function buildArtifactCard(basis: ArtifactCardBasis): ArtifactCard {
   );
 
   const missing: string[] = [];
-  if (summary.state === "missing") missing.push("no summary has been written");
-  if (summary.state === "stale") {
-    missing.push("the summary describes an older version of this file");
-  }
-  if (summary.state === "unknown") missing.push(summary.reason);
+  // The prose absence comes from `summaryAbsence`, not from a sentence of
+  // this file's own (todo 19 보완 R-02). Three surfaces report it — this
+  // card, `get_node_content` and the search excerpt — and three sentences
+  // for one state is how a reader learns that the answer depends on which
+  // door they came through.
+  const absence = summaryAbsence(summary);
+  if (absence) missing.push(absence.reason);
   if (exports.length === 0 && basis.classification === "code_metadata") {
     missing.push("no exported symbols were recorded");
   }
