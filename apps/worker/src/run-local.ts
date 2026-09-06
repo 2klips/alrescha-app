@@ -29,6 +29,7 @@ import { createAnalysisJobHandler } from "./analysis-job";
 import { createCoachingJobHandler } from "./coaching-job";
 import { runDrainLoop } from "./drain-loop";
 import { createEnrichJobHandler } from "./enrich-job";
+import { GitHubCiEvidenceSource } from "./github-ci-evidence-source";
 import { GitHubRepositorySource } from "./github-repository-source";
 import { createJudgmentJobHandler } from "./judgment-job";
 import { PostgresAnalysisStore } from "./postgres-analysis-store";
@@ -176,12 +177,47 @@ function createSourceFactory(sql: postgres.Sql) {
     });
     return {
       expiresAt: token.expiresAt,
-      source: new GitHubRepositorySource(owner, repository, token.token),
+      // One token, two readers. The CI evidence source calls a different set
+      // of endpoints with the same installation token, and minting a second
+      // one per job would double the calls for no separation (todo 18).
+      source: {
+        ci: new GitHubCiEvidenceSource(owner, repository, token.token),
+        contents: new GitHubRepositorySource(owner, repository, token.token),
+      },
     };
   });
 }
 
 type SourceFactory = ReturnType<typeof createSourceFactory>;
+
+/** The file-body reader, for the jobs that need one. */
+const contentsFor = async (
+  sourceFor: SourceFactory,
+  workspaceId: string,
+  repositoryId: string,
+): Promise<GitHubRepositorySource> =>
+  (await sourceFor(workspaceId, repositoryId)).contents;
+
+/**
+ * CI evidence for one commit, or nothing (Wave C todo 18).
+ *
+ * Every failure here is a repository fact rather than a defect: no
+ * installation (a local-ingest repository — todo 17), no Actions, a throttled
+ * API. The analysis proceeds without execution evidence, which shows up as an
+ * absent `verified` grade rather than as a failed job.
+ */
+function createCiEvidenceCollector(sourceFor: SourceFactory) {
+  return async ({
+    analyzedCommitSha,
+    repositoryId,
+    workspaceId,
+  }: {
+    analyzedCommitSha: string;
+    repositoryId: string;
+    workspaceId: string;
+  }) =>
+    (await sourceFor(workspaceId, repositoryId)).ci.collect(analyzedCommitSha);
+}
 
 function createScanHandler(
   sql: postgres.Sql,
@@ -205,7 +241,7 @@ function createScanHandler(
       ...(fetchConcurrency === undefined ? {} : { fetchConcurrency }),
       ...(mode === undefined ? {} : { mode }),
       repositoryId: job.repositoryId,
-      source: await sourceFor(job.workspaceId, job.repositoryId),
+      source: await contentsFor(sourceFor, job.workspaceId, job.repositoryId),
       store,
       workspaceId: job.workspaceId,
     });
@@ -232,13 +268,16 @@ async function main(): Promise<void> {
 
   const handlers: JobHandlers = {
     analyze: createAnalysisJobHandler({
+      // Actions artifacts and check runs for the analysed commit — the only
+      // input that can raise a node to `verified` (todo 18, ADR-001).
+      collectCiEvidence: createCiEvidenceCollector(sourceFor),
       // Transient: the body is decoded, handed to the rules, and dropped.
       // Only a 404 reads as "file vanished" — any other failure (dead token,
       // throttling) fails the job into the retry path instead of letting the
       // findings reconciler mistake an outage for deletions (MT-1).
       readSource: async ({ commitSha, path, repositoryId, workspaceId }) =>
         readTransientSource(
-          await sourceFor(workspaceId, repositoryId),
+          await contentsFor(sourceFor, workspaceId, repositoryId),
           path,
           commitSha,
         ),
@@ -249,7 +288,7 @@ async function main(): Promise<void> {
       // Transient, like analysis: fetched, clipped, summarized, dropped.
       readSource: async ({ commitSha, path, repositoryId, workspaceId }) =>
         readTransientSource(
-          await sourceFor(workspaceId, repositoryId),
+          await contentsFor(sourceFor, workspaceId, repositoryId),
           path,
           commitSha,
         ),

@@ -225,3 +225,93 @@ describe("GitHub CI evidence source", () => {
     }
   });
 });
+
+/**
+ * Coverage in the same archive (Phase 4 Wave C todo 18).
+ *
+ * `coverage-final.json` ends in `.json`, and the classifier used to read
+ * every `.json` as a Vitest report. Handing it to `ingestCiTestReports`
+ * produces a parse diagnostic, and a single diagnostic makes that function
+ * discard **the whole run's evidence** — so a repository that uploads its
+ * coverage next to its test results would have lost its `verified` grade to
+ * a file that was never a test report.
+ */
+describe("classifying an artifact archive", () => {
+  const COMMIT = "1".repeat(40);
+
+  async function collectArchive(files: Record<string, string>) {
+    const artifacts = JSON.stringify({
+      artifacts: [
+        {
+          expired: false,
+          id: 8001,
+          name: "results",
+          workflow_run: { head_sha: COMMIT },
+        },
+      ],
+    });
+    const source = new GitHubCiEvidenceSource(
+      "alrescha",
+      "drifted-demo",
+      "installation-token",
+      vi.fn<typeof fetch>(async (input) => {
+        const url = String(input);
+        if (url.includes("/actions/artifacts?")) {
+          return new Response(artifacts, { status: 200 });
+        }
+        if (url.includes("/check-runs?")) {
+          return new Response(JSON.stringify({ check_runs: [] }), {
+            status: 200,
+          });
+        }
+        return new Response(
+          zipSync(
+            Object.fromEntries(
+              Object.entries(files).map(([name, body]) => [
+                name,
+                strToU8(body),
+              ]),
+            ),
+          ),
+          { status: 200 },
+        );
+      }),
+    );
+    return source.collect(COMMIT);
+  }
+
+  it("keeps coverage out of the test reports", async () => {
+    const collected = await collectArchive({
+      "coverage-final.json": JSON.stringify({ "src/a.ts": {} }),
+      "lcov.info": "SF:src/a.ts\nend_of_record\n",
+      "results.json": JSON.stringify({ success: true, testResults: [] }),
+    });
+
+    expect(collected.reports.map(({ format }) => format)).toEqual([
+      "vitest-json",
+    ]);
+    expect(collected.coverage.map(({ format }) => format).sort()).toEqual([
+      "istanbul-json",
+      "lcov",
+    ]);
+
+    // The point of the split: the test reports still parse, because the
+    // coverage file never reached the test-report parser.
+    expect(
+      ingestCiTestReports({
+        analyzedCommitSha: COMMIT,
+        checkRuns: collected.checkRuns,
+        reports: collected.reports,
+      }).diagnostics,
+    ).toEqual([]);
+  });
+
+  it("still reads a plain test archive as reports", async () => {
+    const collected = await collectArchive({
+      "junit.xml": '<testsuites tests="0"></testsuites>',
+    });
+
+    expect(collected.reports.map(({ format }) => format)).toEqual(["junit"]);
+    expect(collected.coverage).toEqual([]);
+  });
+});

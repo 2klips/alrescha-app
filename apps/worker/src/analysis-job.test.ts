@@ -8,12 +8,14 @@ import { describe, expect, it } from "vitest";
 import {
   createAnalysisJobHandler,
   type AnalysisJobStore,
+  type CiEvidenceCollector,
   type FindingsDelta,
   type PersistedFinding,
   type PersistedImplementsEdge,
   type PersistedRequirement,
   type StoredArtifact,
 } from "./analysis-job";
+import type { PersistedEvidence, PersistedEvidenceEdge } from "./ci-evidence";
 import type { ClaimedJob } from "./queue";
 
 const COMMIT = "a".repeat(40);
@@ -76,6 +78,8 @@ const ARTIFACTS: readonly StoredArtifact[] = [
 ];
 
 interface Recorded {
+  ciEdges: readonly PersistedEvidenceEdge[];
+  ciEvidence: readonly PersistedEvidence[];
   delta: FindingsDelta | null;
   digest: string | null;
   findings: readonly PersistedFinding[];
@@ -92,6 +96,8 @@ function fakeStore(
   } = {},
 ) {
   const recorded: Recorded = {
+    ciEdges: [],
+    ciEvidence: [],
     delta: null,
     digest: null,
     findings: [],
@@ -128,6 +134,15 @@ function fakeStore(
       recorded.requirements = requirements;
       return { active: requirements.length, superseded: 0 };
     },
+    reconcileCiEvidence: async ({ edges, evidence }) => {
+      recorded.ciEdges = edges;
+      recorded.ciEvidence = evidence;
+      return {
+        removed: 0,
+        supporting: evidence.filter((row) => row.verdict === "supports").length,
+        written: evidence.length,
+      };
+    },
   };
   return { recorded, store };
 }
@@ -148,12 +163,16 @@ function job(): ClaimedJob {
 
 async function run(
   options: {
+    collectCiEvidence?: CiEvidenceCollector;
     openFingerprints?: readonly string[];
     testedPaths?: readonly string[];
   } = {},
 ): Promise<Recorded> {
   const { recorded, store } = fakeStore(options);
   const handler = createAnalysisJobHandler({
+    ...(options.collectCiEvidence
+      ? { collectCiEvidence: options.collectCiEvidence }
+      : {}),
     readSource: async ({ path }) => {
       recorded.read.push(path);
       return path.endsWith(".md") ? SPEC : "";
@@ -360,5 +379,221 @@ describe("analyze job", () => {
     await expect(
       handler(job(), { heartbeat: async () => true }),
     ).rejects.toThrow(/has not applied its plan/);
+  });
+});
+
+/**
+ * CI evidence (Phase 4 Wave C todo 18, D12).
+ *
+ * `ingestCiTestReports` has parsed Actions artifacts since Phase 2C and
+ * nothing ever wrote a row, so the `verified` grade the map reads for was
+ * unreachable in production. What the tests below pin is not the parsing —
+ * `tests/ci-evidence.test.ts` owns that — but which claims are allowed to
+ * carry the grade, and what happens when there is no CI at all.
+ */
+describe("analyze job — CI evidence", () => {
+  const passingRun = {
+    checkRuns: [
+      {
+        conclusion: "success",
+        head_sha: COMMIT,
+        name: "test",
+        status: "completed",
+      },
+    ],
+    coverage: [],
+    reports: [
+      {
+        artifactId: 7001,
+        artifactName: "test-results",
+        content: JSON.stringify({
+          success: true,
+          testResults: [
+            {
+              assertionResults: [
+                {
+                  fullName: "REQ-AUTH-002 rotates tokens",
+                  status: "passed",
+                  title: "rotates tokens",
+                },
+              ],
+              name: "/home/runner/work/app/app/tests/auth.test.ts",
+              status: "passed",
+            },
+          ],
+        }),
+        format: "vitest-json" as const,
+        headSha: COMMIT,
+      },
+    ],
+  };
+
+  it("writes nothing at all when no collector is wired", async () => {
+    const recorded = await run();
+
+    // The state most repositories are in. No evidence is the honest answer,
+    // and it is what keeps a scan-only workspace free of `verified` nodes.
+    expect(recorded.ciEvidence).toEqual([]);
+    expect(recorded.ciEdges).toEqual([]);
+  });
+
+  it("writes nothing when the repository has no CI to collect", async () => {
+    const recorded = await run({ collectCiEvidence: async () => null });
+
+    expect(recorded.ciEvidence).toEqual([]);
+  });
+
+  /**
+   * A throttled API, a revoked token, an expired artifact: none of them is a
+   * defect in the repository being analysed, and failing the job over one
+   * would replace a missing grade with a missing analysis.
+   */
+  it("analyses anyway when collection throws", async () => {
+    const recorded = await run({
+      collectCiEvidence: async () => {
+        throw new Error("GitHub CI evidence request failed: 403");
+      },
+    });
+
+    expect(recorded.ciEvidence).toEqual([]);
+    expect(recorded.statement).not.toBeNull();
+    expect(recorded.findings.length).toBeGreaterThan(0);
+  });
+
+  it("grades the test file that ran and the requirement it names", async () => {
+    const recorded = await run({
+      collectCiEvidence: async () => passingRun,
+    });
+
+    expect(recorded.ciEvidence).toHaveLength(1);
+    const [evidence] = recorded.ciEvidence;
+    expect(evidence).toMatchObject({
+      kind: "test",
+      // Anchored on the repository path, resolved out of the CI machine's.
+      sourceArtifactId: "node-test",
+      verdict: "supports",
+    });
+    expect(evidence?.label).toContain("tests/auth.test.ts");
+
+    const relations = recorded.ciEdges.map(({ relation }) => relation).sort();
+    expect(relations).toEqual(["supports", "tests"]);
+    // The test file ran: a direct claim.
+    expect(
+      recorded.ciEdges.find(({ relation }) => relation === "tests")
+        ?.targetNodeId,
+    ).toBe("node-test");
+    // …and the requirement its name claims, pointing at the node this same
+    // analysis wrote rather than at the REQ string.
+    const requirementNodeId = recorded.requirements.find(
+      ({ label }) => label === "REQ-AUTH-002",
+    )?.id;
+    expect(requirementNodeId).toBeTruthy();
+    expect(
+      recorded.ciEdges.find(({ relation }) => relation === "supports")
+        ?.targetNodeId,
+    ).toBe(requirementNodeId);
+  });
+
+  /**
+   * ADR-001, stated as an edge that is not written. The scan derives
+   * file→file `tests` edges from imports; they say a test file imports a
+   * source file, not that the run executed it. Promoting `src/auth.ts` here
+   * would be inference wearing an execution grade.
+   */
+  it("does not promote the code under the test", async () => {
+    const recorded = await run({
+      collectCiEvidence: async () => passingRun,
+      testedPaths: ["src/auth.ts"],
+    });
+
+    for (const edge of recorded.ciEdges) {
+      expect(edge.targetNodeId).not.toBe("node-code");
+    }
+  });
+
+  it("records a report that did not verify without a supporting verdict", async () => {
+    const recorded = await run({
+      collectCiEvidence: async () => ({
+        ...passingRun,
+        // No successful check run for the analysed commit.
+        checkRuns: [],
+      }),
+    });
+
+    expect(recorded.ciEvidence).toHaveLength(1);
+    expect(recorded.ciEvidence[0]?.verdict).toBe("unknown");
+    expect(recorded.ciEvidence[0]?.metadata).toMatchObject({
+      grade: "inferred",
+    });
+    // The rows exist, and the map promotes nothing from them.
+    expect(recorded.ciEdges.every(({ confidence }) => confidence < 1)).toBe(
+      true,
+    );
+  });
+
+  /**
+   * Coverage is measurement, not support: it says a file was executed, which
+   * is what separates "not covered" from "never measured" (todo 21). It gets
+   * an `unknown` verdict and no edge, so nothing is graded by it.
+   */
+  it("records coverage as measurement, with no edge and no number", async () => {
+    const recorded = await run({
+      collectCiEvidence: async () => ({
+        checkRuns: [],
+        coverage: [
+          {
+            artifactId: 7003,
+            artifactName: "coverage",
+            content:
+              "SF:/home/runner/work/app/app/src/audit.ts\nLH:0\nend_of_record\n",
+            format: "lcov" as const,
+            headSha: COMMIT,
+          },
+        ],
+        reports: [],
+      }),
+    });
+
+    expect(recorded.ciEvidence).toHaveLength(1);
+    expect(recorded.ciEvidence[0]).toMatchObject({
+      kind: "ci",
+      sourceArtifactId: "node-audit",
+      verdict: "unknown",
+    });
+    expect(recorded.ciEdges).toEqual([]);
+    // Measured, with no hit count to be read as a grade.
+    expect(JSON.stringify(recorded.ciEvidence[0]?.metadata)).not.toMatch(/LH/);
+  });
+
+  it("ignores a report naming a file this repository does not have", async () => {
+    const recorded = await run({
+      collectCiEvidence: async () => ({
+        ...passingRun,
+        reports: [
+          {
+            ...passingRun.reports[0]!,
+            content: JSON.stringify({
+              success: true,
+              testResults: [
+                {
+                  assertionResults: [
+                    {
+                      fullName: "REQ-AUTH-002 elsewhere",
+                      status: "passed",
+                      title: "elsewhere",
+                    },
+                  ],
+                  name: "/somewhere/else/other.test.ts",
+                  status: "passed",
+                },
+              ],
+            }),
+          },
+        ],
+      }),
+    });
+
+    // No node to anchor it to, so no row — never a dangling one.
+    expect(recorded.ciEvidence).toEqual([]);
   });
 });

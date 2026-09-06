@@ -288,15 +288,17 @@ export type {
   RequirementImplementationLink,
 } from "./assurance/rules";
 
-export { probeRepositoryEvidence } from "./evidence/probes";
+export {
+  ingestCoverageReports,
+  resolveReportedPath,
+} from "./evidence/coverage-reports";
 export type {
-  EvidenceProbeKind,
-  ProbeArtifactMetadata,
-  ProbeRepositoryEvidenceInput,
-  RepositoryEvidenceProbe,
-  RepositoryEvidenceProbeResult,
-  SymbolExtractionMethod,
-} from "./evidence/probes";
+  CoverageIngestionResult,
+  CoverageReportArtifact,
+  CoverageReportDiagnostic,
+  CoverageReportFormat,
+  MeasuredFile,
+} from "./evidence/coverage-reports";
 
 export { ingestCiTestReports } from "./evidence/ci-reports";
 export type {

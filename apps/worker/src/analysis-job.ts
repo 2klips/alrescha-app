@@ -24,16 +24,27 @@ import {
   assuranceCoverage,
   assuranceSourceRequired,
   digestInTotoStatement,
+  ingestCiTestReports,
+  ingestCoverageReports,
   prepareAssuranceContexts,
   requirementImplementationLinks,
   RECEIPT_PREDICATE_TYPE,
   RECEIPT_TOOL,
   type AssuranceFinding,
   type AssuranceSourceFile,
+  type CiCheckRun,
+  type CiReportArtifact,
+  type CoverageReportArtifact,
   type InTotoStatement,
   type RequirementImplementationLink,
 } from "@alrescha/core";
 
+import {
+  ciEvidenceRecords,
+  type CiEvidenceInput,
+  type PersistedEvidence,
+  type PersistedEvidenceEdge,
+} from "./ci-evidence";
 import { deterministicUlid } from "./deterministic-id";
 import type { ClaimedJob } from "./queue";
 import type { JobHandler } from "./worker";
@@ -162,9 +173,51 @@ export interface AnalysisJobStore {
     requirements: readonly PersistedRequirement[];
     workspaceId: string;
   }): Promise<RequirementsDelta>;
+  /**
+   * Replace this repository's CI-sourced evidence with what this analysis
+   * found (Wave C todo 18). Wholesale, because an evidence row is a claim
+   * about one commit: keeping the previous commit's rows would leave the map
+   * showing a `verified` file whose test no longer runs.
+   */
+  reconcileCiEvidence(input: {
+    edges: readonly PersistedEvidenceEdge[];
+    evidence: readonly PersistedEvidence[];
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<EvidenceDelta>;
+}
+
+export interface EvidenceDelta {
+  readonly removed: number;
+  /** Rows with a `supports` verdict — the only ones that carry a grade. */
+  readonly supporting: number;
+  readonly written: number;
+}
+
+/**
+ * The CI artifacts and check runs for one commit, fetched from the host
+ * (Wave C todo 18). Optional: a repository with no installation, no Actions,
+ * or a throttled API still analyses — it simply produces no execution
+ * evidence, which is the honest reading rather than a failed job.
+ */
+export interface CiEvidenceCollector {
+  (input: {
+    analyzedCommitSha: string;
+    repositoryFullName: string;
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<CollectedCiEvidence | null>;
+}
+
+export interface CollectedCiEvidence {
+  readonly checkRuns: readonly CiCheckRun[];
+  readonly coverage: readonly CoverageReportArtifact[];
+  readonly reports: readonly CiReportArtifact[];
 }
 
 export interface AnalysisJobDependencies {
+  /** Fetches CI evidence for the analysed commit; omitted disables it. */
+  readonly collectCiEvidence?: CiEvidenceCollector;
   /**
    * Transient read of one file at the analysed commit. Returning null drops the
    * file from the analysis rather than failing the job: a file can vanish
@@ -317,10 +370,84 @@ export function persistedRequirements(
   return requirements;
 }
 
+/**
+ * Requirement graph nodes by the REQ code they carry.
+ *
+ * `ingestCiTestReports` keys evidence by the code it finds in a test name;
+ * the graph keys requirements by a content-derived id. This is the join, and
+ * it is a multimap because two documents may state the same code — a report
+ * naming it supports both, and picking one would be a guess.
+ */
+export function requirementNodesByCode(
+  requirements: readonly PersistedRequirement[],
+): Map<string, string[]> {
+  const byCode = new Map<string, string[]>();
+  for (const requirement of requirements) {
+    if (!/^REQ-[A-Z\d]+(?:-[A-Z\d]+)*$/.test(requirement.label)) continue;
+    byCode.set(requirement.label, [
+      ...(byCode.get(requirement.label) ?? []),
+      requirement.id,
+    ]);
+  }
+  return byCode;
+}
+
+/**
+ * Collect and parse the CI evidence for one commit, or return an empty set.
+ *
+ * Every failure mode ends the same way — no evidence — because none of them
+ * is a defect in the repository being analysed: no collector wired, no
+ * installation, no Actions, a throttled API, a report that will not parse.
+ * Failing the analysis over any of them would replace a missing grade with a
+ * missing analysis.
+ */
+async function collectedCiEvidence(input: {
+  analyzedCommitSha: string;
+  collect: CiEvidenceCollector | undefined;
+  nodeByPath: ReadonlyMap<string, string>;
+  repositoryFullName: string;
+  requirementNodesByCode: ReadonlyMap<string, readonly string[]>;
+  scope: { readonly repositoryId: string; readonly workspaceId: string };
+}): Promise<CiEvidenceInput> {
+  const empty = {
+    analyzedCommitSha: input.analyzedCommitSha,
+    measured: [],
+    nodeByPath: input.nodeByPath,
+    requirementNodesByCode: input.requirementNodesByCode,
+    scope: input.scope,
+    testEvidence: [],
+  } satisfies CiEvidenceInput;
+  if (!input.collect) return empty;
+
+  let collected: CollectedCiEvidence | null;
+  try {
+    collected = await input.collect({
+      analyzedCommitSha: input.analyzedCommitSha,
+      repositoryFullName: input.repositoryFullName,
+      repositoryId: input.scope.repositoryId,
+      workspaceId: input.scope.workspaceId,
+    });
+  } catch {
+    return empty;
+  }
+  if (!collected) return empty;
+
+  const ingestion = ingestCiTestReports({
+    analyzedCommitSha: input.analyzedCommitSha,
+    checkRuns: collected.checkRuns,
+    reports: collected.reports,
+  });
+  return {
+    ...empty,
+    measured: ingestCoverageReports(collected.coverage).measured,
+    testEvidence: ingestion.evidence,
+  };
+}
+
 export function createAnalysisJobHandler(
   dependencies: AnalysisJobDependencies,
 ): JobHandler {
-  const { readSource, store } = dependencies;
+  const { collectCiEvidence, readSource, store } = dependencies;
 
   return async (job, context) => {
     const commitSha = commitShaOf(job);
@@ -371,6 +498,7 @@ export function createAnalysisJobHandler(
     // until now they were extracted, used for findings, and dropped, which
     // left every requirement surface empty in production. Their `implements`
     // edges land in the same call (Phase 4 Wave A todo 1).
+    const requirements = persistedRequirements(prepared, nodeByPath, scope);
     await store.reconcileRequirements({
       implementsEdges: persistedImplementsEdges(
         requirementImplementationLinks({ files, prepared }),
@@ -378,9 +506,36 @@ export function createAnalysisJobHandler(
         scope,
       ),
       repositoryId,
-      requirements: persistedRequirements(prepared, nodeByPath, scope),
+      requirements,
       workspaceId,
     });
+    // CI evidence, after the requirements so a `supports` edge has a node to
+    // point at (Wave C todo 18). It runs whatever the collector returns,
+    // including nothing: a repository with no Actions produces no evidence
+    // and no `verified` node, which is the honest reading of "we have not
+    // seen this run".
+    const evidenceDelta = await store.reconcileCiEvidence({
+      ...ciEvidenceRecords(
+        await collectedCiEvidence({
+          analyzedCommitSha: commitSha,
+          collect: collectCiEvidence,
+          nodeByPath,
+          repositoryFullName,
+          requirementNodesByCode: requirementNodesByCode(requirements),
+          scope,
+        }),
+      ),
+      repositoryId,
+      workspaceId,
+    });
+    if (evidenceDelta.written > 0 || evidenceDelta.removed > 0) {
+      // The one number worth saying out loud: how much of this run's evidence
+      // actually carries a grade. Rows with an `unknown` verdict are recorded
+      // and promote nothing, and a silent count would hide that difference.
+      console.log(
+        `  ci evidence ${evidenceDelta.written} row(s), ${evidenceDelta.supporting} supporting, ${evidenceDelta.removed} removed`,
+      );
+    }
     // What the repository's own tests reach, as the scan resolved it — the
     // input the `untested-code` rule needs and cannot derive from metadata.
     const testedPaths = await store.loadTestedPaths({

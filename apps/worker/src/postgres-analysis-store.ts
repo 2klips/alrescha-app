@@ -11,6 +11,7 @@ import type postgres from "postgres";
 
 import type {
   AnalysisJobStore,
+  EvidenceDelta,
   FindingsDelta,
   PersistedFinding,
   PersistedImplementsEdge,
@@ -18,6 +19,7 @@ import type {
   RequirementsDelta,
   StoredArtifact,
 } from "./analysis-job";
+import type { PersistedEvidence, PersistedEvidenceEdge } from "./ci-evidence";
 import type { InTotoStatement } from "@alrescha/core";
 
 interface ArtifactRow {
@@ -268,6 +270,97 @@ export class PostgresAnalysisStore implements AnalysisJobStore {
       `;
 
       return { active: ids.length, superseded: superseded.length };
+    });
+  }
+
+  /**
+   * CI evidence for the analysed commit, replacing what was there (todo 18).
+   *
+   * Wholesale rather than merged, because an evidence row is a claim about
+   * one commit: a `verified` file whose test was deleted two commits ago is
+   * the failure this table exists to prevent. The sweep names only rows this
+   * writer produced (`metadata->>'source' = 'ci'`), so the hand-written and
+   * future evidence kinds are untouched.
+   *
+   * Deleting the graph node is what removes the row and its edges — both
+   * cascade from `graph_nodes` — so the node delete has to come last, after
+   * the rows that reference it are in place.
+   */
+  async reconcileCiEvidence(input: {
+    edges: readonly PersistedEvidenceEdge[];
+    evidence: readonly PersistedEvidence[];
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<EvidenceDelta> {
+    const ids = input.evidence.map(({ id }) => id);
+
+    return this.sql.begin(async (tx) => {
+      for (const row of input.evidence) {
+        // The node first: `evidence.id` is a foreign key onto it.
+        await tx`
+          insert into public.graph_nodes (id, workspace_id, repository_id, kind, label)
+          values (${row.id}, ${input.workspaceId}, ${input.repositoryId},
+                  'evidence', ${row.label})
+          on conflict (id) do update
+            set label = excluded.label, updated_at = now()
+        `;
+        await tx`
+          insert into public.evidence (
+            id, workspace_id, repository_id, source_artifact_id, kind,
+            verdict, metadata
+          ) values (
+            ${row.id}, ${input.workspaceId}, ${input.repositoryId},
+            ${row.sourceArtifactId}, ${row.kind}, ${row.verdict},
+            ${this.sql.json(row.metadata as never)}::jsonb
+          )
+          on conflict (id) do update set
+            source_artifact_id = excluded.source_artifact_id,
+            kind = excluded.kind,
+            verdict = excluded.verdict,
+            metadata = excluded.metadata
+        `;
+      }
+
+      for (const edge of input.edges) {
+        await tx`
+          insert into public.edges (
+            workspace_id, repository_id, source_node_id, target_node_id,
+            relation, family, provenance, confidence
+          ) values (
+            ${input.workspaceId}, ${input.repositoryId}, ${edge.evidenceId},
+            ${edge.targetNodeId}, ${edge.relation}, 'evidence',
+            ${this.sql.json(edge.provenance as never)}::jsonb,
+            ${edge.confidence}
+          )
+          on conflict (workspace_id, repository_id, source_node_id,
+                       target_node_id, relation)
+          do update set
+            provenance = excluded.provenance,
+            confidence = excluded.confidence,
+            family = excluded.family
+        `;
+      }
+
+      const removed = await tx<{ id: string }[]>`
+        delete from public.graph_nodes n
+        where n.workspace_id = ${input.workspaceId}
+          and n.repository_id = ${input.repositoryId}
+          and n.kind = 'evidence'
+          and exists (
+            select 1 from public.evidence e
+            where e.id = n.id and e.metadata->>'source' = 'ci'
+          )
+          and not (n.id = any(${ids}::text[]))
+        returning n.id
+      `;
+
+      return {
+        removed: removed.length,
+        supporting: input.evidence.filter(
+          ({ verdict }) => verdict === "supports",
+        ).length,
+        written: input.evidence.length,
+      };
     });
   }
 
