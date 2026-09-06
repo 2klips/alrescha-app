@@ -39,7 +39,7 @@ Phase 3까지 "push → 스캔 → 그래프 → MCP 22툴 → enrich → 벤치
 
 성능: 프레임 플랜 p95 <16.7ms(vitest, 1,300/4k·5k 컬링 케이스 신설) · 워커 틱 p95 <33.3ms · **브라우저 팬/줌 p95 <16.7ms는 `scripts/bench-graph-browser.ts`(Playwright, 호스트·GPU 명시) 통과 전 미주장** · 정착 후 idle 0프레임 · `/app/map` TTFB 회귀 0 · 필터·토글 시 워커 `start` 0건 · 페이로드 ≤300KB gz 목표 · `apply_repository_scan` set-based 적용 시간과 `/api/ingest/local` 타임아웃 여유 기록 · MCP 기본 로드 = structure+evidence+semantic만. 수치는 전부 실측 전 "추정"(§3-8).
 
-## 보완 설계 접속 — Codex 인수인계 2026-09-06 (R-01~~R-03 · P0-A~~P0-D · S1~S6)
+## 보완 설계 접속 — Codex 인수인계 2026-09-06 (R-01–R-03 · P0-A–P0-D · S1–S6)
 
 [인수인계](../docs/reports/CODEX_TO_CLAUDE_HANDOFF_2026-09-06.md)와 [보완 설계](../docs/reports/REMEDY_DESIGN_2026-09-06.md)의 P0을 **기존 todo에 수용 기준으로 붙인다.** todo 번호·담당·순서·기존 문안은 그대로다. 근거는 격리 실험(메모리 PGlite + 후보 SQL)이지 제품 검증이 아니므로(HANDOFF §6), 여기 붙는 것은 "무엇을 통과해야 완료인가"이지 "이미 참인 사실"이 아니다.
 
@@ -68,7 +68,9 @@ S2 완료 — [S2a 근거 무손실](../.omo/evidence/phase4/remedy-s2a.md)(한 
 S3 완료 — [evidence](../.omo/evidence/phase4/remedy-s3.md): `read_edge_page`(keyset·n+1 hasMore·행/바이트 예산·`exactCount` null·service_role 전용 EXECUTE)와 스토어의 커서 페이징. 실 PostgreSQL(PGlite)에서 99/100/101 경계·권한 음성 테스트. 나머지 컬렉션과 revision fence(OQ-053)는 미착수.
 S4 완료 — [evidence](../.omo/evidence/phase4/remedy-s4.md): `impact_of`에 `mode`·`semanticsVersion` 추가, `dependency-impact`는 imports/calls 역방향 전이 폐쇄(cycle 종료·경로 근거·test 종단·budget 보고). 기본값은 그대로 `related-neighborhood` — 전환은 OQ-052 판정(todo 22).
 S5 완료 — [evidence](../.omo/evidence/phase4/remedy-s5.md): 공통 `buildArtifactCard`(화면·에이전트 동일 카드, 산문 없이도 사실), context pack의 code-card lane(문서로 위장 금지·직렬화 기준 토큰 추정), `prepareChange`는 툴 등록 없는 내부 조합. 화면 렌더는 todo 19 소관.
-S6 미착수.
+S6 완료 — [evidence](../.omo/evidence/phase4/remedy-s6.md): `repositories.data_revision`·`workspaces.memory_revision`(writer가 자기 트랜잭션에서 증분, 읽기 부수 기록은 제외), `read_repository_basis`의 3상태(revision·structure·analysis), `read_edge_page`의 revision fence, 로드의 `readConsistency`. **OQ-053 resolved(⑴)**. 재시도 루프·memory revision writer·analyze 발행은 미구현.
+
+**S1–S6 전부 완료.** 다음은 원래 계획 순서인 Wave C(todo 16–18).
 
 ---
 

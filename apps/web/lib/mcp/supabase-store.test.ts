@@ -111,8 +111,13 @@ class FakeSupabaseClient {
   readonly channels: FakeChannel[] = [];
   readonly removedChannels: FakeChannel[] = [];
   readonly #queues = new Map<string, TableResponse[]>();
-  /** Pages `read_edge_page` hands back, in request order. */
-  rpcPages: TableResponse[] = [];
+  /**
+   * Responses per RPC name, consumed in call order and holding on the last.
+   * Keyed by name because a workspace load calls three different functions
+   * (`revision_of`, `read_edge_page`, `read_repository_basis`) and a single
+   * queue would hand one function another's answer.
+   */
+  rpcResponses: Record<string, TableResponse[]> = {};
 
   constructor(
     responses: Record<string, TableResponse | TableResponse[]>,
@@ -126,12 +131,21 @@ class FakeSupabaseClient {
 
   async rpc(name: string, args: unknown) {
     this.rpcCalls.push({ args, name });
-    return (
-      this.rpcPages[this.rpcCalls.length - 1] ?? {
-        data: { edges: [], hasMore: false, nextCursor: null },
-        error: null,
-      }
-    );
+    const queued = this.rpcResponses[name];
+    if (queued && queued.length > 0) {
+      return queued.length > 1 ? (queued.shift() as TableResponse) : queued[0]!;
+    }
+    if (name === "revision_of") return { data: 1, error: null };
+    if (name === "read_repository_basis") return { data: [], error: null };
+    return {
+      data: { edges: [], hasMore: false, nextCursor: null },
+      error: null,
+    };
+  }
+
+  /** Calls to one RPC, in order. */
+  callsTo(name: string) {
+    return this.rpcCalls.filter((call) => call.name === name);
   }
 
   from(table: string) {
@@ -468,7 +482,7 @@ describe("SupabaseMcpStore.loadWorkspace — edge provenance", () => {
         error: null,
       },
     });
-    fake.rpcPages = [
+    fake.rpcResponses["read_edge_page"] = [
       {
         data: { edges: [...edges], hasMore: false, nextCursor: null },
         error: null,
@@ -672,6 +686,7 @@ describe("SupabaseMcpStore.loadWorkspace — read coverage", () => {
       MCP_WORKSPACE_READ_LIMIT,
     );
     expect(workspace.coverage).toEqual({
+      readConsistency: "revision-fenced",
       result: "partial",
       truncated: [{ limit: MCP_WORKSPACE_READ_LIMIT, table: "artifacts" }],
     });
@@ -679,7 +694,11 @@ describe("SupabaseMcpStore.loadWorkspace — read coverage", () => {
 
   it("calls a read that fit complete", async () => {
     const workspace = await workspaceOf(client(artifactRows(3)));
-    expect(workspace.coverage).toEqual({ result: "complete", truncated: [] });
+    expect(workspace.coverage).toEqual({
+      readConsistency: "revision-fenced",
+      result: "complete",
+      truncated: [],
+    });
   });
 });
 
@@ -854,7 +873,7 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
         error: null,
       },
     });
-    fake.rpcPages = pages.map(({ edges, hasMore }) => ({
+    fake.rpcResponses["read_edge_page"] = pages.map(({ edges, hasMore }) => ({
       data: {
         edges: edges.map(edge),
         hasMore,
@@ -887,14 +906,16 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
       "e2",
       "e3",
     ]);
-    expect(fake.rpcCalls.map(({ name }) => name)).toEqual([
-      "read_edge_page",
-      "read_edge_page",
-    ]);
+    const pages = fake.callsTo("read_edge_page");
+    expect(pages).toHaveLength(2);
     // The second request resumes from the first page's last row.
-    expect(fake.rpcCalls[0]?.args).toMatchObject({ after_edge_id: null });
-    expect(fake.rpcCalls[1]?.args).toMatchObject({ after_edge_id: "e2" });
-    expect(workspace.coverage).toEqual({ result: "complete", truncated: [] });
+    expect(pages[0]?.args).toMatchObject({ after_edge_id: null });
+    expect(pages[1]?.args).toMatchObject({ after_edge_id: "e2" });
+    expect(workspace.coverage).toEqual({
+      readConsistency: "revision-fenced",
+      result: "complete",
+      truncated: [],
+    });
   });
 
   it("stops at its page budget and says so rather than reading forever", async () => {
@@ -906,8 +927,9 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
     );
     const workspace = await workspaceOf(fake);
 
-    expect(fake.rpcCalls).toHaveLength(MCP_EDGE_MAX_PAGES);
+    expect(fake.callsTo("read_edge_page")).toHaveLength(MCP_EDGE_MAX_PAGES);
     expect(workspace.coverage).toEqual({
+      readConsistency: "revision-fenced",
       result: "partial",
       truncated: [
         { limit: MCP_EDGE_PAGE_ROWS * MCP_EDGE_MAX_PAGES, table: "edges" },
@@ -920,7 +942,82 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
     const workspace = await workspaceOf(fake);
 
     // Unresumable is not a reason to loop on the same page forever.
-    expect(fake.rpcCalls).toHaveLength(1);
+    expect(fake.callsTo("read_edge_page")).toHaveLength(1);
     expect(workspace.coverage?.result).toBe("partial");
+  });
+
+  /**
+   * Codex remedy §5.3 (S6). A workspace load makes many reads and Read
+   * Committed gives each its own snapshot, so the only honest way to claim
+   * they belong together is to check that no writer published between the
+   * first and the last.
+   */
+  it("passes the revision it started with to every page", async () => {
+    const fake = client([{ edges: ["e1"], hasMore: false }]);
+    fake.rpcResponses["revision_of"] = [{ data: 42, error: null }];
+    await workspaceOf(fake);
+
+    expect(fake.callsTo("read_edge_page")[0]?.args).toMatchObject({
+      expected_revision: 42,
+    });
+  });
+
+  it("calls the read unproven when a writer published during it", async () => {
+    const fake = client([{ edges: ["e1"], hasMore: false }]);
+    // Before, then after: the ground moved while the reads were running.
+    fake.rpcResponses["revision_of"] = [
+      { data: 42, error: null },
+      { data: 43, error: null },
+    ];
+    const workspace = await workspaceOf(fake);
+
+    expect(workspace.coverage?.readConsistency).toBe("unproven");
+  });
+
+  it("stops splicing states together when a fenced page says the ground moved", async () => {
+    const fake = client([]);
+    fake.rpcResponses["read_edge_page"] = [
+      {
+        data: {
+          edges: [],
+          hasMore: true,
+          nextCursor: "e1",
+          revisionChanged: true,
+        },
+        error: null,
+      },
+    ];
+    const workspace = await workspaceOf(fake);
+
+    expect(fake.callsTo("read_edge_page")).toHaveLength(1);
+    expect(workspace.repositories[0]?.edges).toEqual([]);
+    expect(workspace.coverage?.result).toBe("partial");
+  });
+
+  it("reports what each repository is standing on", async () => {
+    const fake = client([{ edges: [], hasMore: false }]);
+    fake.rpcResponses["read_repository_basis"] = [
+      {
+        data: [
+          {
+            analyzedCommit: null,
+            dataRevision: 7,
+            graphGeneration: null,
+            indexedCommit: "a".repeat(40),
+            repositoryId: REPOSITORY_ID,
+            stages: { analysis: "pending", structure: "ready" },
+          },
+        ],
+        error: null,
+      },
+    ];
+    const workspace = await workspaceOf(fake);
+
+    // A published graph and findings from no commit at all is a real state,
+    // and the reader is told rather than left to infer it.
+    expect(workspace.repositories[0]?.basis).toMatchObject({
+      dataRevision: 7,
+      stages: { analysis: "pending", structure: "ready" },
+    });
   });
 });

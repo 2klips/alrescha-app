@@ -27,6 +27,7 @@ import {
   type McpEdgeProvenance,
   type McpEdgeRelation,
   type McpEdgeTier,
+  type McpReadBasis,
   type McpReadTruncation,
   type McpFindingProvenance,
   type McpNodeType,
@@ -657,8 +658,22 @@ export class SupabaseMcpStore implements McpStore {
    * and reports whether more remain, so this stops on a stated budget rather
    * than on an invisible transport cap — and says which, and where it got to.
    */
+  /** The fence value for the whole workspace, or null when it is unreadable. */
+  async #revisionOf(workspaceId: string): Promise<number | null> {
+    const response = await this.client.rpc("revision_of", {
+      target_repository_id: null,
+      target_workspace_id: workspaceId,
+    });
+    // A store that cannot read the revision reports an unproven read rather
+    // than pretending to a fence it does not have.
+    if (response.error) return null;
+    const value = Number(response.data);
+    return Number.isFinite(value) ? value : null;
+  }
+
   async #readEdgePages(
     workspaceId: string,
+    expectedRevision: number | null,
   ): Promise<{ rows: Row[]; truncation: McpReadTruncation | null }> {
     const collected: Row[] = [];
     let cursor: string | null = null;
@@ -666,12 +681,21 @@ export class SupabaseMcpStore implements McpStore {
       const response = await this.client.rpc("read_edge_page", {
         after_edge_id: cursor,
         byte_budget: MCP_EDGE_PAGE_BYTES,
+        expected_revision: expectedRevision,
         row_budget: MCP_EDGE_PAGE_ROWS,
         target_repository_id: null,
         target_workspace_id: workspaceId,
       });
       queryError("MCP edge page query failed", response.error);
       const page = record(response.data);
+      // The ground moved under a fenced page: stop rather than splice rows
+      // from two states together. The caller's coverage says so.
+      if (page.revisionChanged === true) {
+        return {
+          rows: collected,
+          truncation: { limit: collected.length, table: "edges" },
+        };
+      }
       collected.push(...rows(page.edges));
       if (page.hasMore !== true) return { rows: collected, truncation: null };
       cursor = typeof page.nextCursor === "string" ? page.nextCursor : null;
@@ -700,6 +724,14 @@ export class SupabaseMcpStore implements McpStore {
      * without telling anyone where it is.
      */
     const truncated: McpReadTruncation[] = [];
+    /**
+     * The revision fence (Codex remedy §5.3, step S6). A workspace load makes
+     * many reads and Read Committed gives each its own snapshot, so the only
+     * honest way to claim they belong together is to check that no writer
+     * published between the first and the last. Read before, read after, and
+     * report which.
+     */
+    const revisionBefore = await this.#revisionOf(workspaceId);
     const kept = (table: string, data: unknown): Row[] => {
       const all = rows(data);
       if (all.length <= MCP_WORKSPACE_READ_LIMIT) return all;
@@ -754,7 +786,7 @@ export class SupabaseMcpStore implements McpStore {
         .eq("workspace_id", workspaceId)
         .order("id", { ascending: true })
         .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.#readEdgePages(workspaceId),
+      this.#readEdgePages(workspaceId, revisionBefore),
       this.client
         .from("findings")
         .select(
@@ -838,6 +870,19 @@ export class SupabaseMcpStore implements McpStore {
     const evidenceRows = kept("evidence", evidence.data);
     const edgeRows = edgePages.rows;
     if (edgePages.truncation) truncated.push(edgePages.truncation);
+
+    // What each repository's rows are standing on: the revision, the commit
+    // the structure was published from, and whether the derived layer caught
+    // up. Three independent states, reported as three (REMEDY §5.4).
+    const basisResponse = await this.client.rpc("read_repository_basis", {
+      target_workspace_id: workspaceId,
+    });
+    const basisByRepository = new Map<string, McpReadBasis>(
+      (basisResponse.error ? [] : rows(basisResponse.data)).map((row) => [
+        requiredString(row, "repositoryId"),
+        row as unknown as McpReadBasis,
+      ]),
+    );
     /**
      * What the vocabulary filter left behind, per repository and relation.
      * A read that returns less than it found without saying so makes a
@@ -879,8 +924,15 @@ export class SupabaseMcpStore implements McpStore {
       ]),
     );
 
+    const revisionAfter = await this.#revisionOf(workspaceId);
+    const fenceHeld =
+      revisionBefore !== null &&
+      revisionAfter !== null &&
+      revisionBefore === revisionAfter;
+
     return {
       coverage: {
+        readConsistency: fenceHeld ? "revision-fenced" : "unproven",
         result: truncated.length === 0 ? "complete" : "partial",
         truncated,
       },
@@ -957,6 +1009,9 @@ export class SupabaseMcpStore implements McpStore {
                   },
                 ],
           defaultBranch: requiredString(repository, "default_branch"),
+          ...(basisByRepository.has(repositoryId)
+            ? { basis: basisByRepository.get(repositoryId) as McpReadBasis }
+            : {}),
           edgeOmissions: edgeOmissionsFor(repositoryId),
           edges: edgeRows
             .filter((row) => row.repository_id === repositoryId)

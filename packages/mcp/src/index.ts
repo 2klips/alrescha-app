@@ -74,6 +74,7 @@ export type {
   McpEdgeProvenance,
   McpEdgeRelation,
   McpEdgeTier,
+  McpReadBasis,
   McpReadCoverage,
   McpReadTruncation,
   McpEvidenceData,

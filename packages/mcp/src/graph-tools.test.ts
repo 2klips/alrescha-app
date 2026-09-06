@@ -510,6 +510,7 @@ describe("targeted reads and what they can claim", () => {
       {
         ...base,
         coverage: {
+          readConsistency: "unproven",
           result: "partial",
           truncated: [{ limit: 2_000, table: "edges" }],
         },
@@ -528,6 +529,7 @@ describe("targeted reads and what they can claim", () => {
         {
           ...base,
           coverage: {
+            readConsistency: "unproven",
             result: "partial",
             truncated: [{ limit: 2_000, table: "edges" }],
           },

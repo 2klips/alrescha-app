@@ -201,11 +201,45 @@ export interface McpArtifactMatch {
 
 export interface McpReadCoverage {
   /**
+   * How much the rows can be trusted to belong together (Codex remedy §5.3,
+   * step S6).
+   *
+   * `single-statement` — one SELECT, one snapshot.
+   * `revision-fenced` — several reads, and the repository revision was the
+   * same before and after, so no writer published between them.
+   * `unproven` — several reads and the revision moved, so this is a mix of
+   * two states. Not an error, and not something to present as one picture
+   * either.
+   */
+  readConsistency: "revision-fenced" | "single-statement" | "unproven";
+  /**
    * `complete` for the stated scope — never a claim about the repository's
    * behaviour, only about the rows this read carried.
    */
   result: "complete" | "partial";
   truncated: McpReadTruncation[];
+}
+
+/**
+ * What one repository's rows are standing on (REMEDY §4's ReadBasis).
+ *
+ * The three states are independent: `dataRevision` says whether the rows are
+ * consistent, `structure` says whether the graph is published, and `analysis`
+ * says whether the derived layer caught up. A repository can have a real,
+ * complete graph and findings from an older commit, and a reader that
+ * collapses those into one word will get one of them wrong.
+ */
+export interface McpReadBasis {
+  analyzedCommit: string | null;
+  dataRevision: number;
+  /** Null: there is no immutable generation to name, so nothing is named. */
+  graphGeneration: null;
+  indexedCommit: string | null;
+  repositoryId: string;
+  stages: {
+    analysis: "current" | "pending" | "unavailable";
+    structure: "building" | "ready";
+  };
 }
 
 /** An ID-token heading this repository's own documents declare. */
@@ -331,6 +365,8 @@ export interface McpRepositoryData {
   indexEntries: McpIndexEntryData[];
   overview: string;
   receipts: McpReceiptData[];
+  /** What this repository's rows are standing on. */
+  basis?: McpReadBasis;
   /** What the edge read left out, per stored relation. */
   edgeOmissions?: McpEdgeOmission[];
   requirements: McpRequirementData[];

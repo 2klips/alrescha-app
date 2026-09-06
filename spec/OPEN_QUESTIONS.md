@@ -449,9 +449,9 @@
 
 - 발견: Codex 보완 설계 P0-B / [REMEDY §5.3~§5.4](../docs/reports/REMEDY_DESIGN_2026-09-06.md), `apps/web/lib/mcp/supabase-store.ts`(`loadWorkspace`), `apps/web/lib/map/workspace-map.ts`
 - 내용: 페이지를 나눠 읽으면 페이지 사이에 데이터가 바뀔 수 있다. 단일 SELECT의 snapshot 보장은 그 페이지까지고, PG 17 기본 Read Committed에서는 같은 트랜잭션의 연속 SELECT도 다른 시점을 본다 — 기존 조회를 VOLATILE PL/pgSQL 함수로 감싸는 것으로는 해결되지 않는다. 해결책은 revision fence(읽기 전후 같은 revision 확인) 또는 immutable generation인데, 둘 다 **writer 쪽 규율**을 요구한다: read-visible 변경과 revision UPDATE가 같은 트랜잭션이어야 하고, `access_events`·`last_used_at` 같은 읽기 부수 기록은 넣으면 안 된다(읽기가 자기 자신을 무효화한다). 커밋 SHA는 대용이 될 수 없다 — 같은 커밋에서 enrich·CI·todo 상태가 바뀐다.
-- 임시 결정: 도입하지 않는다. 지금은 고정된 작은 읽기로 가고, 불완전한 조회는 `complete=false`와 사유로 **정직하게 보고**한다. 없는 revision을 커밋 SHA나 현재 시각으로 꾸며 채우지 않는다(null/unknown).
-- 필요한 결정: ⑴ repo 공통 revision 하나 + workspace memory revision 하나로 시작(기본 후보 — 종류별 counter를 늘리지 않는다) ⑵ generation 기반 immutable snapshot(큰 페이지 조회·과거 조회 수요가 확인될 때) ⑶ 계속 도입하지 않고 페이지 사이 변경은 재시작으로만 처리.
-- 상태: open. todo 22의 bounded read가 실제로 페이지를 나눌 때 판정.
+- 임시 결정(폐기): 도입하지 않고 불완전한 조회를 정직하게 보고만 한다.
+- 필요한 결정: ⑴ repo 공통 revision 하나 + workspace memory revision 하나로 시작(종류별 counter를 늘리지 않는다) ⑵ generation 기반 immutable snapshot ⑶ 계속 도입하지 않고 페이지 사이 변경은 재시작으로만 처리.
+- 상태: **resolved(보완 S6, 2026-09-06)** — ⑴ 채택. `repositories.data_revision`과 `workspaces.memory_revision` 둘뿐이고, 두 writer(`apply_repository_scan`은 커밋을 발행하는 바로 그 UPDATE에서, `apply_artifact_summaries`는 실제로 행이 바뀐 경우에만)가 **자기 트랜잭션 안에서** 증분한다. `access_events`·`last_used_at`는 증분하지 않는다 — 넣으면 읽기가 자기를 무효화한다. `read_edge_page(… expected_revision)`가 fence이고, 어긋나면 행 대신 `revisionChanged`와 현재 revision을 돌려준다. 워크스페이스 로드는 읽기 전후 revision을 비교해 `revision-fenced`인지 `unproven`인지 보고한다. ⑵는 미채택 — 과거 조회 수요가 없고, 없는 generation을 커밋 SHA로 꾸미지 않으려고 `graphGeneration`은 명시적 null이다. 재시도 루프는 미구현(정직한 보고까지만) — [evidence](../.omo/evidence/phase4/remedy-s6.md).
 
 ## OQ-054 — `.alrescha.json`가 확장할 수 있는 것이 접두어인가 패턴인가
 
