@@ -35,8 +35,15 @@ function StatCard({
     <article className="pilot-stat-card">
       <span>{label}</span>
       <strong>{shortfall ?? headline}</strong>
-      {shortfall ? null : <p>{detail}</p>}
-      <small>{shortfall ? shortfall : footnote}</small>
+      {/* Below the threshold the supporting numbers go too. Printing them
+          under "not enough evidence" would be handing over the thin figure
+          the card just declined to headline. */}
+      {shortfall ? null : (
+        <>
+          <p>{detail}</p>
+          <small>{footnote}</small>
+        </>
+      )}
       <small className="pilot-stat-assumption">
         {STATS.cards.assumptionLabel}: {assumption}
       </small>

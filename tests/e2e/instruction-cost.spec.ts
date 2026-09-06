@@ -9,6 +9,7 @@ import { THEME_STORAGE_KEY } from "../../apps/web/lib/theme/theme-preference";
 import {
   createWorkspaceUser,
   deleteWorkspaceUser,
+  serviceRoleClient,
   signIn,
 } from "./helpers/session";
 
@@ -145,6 +146,42 @@ test("the demo cost table states the tokenizer assumption", async ({
   ).toContainText(HARNESS.cost.modes.unknown);
 });
 
+/**
+ * Enough served calls for the "measured" card to have a headline.
+ *
+ * A brand-new workspace has none, and the screen is right to show its empty
+ * state — which is why the first version of this test found the empty state
+ * instead of the caveat. Seeded through the service role because no UI
+ * creates access events; the rows are the ones the MCP server writes.
+ */
+async function seedServedCalls(
+  workspaceId: string,
+  userId: string,
+): Promise<void> {
+  const admin = serviceRoleClient();
+  const tokenId = "01K900000000000000000000E2";
+  // Crockford base32: no I, L, O or U, which is why this is not `toString(36)`.
+  const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  const token = await admin.from("mcp_tokens").insert({
+    created_by: userId,
+    id: tokenId,
+    token_hash: `e2e-${workspaceId}`,
+    token_prefix: "sp_e2e0",
+    workspace_id: workspaceId,
+  });
+  expect(token.error?.message ?? null).toBeNull();
+  const events = await admin.from("access_events").insert(
+    Array.from({ length: 24 }, (_unused, index) => ({
+      id: `01K9000000000000000000000${CROCKFORD[index]}`,
+      response_chars: 400 + index,
+      token_id: tokenId,
+      tool: "search_index",
+      workspace_id: workspaceId,
+    })),
+  );
+  expect(events.error?.message ?? null).toBeNull();
+}
+
 test("the stats page carries the benchmark caveat beside the link", async ({
   context,
   page,
@@ -153,9 +190,19 @@ test("the stats page carries the benchmark caveat beside the link", async ({
   try {
     await signIn(context, user);
     await page.goto("/app/stats");
-    // A fresh workspace has not consented, so the caveat lives one click in.
+    // Consent first: nothing is collected or shown before it (ADR-011).
     await page.getByRole("button", { name: STATS.consent.enable }).click();
-    await expect(page.getByLabel(STATS.filter.label)).toBeVisible();
+    await seedServedCalls(user.workspaceId, user.userId);
+    await page.reload();
+
+    await expect(
+      page.getByLabel(STATS.filter.label, { exact: true }),
+    ).toBeVisible();
+    // The measured card has a headline; the two without evidence say so
+    // instead of showing a thin number.
+    await expect(page.getByText(STATS.served.label)).toBeVisible();
+    await expect(page.getByText(STATS.cards.insufficient(0, 5))).toBeVisible();
+
     await page.getByText(STATS.methodology.summary).click();
     await expect(
       page.getByText(STATS.methodology.benchmarkCaveat),

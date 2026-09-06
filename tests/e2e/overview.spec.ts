@@ -50,8 +50,15 @@ test("all four zones render with derived data", async ({ page }) => {
   // Agent zone: MCP tool names render in the feed.
   await expect(page.locator(".overview-agent-list code").first()).toBeVisible();
 
-  // Brain zone: all four areas render with counts.
-  await expect(page.locator(".overview-brain-areas li")).toHaveCount(4);
+  // Brain zone: every area renders with a count. Six since Wave A todo 4
+  // added `database` and the `기타` catch-all — and the assertion is now
+  // that each one carries a number, which is what the zone is for. A count
+  // alone would have gone on passing with six empty rows.
+  const areas = page.locator(".overview-brain-areas li");
+  await expect(areas).toHaveCount(6);
+  for (const text of await areas.allInnerTexts()) {
+    expect(text).toMatch(/\d/);
+  }
 
   await page.screenshot({
     fullPage: true,

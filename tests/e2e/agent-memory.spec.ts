@@ -98,22 +98,28 @@ test("an agent orients, records memory, and the map shows it", async ({
     );
 
     // Search serves the real scan (Wave C todo 6): the scan now derives
-    // index_entries, so `search_nodes` answers on a freshly scanned
+    // index_entries, so the ID-first search answers on a freshly scanned
     // workspace — the Wave D gap, closed and pinned here.
+    //
+    // `search_nodes` was merged into `search_index(include_excerpt: false)`
+    // in todo 22 ⑴, and this call is the live proof that the merge kept the
+    // behaviour: ids and paths, and no prose on the wire.
     const search = await mcp.callTool({
-      arguments: { query: "session" },
-      name: "search_nodes",
+      arguments: { include_excerpt: false, query: "session" },
+      name: "search_index",
     });
     expect(search.isError).not.toBe(true);
     const searchResults = (
       search.structuredContent as {
-        results: { nodeId: string; path: string }[];
+        results: { excerpt?: string; nodeId: string; path: string }[];
       }
     ).results;
     expect(searchResults.length).toBeGreaterThan(0);
     expect(searchResults.some((row) => row.path === "src/session.ts")).toBe(
       true,
     );
+    // Omitted, not blanked — an empty string is still a key on the wire.
+    expect(searchResults.every((row) => !("excerpt" in row))).toBe(true);
 
     // Node ids for the write-back, read straight from the stored artifact
     // rows — the canonical address book regardless of search.

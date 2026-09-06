@@ -20,8 +20,24 @@ test("area chips filter the map and report their counts", async ({ page }) => {
   await page.goto("/map");
 
   const chips = page.locator(".arr-area-chip");
-  // One chip per area plus "전체 영역".
-  await expect(chips).toHaveCount(5);
+  // One chip per area plus "전체 영역". Two more areas than when this was
+  // written: Wave A todo 4 added `database` and the `기타` catch-all, and
+  // the set is asserted rather than the count so the next addition has to
+  // say which one it is.
+  await expect(chips).toHaveCount(7);
+  await expect(
+    chips.evaluateAll((nodes) =>
+      nodes.map((node) => node.getAttribute("data-area")),
+    ),
+  ).resolves.toEqual([
+    "all",
+    "frontend",
+    "backend",
+    "database",
+    "docs",
+    "tests",
+    "other",
+  ]);
   await expect(chips.first()).toHaveAttribute("aria-pressed", "true");
 
   const hits = page.locator('[data-testid="brain-map-hits"] [data-node-id]');

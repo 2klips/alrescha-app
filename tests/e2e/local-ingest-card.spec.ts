@@ -181,9 +181,19 @@ test("a pushed PROGRESS.md fills the live todo board", async ({
     // Requirement coverage has no `implements` edge behind it on a
     // graph-only ingest, so the card must say so rather than print 0%
     // (Wave A todo 1).
-    await expect(page.locator(".progress-metric")).toContainText(
-      PROGRESS_COPY.metrics.noLinks,
-    );
+    // Scoped to the coverage card: todo 19 added a second metric (todo
+    // completion), and an unscoped locator would have started passing on
+    // whichever card happened to match. The basis attribute is the claim —
+    // "nobody measured this" is a state, not a missing number.
+    const coverage = page.locator('.progress-metric[data-basis="no-data"]');
+    await expect(coverage).toContainText(PROGRESS_COPY.metrics.notMeasured);
+    // Three states, not two, and this scenario is the first: a graph-only
+    // push has no requirements at all (`no-data`), which is a different fact
+    // from having requirements with no `implements` edge (`no-links`) and a
+    // different fact again from 0%. The card must not borrow either.
+    await expect(coverage).not.toContainText(PROGRESS_COPY.metrics.noLinks);
+    await expect(coverage).not.toContainText("0%");
+    await expect(page.locator(".progress-metric")).toHaveCount(2);
   } finally {
     await rm(projectDir, { force: true, recursive: true });
     await deleteWorkspaceUser(user.userId);
