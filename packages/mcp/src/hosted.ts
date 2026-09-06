@@ -299,12 +299,20 @@ const IMPACT_OF_TOOL = {
 
 const LOG_PROGRESS_TOOL = {
   annotations: WRITE_METADATA_TOOL,
-  description: "Record one progress event against a task.",
+  description:
+    "Record one progress event. Lands on an existing todo by id or by title; says which it matched.",
   inputSchema: z.object({
+    commit_sha: z
+      .string()
+      .trim()
+      .regex(/^[0-9a-f]{40}$/)
+      .optional(),
     refs: z.array(z.string().trim().min(1).max(200)).max(10).optional(),
+    repository_id: z.string().trim().min(1).optional(),
     status: z.enum(["started", "progress", "done", "blocked"]),
     summary: z.string().trim().min(1).max(200),
     task: z.string().trim().min(1).max(120),
+    todo_id: z.string().trim().min(1).optional(),
   }),
 };
 
@@ -1011,7 +1019,19 @@ function createServer(
 
   server.registerTool("log_progress", LOG_PROGRESS_TOOL, async (input) => {
     requireScope("mcp:write");
-    const event = await store.appendProgress(principal, input);
+    const event = await store.appendProgress(principal, {
+      ...(input.commit_sha === undefined
+        ? {}
+        : { commitSha: input.commit_sha }),
+      ...(input.refs === undefined ? {} : { refs: input.refs }),
+      ...(input.repository_id === undefined
+        ? {}
+        : { repositoryId: input.repository_id }),
+      status: input.status,
+      summary: input.summary,
+      task: input.task,
+      ...(input.todo_id === undefined ? {} : { todoId: input.todo_id }),
+    });
     // The nodes the entry names light up like any other touch (todo 19 ⑹).
     // A write that changed the graph and left no trace in the access stream
     // was invisible to the live map and to the telemetry that counts what a
@@ -1020,8 +1040,13 @@ function createServer(
     return toolResult(
       {
         event: {
+          commitSha: event.commitSha ?? null,
           id: event.id,
+          // "created" and "matched by title" are different outcomes for a
+          // caller who thought they were updating something (todo 21).
+          matched: event.matched ?? "created",
           refs: event.refs,
+          repositoryId: event.repositoryId ?? null,
           status: event.status,
           summary: event.summary,
           task: event.task,

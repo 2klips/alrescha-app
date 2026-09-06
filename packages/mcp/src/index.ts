@@ -117,6 +117,7 @@ export type {
   McpStore,
   McpTokenRecord,
   McpTodo,
+  McpTodoMatch,
   McpTodoStatus,
   McpWorkspaceData,
   PublicMcpTokenRecord,

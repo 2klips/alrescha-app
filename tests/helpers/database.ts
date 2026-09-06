@@ -145,6 +145,8 @@ export const DOC_PAGES_MIGRATION =
   "supabase/migrations/202609060010_doc_pages.sql";
 export const SESSION_TELEMETRY_MIGRATION =
   "supabase/migrations/202609060011_session_telemetry.sql";
+export const PROGRESS_ATTRIBUTION_MIGRATION =
+  "supabase/migrations/202609060012_progress_attribution.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -207,6 +209,7 @@ export const ALL_MIGRATIONS = [
   FINDING_DISMISSAL_MIGRATION,
   DOC_PAGES_MIGRATION,
   SESSION_TELEMETRY_MIGRATION,
+  PROGRESS_ATTRIBUTION_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

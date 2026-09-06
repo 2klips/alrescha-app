@@ -37,6 +37,7 @@ import {
   type McpFindingProvenance,
   type McpNodeType,
   type McpSourceSpan,
+  type McpTodoMatch,
   type McpNote,
   type McpPackMeasurement,
   type McpPrincipal,
@@ -113,6 +114,18 @@ function isScope(value: string): value is McpScope {
  * about, and it had fallen six values behind — `memory`, `route`,
  * `db_object`, `section` and now `todo` all failed this guard.
  */
+/** The four words the SQL returns; anything else is a schema that moved. */
+function todoMatch(value: unknown): McpTodoMatch {
+  const word = String(value);
+  return word === "created" ||
+    word === "id" ||
+    word === "normalized_title" ||
+    word === "source_key" ||
+    word === "todo_id"
+    ? word
+    : "created";
+}
+
 function isNodeType(value: unknown): value is McpNodeType {
   return (MCP_NODE_TYPES as readonly string[]).includes(String(value));
 }
@@ -431,17 +444,23 @@ export class SupabaseMcpStore implements McpStore {
   async appendProgress(
     principal: McpPrincipal,
     input: {
+      commitSha?: string | undefined;
       refs?: string[] | undefined;
+      repositoryId?: string | undefined;
       status: McpProgressStatus;
       summary: string;
       task: string;
+      todoId?: string | undefined;
     },
   ): Promise<McpProgressEvent> {
     const result = await this.client.rpc("log_progress_atomic", {
+      p_commit_sha: input.commitSha ?? null,
       p_refs: input.refs ?? [],
+      p_repository_id: input.repositoryId ?? null,
       p_status: input.status,
       p_summary: input.summary,
       p_task: input.task,
+      p_todo_id: input.todoId ?? null,
       p_token_id: principal.tokenId,
       p_user_id: principal.userId,
       p_workspace_id: principal.workspaceId,
@@ -450,9 +469,15 @@ export class SupabaseMcpStore implements McpStore {
     const row = rows(result.data)[0];
     if (!row) throw new Error("MCP progress write failed: empty result");
     const event: McpProgressEvent = {
+      commitSha: input.commitSha ?? null,
       id: requiredString(row, "event_id"),
+      // How the entry found its todo, as the function reports it — not
+      // re-derived here, because two answers to "did this create a todo"
+      // is exactly the drift the equivalence test exists to catch.
+      matched: todoMatch(row.todo_matched),
       occurredAt: requiredString(row, "event_occurred_at"),
       refs: input.refs ?? [],
+      repositoryId: input.repositoryId ?? null,
       status: input.status,
       summary: input.summary,
       task: input.task,

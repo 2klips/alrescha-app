@@ -663,3 +663,5 @@ export {
   moduleMemberDigest,
 } from "./brain/modules";
 export type { ModuleCluster, ModuleGraphEdge } from "./brain/modules";
+
+export { normalizeTodoTitle } from "./progress/todo-title";

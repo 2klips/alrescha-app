@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import type { SummaryState } from "@alrescha/core";
+import { normalizeTodoTitle, type SummaryState } from "@alrescha/core";
 
 export const MCP_SCOPES = ["mcp:read", "mcp:write"] as const;
 
@@ -593,6 +593,14 @@ export interface McpPrincipal {
 export type McpProgressStatus = "started" | "progress" | "done" | "blocked";
 export type McpTodoStatus = "open" | "in-progress" | "done" | "blocked";
 
+/**
+ * How a progress entry reached its todo (todo 21). Reported rather than
+ * inferred: "created" and "normalized_title" are very different outcomes for
+ * a caller who thought they were updating something.
+ */
+export type McpTodoMatch =
+  "created" | "id" | "normalized_title" | "source_key" | "todo_id";
+
 export interface McpTodo {
   createdAt: string;
   id: string;
@@ -609,7 +617,12 @@ export interface McpTodo {
 }
 
 export interface McpProgressEvent {
+  /** The commit the caller named, when it named one. */
+  commitSha?: string | null;
   id: string;
+  /** How the entry found its todo — the same four words in both stores. */
+  matched?: McpTodoMatch;
+  repositoryId?: string | null;
   occurredAt: string;
   refs: string[];
   status: McpProgressStatus;
@@ -758,13 +771,24 @@ export interface McpStore {
       text?: string | undefined;
     },
   ): Promise<McpWriteMemoryResult>;
+  /**
+   * Record one progress entry, against the todo it is about (todo 21).
+   *
+   * `todoId` names one outright; without it the writer matches by id, then
+   * by the key it mints itself, then by **normalised title** — which is what
+   * lets an entry land on a checkbox the scan read out of a document rather
+   * than minting a second todo with the same name.
+   */
   appendProgress(
     principal: McpPrincipal,
     input: {
+      commitSha?: string | undefined;
       refs?: string[] | undefined;
+      repositoryId?: string | undefined;
       status: McpProgressStatus;
       summary: string;
       task: string;
+      todoId?: string | undefined;
     },
   ): Promise<McpProgressEvent>;
   authenticateAccessToken(secret: string): Promise<McpPrincipal | null>;
@@ -1231,10 +1255,13 @@ export class InMemoryMcpStore implements McpStore {
   async appendProgress(
     principal: McpPrincipal,
     input: {
+      commitSha?: string | undefined;
       refs?: string[] | undefined;
+      repositoryId?: string | undefined;
       status: McpProgressStatus;
       summary: string;
       task: string;
+      todoId?: string | undefined;
     },
   ): Promise<McpProgressEvent> {
     await this.loadWorkspace(principal);
@@ -1249,22 +1276,81 @@ export class InMemoryMcpStore implements McpStore {
     if (refs.length > 10)
       throw new Error("log_progress refs must contain at most 10 entries");
 
+    if (input.commitSha && !/^[0-9a-f]{40}$/.test(input.commitSha))
+      throw new Error(
+        "log_progress commit_sha must be a 40-character commit sha",
+      );
+    /**
+     * Both halves. A fixture's todos live on the workspace object and this
+     * writer's own live in `#todos`; matching against only the second made
+     * every scanned checkbox invisible here while the SQL found it — which
+     * is the divergence the equivalence test caught on its first run.
+     */
+    const mine = [
+      ...(this.#workspaces.get(principal.workspaceId)?.todos ?? []),
+      ...this.#todos.filter(
+        (todo) => todo.workspaceId === principal.workspaceId,
+      ),
+    ];
+    if (
+      input.repositoryId !== undefined &&
+      !(
+        this.#workspaces
+          .get(principal.workspaceId)
+          ?.repositories.some(({ id }) => id === input.repositoryId) ?? false
+      )
+    ) {
+      throw new Error("log_progress repository_id is not in this workspace");
+    }
+
     const sourceKey = `progress:${task.toLocaleLowerCase("en-US")}`;
-    const existingTodo = this.#todos.find(
-      (todo) =>
-        todo.workspaceId === principal.workspaceId &&
-        (todo.id === task || todo.sourceKey === sourceKey),
-    );
+    const normalizedTitle = normalizeTodoTitle(task);
+    /**
+     * The same order the SQL walks (todo 21): named outright, then exact id,
+     * then the key this writer mints, then the normalised title. Widest last,
+     * so an exact answer always beats a matched one — and the answer says
+     * which, because "created" and "matched by title" are very different
+     * outcomes for a caller who thought they were updating something.
+     */
+    let matched: McpTodoMatch = "created";
+    let existingTodo: McpTodo | undefined;
+    if (input.todoId !== undefined) {
+      existingTodo = mine.find((todo) => todo.id === input.todoId);
+      if (!existingTodo)
+        throw new Error("log_progress todo_id is not in this workspace");
+      matched = "todo_id";
+    } else {
+      existingTodo = mine.find((todo) => todo.id === task);
+      if (existingTodo) matched = "id";
+      else {
+        existingTodo = mine.find((todo) => todo.sourceKey === sourceKey);
+        if (existingTodo) matched = "source_key";
+        else {
+          existingTodo = mine.find(
+            (todo) => normalizeTodoTitle(todo.title) === normalizedTitle,
+          );
+          if (existingTodo) matched = "normalized_title";
+        }
+      }
+    }
     const todoStatus: McpTodoStatus =
       input.status === "started" || input.status === "progress"
         ? "in-progress"
         : input.status;
     const eventId = createUlid(now);
     const todo: McpTodo = existingTodo
-      ? { ...existingTodo, status: todoStatus, updatedAt: now.toISOString() }
+      ? {
+          ...existingTodo,
+          // Attribution fills a gap; it never moves a todo that already
+          // names a repository to one the caller happened to mention.
+          repositoryId: existingTodo.repositoryId ?? input.repositoryId ?? null,
+          status: todoStatus,
+          updatedAt: now.toISOString(),
+        }
       : {
           createdAt: now.toISOString(),
           id: createUlid(now),
+          repositoryId: input.repositoryId ?? null,
           sourceEventId: eventId,
           sourceKey,
           status: todoStatus,
@@ -1273,9 +1359,12 @@ export class InMemoryMcpStore implements McpStore {
           workspaceId: principal.workspaceId,
         };
     const event: McpProgressEvent = {
+      commitSha: input.commitSha ?? null,
       id: eventId,
+      matched,
       occurredAt: now.toISOString(),
       refs,
+      repositoryId: input.repositoryId ?? null,
       status: input.status,
       summary,
       task,
