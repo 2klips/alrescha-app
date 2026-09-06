@@ -16,9 +16,24 @@ import type { ArtifactClassification } from "./repository-scanner";
  * saying nothing.
  */
 
-export type FacetDomain =
-  "backend" | "database" | "frontend" | "shared" | "unclassified";
-export type FacetUnit = "code" | "doc" | "file" | "test";
+/**
+ * The two facet vocabularies as arrays, so a zod enum on the MCP surface can
+ * read them instead of retyping them (todo 21). Every other vocabulary in
+ * this codebase learned the same lesson: a hand-copied enum is a vocabulary
+ * that is wrong somewhere.
+ */
+export const FACET_DOMAINS = [
+  "backend",
+  "database",
+  "frontend",
+  "shared",
+  "unclassified",
+] as const;
+
+export const FACET_UNITS = ["code", "doc", "file", "test"] as const;
+
+export type FacetDomain = (typeof FACET_DOMAINS)[number];
+export type FacetUnit = (typeof FACET_UNITS)[number];
 
 /**
  * The finer axis the graph tags nodes with (R5 §2.4): shape and filter, not

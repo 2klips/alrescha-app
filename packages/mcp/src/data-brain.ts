@@ -1,6 +1,7 @@
 import {
   buildArtifactCard,
   composeContextPack,
+  deriveArtifactFacets,
   personalizedPageRank,
   summaryAbsence,
   type ArtifactCard,
@@ -9,6 +10,8 @@ import {
   type ContextDocumentKind,
   type ContextTargetAgent,
   type ArtifactCardRelation,
+  type FacetDomain,
+  type FacetUnit,
   type PageRankEdge,
   type SummaryAbsence,
 } from "@alrescha/core";
@@ -23,6 +26,7 @@ import type {
   McpArtifactData,
   McpArtifactMatch,
   McpFindingData,
+  McpEdgeFamily,
   McpEdgeRelation,
   McpIndexEntryData,
   McpNodeType,
@@ -68,8 +72,31 @@ export interface BrainNode {
 }
 
 export interface BrainQueryFilter {
+  /**
+   * Which area of the repository a node sits in (todo 21). Derived from the
+   * path and classification the same way the map derives it — one
+   * `deriveArtifactFacets`, so a chip on the graph and a filter here cannot
+   * disagree about what `backend` means.
+   *
+   * Only nodes with a path can carry a domain; a requirement or a finding
+   * inherits the domain of the file it is anchored to, and a node with no
+   * path at all is filtered out rather than assigned `unclassified`.
+   */
+  domains?: FacetDomain[] | undefined;
+  /**
+   * Edge families a node touches (todo 21 / todo 22 ⑸). A band with no edges
+   * answers with none rather than with everything — the same rule
+   * `get_neighbors` follows, for the same reason.
+   */
+  families?: McpEdgeFamily[] | undefined;
   /** `table` renders the same nodes for a reader; `ids` is the default. */
   format?: "ids" | "table" | undefined;
+  /**
+   * Rows to keep after sorting (todo 21). The answer says how many the cap
+   * left out, because a list that is shorter than the truth is only honest
+   * if it admits it.
+   */
+  limit?: number | undefined;
   /**
    * Files that do or do not carry a description the freshness rule accepts
    * as current (todo 21). Stale prose reads as *no* summary here, because
@@ -87,6 +114,8 @@ export interface BrainQueryFilter {
   sortBy?: "risk" | undefined;
   statuses?: string[] | undefined;
   types?: McpNodeType[] | undefined;
+  /** `code` · `doc` · `file` · `test` — the coarse role of the file. */
+  units?: FacetUnit[] | undefined;
   withoutRelations?: McpEdgeRelation[] | undefined;
 }
 
@@ -512,6 +541,12 @@ export interface BrainQueryCoverage {
 
 export interface BrainQueryResult {
   readonly coverage: BrainQueryCoverage;
+  /**
+   * Rows a `limit` dropped after sorting (todo 21). Zero when the answer is
+   * the whole match — a list shorter than the truth is only honest if it
+   * says by how much.
+   */
+  readonly droppedByLimit: number;
   readonly nodes: BrainNode[];
   /**
    * A fixed-width rendering of the same nodes (todo 21), present only when
@@ -613,6 +648,42 @@ export function queryWorkspaceBrain(
   );
   const risk =
     filter.sortBy === "risk" ? workspaceRiskEntries(workspace) : null;
+  /**
+   * Domain and unit per node, from the same deriver the map uses (todo 21) —
+   * one definition of `backend`, so a chip on the graph and a filter here
+   * cannot mean different things.
+   *
+   * Keyed by node id, not by path: a requirement and the document stating it
+   * share a path and are different nodes. Anchored nodes inherit the facets
+   * of the file they hang off.
+   */
+  const facets = new Map<string, { domain: FacetDomain; unit: FacetUnit }>();
+  const familiesByNode = new Map<string, Set<McpEdgeFamily>>();
+  for (const repository of workspace.repositories) {
+    for (const artifact of repository.artifacts) {
+      const { domain, unit } = deriveArtifactFacets(
+        artifact.path,
+        artifact.kind as ArtifactClassification,
+      );
+      facets.set(artifact.id, { domain, unit });
+    }
+    for (const requirement of repository.requirements) {
+      const owner = facets.get(requirement.sourceArtifactId);
+      if (owner) facets.set(requirement.id, owner);
+    }
+    for (const evidence of repository.evidence) {
+      const owner = facets.get(evidence.sourceArtifactId);
+      if (owner) facets.set(evidence.id, owner);
+    }
+    for (const edge of repository.edges) {
+      if (!edge.family) continue;
+      for (const end of [edge.sourceNodeId, edge.targetNodeId]) {
+        const held = familiesByNode.get(end);
+        if (held) held.add(edge.family);
+        else familiesByNode.set(end, new Set([edge.family]));
+      }
+    }
+  }
   const nodes = repositoryNodes(workspace)
     .filter(
       (node) =>
@@ -621,6 +692,27 @@ export function queryWorkspaceBrain(
     )
     .filter((node) => !matchesGlob || matchesGlob(node.path ?? ""))
     .filter((node) => !filter.types || filter.types.includes(node.type))
+    .filter(
+      (node) =>
+        !filter.domains ||
+        // A node with no facet has no path to derive one from. Excluded
+        // rather than bucketed as `unclassified`, which is a real answer
+        // some files give and would be wrong to invent for a node that has
+        // no path at all.
+        filter.domains.includes(facets.get(node.id)?.domain as FacetDomain),
+    )
+    .filter(
+      (node) =>
+        !filter.units ||
+        filter.units.includes(facets.get(node.id)?.unit as FacetUnit),
+    )
+    .filter(
+      (node) =>
+        !filter.families ||
+        filter.families.some((family) =>
+          familiesByNode.get(node.id)?.has(family),
+        ),
+    )
     .filter((node) => !filter.statuses || filter.statuses.includes(node.status))
     .filter(
       (node) =>
@@ -648,6 +740,8 @@ export function queryWorkspaceBrain(
           left.id.localeCompare(right.id),
     );
 
+  const capped =
+    filter.limit === undefined ? nodes : nodes.slice(0, filter.limit);
   const coverage = queryCoverage(workspace, filter);
   const unanswered = [
     ...coverage.unanswered,
@@ -670,12 +764,15 @@ export function queryWorkspaceBrain(
       result: unanswered.length === 0 ? "complete" : "partial",
       unanswered,
     },
-    nodes,
+    // What the caller asked for, and — when a cap dropped rows — how many.
+    // A list shorter than the truth is only honest if it says so.
+    droppedByLimit: nodes.length - capped.length,
+    nodes: capped,
     ...(filter.format === "table"
       ? {
           table: {
             columns: [...BRAIN_TABLE_COLUMNS],
-            rows: nodes.slice(0, BRAIN_TABLE_ROWS).map((node) => [
+            rows: capped.slice(0, BRAIN_TABLE_ROWS).map((node) => [
               node.type,
               node.path ?? "",
               // One line per cell: a table with a wrapped label is not a
@@ -685,7 +782,7 @@ export function queryWorkspaceBrain(
               node.relations.join(","),
               risk ? String(risk.get(node.id)?.score ?? 0) : "",
             ]),
-            truncated: Math.max(0, nodes.length - BRAIN_TABLE_ROWS),
+            truncated: Math.max(0, capped.length - BRAIN_TABLE_ROWS),
           },
         }
       : {}),

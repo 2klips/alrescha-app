@@ -6,7 +6,11 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-import { deriveArtifactFacets } from "@alrescha/core";
+import {
+  FACET_DOMAINS,
+  FACET_UNITS,
+  deriveArtifactFacets,
+} from "@alrescha/core";
 
 import { buildRepoOverview, findModuleForNode } from "./module-tools";
 
@@ -74,6 +78,13 @@ const WRITE_METADATA_TOOL = {
 export const NODE_TYPE_SCHEMA = z.enum(MCP_NODE_TYPES);
 export const RELATION_SCHEMA = z.enum(MCP_EDGE_RELATIONS);
 const EDGE_FAMILY_SCHEMA = z.enum(MCP_EDGE_FAMILIES);
+/**
+ * The map's own facet vocabularies (todo 21), read from the package rather
+ * than retyped — the same rule the node and relation enums follow, for the
+ * same reason: a hand-copied enum is a vocabulary that is wrong somewhere.
+ */
+const FACET_DOMAIN_SCHEMA = z.enum(FACET_DOMAINS);
+const FACET_UNIT_SCHEMA = z.enum(FACET_UNITS);
 const EDGE_TIER_SCHEMA = z.enum(MCP_EDGE_TIERS);
 
 /**
@@ -368,17 +379,21 @@ const MEMORY_WRITE_TOOL = {
 const QUERY_BRAIN_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "Structured query over node types, statuses, relations, paths and risk.",
+    "Structured query over node types, domains, units, families, statuses, relations, paths and risk.",
   inputSchema: z.object({
     filter: z.object({
+      domains: z.array(FACET_DOMAIN_SCHEMA).optional(),
+      families: z.array(EDGE_FAMILY_SCHEMA).optional(),
       format: z.enum(["ids", "table"]).optional(),
       hasSummary: z.boolean().optional(),
+      limit: z.number().int().min(1).max(500).optional(),
       path: z.string().trim().min(1).optional(),
       pathGlob: z.string().trim().min(1).max(200).optional(),
       relations: z.array(RELATION_SCHEMA).optional(),
       sortBy: z.enum(["risk"]).optional(),
       statuses: z.array(z.string().trim().min(1)).optional(),
       types: z.array(NODE_TYPE_SCHEMA).optional(),
+      units: z.array(FACET_UNIT_SCHEMA).optional(),
       withoutRelations: z.array(RELATION_SCHEMA).optional(),
     }),
   }),

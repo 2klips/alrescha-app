@@ -121,3 +121,6 @@ export type {
   McpWorkspaceData,
   PublicMcpTokenRecord,
 } from "./store";
+
+export { SAVED_QUERIES, SAVED_QUERY_IDS, savedQuery } from "./saved-queries";
+export type { SavedQuery, SavedQueryId } from "./saved-queries";

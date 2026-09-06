@@ -441,11 +441,13 @@ describe("hosted MCP contract", () => {
      * which is ~65 tokens before a single parameter (OQ-059).
      *
      * 2,704 → 2,890 when `report_session_usage` arrived (todo 23) → 2,914
-     * when `memory_read` gained its cap (todo 22 ⑴). Each rise was caught
-     * here first, which is the whole point of a ratchet.
+     * when `memory_read` gained its cap (todo 22 ⑴) → 3,009 when
+     * `query_brain` took the domain, unit and family filters (todo 21).
+     * Each rise was caught here first, which is the whole point of a
+     * ratchet: it does not forbid growth, it makes growth say its price.
      */
     expect(estimateTokens(JSON.stringify(listed.tools))).toBeLessThanOrEqual(
-      2_950,
+      3_050,
     );
     expect(listed.tools).toHaveLength(21);
     expect(

@@ -601,6 +601,8 @@ export type {
 } from "./stats/pilot-stats";
 export {
   BRAIN_AREAS,
+  FACET_DOMAINS,
+  FACET_UNITS,
   deriveArtifactFacets,
   deriveBrainArea,
 } from "./ingest/artifact-facets";

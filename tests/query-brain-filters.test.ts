@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest";
 import {
   BRAIN_TABLE_COLUMNS,
   BRAIN_TABLE_ROWS,
+  SAVED_QUERIES,
+  SAVED_QUERY_IDS,
   queryWorkspaceBrain,
+  savedQuery,
 } from "../packages/mcp/src/index";
 import type {
   McpArtifactData,
@@ -300,5 +303,175 @@ describe("query_brain tabular output", () => {
           ?.rows[0]?.[5],
       ),
     ).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * The three facet filters (todo 21). They are the axes the map already
+ * offers as chips, so an agent can ask the question a person clicks.
+ */
+describe("domain, unit and family filters", () => {
+  const space = () =>
+    workspace({
+      artifacts: [
+        artifact("apps/web/app/page.tsx"),
+        artifact("apps/worker/src/queue.ts"),
+        artifact("supabase/migrations/001_init.sql", { kind: "schema" }),
+        artifact("docs/guide.md", { kind: "doc" }),
+        artifact("tests/queue.test.ts"),
+      ],
+      edges: [
+        edge("imports", "apps/worker/src/queue.ts", "apps/web/app/page.tsx"),
+        {
+          ...edge("references", "docs/guide.md", "apps/worker/src/queue.ts"),
+          family: "doc",
+        },
+      ],
+    });
+
+  it("narrows by the area the map calls a domain", () => {
+    expect(
+      queryWorkspaceBrain(space(), { domains: ["frontend"] }).nodes.map(
+        ({ path }) => path,
+      ),
+    ).toEqual(["apps/web/app/page.tsx"]);
+    // A schema file is `database` wherever it lives — one deriver, so this
+    // agrees with the chip on the graph rather than re-deciding.
+    expect(
+      queryWorkspaceBrain(space(), { domains: ["database"] }).nodes.map(
+        ({ path }) => path,
+      ),
+    ).toEqual(["supabase/migrations/001_init.sql"]);
+  });
+
+  it("narrows by unit, which is the file's role and not its folder", () => {
+    expect(
+      queryWorkspaceBrain(space(), { units: ["test"] }).nodes.map(
+        ({ path }) => path,
+      ),
+    ).toEqual(["tests/queue.test.ts"]);
+    expect(
+      queryWorkspaceBrain(space(), { units: ["doc"] }).nodes.map(
+        ({ path }) => path,
+      ),
+    ).toEqual(["docs/guide.md"]);
+  });
+
+  it("narrows by the edge families a node actually touches", () => {
+    expect(
+      queryWorkspaceBrain(space(), { families: ["doc"] })
+        .nodes.map(({ path }) => path)
+        .sort(),
+    ).toEqual(["apps/worker/src/queue.ts", "docs/guide.md"]);
+  });
+
+  it("answers none for a family with no edges, not everything", () => {
+    // The same rule `get_neighbors` follows: an ignored filter would have
+    // answered with the whole workspace, which is what makes a caller stop
+    // trusting filters.
+    expect(queryWorkspaceBrain(space(), { families: ["route"] }).nodes).toEqual(
+      [],
+    );
+  });
+
+  it("combines with the filters that were already there", () => {
+    expect(
+      queryWorkspaceBrain(space(), {
+        domains: ["backend"],
+        units: ["code"],
+      }).nodes.map(({ path }) => path),
+    ).toEqual(["apps/worker/src/queue.ts"]);
+  });
+});
+
+/**
+ * The four saved queries (todo 21). They are filters, not stored results —
+ * running one is the same read as running it by hand, at the same zero cost.
+ */
+describe("saved queries", () => {
+  const space = () =>
+    workspace({
+      artifacts: [
+        artifact("src/tested.ts"),
+        artifact("src/untested.ts"),
+        artifact("src/documented.ts", {
+          content: CURRENT.text,
+          summaryState: CURRENT,
+        }),
+        artifact("tests/tested.test.ts"),
+        artifact("docs/guide.md", { kind: "doc" }),
+      ],
+      edges: [
+        edge("tests", "tests/tested.test.ts", "src/tested.ts"),
+        {
+          ...edge("references", "docs/guide.md", "src/tested.ts"),
+          family: "doc",
+        },
+      ],
+    });
+
+  it("names four and only four, with stable ids", () => {
+    expect(SAVED_QUERIES.map(({ id }) => id)).toEqual([...SAVED_QUERY_IDS]);
+    expect(SAVED_QUERIES).toHaveLength(4);
+    // Every one of them must say what its answer means; a saved query whose
+    // title is the only explanation is a number without provenance.
+    expect(
+      SAVED_QUERIES.every(({ description }) => description.length > 30),
+    ).toBe(true);
+  });
+
+  it("finds code no test points at", () => {
+    expect(
+      queryWorkspaceBrain(space(), savedQuery("untested-code").filter)
+        .nodes.map(({ path }) => path)
+        .sort(),
+    ).toEqual(["src/documented.ts", "src/untested.ts"]);
+  });
+
+  it("finds code that neither a document nor a summary describes", () => {
+    // `src/tested.ts` is referenced by the guide, `src/documented.ts` has a
+    // current summary, and the test file is unit `test` rather than `code` —
+    // so the query is narrower than "files with no prose anywhere".
+    expect(
+      queryWorkspaceBrain(space(), savedQuery("undocumented-code").filter)
+        .nodes.map(({ path }) => path)
+        .sort(),
+    ).toEqual(["src/untested.ts"]);
+  });
+
+  it("caps the risk query at ten and says how many it dropped", () => {
+    const many = workspace({
+      artifacts: Array.from({ length: 14 }, (_unused, index) =>
+        artifact(`src/file-${index}.ts`),
+      ),
+      edges: Array.from({ length: 14 }, (_unused, index) =>
+        edge("imports", `src/file-${index}.ts`, "src/file-0.ts"),
+      ),
+    });
+    const result = queryWorkspaceBrain(many, savedQuery("risk-top-10").filter);
+
+    expect(result.nodes.length).toBeLessThanOrEqual(10);
+    expect(result.droppedByLimit).toBeGreaterThan(0);
+    expect(result.nodes.length + result.droppedByLimit).toBe(14);
+  });
+
+  it("marks the three negative queries as unreliable on a short read", () => {
+    // 보완 R-01: "no `tests` edge" from a truncated edge read is unknown,
+    // not none. The flag is how a screen knows to look at `coverage`.
+    expect(
+      SAVED_QUERIES.filter(({ negative }) => negative).map(({ id }) => id),
+    ).toEqual([
+      "untested-code",
+      "undocumented-code",
+      "unimplemented-requirements",
+    ]);
+    const short = workspace({
+      artifacts: [artifact("src/a.ts")],
+      truncated: [{ limit: 1, table: "edges" }],
+    });
+
+    expect(
+      queryWorkspaceBrain(short, savedQuery("untested-code").filter).coverage,
+    ).toMatchObject({ result: "partial" });
   });
 });
