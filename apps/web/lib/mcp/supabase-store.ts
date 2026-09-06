@@ -7,6 +7,7 @@ import {
   MCP_EDGE_PAGE_ROWS,
   MCP_EDGE_RELATIONS,
   MCP_EDGE_TIERS,
+  MCP_NODE_TYPES,
   MCP_DEFAULT_READ_BANDS,
   MCP_SCOPES,
   MCP_WORKSPACE_READ_LIMIT,
@@ -106,15 +107,14 @@ function isScope(value: string): value is McpScope {
   return MCP_SCOPES.some((scope) => scope === value);
 }
 
+/**
+ * The node vocabulary, read from the package (Codex remedy P0-D). This was
+ * the fourth hand-maintained copy the comment on `MCP_NODE_TYPES` warns
+ * about, and it had fallen six values behind — `memory`, `route`,
+ * `db_object`, `section` and now `todo` all failed this guard.
+ */
 function isNodeType(value: unknown): value is McpNodeType {
-  return [
-    "artifact",
-    "requirement",
-    "evidence",
-    "finding",
-    "receipt",
-    "context_pack",
-  ].includes(String(value));
+  return (MCP_NODE_TYPES as readonly string[]).includes(String(value));
 }
 
 /**
@@ -773,6 +773,7 @@ export class SupabaseMcpStore implements McpStore {
       routes,
       dbObjects,
       sections,
+      todoRows,
     ] = await Promise.all([
       this.client
         .from("repositories")
@@ -834,6 +835,18 @@ export class SupabaseMcpStore implements McpStore {
         .select("id, anchor_node_id, name, entry_key, text, valid_from")
         .eq("workspace_id", workspaceId)
         .is("invalidated_at", null),
+      // Todos are workspace-scoped: a checkbox can name no repository at
+      // all, so this is not part of the per-repository walk (todo 21).
+      wants("evidence")
+        ? this.client
+            .from("todos")
+            .select(
+              "id, repository_id, title, status, source_key, source_event_id, source_path, created_at, updated_at",
+            )
+            .eq("workspace_id", workspaceId)
+            .order("id", { ascending: true })
+            .limit(MCP_WORKSPACE_READ_LIMIT + 1)
+        : empty,
       this.client
         .from("module_summaries")
         .select(
@@ -876,6 +889,7 @@ export class SupabaseMcpStore implements McpStore {
       ["receipts", receipts],
       ["index entries", indexEntries],
       ["memory entries", memoryEntries],
+      ["todos", todoRows],
       ["module summaries", moduleSummaries],
       ["routes", routes],
       ["database objects", dbObjects],
@@ -956,7 +970,7 @@ export class SupabaseMcpStore implements McpStore {
     // answered says so with its reason.
     const bandTables: Partial<Record<McpReadBand, readonly string[]>> = {
       database: ["db_objects"],
-      evidence: ["requirements", "evidence", "findings", "receipts"],
+      evidence: ["requirements", "evidence", "findings", "receipts", "todos"],
       route: ["routes"],
       semantic: ["sections", "module_summaries", "memory_block_entries"],
       structure: ["repositories", "graph_nodes", "artifacts", "index_entries"],
@@ -988,6 +1002,34 @@ export class SupabaseMcpStore implements McpStore {
         truncated,
       },
       id: workspaceId,
+      todos: kept("todos", todoRows.data).flatMap((row) => {
+        const status = String(row.status);
+        // The CHECK on the column allows exactly these four; a fifth value
+        // means the schema moved, and dropping the row is safer than
+        // widening a union at the decoder.
+        if (
+          status !== "open" &&
+          status !== "in-progress" &&
+          status !== "done" &&
+          status !== "blocked"
+        ) {
+          return [];
+        }
+        return [
+          {
+            createdAt: String(row.created_at),
+            id: requiredString(row, "id"),
+            repositoryId: nullableString(row.repository_id),
+            sourceEventId: nullableString(row.source_event_id) ?? "",
+            sourceKey: requiredString(row, "source_key"),
+            sourcePath: nullableString(row.source_path),
+            status,
+            title: requiredString(row, "title"),
+            updatedAt: String(row.updated_at),
+            workspaceId,
+          },
+        ];
+      }),
       memoryEntries: kept("memory_block_entries", memoryEntries.data).flatMap(
         (row) => {
           const name = String(row.name);

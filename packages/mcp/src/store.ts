@@ -22,8 +22,12 @@ export type McpScope = (typeof MCP_SCOPES)[number];
  * - `db_object` — a table, view or function this repository declares
  *   (todo 7).
  * - `section` — an ID-token heading: `ADR-013`, `OQ-041`, `MT-7` (todo 8).
+ * - `todo` — a checkbox the scan read out of a todo document (todo 21).
+ *   Reading todos is a filter on `query_brain`, not a tool of its own: an
+ *   agent that already knows how to ask this graph a question should not
+ *   have to learn a second way to ask about work.
  *
- * None of the three is an `index_entries.entry_type`: the search index keeps
+ * None of the four is an `index_entries.entry_type`: the search index keeps
  * its own six-value vocabulary until a migration widens that CHECK.
  */
 export const MCP_NODE_TYPES = [
@@ -37,6 +41,7 @@ export const MCP_NODE_TYPES = [
   "requirement",
   "route",
   "section",
+  "todo",
 ] as const;
 
 export type McpNodeType = (typeof MCP_NODE_TYPES)[number];
@@ -556,6 +561,12 @@ export interface McpWorkspaceData {
   memoryEntries?: McpMemoryEntryData[];
   ownerUserId: string;
   repositories: McpRepositoryData[];
+  /**
+   * Work items the scan read out of todo documents (todo 21). Workspace
+   * scoped like `memoryEntries`, because a todo can name no repository at
+   * all; `query_brain(types: ["todo"])` is the only reader.
+   */
+  todos?: McpTodo[];
 }
 
 export interface McpTokenRecord {
@@ -585,6 +596,10 @@ export type McpTodoStatus = "open" | "in-progress" | "done" | "blocked";
 export interface McpTodo {
   createdAt: string;
   id: string;
+  /** Null for a todo nobody has tied to a repository yet. */
+  repositoryId?: string | null;
+  /** The document the checkbox lives in, when the scan recorded one. */
+  sourcePath?: string | null;
   sourceEventId: string;
   sourceKey: string;
   status: McpTodoStatus;
@@ -1435,6 +1450,13 @@ export class InMemoryMcpStore implements McpStore {
         bands,
       },
       memoryEntries: [...(workspace.memoryEntries ?? []), ...written],
+      // Todos written through `appendProgress` join the ones the fixture
+      // declared, so `query_brain(types: ["todo"])` sees the same set here
+      // as it would hosted (todo 21).
+      todos: [
+        ...(workspace.todos ?? []),
+        ...this.#todos.filter((todo) => todo.workspaceId === workspace.id),
+      ],
       repositories: workspace.repositories.map((repository) => ({
         ...repository,
         ...(requested.has("database") ? {} : { dbObjects: [] }),

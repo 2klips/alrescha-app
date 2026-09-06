@@ -8,6 +8,7 @@ import {
   queryWorkspaceBrain,
   savedQuery,
 } from "../packages/mcp/src/index";
+import { MCP_NODE_TYPES } from "../packages/mcp/src/store";
 import type {
   McpArtifactData,
   McpEdgeData,
@@ -473,5 +474,90 @@ describe("saved queries", () => {
     expect(
       queryWorkspaceBrain(short, savedQuery("untested-code").filter).coverage,
     ).toMatchObject({ result: "partial" });
+  });
+});
+
+/**
+ * Reading todos (todo 21). Not a new tool: an agent that already knows how
+ * to ask this graph a question should not have to learn a second way to ask
+ * about work.
+ */
+describe("query_brain(types: ['todo'])", () => {
+  const withTodos = (): McpWorkspaceData => ({
+    ...workspace({ artifacts: [artifact("src/a.ts")] }),
+    todos: [
+      {
+        createdAt: "2026-09-01T00:00:00Z",
+        id: "todo:1",
+        repositoryId: REPOSITORY,
+        sourceEventId: "",
+        sourceKey: "spec/plan.md#1",
+        sourcePath: "spec/plan.md",
+        status: "open",
+        title: "Wire the CI evidence source",
+        updatedAt: "2026-09-01T00:00:00Z",
+        workspaceId: WORKSPACE,
+      },
+      {
+        createdAt: "2026-09-02T00:00:00Z",
+        id: "todo:2",
+        // A checkbox nobody has tied to a repository. Carried, not dropped
+        // and not given a repository it does not have.
+        repositoryId: null,
+        sourceEventId: "",
+        sourceKey: "NOTES.md#4",
+        sourcePath: "NOTES.md",
+        status: "done",
+        title: "Decide the pricing tiers",
+        updatedAt: "2026-09-02T00:00:00Z",
+        workspaceId: WORKSPACE,
+      },
+    ],
+  });
+
+  it("returns todos as nodes, with their status", () => {
+    expect(
+      queryWorkspaceBrain(withTodos(), { types: ["todo"] }).nodes.map(
+        ({ id, label, status }) => [id, status, label],
+      ),
+      // Ordered by the same rule as every other node — type, then path —
+      // so `NOTES.md` precedes `spec/plan.md` and a todo does not get a
+      // sort of its own.
+    ).toEqual([
+      ["todo:2", "done", "Decide the pricing tiers"],
+      ["todo:1", "open", "Wire the CI evidence source"],
+    ]);
+  });
+
+  it("narrows by status, the way a board does", () => {
+    expect(
+      queryWorkspaceBrain(withTodos(), {
+        statuses: ["open"],
+        types: ["todo"],
+      }).nodes.map(({ id }) => id),
+    ).toEqual(["todo:1"]);
+  });
+
+  it("reaches them by the document the checkbox lives in", () => {
+    expect(
+      queryWorkspaceBrain(withTodos(), {
+        pathGlob: "spec/*.md",
+        types: ["todo"],
+      }).nodes.map(({ id }) => id),
+    ).toEqual(["todo:1"]);
+  });
+
+  it("leaves them out of every other query", () => {
+    // A `todo` is not an artifact and must not quietly join a file listing.
+    expect(
+      queryWorkspaceBrain(withTodos(), { types: ["artifact"] }).nodes.map(
+        ({ type }) => type,
+      ),
+    ).toEqual(["artifact"]);
+  });
+
+  it("is part of the vocabulary, not a special case beside it", () => {
+    // The sync rule: one array, and every reader of it agrees.
+    expect(MCP_NODE_TYPES).toContain("todo");
   });
 });

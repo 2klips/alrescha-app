@@ -522,6 +522,28 @@ function repositoryNodes(workspace: McpWorkspaceData): BrainNode[] {
 }
 
 /**
+ * Todos as brain nodes (todo 21).
+ *
+ * They hang off the workspace rather than a repository — a checkbox can name
+ * no repository at all — so they are added once here instead of inside the
+ * per-repository walk. A todo that *does* name one carries it, so
+ * `repositoryId` on the answer is the truth rather than a placeholder.
+ */
+function todoNodes(workspace: McpWorkspaceData): BrainNode[] {
+  return (workspace.todos ?? []).map((todo) => ({
+    id: todo.id,
+    label: todo.title,
+    // The document the checkbox lives in, when the scan recorded one — so a
+    // path filter and a path glob reach todos the same way they reach files.
+    ...(todo.sourcePath ? { path: todo.sourcePath } : {}),
+    relations: [] as McpEdgeRelation[],
+    repositoryId: todo.repositoryId ?? "",
+    status: todo.status,
+    type: "todo" as const,
+  }));
+}
+
+/**
  * What a query could and could not answer (Codex remedy P0-B / R-01).
  *
  * A negative question — "which files have no test" — is only as good as the
@@ -684,7 +706,7 @@ export function queryWorkspaceBrain(
       }
     }
   }
-  const nodes = repositoryNodes(workspace)
+  const nodes = [...repositoryNodes(workspace), ...todoNodes(workspace)]
     .filter(
       (node) =>
         filter.hasSummary === undefined ||
