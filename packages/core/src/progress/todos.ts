@@ -83,7 +83,12 @@ export function todoSourceKey(input: {
   return `document:${input.path}:${titleHash(input.title)}${suffix}`;
 }
 
-function truncate(title: string): string {
+/**
+ * Truncate to what the column takes. Shared with the beads reader: a long
+ * issue title has to be cut the same way a long checkbox is, or a
+ * repository would fail its scan depending on which tool wrote its todos.
+ */
+export function truncateTodoTitle(title: string): string {
   return title.length <= MAX_TODO_TITLE
     ? title
     : `${title.slice(0, MAX_TODO_TITLE - 1)}…`;
@@ -127,7 +132,7 @@ export function parseTodoDocument(input: ParseMarkdownInput): ParsedTodoItem[] {
       source: { kind: "document", path: input.path, span: task.span },
       sourceKey,
       status: STATUS_BY_MARKER[task.marker],
-      title: truncate(title),
+      title: truncateTodoTitle(title),
     });
   }
 

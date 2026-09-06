@@ -1,8 +1,8 @@
 {
   "incomplete": [],
   "incompleteCount": 0,
-  "passes": 47,
-  "route": "/app/inspection",
+  "passes": 159,
+  "route": "/inspection",
   "theme": "dark",
   "violationCount": 0,
   "violations": []

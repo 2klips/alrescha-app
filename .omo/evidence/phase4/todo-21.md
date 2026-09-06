@@ -141,3 +141,117 @@ repository with no documents at all, and `inferred` at every score.
   with two repositories ranks them in one pass. With one repository per
   workspace today it makes no difference; it would need splitting before that
   changes.
+
+---
+
+## Closing the todo (2026-09-06, second pass)
+
+**Scope:** `packages/core/src/progress/beads.ts` (new),
+`packages/core/src/progress/todos.ts`,
+`packages/core/src/ingest/{repository-config,repository-scanner}.ts`,
+`packages/core/src/index.ts`, `tests/todo-recognition.test.ts` (new),
+`apps/web/lib/strings/inspection.ts`, `apps/web/lib/inspection/fixtures.ts`,
+`apps/web/app/ui/inspection-view.{tsx,test.tsx}`,
+`apps/web/app/styles/screens/inspection.css`,
+`apps/web/lib/mcp/supabase-store.{ts,test.ts}`,
+`tests/e2e/{inspection,a11y-contrast}.spec.ts`.
+
+### Todo recognition — 8 of 8, where the bar was 7
+
+The pilot measurement was that the scan recognised three of the eight
+conventions teams keep tasks in, and the five it missed are the ones written
+by the tools people actually use.
+
+| Convention | Example | Before | Now |
+| --- | --- | --- | --- |
+| `TODO.md` | `TODO.md` | ✅ | ✅ |
+| progress ledger | `docs/progress.md` | ✅ | ✅ |
+| handoff/session note | `HANDOFF.md` | ✅ | ✅ |
+| numbered handoff | `docs/2026-09-06-handoff.md` | ❌ | ✅ |
+| spec-kit tasks | `specs/001-auth/tasks.md` | ❌ | ✅ |
+| `PLAN.md` | `PLAN.md` | ❌ | ✅ |
+| `BACKLOG.md` | `BACKLOG.md` | ❌ | ✅ |
+| beads export | `.beads/issues.jsonl` | ❌ | ✅ |
+
+Three decisions worth stating.
+
+**Names are anchored at the start of the filename.** `plan` and `tasks` are
+common words; a rule that matched them anywhere would have relabelled half of
+`spec/`. `spec/BUILD_PLAN.md` is still a spec, `docs/planning-guide.md` is
+still prose, and the test says both.
+
+**`.beads` gets its own reader.** A beads export is JSON lines, not prose, so
+reading it with the markdown parser would have produced one todo for the
+whole file. The reader is 90 lines and buys the thing markdown cannot give:
+identity. A checkbox is keyed by a hash of its title, so retitling it loses
+the todo; a beads issue carries an id that survives a retitle, a reorder and
+a move, and the test proves it by rewriting the file and finding the same
+key. Beads' `blocked_by` stays out of `parentKey` — a dependency is not a
+nesting, and flattening it would put a claim in the graph beads never made.
+
+**A repository's `.alrescha.json` beats every filename rule but four.**
+`todoFiles`/`progressDocs` were parsed since Wave A and never acted on; they
+now classify. They do not override `AGENTS.md`, `CLAUDE.md`, `SKILL.md` or a
+Cursor rule, because the instruction-cost table is built from those four and
+a repository that could relabel its own always-loaded files would take them
+out of its own bill.
+
+### The risk widget
+
+`dashboard.risk` had entries, a state and its unmeasured signals since the
+first pass, and nothing rendered them. It renders now: rank, path, level
+chip, the `inferred` badge, and every factor with the sentence that explains
+it. Three choices:
+
+- **The score is a `data-score` attribute, not print.** A rank answers "what
+  first"; three decimal places of a weighted sum would read as a precision
+  none of these signals has. The e2e reads the attribute and asserts the list
+  descends, so the ordering is still checkable.
+- **The cut is stated.** `상위 N개 · 전체 M개` under the list, so a truncation
+  at ten is never silent.
+- **`unmeasured` is a dashed grey line, deliberately unlike the level chips.**
+  The demo has no coverage report, so it says so. "Measured, and clean" and
+  "nobody looked" are different answers and only one is reassuring.
+
+The demo fixture builds its map with `buildRiskMap` rather than writing
+entries out, and passes the *same* audit JSON to both widgets — a risk map
+calling a manifest risky beside an audit widget reporting nothing would be a
+screen contradicting itself. Its clock is fixed at `2026-08-20`, because
+co-change decays by age and a demo that read the wall clock would re-rank
+itself every week.
+
+e2e: `/inspection` is now in the axe contrast sweep (both themes, 0
+violations) as well as `/app/inspection`, because a fresh workspace has
+nothing to rank and the widget's colours would otherwise never reach axe.
+
+### A bug the e2e caught, which nothing else could
+
+`loadWorkspace` fires fifteen queries in one `Promise.all` and names the
+answers by position. The previous commit added `todos` in the middle of the
+array and left its name at the end of the destructuring, shifting every
+result after it by one — so the module-summary decoder was handed a todo row
+and every MCP read of a workspace holding both answered `Malformed database
+row: member_digest`. No unit test held both tables at once, so nothing failed
+until an end-to-end agent session ran.
+
+Fixed, and guarded: `supabase-store.test.ts` now gives five tables a row only
+they could have produced and asserts each arrives in its own field. Putting
+the bug back makes that test fail with the production error, which is the
+only way to know a guard guards anything.
+
+### Verification
+
+- `npx vitest run` — 173 files, 1,538 passed, 1 skipped
+- `npx playwright test` — 136 passed, 1 skipped
+- `pnpm lint`, `pnpm typecheck` (root + six workspaces) — clean
+- `verify-scope-boundaries` — PASS, 12 boundaries, 351 files
+
+### Still open
+
+- **PageRank over the whole import graph, not per-repository.** Unchanged
+  from the first pass: one repository per workspace makes it moot today.
+- **The `todoFiles`/`progressDocs` distinction is not acted on.** Both feed
+  one classification because the graph has one `todo` kind. What a repository
+  plans to do and what it recorded doing differ in the checkbox states, not
+  in what the file is — but if that turns out to matter, the setting already
+  carries the answer.

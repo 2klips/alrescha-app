@@ -221,3 +221,125 @@
   background: var(--bg-default);
   border-radius: var(--radius-medium);
 }
+
+/* Risk map — the ranked "먼저 볼 파일" list (Phase 4 Wave D todo 21). */
+.inspection-risk {
+  counter-reset: none;
+  gap: 0.6rem;
+}
+
+.inspection-risk-entry {
+  border-left: 2px solid var(--border-default);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.1rem 0 0.1rem 0.65rem;
+}
+
+.inspection-risk-entry[data-level="high"] {
+  border-left-color: var(--danger-fg);
+}
+
+.inspection-risk-entry[data-level="elevated"] {
+  border-left-color: var(--attention-fg);
+}
+
+.inspection-risk-head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.inspection-risk-rank {
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  min-width: 1.1rem;
+}
+
+.inspection-risk-head code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  overflow-wrap: anywhere;
+}
+
+.inspection-risk-level {
+  border: 1px solid currentColor;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.08em;
+  padding: 0.12rem 0.35rem;
+  white-space: nowrap;
+}
+
+.inspection-risk-level.high {
+  color: var(--danger-fg);
+}
+
+.inspection-risk-level.elevated {
+  color: var(--attention-fg);
+}
+
+.inspection-risk-level.low,
+.inspection-risk-level.moderate {
+  color: var(--fg-muted);
+}
+
+.inspection-risk-factors {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inspection-risk-factors li {
+  align-items: baseline;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.inspection-risk-factor {
+  color: var(--fg-default);
+  font-size: var(--text-2xs);
+  white-space: nowrap;
+}
+
+.inspection-risk-factors small {
+  color: var(--fg-muted);
+  font-size: var(--text-2xs);
+}
+
+.inspection-risk-count {
+  color: var(--fg-muted);
+  font-size: var(--text-2xs);
+}
+
+/*
+ * A signal nobody measured. Dashed and muted, deliberately unlike the level
+ * chips: an absence must not read as a clean result.
+ */
+.inspection-unmeasured {
+  border: 1px dashed var(--border-default);
+  color: var(--fg-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: var(--text-2xs);
+  gap: 0.15rem 0.6rem;
+  margin: 0;
+  padding: 0.45rem 0.6rem;
+}
+
+.inspection-unmeasured > span:first-child {
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  width: 100%;
+}
+
+.inspection-unmeasured small {
+  color: var(--fg-subtle, var(--fg-muted));
+  margin-left: 0.3rem;
+}

@@ -46,6 +46,33 @@ export const INSPECTION = {
     note: "결정론 룰이 낸 발견 중 문서 위험군만 모았습니다.",
   },
 
+  risk: {
+    title: "먼저 볼 파일",
+    note: "요인이 하나라도 있는 파일만 순위에 오릅니다 — 요인 없는 파일은 0점이 아니라 목록에 없습니다.",
+    /** `상위 <shown>개 · 전체 <total>개` */
+    showing: (shown: number, total: number) =>
+      `상위 ${shown}개 · 전체 ${total}개`,
+    levels: {
+      high: "높음",
+      elevated: "주의",
+      moderate: "보통",
+      low: "낮음",
+    },
+    factors: {
+      "co-changed": "동반 변경",
+      "dependency-audit": "의존성 감사",
+      "fan-in": "역방향 참조",
+      "open-finding": "열린 문제",
+      untested: "테스트 없음",
+    },
+    /** Grey, never zero: nobody measured this signal. */
+    unmeasuredTitle: "측정되지 않은 신호",
+    unmeasured: {
+      coverage: "커버리지",
+      "dependency-audit": "의존성 감사",
+    },
+  },
+
   dependencyAudit: {
     title: "의존성 감사",
     note: "Alrescha는 코드를 스캔하지 않습니다 — npm audit 결과를 수집해 보여줄 뿐입니다.",

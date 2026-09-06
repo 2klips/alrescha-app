@@ -6,6 +6,7 @@ import {
   parseMarkdownStructure,
   type ParsedMarkdownStructure,
 } from "../parser/markdown";
+import { isBeadsExportPath, parseBeadsExport } from "../progress/beads";
 import { parseTodoDocument, type ParsedTodoItem } from "../progress/todos";
 import {
   LINK_SCHEMA_VERSION,
@@ -48,6 +49,7 @@ import {
   EMPTY_REPOSITORY_CONFIG,
   parseRepositoryConfig,
   repositoryIgnoreMatcher,
+  repositoryTodoMatcher,
   REPOSITORY_CONFIG_PATH,
   type RepositoryScanConfig,
 } from "./repository-config";
@@ -255,9 +257,28 @@ const CONFIG_FILE_NAMES = new Set([
 const CONFIG_FILE_PATTERN =
   /^(?:tsconfig[\w.-]*\.json|jsconfig[\w.-]*\.json|[\w.-]*\.config\.[cm]?[jt]s|dockerfile(?:\.[\w-]+)?)$/;
 
-/** Handoff/session files agents leave behind (Phase 2B todo 7 ⑶, H1). */
+/**
+ * Handoff/session files agents leave behind (Phase 2B todo 7 ⑶, H1).
+ *
+ * The optional numeric head is todo 21: teams number these by date or by
+ * sequence — `001-handoff.md`, `2026-09-06-handoff.md` — and the pilot scan
+ * recognised none of them, because the name had to *start* with the word.
+ */
 const HANDOFF_FILE_PATTERN =
-  /^(session[-_](state|notes?)|current[-_]task|handoff([._-].*)?)\.(md|mdx)$/;
+  /^(?:\d[\w.-]*[._-])?(session[-_](state|notes?)|current[-_]task|handoff([._-].*)?)\.(md|mdx)$/;
+
+/**
+ * Names a repository keeps its task list under (todo 21).
+ *
+ * `tasks`, `plan` and `backlog` join the original four for the conventions
+ * that were measured missing: spec-kit writes `specs/<feature>/tasks.md` and
+ * `plan.md` beside a `spec.md`, and `PLAN.md`/`BACKLOG.md` at a root are the
+ * two most common hand-written ledgers. The prefix is anchored, so this
+ * repository's own `BUILD_PLAN.md` is still a spec — a rule that matched a
+ * name anywhere would swallow half of `spec/`.
+ */
+const TODO_FILE_PATTERN =
+  /^(todo|todos|tasks?|plan|plans|backlog|progress|status|roadmap)([._-].*)?\.(md|mdx)$/;
 
 function extension(path: string): string {
   const fileName = path.slice(path.lastIndexOf("/") + 1);
@@ -283,6 +304,12 @@ function underFixtureDirectory(lowerPath: string): boolean {
 
 export function classifyArtifactPath(
   inputPath: string,
+  /**
+   * The repository's own `todoFiles`/`progressDocs`, as a matcher
+   * (`repositoryTodoMatcher`). A repository knows which of its documents is
+   * its task list; a filename rule only guesses.
+   */
+  declaredTodo?: (path: string) => boolean,
 ): ArtifactClassification | null {
   const path = inputPath.replaceAll("\\", "/");
   const lower = path.toLowerCase();
@@ -308,6 +335,15 @@ export function classifyArtifactPath(
   if (lower.includes("/.cursor/rules/") || lower.startsWith(".cursor/rules/")) {
     return "cursor_rule";
   }
+  // The repository's own list runs after the four instruction identities and
+  // before every rule that guesses from a name. Those four are excluded
+  // deliberately: the instruction-cost table is built from them, so a
+  // repository that could relabel its `AGENTS.md` as a todo list would take
+  // its own always-loaded bytes out of its own bill. Everything below here
+  // is inference, and a repository's statement about its files beats it.
+  if (declaredTodo?.(path)) {
+    return "todo_progress";
+  }
   if (
     (fileExtension === ".md" || fileExtension === ".mdx") &&
     (fileName.startsWith("adr-") ||
@@ -316,12 +352,14 @@ export function classifyArtifactPath(
   ) {
     return "adr";
   }
+  // A beads export is issues, in JSON lines. It is a todo document that no
+  // markdown rule could ever match, which is why the pilot scan saw none.
+  if (isBeadsExportPath(lower)) {
+    return "todo_progress";
+  }
   if (
     (fileExtension === ".md" || fileExtension === ".mdx") &&
-    (/^(todo|todos|progress|status|roadmap)([._-].*)?\.(md|mdx)$/.test(
-      fileName,
-    ) ||
-      HANDOFF_FILE_PATTERN.test(fileName))
+    (TODO_FILE_PATTERN.test(fileName) || HANDOFF_FILE_PATTERN.test(fileName))
   ) {
     return "todo_progress";
   }
@@ -955,6 +993,7 @@ export async function scanRepository(input: {
     }
   }
   const ignoredByRepository = repositoryIgnoreMatcher(repositoryConfig);
+  const declaredTodo = repositoryTodoMatcher(repositoryConfig);
 
   for (const entry of sortedEntries) {
     if (entry.type === "commit" || entry.mode === "160000") {
@@ -990,7 +1029,7 @@ export async function scanRepository(input: {
       continue;
     }
 
-    const classification = classifyArtifactPath(entry.path);
+    const classification = classifyArtifactPath(entry.path, declaredTodo);
     // A manifest is read for the mappings a non-relative specifier resolves
     // through — package names, `exports`/`main` targets, tsconfig `paths`,
     // Python source roots (Wave A todo 0, R5 §2.2 D1) — and is re-read on
@@ -1048,7 +1087,8 @@ export async function scanRepository(input: {
       if (
         linkScope === "full" &&
         (classification === "code_metadata" ||
-          isMarkdownArtifact(classification))
+          (isMarkdownArtifact(classification) &&
+            !isBeadsExportPath(entry.path)))
       ) {
         slots.push({
           classification,
@@ -1166,7 +1206,10 @@ export async function scanRepository(input: {
       parsedLinks.set(entry.path, parsePythonLinks(source));
     }
 
-    if (isMarkdownArtifact(classification)) {
+    // A beads export is `todo_progress` but is not prose: the classification
+    // says what a file means, the path says whether a markdown parser can
+    // read it, and those are two different questions.
+    if (isMarkdownArtifact(classification) && !isBeadsExportPath(entry.path)) {
       const document = parseMarkdownStructure({ path: entry.path, source });
       parsedDocuments.set(entry.path, document);
       // ID-token headings become hubs, and every document that names one
@@ -1241,9 +1284,16 @@ export async function scanRepository(input: {
       sourceBlobSha: entry.sha,
       sourceCommitSha: input.commitSha,
       symbolEngine: extraction?.engine ?? null,
+      // Two readers, because a todo document is not always prose. Which one
+      // runs is decided by the path, not by the classification: a beads
+      // export and a `TODO.md` are both `todo_progress`, and reading JSON
+      // lines with a markdown parser would produce a todo per file instead
+      // of a todo per issue.
       todoItems:
         classification === "todo_progress"
-          ? parseTodoDocument({ path: entry.path, source })
+          ? isBeadsExportPath(entry.path)
+            ? parseBeadsExport({ path: entry.path, source })
+            : parseTodoDocument({ path: entry.path, source })
           : [],
     });
   }

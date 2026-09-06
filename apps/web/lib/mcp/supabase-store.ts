@@ -108,13 +108,7 @@ function isScope(value: string): value is McpScope {
   return MCP_SCOPES.some((scope) => scope === value);
 }
 
-/**
- * The node vocabulary, read from the package (Codex remedy P0-D). This was
- * the fourth hand-maintained copy the comment on `MCP_NODE_TYPES` warns
- * about, and it had fallen six values behind — `memory`, `route`,
- * `db_object`, `section` and now `todo` all failed this guard.
- */
-/** The four words the SQL returns; anything else is a schema that moved. */
+/** The five words the SQL returns; anything else is a schema that moved. */
 function todoMatch(value: unknown): McpTodoMatch {
   const word = String(value);
   return word === "created" ||
@@ -126,6 +120,12 @@ function todoMatch(value: unknown): McpTodoMatch {
     : "created";
 }
 
+/**
+ * The node vocabulary, read from the package (Codex remedy P0-D). This was
+ * the fourth hand-maintained copy the comment on `MCP_NODE_TYPES` warns
+ * about, and it had fallen six values behind — `memory`, `route`,
+ * `db_object`, `section` and now `todo` all failed this guard.
+ */
 function isNodeType(value: unknown): value is McpNodeType {
   return (MCP_NODE_TYPES as readonly string[]).includes(String(value));
 }
@@ -783,6 +783,11 @@ export class SupabaseMcpStore implements McpStore {
       truncated.push({ limit: MCP_WORKSPACE_READ_LIMIT, table });
       return all.slice(0, MCP_WORKSPACE_READ_LIMIT);
     };
+    // Positional, and the order below must match the array exactly. Adding
+    // `todos` in the middle of the array while its name stayed at the end of
+    // this list shifted every result after it by one, and the first symptom
+    // was the module-summary decoder being handed a todo row — a mismatch
+    // that only shows up once both tables have rows.
     const [
       repositories,
       nodes,
@@ -794,11 +799,11 @@ export class SupabaseMcpStore implements McpStore {
       receipts,
       indexEntries,
       memoryEntries,
+      todoRows,
       moduleSummaries,
       routes,
       dbObjects,
       sections,
-      todoRows,
     ] = await Promise.all([
       this.client
         .from("repositories")

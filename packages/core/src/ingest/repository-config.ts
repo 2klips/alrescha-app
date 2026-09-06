@@ -149,3 +149,32 @@ export function repositoryIgnoreMatcher(
   const matches = picomatch(patterns, { dot: true });
   return (path: string) => matches(path);
 }
+
+/**
+ * A matcher for the documents a repository says hold its todo list and its
+ * progress ledger (Phase 4 Wave D todo 21).
+ *
+ * Both lists feed one matcher because the graph has one `todo` kind: the
+ * difference between "what we plan to do" and "what we recorded doing" lives
+ * in the checkbox states, not in what the file is. Keeping them as two
+ * settings is still worth it — a repository writes down which of its
+ * documents is which, and a later build that does act on the distinction
+ * will not have to ask again.
+ *
+ * The pattern is a glob, not a prefix: a repository naming
+ * `docs/plans/**\/tasks.md` means the ones under that tree and not a file
+ * that happens to start with the same letters.
+ */
+export function repositoryTodoMatcher(
+  config: RepositoryScanConfig,
+): (path: string) => boolean {
+  const patterns = [...config.progressDocs, ...config.todoFiles].flatMap(
+    (pattern) =>
+      pattern.endsWith("/")
+        ? [`${pattern}**`, pattern.slice(0, -1)]
+        : [pattern],
+  );
+  if (patterns.length === 0) return () => false;
+  const matches = picomatch(patterns, { dot: true });
+  return (path: string) => matches(path);
+}

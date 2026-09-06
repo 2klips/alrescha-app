@@ -44,6 +44,11 @@ const SURFACES = [
   // are audited like any other screen now.
   ["auth-login", "/auth/login"],
   ["auth-code-error", "/auth/auth-code-error"],
+  // The demo inspection route (todo 21). `/app/inspection` is already swept
+  // below, but a fresh workspace has nothing to rank, so the risk widget
+  // renders its empty state there and its colours — the level chips and the
+  // grey unmeasured line — would never reach axe.
+  ["inspection", "/inspection"],
 ] as const;
 
 const THEMES = ["dark", "light"] as const;

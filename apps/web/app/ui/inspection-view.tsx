@@ -2,9 +2,11 @@ import type {
   DependencyAdvisory,
   InspectionDashboard,
   InspectionFindingInput,
+  RiskEntry,
 } from "@alrescha/core";
 import {
   Ban,
+  Crosshair,
   FileText,
   FileWarning,
   Link2,
@@ -79,6 +81,46 @@ function FindingRow({ finding }: { finding: InspectionFindingInput }) {
   );
 }
 
+/**
+ * How many files the widget names (todo 21). The map ranks everything with a
+ * factor, which on a real repository is hundreds — "먼저 볼 파일" is a
+ * question with a short answer, and the count below the list says how much
+ * was left off rather than letting the cut go unmentioned.
+ */
+const RISK_ROWS = 10;
+
+function RiskRow({ entry, rank }: { entry: RiskEntry; rank: number }) {
+  return (
+    <li
+      className="inspection-risk-entry"
+      data-level={entry.level}
+      // The score orders the list and is checkable here; it is not printed.
+      // A rank answers "what first", and three decimal places of a weighted
+      // sum would read as a precision none of these signals has.
+      data-score={entry.score}
+    >
+      <span className="inspection-risk-head">
+        <span className="inspection-risk-rank">{rank}</span>
+        <code>{entry.path}</code>
+        <span className={`inspection-risk-level ${entry.level}`}>
+          {INSPECTION.risk.levels[entry.level]}
+        </span>
+        <StatusBadge grade={entry.grade} />
+      </span>
+      <ul className="inspection-risk-factors">
+        {entry.factors.map((factor) => (
+          <li key={factor.kind}>
+            <span className="inspection-risk-factor">
+              {INSPECTION.risk.factors[factor.kind]}
+            </span>
+            <small>{factor.detail}</small>
+          </li>
+        ))}
+      </ul>
+    </li>
+  );
+}
+
 function AdvisoryRow({ advisory }: { advisory: DependencyAdvisory }) {
   return (
     <li className="inspection-advisory">
@@ -125,6 +167,39 @@ export function InspectionView({ dashboard }: InspectionViewProps) {
               dashboard.progress.total,
             )}
           </p>
+        </Widget>
+
+        <Widget
+          icon={<Icon icon={Crosshair} size="sm" />}
+          section={dashboard.risk}
+          testId="inspection-risk"
+          title={INSPECTION.risk.title}
+        >
+          <p className="inspection-note">{INSPECTION.risk.note}</p>
+          <ol className="inspection-list inspection-risk">
+            {dashboard.risk.entries.slice(0, RISK_ROWS).map((entry, index) => (
+              <RiskRow entry={entry} key={entry.nodeId} rank={index + 1} />
+            ))}
+          </ol>
+          <small className="inspection-risk-count">
+            {INSPECTION.risk.showing(
+              Math.min(RISK_ROWS, dashboard.risk.entries.length),
+              dashboard.risk.entries.length,
+            )}
+          </small>
+          {dashboard.risk.unmeasured.length > 0 ? (
+            // Grey, never zero. "Measured, and clean" and "nobody looked" are
+            // different answers, and only one of them is reassuring.
+            <p className="inspection-unmeasured">
+              <span>{INSPECTION.risk.unmeasuredTitle}</span>
+              {dashboard.risk.unmeasured.map((signal) => (
+                <span key={signal.signal}>
+                  {INSPECTION.risk.unmeasured[signal.signal]}
+                  <small>{signal.reason}</small>
+                </span>
+              ))}
+            </p>
+          ) : null}
         </Widget>
 
         <Widget

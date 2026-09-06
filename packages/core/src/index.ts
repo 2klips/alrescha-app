@@ -108,6 +108,7 @@ export {
   REPOSITORY_CONFIG_PATH,
   parseRepositoryConfig,
   repositoryIgnoreMatcher,
+  repositoryTodoMatcher,
 } from "./ingest/repository-config";
 export type { RepositoryScanConfig } from "./ingest/repository-config";
 export type {
@@ -212,7 +213,13 @@ export {
   MAX_TODO_TITLE,
   parseTodoDocument,
   todoSourceKey,
+  truncateTodoTitle,
 } from "./progress/todos";
+export {
+  beadsSourceKey,
+  isBeadsExportPath,
+  parseBeadsExport,
+} from "./progress/beads";
 export type {
   DocumentTodoSource,
   ParsedTodoItem,

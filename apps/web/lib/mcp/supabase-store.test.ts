@@ -1130,3 +1130,126 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
     });
   });
 });
+
+/**
+ * A workspace load fires fifteen queries in one `Promise.all` and names the
+ * answers by position. Adding `todos` in the middle of the array while its
+ * name stayed at the end of the destructuring shifted every result after it
+ * by one, and nothing failed until a live workspace happened to hold both a
+ * todo and a module summary — at which point the module-summary decoder was
+ * handed a todo row and the whole read answered "Malformed database row".
+ *
+ * So every table here carries a row only it could have produced, and the
+ * assertion is that each one arrives where it was asked for.
+ */
+describe("SupabaseMcpStore.loadWorkspace — every answer reaches its own field", () => {
+  const REPOSITORY_ID = "01K287J3D18V7A1MZG9E8D1Y20";
+
+  it("does not hand one table's rows to another table's decoder", async () => {
+    const fake = new FakeSupabaseClient({
+      db_objects: {
+        data: [
+          {
+            id: "01K287J3D18V7A1MZG9E8D1YB0",
+            kind: "table",
+            name: "todos",
+            repository_id: REPOSITORY_ID,
+            source_line: 12,
+            source_path: "supabase/migrations/0001_init.sql",
+          },
+        ],
+        error: null,
+      },
+      module_summaries: {
+        data: [
+          {
+            member_digest: "d".repeat(64),
+            member_paths: ["packages/core/src/progress/todos.ts"],
+            module_key: "packages/core/src/progress",
+            name: "progress",
+            repository_id: REPOSITORY_ID,
+            summary: "How a document's checkboxes become todos.",
+          },
+        ],
+        error: null,
+      },
+      repositories: {
+        data: [
+          {
+            default_branch: "main",
+            full_name: "2klips/alrescha-app",
+            id: REPOSITORY_ID,
+          },
+        ],
+        error: null,
+      },
+      routes: {
+        data: [
+          {
+            id: "01K287J3D18V7A1MZG9E8D1YA0",
+            methods: ["GET"],
+            repository_id: REPOSITORY_ID,
+            tier: "resolved",
+            url: "/app/inspection",
+          },
+        ],
+        error: null,
+      },
+      sections: {
+        data: [
+          {
+            heading: "ADR-013 — one apply path",
+            id: "01K287J3D18V7A1MZG9E8D1YC0",
+            repository_id: REPOSITORY_ID,
+            source_path: "spec/DECISIONS-ADR.md",
+            token: "ADR-013",
+          },
+        ],
+        error: null,
+      },
+      todos: {
+        data: [
+          {
+            created_at: "2026-09-01T00:00:00.000Z",
+            id: "01K287J3D18V7A1MZG9E8D1Y90",
+            repository_id: REPOSITORY_ID,
+            source_event_id: null,
+            source_key: "document:spec/plan.md:abc",
+            source_path: "spec/plan.md",
+            status: "open",
+            title: "Wire the CI evidence source",
+            updated_at: "2026-09-01T00:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+    });
+
+    const workspace = await new SupabaseMcpStore(asClient(fake)).loadWorkspace(
+      {
+        scopes: ["mcp:read"],
+        tokenId: TOKEN_ID,
+        userId: USER_ID,
+        workspaceId: WORKSPACE_ID,
+      },
+      // Every band, so no query is skipped and the positions are the ones a
+      // full read uses.
+      { bands: [...MCP_READ_BANDS] },
+    );
+    const repository = workspace.repositories[0];
+
+    expect(workspace.todos?.map(({ title }) => title)).toEqual([
+      "Wire the CI evidence source",
+    ]);
+    expect(
+      repository?.moduleSummaries?.map(({ moduleKey }) => moduleKey),
+    ).toEqual(["packages/core/src/progress"]);
+    expect(repository?.routes?.map(({ url }) => url)).toEqual([
+      "/app/inspection",
+    ]);
+    expect(repository?.dbObjects?.map(({ name }) => name)).toEqual(["todos"]);
+    expect(repository?.sections?.map(({ token }) => token)).toEqual([
+      "ADR-013",
+    ]);
+  });
+});
