@@ -90,6 +90,7 @@ export type {
   McpReceiptData,
   McpRepositoryData,
   McpRequirementData,
+  McpRescanResult,
   McpScope,
   McpSectionData,
   McpSourceSpan,

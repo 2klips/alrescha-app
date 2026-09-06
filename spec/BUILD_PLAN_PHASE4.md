@@ -237,6 +237,7 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
       v1 todo 11 그대로(`enqueue_backfill_scan`, 멱등 키 `backfill:<repoId>:<headSha>`, 온보딩 진행 표시, 버튼, `request_rescan` — `readOnlyHint:false`) + `link_schema_version` 불일치 시 자동으로 `mode:'full'`, `request_rescan(repository_id?, mode?)` 인자, 워커 소스 팩토리를 잡 종류별 지연 생성(DB만 읽는 결정론 잡이 CLI 레포에서도 돌게 — ADR-013). 툴 수 순증 0 목표(todo 22의 통합으로 상쇄).
       수용 기준: v1 기준 + 재링크 잡이 0크레딧임을 원장 테스트로, e2e "레포 연결 → 진행 표시 → `/app/map` 노드 >0"(테스트 이메일 세션), T2FV(연결→의미 있는 첫 화면) 분 단위를 evidence에 기록.
       보완(R-02, 2026-09-06): 백필·재스캔이 산문을 무효화하는 지점을 명시한다 — 새 blob이 들어오면 그 파일의 요약은 즉시 `stale`이고, 구조가 준비되면(structure-ready) 분석이 아직이어도(analysis-pending) 화면을 연다. 두 상태는 별개다.
+      **진행(2026-09-06, 미완):** 결정론 절반 완료 — [evidence](../.omo/evidence/phase4/todo-16.md). `enqueue_backfill_scan`·`enqueue_repository_rescan`(head/mode 멱등, 0크레딧 원장 테스트, `link_schema_version` 미달 시 full 승격+사유), MCP `request_rescan`(`readOnlyHint:false`, 툴 23개로 +1 — todo 22에서 상쇄), 스캔 잡이 payload의 `mode`를 읽음, 보완 3상태 단언. **체크박스는 열어 둔다:** G2 미개통이라 실기 연결 0회, 커넥트가 아직 head sha를 읽지 않아 실제로는 `scheduled:false`, 온보딩 진행 표시·버튼·e2e·T2FV 미착수. 워커 소스 팩토리 분리는 소스 없는 잡이 실제로 생기는 todo 17로 미룬다.
       Commit: `feat(onboarding): backfill scan on connect with a full relink mode and an on-demand rescan tool`
 
 - [ ] **17. 로컬 서빙 모드 `alrescha serve --local` + 로컬 레포 분석 경로 판정** _(v1 todo 12 그대로, OQ-030)_

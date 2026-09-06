@@ -181,20 +181,27 @@ function createScanHandler(
   const store = new RepositoryScanStore(sql);
 
   return async (job) => {
-    const commitSha = (job.payload as { commitSha?: string }).commitSha;
+    const payload = job.payload as { commitSha?: string; mode?: string };
+    const commitSha = payload.commitSha;
     if (!commitSha) throw new Error("scan job payload has no commitSha");
+    // A backfill and a "scan again" both ask for a full relink; a push does
+    // not. `runRepositoryScan` still upgrades an incremental request whose
+    // stored links are from an older resolver, so this is what the caller
+    // asked for, not the last word (todo 16).
+    const mode = payload.mode === "full" ? "full" : undefined;
 
     const fetchConcurrency = scanFetchConcurrency();
     const result = await runRepositoryScan({
       commitSha,
       ...(fetchConcurrency === undefined ? {} : { fetchConcurrency }),
+      ...(mode === undefined ? {} : { mode }),
       repositoryId: job.repositoryId,
       source: await sourceFor(job.workspaceId, job.repositoryId),
       store,
       workspaceId: job.workspaceId,
     });
     console.log(
-      `  scan @${commitSha.slice(0, 7)} → ${result.touchedRows} rows`,
+      `  scan @${commitSha.slice(0, 7)} ${result.linkScope} → ${result.touchedRows} rows`,
     );
   };
 }

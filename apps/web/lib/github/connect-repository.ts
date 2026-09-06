@@ -9,9 +9,21 @@ import { createGitHubAppJwt } from "./api";
 import { githubAppEnvironment } from "./env";
 import { saveSelectedRepository } from "./onboarding-store";
 import { createAdminClient } from "../supabase/admin";
+import { scheduleBackfillScan, type BackfillScanResult } from "./backfill-scan";
 
 export type ConnectSelectedRepositoryResult =
-  | { ok: true; repositoryId: string }
+  | {
+      /**
+       * Whether the first scan was queued (Phase 4 Wave C todo 16). A
+       * connect succeeds either way: a repository that is connected but not
+       * yet scanned is a state the product already reports
+       * (`structure: building`), while failing the connect after the row was
+       * written would leave a half-finished setup with no way to retry.
+       */
+      backfill: BackfillScanResult;
+      ok: true;
+      repositoryId: string;
+    }
   | { ok: false; error: "forbidden" | "github_installation_revoked" };
 
 /**
@@ -22,6 +34,12 @@ export type ConnectSelectedRepositoryResult =
 export async function connectSelectedRepository(input: {
   actorUserId: string;
   githubRepositoryId: number;
+  /**
+   * The default branch's head, when the caller knows it. Injected rather
+   * than fetched here so the connect path stays one GitHub round trip and
+   * the scheduling decision is testable without a live installation.
+   */
+  headCommitSha?: string | null;
   installationId: string;
   workspaceId: string;
 }): Promise<ConnectSelectedRepositoryResult> {
@@ -79,5 +97,12 @@ export async function connectSelectedRepository(input: {
     workspaceId: input.workspaceId,
   });
 
-  return { ok: true, repositoryId: selection.repositoryId };
+  const backfill = await scheduleBackfillScan({
+    client: admin,
+    headCommitSha: input.headCommitSha ?? null,
+    repositoryId: selection.repositoryId,
+    workspaceId: input.workspaceId,
+  });
+
+  return { backfill, ok: true, repositoryId: selection.repositoryId };
 }

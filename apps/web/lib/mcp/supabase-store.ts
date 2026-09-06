@@ -28,6 +28,7 @@ import {
   type McpEdgeRelation,
   type McpEdgeTier,
   type McpReadBasis,
+  type McpRescanResult,
   type McpReadTruncation,
   type McpFindingProvenance,
   type McpNodeType,
@@ -42,7 +43,7 @@ import {
   type McpWorkspaceData,
   type PublicMcpTokenRecord,
 } from "@alrescha/mcp";
-import { summaryState } from "@alrescha/core";
+import { LINK_SCHEMA_VERSION, summaryState } from "@alrescha/core";
 
 type Row = Record<string, unknown>;
 
@@ -1152,6 +1153,65 @@ export class SupabaseMcpStore implements McpStore {
     } finally {
       await this.client.removeChannel(realtime);
     }
+  }
+
+  /**
+   * Phase 4 Wave C todo 16. The repository must belong to the principal's
+   * workspace, and the SQL function checks that again — a client-supplied id
+   * is a request, never a claim.
+   */
+  async requestRescan(
+    principal: McpPrincipal,
+    input: {
+      mode?: "full" | "incremental" | undefined;
+      repositoryId?: string | undefined;
+    },
+  ): Promise<McpRescanResult> {
+    const repositoryId =
+      input.repositoryId ?? (await this.#soleRepositoryId(principal));
+    if (repositoryId === null) {
+      return {
+        jobId: null,
+        mode: null,
+        // Naming a repository is the caller's job when there is more than
+        // one; guessing would scan the wrong one silently.
+        reason: "name a repository_id: this workspace has none, or several",
+        repositoryId: null,
+        scheduled: false,
+      };
+    }
+
+    const result = await this.client.rpc("enqueue_repository_rescan", {
+      expected_link_schema_version: LINK_SCHEMA_VERSION,
+      requested_mode: input.mode ?? null,
+      target_repository_id: repositoryId,
+      target_workspace_id: principal.workspaceId,
+    });
+    queryError("MCP rescan request failed", result.error);
+    const outcome = record(result.data);
+    return {
+      jobId: typeof outcome.jobId === "string" ? outcome.jobId : null,
+      mode:
+        outcome.mode === "full" || outcome.mode === "incremental"
+          ? outcome.mode
+          : null,
+      reason: typeof outcome.reason === "string" ? outcome.reason : "unknown",
+      repositoryId,
+      scheduled: outcome.scheduled === true,
+    };
+  }
+
+  /** The workspace's repository when it has exactly one, else null. */
+  async #soleRepositoryId(principal: McpPrincipal): Promise<string | null> {
+    const rows = await this.client
+      .from("repositories")
+      .select("id")
+      .eq("workspace_id", principal.workspaceId)
+      .order("id", { ascending: true })
+      .limit(2);
+    queryError("MCP repository lookup failed", rows.error);
+    const found = rows.data ?? [];
+    return found.length === 1 ? String((found[0] as Row)["id"]) : null;
   }
 
   async requestModuleSummary(

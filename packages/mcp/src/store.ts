@@ -192,6 +192,20 @@ export interface McpReadTruncation {
   table: string;
 }
 
+/** What a rescan request did, and why it did that rather than what was asked. */
+export interface McpRescanResult {
+  jobId: string | null;
+  /** Null when nothing was scheduled. */
+  mode: "full" | "incremental" | null;
+  /**
+   * `requested` when the mode is the caller's, a sentence explaining the
+   * upgrade when it is not, or why nothing was scheduled.
+   */
+  reason: string;
+  repositoryId: string | null;
+  scheduled: boolean;
+}
+
 /** An artifact and the repository it belongs to, from a targeted read. */
 export interface McpArtifactMatch {
   artifact: McpArtifactData;
@@ -683,6 +697,22 @@ export interface McpStore {
       repositoryId: string;
     },
   ): Promise<{ jobId: string | null }>;
+  /**
+   * Ask for a repository to be scanned again (Phase 4 Wave C todo 16).
+   *
+   * Deterministic and free, like every scan. The **mode is decided by the
+   * server**, not by the caller: an incremental request whose stored links
+   * come from an older resolver generation is upgraded to a full relink,
+   * because an incremental pass never re-parses an unchanged file and would
+   * leave the thin graph exactly as it is.
+   */
+  requestRescan(
+    principal: McpPrincipal,
+    input: {
+      mode?: "full" | "incremental" | undefined;
+      repositoryId?: string | undefined;
+    },
+  ): Promise<McpRescanResult>;
   revokeAccessToken(input: {
     actorUserId: string;
     tokenId: string;
@@ -1156,6 +1186,32 @@ export class InMemoryMcpStore implements McpStore {
    * workspace load would carry — which is the point: the contract is what
    * differs between the two, not the answer.
    */
+  /**
+   * The in-memory store schedules nothing — it has no queue. It answers with
+   * the shape a caller has to handle anyway, which is the one where the
+   * server declined to schedule.
+   */
+  async requestRescan(
+    principal: McpPrincipal,
+    input: { repositoryId?: string | undefined },
+  ): Promise<McpRescanResult> {
+    const workspace = this.#workspaces.get(principal.workspaceId);
+    if (!workspace || workspace.ownerUserId !== principal.userId) {
+      throw new Error("Workspace access denied");
+    }
+    const repository =
+      input.repositoryId === undefined
+        ? workspace.repositories[0]
+        : workspace.repositories.find(({ id }) => id === input.repositoryId);
+    return {
+      jobId: null,
+      mode: null,
+      reason: repository ? "no queue in this store" : "unknown repository",
+      repositoryId: repository?.id ?? null,
+      scheduled: false,
+    };
+  }
+
   async findArtifacts(
     principal: McpPrincipal,
     selector: { id?: string | undefined; path?: string | undefined },

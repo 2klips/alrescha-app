@@ -131,6 +131,8 @@ export const BOUNDED_GRAPH_READ_MIGRATION =
   "supabase/migrations/202609060004_bounded_graph_read.sql";
 export const REPOSITORY_REVISION_MIGRATION =
   "supabase/migrations/202609060005_repository_revision.sql";
+export const BACKFILL_AND_RESCAN_MIGRATION =
+  "supabase/migrations/202609060006_backfill_and_rescan.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -187,6 +189,7 @@ export const ALL_MIGRATIONS = [
   SUMMARY_CAS_MIGRATION,
   BOUNDED_GRAPH_READ_MIGRATION,
   REPOSITORY_REVISION_MIGRATION,
+  BACKFILL_AND_RESCAN_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

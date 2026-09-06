@@ -416,6 +416,7 @@ describe("hosted MCP contract", () => {
       "repo_map",
       "repo_overview",
       "request_context_pack",
+      "request_rescan",
       "route_query",
       "search_index",
       "search_nodes",
@@ -489,7 +490,10 @@ describe("hosted MCP contract", () => {
 
     expect(catalogs[1]).toEqual(catalogs[0]);
     expect(catalogs[2]).toEqual(catalogs[0]);
-    expect((catalogs[0] as unknown[]).length).toBe(22);
+    // 23 since todo 16 added `request_rescan`. The catalogue is budgeted at
+    // ≤16 and todo 22's consolidation is where it comes back down; the plan
+    // budgets that trade rather than pretending the count did not move.
+    expect((catalogs[0] as unknown[]).length).toBe(23);
   });
 
   it("ranks index results deterministically and applies the type filter", async () => {

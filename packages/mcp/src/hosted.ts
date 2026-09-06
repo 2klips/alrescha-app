@@ -484,6 +484,33 @@ const LOG_PROGRESS_TOOL = {
   }),
 };
 
+/**
+ * Phase 4 Wave C todo 16. `readOnlyHint: false` because it changes something
+ * — a job appears in the queue — even though it costs nothing and writes no
+ * repository content. A tool that scheduled work while claiming to be
+ * read-only would be lying to every client that gates on the hint.
+ *
+ * The tool count goes up by one here and comes back down in todo 22's
+ * consolidation; the plan budgets that trade explicitly.
+ */
+const REQUEST_RESCAN_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description:
+    "Scan a connected repository again (free, deterministic). Defaults to an incremental pass; the server upgrades it to a full relink when the stored links come from an older resolver generation, and says so in `reason`.",
+  inputSchema: z.object({
+    mode: z.enum(["full", "incremental"]).optional(),
+    repository_id: z.string().trim().min(1).optional(),
+  }),
+  outputSchema: z.object({
+    jobId: z.string().nullable(),
+    mode: z.enum(["full", "incremental"]).nullable(),
+    reason: z.string(),
+    repositoryId: z.string().nullable(),
+    scheduled: z.boolean(),
+    workspaceId: z.string(),
+  }),
+};
+
 const MEMORY_READ_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
@@ -1462,6 +1489,23 @@ function createServer(
         ...contextPack,
         workspaceId: principal.workspaceId,
       });
+    },
+  );
+
+  // Registered here so the advertised catalogue keeps the alphabetical order
+  // the contract test pins — the list is registration order, and a tool that
+  // landed in the middle of it would move every entry after it.
+  server.registerTool(
+    "request_rescan",
+    REQUEST_RESCAN_TOOL,
+    async ({ mode, repository_id }) => {
+      requireScope("mcp:write");
+      const result = await store.requestRescan(principal, {
+        ...(mode === undefined ? {} : { mode }),
+        ...(repository_id === undefined ? {} : { repositoryId: repository_id }),
+      });
+      emitAccessEvent(store, principal, "request_rescan", []);
+      return toolResult({ ...result, workspaceId: principal.workspaceId });
     },
   );
 
