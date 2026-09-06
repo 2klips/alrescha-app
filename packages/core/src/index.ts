@@ -456,6 +456,22 @@ export type {
   DependencyFixAvailability,
 } from "./inspection/dependency-audit";
 
+export {
+  DOC_PAGE_NODE_SCOPES,
+  buildDocPageSkeleton,
+  docPageNeedsNode,
+  docPageSlug,
+  memberDirectories,
+  validateDocPageProse,
+} from "./docs/doc-page";
+export type {
+  DocPageCitation,
+  DocPageProse,
+  DocPageScope,
+  DocPageSkeleton,
+  DocPageSkeletonInput,
+} from "./docs/doc-page";
+
 export { buildRiskMap } from "./inspection/risk-map";
 export type {
   BuildRiskMapInput,
