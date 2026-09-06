@@ -533,3 +533,15 @@
 - 임시 결정: 헤더에 **두 가정을 모두 적는다** — "4자/토큰 가정 · 파일 크기(바이트) 기준 … 한글은 UTF-8에서 한 자가 3바이트라 이 방식은 과대 추정합니다". 저장하는 값은 바이트(사실)이므로 나중에 문자 수가 생기면 다시 계산할 수 있다.
 - 필요한 결정: ⑴ 스캔이 `char_count`를 `size_bytes`와 함께 저장한다(본문이 아니라 수치 하나 — OQ-062 ⑴과 같은 변경에 묶을 수 있다, 기본 후보) ⑵ 바이트에서 UTF-8 다바이트 비율을 추정한다(추정 위의 추정 — 기각) ⑶ 현행 유지 + 가정 표기.
 - 상태: open. ⑴이 기본 후보. OQ-060·OQ-062와 함께 판정한다.
+
+## OQ-064 — 요구사항 커버리지가 1/99인 이유는 매처가 아니라 코퍼스다
+
+- 발견: Phase 4 실레포 스캔(2026-09-06) / `packages/core/src/assurance/rules.ts`(`requirementImplementationLinks`·`explicitImplementationSymbols`·`symbolOwners`), `.omo/evidence/phase4/live-scan.md`
+- 내용: `2klips/alrescha-app` 실스캔에서 요구사항 99개에 `implements` 엣지 **1개**가 나왔다. D6이 "writer가 없어 커버리지가 거짓 0%"라 했고 todo 1이 writer를 만들었으니 0은 아니게 됐지만, 실측하니 원인이 세 겹이다.
+  - **⑴ 소유자 맵은 멀쩡하다.** 고유 심볼 1,218개 중 1,206개가 소유 파일 확정(모호 12개, 1%). 모호성 가드는 병목이 아니다.
+  - **⑵ 매처가 어휘의 3분의 1만 본다.** 심볼 표기법은 camelCase 541 · PascalCase 899 · UPPER_SNAKE 262인데 `explicitImplementationSymbols`는 camelCase만 찾았다. 이번에 PascalCase(2혹 이상)·UPPER_SNAKE까지 넓혔다 — **다만 이 레포에서 순증은 0이다(1 → 1)**. 넓히자마자 오탐이 하나 나왔고(제목 "Theme toggle and persistence"가 export 타입 `Theme`에 붙었다) 2혹 규칙으로 막았다. 백틱은 신호로 못 쓴다: 마크다운 파싱이 인라인 코드를 평문으로 만들어, 99개 중 백틱이 남은 statement가 1개(그나마 짝이 안 맞는다)다.
+  - **⑶ 진짜 원인.** 99개 중 **60개가 한국어 산문**이고 camelCase 토큰이 하나라도 있는 건 11개뿐이다. 그리고 출처를 보면 `BUILD_PLAN.md` 29 · `PHASE2B` 15 · `PHASE3` 15 · `PHASE2C` 11 · `PHASE2A_UI` 10 · `PHASE2D_UI` 6 · `IMPLEMENTATION_GUIDE` 8 — **94개가 계획서·가이드에서 나왔고 정작 규범 스펙인 `WORK_SPEC.md`에서는 2개**다. `spec/` 아래 16개 파일이 전부 `classification='spec'`이라(연구 메모·리뷰·OPEN_QUESTIONS 포함) 추출기가 **작업 항목을 요구사항으로 캔다**. 남은 그 1개 엣지조차 "5. 실기 파일럿: install → push → 카드 → receipt (2026-08-31 완료 …)"라는 **체크박스 항목**이다 — 즉 의미 있는 커버리지는 1/99가 아니라 **0/99**다.
+  - `REQ-…` 코드가 붙은 statement는 **0개**라, `requirementIdsInTests`(테스트 파일에서 `REQ-…`를 찾는 경로)도 이 코퍼스에서는 영원히 안 켜진다.
+- 임시 결정: 매처는 넓힌 채로 둔다(어휘 3분의 2를 못 보는 건 코퍼스와 무관한 결함이고, 2혹 가드로 오탐을 막았다). **순증 0을 그대로 보고한다** — 이 레포에서 이득을 못 보였다는 사실이 측정이다. 분류 변경은 하지 않았다: Wave A의 `classifyArtifactPath`와 밀도 픽스처에 파급이 있어 단독 판단할 일이 아니다.
+- 필요한 결정: ⑴ `spec/` 안에서 **규범 문서와 계획 문서를 분리**한다 — `BUILD_PLAN*`·`RESEARCH_*`·`REVIEW_*`·`OPEN_QUESTIONS`를 `todo_progress`나 `doc`으로 내리고 요구사항 추출은 `WORK_SPEC`·`DECISIONS-ADR` 급에서만(기본 후보, 밀도 픽스처 재측정 필요) ⑵ 요구사항→코드 링크의 신호를 이름 매칭에서 바꾼다 — 이미 있는 재료로는 **출처 문서가 코드를 `references` 하는 요구사항이 34/99**(문서 4개가 코드로 13개 참조)이고, 문서 단위라 statement 단위보다 약하지만 0보다는 많다 ⑶ G3 enrich의 의미 매칭에 맡긴다(비용 발생, ADR-001상 여전히 `inferred`) ⑷ 커버리지 지표를 **"요구사항 문서가 아직 코드를 지목하지 않았다"** 로 다시 쓰고 퍼센트를 안 보여준다.
+- 상태: open. ⑴과 ⑷는 서로 독립이고 둘 다 사용자 결정(OQ-041과 같은 결)이다. 그 전까지 어떤 화면도 이 커버리지를 퍼센트로 그리지 않는다.

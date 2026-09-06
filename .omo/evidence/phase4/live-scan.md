@@ -61,6 +61,37 @@ matcher being too strict or this repository genuinely not naming its
 requirements in symbols is the next question, and it is now a question with a
 number attached instead of a guess.
 
+## Dug out: why that number is 1 (same session)
+
+Full write-up in **OQ-064**. Everything below is measured on this scan.
+
+- The **owner map is healthy** — 1,206 of 1,218 unique exported names have an
+  unambiguous owner. Ambiguity is not the bottleneck.
+- The **matcher saw a third of the vocabulary**: camelCase only, against
+  camelCase 541 / PascalCase 899 / UPPER_SNAKE 262. Widened here to take
+  PascalCase and UPPER_SNAKE — **net gain on this repository: zero (1 → 1)**,
+  reported as measured rather than dressed up. The widening earns its place a
+  different way: the first attempt produced a *wrong* edge (the heading
+  "Theme toggle and persistence" linked to the exported type `Theme`), so
+  bare PascalCase now needs two humps. Backticks cannot be the signal at all
+  — the markdown parse renders inline code to plain text, and 1 of 99
+  statements still holds a backtick, unbalanced.
+- The **cause is the corpus**. 60 of 99 statements are Korean prose, 11
+  contain any camelCase token, and **0 carry a `REQ-…` code** — so the
+  tested-requirement path can never fire either. The requirements come from
+  `BUILD_PLAN.md` (29), `PHASE2B` (15), `PHASE3` (15), `PHASE2C` (11),
+  `PHASE2A_UI` (10), `IMPLEMENTATION_GUIDE` (8) … and **2 from
+  `WORK_SPEC.md`**. Every file under `spec/` is classified `spec`, so the
+  extractor mines build plans, research memos and review notes for
+  requirements.
+- The one surviving edge is itself noise: its statement is
+  "5. 실기 파일럿: install → push → 카드 → receipt (2026-08-31 완료 …)" — a
+  checklist item that happens to contain an identifier. **Meaningful
+  coverage is 0 of 99, not 1 of 99.**
+
+Nothing was reclassified. That is a Wave A change with density-fixture
+consequences and it is the user's call (OQ-064 ⑴, same shape as OQ-041).
+
 ## `verified` is still unreachable, and the reason is not the product
 
 Todo 18 wired CI evidence and the run path executes — but **evidence = 0** on

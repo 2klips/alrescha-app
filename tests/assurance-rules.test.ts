@@ -508,3 +508,165 @@ describe("requirement implementation links", () => {
     ).toEqual(["src/tokens.ts"]);
   });
 });
+
+/**
+ * Phase 4, live-scan follow-up (2026-09-06). The matcher could only see
+ * camelCase, so a third of the exported vocabulary was invisible to it.
+ * Widening what it looks up does not widen what it believes: the ownership
+ * rule still decides, and these hold that line.
+ */
+describe("what a requirement statement can name", () => {
+  function declaration(
+    path: string,
+    name: string,
+    kind = "function",
+  ): AssuranceSourceFile {
+    return {
+      classification: "code_metadata",
+      exportedSymbols: [
+        { endColumn: 1, endLine: 1, kind, name, startColumn: 1, startLine: 1 },
+      ],
+      path,
+      source: "",
+    };
+  }
+
+  it("sees a PascalCase type and an UPPER_SNAKE constant, not only camelCase", () => {
+    const files: AssuranceSourceFile[] = [
+      {
+        classification: "spec",
+        exportedSymbols: [],
+        path: "spec/api.md",
+        source: [
+          "# API",
+          "",
+          "- [ ] REQ-1: every answer carries a `SessionReceipt`.",
+          "- [ ] REQ-2: the cap is `MAX_PACK_TOKENS`.",
+          "- [ ] REQ-3: tokens rotate through `rotateToken`.",
+          "",
+        ].join("\n"),
+      },
+      declaration("src/receipt.ts", "SessionReceipt", "interface"),
+      declaration("src/budget.ts", "MAX_PACK_TOKENS", "variable"),
+      declaration("src/tokens.ts", "rotateToken"),
+    ];
+
+    expect(
+      requirementImplementationLinks({ files })
+        .map(({ identity, symbol, targetPath }) => [
+          identity,
+          symbol,
+          targetPath,
+        ])
+        .sort(),
+    ).toEqual([
+      ["REQ-1", "SessionReceipt", "src/receipt.ts"],
+      ["REQ-2", "MAX_PACK_TOKENS", "src/budget.ts"],
+      ["REQ-3", "rotateToken", "src/tokens.ts"],
+    ]);
+  });
+
+  it("still refuses a name two files declare, whatever its shape", () => {
+    const files: AssuranceSourceFile[] = [
+      {
+        classification: "spec",
+        exportedSymbols: [],
+        path: "spec/api.md",
+        source: "# API\n\n- [ ] REQ-1: answers carry a `SessionReceipt`.\n",
+      },
+      declaration("src/a.ts", "SessionReceipt", "interface"),
+      declaration("src/b.ts", "SessionReceipt", "interface"),
+    ];
+
+    // Looking a name up is not believing it. Two owners is still no owner.
+    expect(requirementImplementationLinks({ files })).toEqual([]);
+  });
+
+  it("treats a backticked span as one name rather than its word pieces", () => {
+    const files: AssuranceSourceFile[] = [
+      {
+        classification: "spec",
+        exportedSymbols: [],
+        path: "spec/api.md",
+        source: "# API\n\n- [ ] REQ-1: the cap is `REQ_TIMEOUT_MS`.\n",
+      },
+      declaration("src/limits.ts", "REQ_TIMEOUT_MS", "variable"),
+    ];
+
+    expect(
+      requirementImplementationLinks({ files }).map(({ symbol }) => symbol),
+    ).toEqual(["REQ_TIMEOUT_MS"]);
+  });
+
+  it("names nothing when the statement is prose about behaviour", () => {
+    const files: AssuranceSourceFile[] = [
+      {
+        classification: "spec",
+        exportedSymbols: [],
+        path: "spec/product.md",
+        source:
+          "# Product\n\n- [ ] REQ-1: 사용자가 푸시하면 서버가 자동으로 분석한다.\n",
+      },
+      declaration("src/scan.ts", "runRepositoryScan"),
+    ];
+
+    // The live-scan finding, as a test: 60 of this repository's 99
+    // requirements are prose like this, and no widening of the lookup
+    // reaches them. Coverage on such a corpus is honest and near-zero.
+    expect(requirementImplementationLinks({ files })).toEqual([]);
+  });
+});
+
+describe("capitalised English is not a type name", () => {
+  function declaration(
+    path: string,
+    name: string,
+    kind = "function",
+  ): AssuranceSourceFile {
+    return {
+      classification: "code_metadata",
+      exportedSymbols: [
+        { endColumn: 1, endLine: 1, kind, name, startColumn: 1, startLine: 1 },
+      ],
+      path,
+      source: "",
+    };
+  }
+
+  it("refuses a one-word capital that is also an exported type", () => {
+    const files: AssuranceSourceFile[] = [
+      {
+        classification: "spec",
+        exportedSymbols: [],
+        path: "spec/ui.md",
+        source: "# UI\n\n- [ ] REQ-1: Theme toggle and persistence.\n",
+      },
+      declaration("apps/web/lib/theme/tokens.ts", "Theme", "type"),
+    ];
+
+    // The live scan produced exactly this edge before the two-hump rule.
+    // A heading is not a reference, and a wrong edge costs more than a
+    // missing one — the rule `symbolOwners` already states.
+    expect(requirementImplementationLinks({ files })).toEqual([]);
+  });
+
+  it("cannot use backticks as the signal, because the parse removes them", () => {
+    const files: AssuranceSourceFile[] = [
+      {
+        classification: "spec",
+        exportedSymbols: [],
+        path: "spec/ui.md",
+        source: "# UI\n\n- [ ] REQ-1: every surface reads `Theme`.\n",
+      },
+      declaration("apps/web/lib/theme/tokens.ts", "Theme", "type"),
+    ];
+
+    // Marking a name as code would be the cleanest signal there is, and it
+    // is gone by the time the matcher sees the statement: inline code is
+    // rendered to plain text, so `Theme` and Theme arrive identical. On the
+    // live repository 1 of 99 statements still held a backtick, and that
+    // one was unbalanced. This test exists so nobody adds a backtick branch
+    // that silently matches nothing.
+    expect(requirementImplementationLinks({ files })).toEqual([]);
+  });
+});

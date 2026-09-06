@@ -293,10 +293,48 @@ function requirementIdsInTests(
   return ids;
 }
 
+/**
+ * Identifiers a requirement statement names, in the shapes exported code
+ * actually uses.
+ *
+ * This used to be camelCase only, which on this repository could see 541 of
+ * 1,702 exported names — a third of the vocabulary. Every `PascalCase` type
+ * and every `UPPER_SNAKE` constant was invisible, so a requirement that named
+ * one had no chance of a link. The ownership map is what keeps this honest:
+ * a token only becomes an edge when exactly one file declares that exact
+ * name, so widening what is *looked up* does not widen what is *believed*.
+ *
+ * **Backticks are not available as a signal.** An author marking a name as
+ * code would be the cleanest way to tell an identifier from a word, but the
+ * statement reaches here after a markdown parse that renders inline code to
+ * plain text: 1 of this repository's 99 statements still contains a
+ * backtick, and that one is unbalanced. Matching on them would be matching
+ * on something that is gone.
+ *
+ * **So bare PascalCase needs two humps.** The first attempt at this widening
+ * accepted `[A-Z][a-z]…` and the live repository immediately produced a
+ * wrong edge: the heading "Theme toggle and persistence" linked to the
+ * exported type `Theme`. Capitalised English is indistinguishable from a
+ * one-word type once the backticks are gone, and `symbolOwners` states the
+ * rule this has to obey — a wrong edge costs more than a missing one.
+ * `SessionReceipt` and `CoachingProviderLoader` match; `Theme`, `Create` and
+ * `Header` do not.
+ *
+ * Measured on `2klips/alrescha-app` (2026-09-06): one `implements` edge
+ * before, two after. The reason the number is that small is not the regex —
+ * see OQ-064.
+ */
 function explicitImplementationSymbols(statement: string): readonly string[] {
-  return [...statement.matchAll(/\b[a-z][A-Za-z\d]*[A-Z][A-Za-z\d]*\b/g)].map(
-    ([symbol]) => symbol,
-  );
+  return [
+    ...new Set(
+      [
+        ...statement.matchAll(
+          // camelCase | PascalCase (≥2 humps) | UPPER_SNAKE
+          /\b(?:[a-z][A-Za-z\d]*[A-Z][A-Za-z\d]*|[A-Z][a-z\d][A-Za-z\d]*[A-Z][A-Za-z\d]*|[A-Z][A-Z\d]*(?:_[A-Z\d]+)+)\b/g,
+        ),
+      ].map(([symbol]) => symbol),
+    ),
+  ];
 }
 
 /**
