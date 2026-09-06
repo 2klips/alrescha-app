@@ -1139,28 +1139,40 @@ describe("hosted MCP contract", () => {
       },
     });
 
-    // The batch form fetches up to four nodes in one round-trip; unknown ids
-    // are dropped rather than erroring the whole batch.
+    // The batch form fetches up to four nodes in one round-trip; an unknown
+    // id does not error the whole batch.
     const batch = await client.callTool({
       arguments: { node_ids: [requirement, "01K287J3D18V7A1MZG9E8D1Y11"] },
       name: "get_node_content",
     });
     const batchContent = batch.structuredContent as {
       node: unknown;
-      nodes: { id: string }[];
+      nodes: { found: boolean; id?: string; requestedId: string }[];
     };
     expect(batchContent.node).toBeNull();
     expect(batchContent.nodes.map(({ id }) => id)).toEqual([
       requirement,
       "01K287J3D18V7A1MZG9E8D1Y11",
     ]);
+
+    // One result per requested id, in the order asked (Codex remedy §9.1).
+    // A miss used to vanish from the array, so a batch of two came back as
+    // one with no way to tell which id had failed — and a caller cannot
+    // retry, or report, an id it was never handed back.
     const missing = await client.callTool({
       arguments: { node_ids: [requirement, "unknown-node-id"] },
       name: "get_node_content",
     });
     expect(
-      (missing.structuredContent as { nodes: unknown[] }).nodes,
-    ).toHaveLength(1);
+      (
+        missing.structuredContent as {
+          nodes: { found: boolean; requestedId: string }[];
+        }
+      ).nodes,
+    ).toEqual([
+      expect.objectContaining({ found: true, requestedId: requirement }),
+      { found: false, requestedId: "unknown-node-id" },
+    ]);
   });
 
   it("emits access events for every graph tool without storing the question", async () => {

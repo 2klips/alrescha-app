@@ -9,6 +9,7 @@ import {
 
 import type {
   McpArtifactData,
+  McpArtifactMatch,
   McpFindingData,
   McpEdgeRelation,
   McpIndexEntryData,
@@ -64,7 +65,22 @@ export interface ArtifactNeighbor {
   type: McpNodeType;
 }
 
+/** Repositories that answer to the same path, when more than one does. */
+export interface AmbiguousArtifactTarget {
+  candidates: {
+    artifactId: string;
+    repositoryFullName: string;
+    repositoryId: string;
+  }[];
+  path: string;
+}
+
 export interface ArtifactWithNeighbors {
+  /**
+   * Set when a path matched in more than one repository. The caller picks;
+   * this layer does not pick for them and call it an answer.
+   */
+  ambiguous?: AmbiguousArtifactTarget;
   artifact: (McpArtifactData & { repositoryId: string }) | null;
   neighbors: ArtifactNeighbor[];
 }
@@ -388,14 +404,70 @@ function repositoryNodes(workspace: McpWorkspaceData): BrainNode[] {
   });
 }
 
+/**
+ * What a query could and could not answer (Codex remedy P0-B / R-01).
+ *
+ * A negative question — "which files have no test" — is only as good as the
+ * edge read behind it. If that read stopped at its row budget, every node
+ * beyond it looks unconnected, and answering "none" is a confident statement
+ * about rows nobody looked at. The filter still runs; the coverage says what
+ * the answer is worth.
+ */
+export interface BrainQueryCoverage {
+  readonly result: "complete" | "partial";
+  /** Filters this read cannot answer as an absence, and why. */
+  readonly unanswered: readonly {
+    readonly filter: string;
+    readonly reason: string;
+  }[];
+}
+
+export interface BrainQueryResult {
+  readonly coverage: BrainQueryCoverage;
+  readonly nodes: BrainNode[];
+}
+
+/** Reads that decide whether a relation filter can be trusted. */
+const RELATION_TABLES = new Set(["edges", "graph_nodes"]);
+
+function queryCoverage(
+  workspace: McpWorkspaceData,
+  filter: BrainQueryFilter,
+): BrainQueryCoverage {
+  const truncated = (workspace.coverage?.truncated ?? []).filter((entry) =>
+    RELATION_TABLES.has(entry.table),
+  );
+  if (truncated.length === 0) {
+    return { result: "complete", unanswered: [] };
+  }
+  const reason = `the ${truncated
+    .map(({ table }) => table)
+    .sort()
+    .join(
+      " and ",
+    )} read stopped at its row budget, so a node with no listed relation may simply be past it`;
+  const unanswered = (
+    [
+      ["withoutRelations", filter.withoutRelations],
+      ["relations", filter.relations],
+    ] as const
+  )
+    .filter(([, value]) => value && value.length > 0)
+    .map(([name]) => ({ filter: name, reason }));
+  return {
+    result: unanswered.length === 0 ? "complete" : "partial",
+    unanswered,
+  };
+}
+
 export function queryWorkspaceBrain(
   workspace: McpWorkspaceData,
   filter: BrainQueryFilter,
-): BrainNode[] {
+): BrainQueryResult {
   const normalizedPath = filter.path
     ? normalizeSearchText(filter.path)
     : undefined;
-  return repositoryNodes(workspace)
+  const nodes = repositoryNodes(workspace)
     .filter((node) => !filter.types || filter.types.includes(node.type))
     .filter((node) => !filter.statuses || filter.statuses.includes(node.status))
     .filter(
@@ -421,32 +493,71 @@ export function queryWorkspaceBrain(
         (left.path ?? "").localeCompare(right.path ?? "") ||
         left.id.localeCompare(right.id),
     );
+  return { coverage: queryCoverage(workspace, filter), nodes };
 }
 
+/**
+ * The artifact a selector names, plus its neighbours from the workspace read.
+ *
+ * `matches` comes from a **targeted** store read, so the artifact is found
+ * whether or not it fell inside the workspace load's row budget (Codex remedy
+ * P0-B). The neighbours still come from that budgeted read, which is why the
+ * caller is told when it was truncated rather than left to read an empty
+ * neighbour list as "this file is connected to nothing".
+ */
 export function getWorkspaceArtifact(
   workspace: McpWorkspaceData,
   selector: { id?: string | undefined; path?: string | undefined },
+  found?: readonly McpArtifactMatch[],
 ): ArtifactWithNeighbors {
-  const matches = workspace.repositories.flatMap((repository) =>
-    repository.artifacts
-      .filter((artifact) =>
-        selector.id
-          ? artifact.id === selector.id
-          : artifact.path === selector.path,
-      )
-      .map((artifact) => ({ artifact, repository })),
-  );
-  matches.sort((left, right) =>
-    left.repository.id.localeCompare(right.repository.id),
-  );
+  const matches: McpArtifactMatch[] = [
+    ...(found ??
+      workspace.repositories.flatMap((repository) =>
+        repository.artifacts
+          .filter((artifact) =>
+            selector.id
+              ? artifact.id === selector.id
+              : artifact.path === selector.path,
+          )
+          .map((artifact) => ({
+            artifact,
+            repositoryFullName: repository.fullName,
+            repositoryId: repository.id,
+          })),
+      )),
+  ].sort((left, right) => left.repositoryId.localeCompare(right.repositoryId));
+  /**
+   * Two repositories can hold the same path — `src/index.ts` is not a name
+   * one project owns. Picking the lexicographically first repository
+   * answered a different question than the one asked, and said nothing about
+   * having chosen (Codex remedy §9.1). An id selector cannot be ambiguous:
+   * ids are unique.
+   */
+  if (!selector.id && matches.length > 1) {
+    return {
+      ambiguous: {
+        candidates: matches.map((match) => ({
+          artifactId: match.artifact.id,
+          repositoryFullName: match.repositoryFullName,
+          repositoryId: match.repositoryId,
+        })),
+        path: selector.path ?? "",
+      },
+      artifact: null,
+      neighbors: [],
+    };
+  }
   const match = matches[0];
   if (!match) return { artifact: null, neighbors: [] };
+  const repository = workspace.repositories.find(
+    ({ id }) => id === match.repositoryId,
+  );
 
   const nodes = new Map(
     repositoryNodes(workspace).map((node) => [node.id, node]),
   );
   const neighbors: ArtifactNeighbor[] = [];
-  for (const edge of match.repository.edges) {
+  for (const edge of repository?.edges ?? []) {
     if (edge.targetNodeId === match.artifact.id) {
       const node = nodes.get(edge.sourceNodeId);
       if (node) {
@@ -476,7 +587,7 @@ export function getWorkspaceArtifact(
   }
 
   return {
-    artifact: { ...match.artifact, repositoryId: match.repository.id },
+    artifact: { ...match.artifact, repositoryId: match.repositoryId },
     neighbors: neighbors.sort(
       (left, right) =>
         left.relation.localeCompare(right.relation) ||

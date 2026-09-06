@@ -46,6 +46,8 @@ export {
   MCP_EDGE_RELATIONS,
   MCP_EDGE_TIERS,
   MCP_NODE_TYPES,
+  MCP_ARTIFACT_MATCH_LIMIT,
+  MCP_WORKSPACE_READ_LIMIT,
   MEMORY_BLOCK_NAMES,
 } from "./store";
 export type {
@@ -54,6 +56,7 @@ export type {
   IssuedAccessToken,
   McpAccessEvent,
   McpArtifactData,
+  McpArtifactMatch,
   McpAssertLinkResult,
   McpMemoryBlockName,
   McpMemoryEntryData,
@@ -66,6 +69,8 @@ export type {
   McpEdgeProvenance,
   McpEdgeRelation,
   McpEdgeTier,
+  McpReadCoverage,
+  McpReadTruncation,
   McpEvidenceData,
   McpFindingData,
   McpFindingProvenance,

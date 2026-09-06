@@ -167,6 +167,38 @@ export interface McpEdgeOmission {
   relation: string;
 }
 
+/**
+ * A read that reached its row budget (Codex remedy P0-B / R-01).
+ *
+ * PostgREST answers with at most `max_rows` and says nothing about it, so a
+ * workspace read of a repository with 5,000 edges used to return an
+ * arbitrary, unordered thousand and present them as the whole graph. Reads
+ * now ask for one row more than they will use: getting it back means there
+ * are more, and the caller is told which table ran out rather than left to
+ * assume it saw everything.
+ */
+export interface McpReadTruncation {
+  /** Rows the read kept. There is at least one more it did not. */
+  limit: number;
+  table: string;
+}
+
+/** An artifact and the repository it belongs to, from a targeted read. */
+export interface McpArtifactMatch {
+  artifact: McpArtifactData;
+  repositoryFullName: string;
+  repositoryId: string;
+}
+
+export interface McpReadCoverage {
+  /**
+   * `complete` for the stated scope — never a claim about the repository's
+   * behaviour, only about the rows this read carried.
+   */
+  result: "complete" | "partial";
+  truncated: McpReadTruncation[];
+}
+
 /** An ID-token heading this repository's own documents declare. */
 export interface McpSectionData {
   /** The declaring heading, as written. */
@@ -299,6 +331,16 @@ export interface McpRepositoryData {
   sections?: McpSectionData[];
 }
 
+/** How many rows one workspace read carries per table before it truncates. */
+export const MCP_WORKSPACE_READ_LIMIT = 2_000;
+
+/**
+ * How many repositories a single path lookup will report. A path answered by
+ * more than a handful of repositories is a workspace-shaped question, not a
+ * file one, and the ambiguity is the answer either way.
+ */
+export const MCP_ARTIFACT_MATCH_LIMIT = 25;
+
 /** Closed concept-relation vocabulary (Graft) — agents assert only these. */
 export const AGENT_ASSERTION_RELATIONS = [
   "part_of",
@@ -348,6 +390,11 @@ export interface McpWriteMemoryResult {
 }
 
 export interface McpWorkspaceData {
+  /**
+   * What this read carried. Absent on a fixture that states nothing, which
+   * reads as complete — a hand-written workspace has no row budget.
+   */
+  coverage?: McpReadCoverage;
   id: string;
   /** Active memory entries (Wave D todo 10); absent on older fixtures. */
   memoryEntries?: McpMemoryEntryData[];
@@ -511,6 +558,22 @@ export interface McpStore {
     actorUserId: string;
     workspaceId: string;
   }): Promise<PublicMcpTokenRecord[]>;
+  /**
+   * One artifact by id, or every artifact answering to a path, read directly
+   * rather than filtered out of a workspace load (Codex remedy P0-B / R-01).
+   *
+   * `loadWorkspace` carries a row budget, so on a repository past it an
+   * artifact simply was not in the answer and nothing said so. A file the
+   * user names is a lookup, not a search, and a lookup should not depend on
+   * where the file happens to sort.
+   *
+   * Returns every match across the workspace's repositories: deciding what
+   * two repositories answering to one path means belongs to the caller.
+   */
+  findArtifacts(
+    principal: McpPrincipal,
+    selector: { id?: string | undefined; path?: string | undefined },
+  ): Promise<readonly McpArtifactMatch[]>;
   loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData>;
   publishAccessEvent(channel: string, event: McpAccessEvent): Promise<void>;
   /**
@@ -1028,6 +1091,34 @@ export class InMemoryMcpStore implements McpStore {
     };
     this.#tokensByHash.set(record.tokenHash, record);
     return { record: publicTokenRecord(record), secret };
+  }
+
+  /**
+   * The in-memory store has no row budget, so this is the same set the
+   * workspace load would carry — which is the point: the contract is what
+   * differs between the two, not the answer.
+   */
+  async findArtifacts(
+    principal: McpPrincipal,
+    selector: { id?: string | undefined; path?: string | undefined },
+  ): Promise<readonly McpArtifactMatch[]> {
+    const workspace = this.#workspaces.get(principal.workspaceId);
+    if (!workspace || workspace.ownerUserId !== principal.userId) {
+      throw new Error("Workspace access denied");
+    }
+    return workspace.repositories.flatMap((repository) =>
+      repository.artifacts
+        .filter((artifact) =>
+          selector.id
+            ? artifact.id === selector.id
+            : artifact.path === selector.path,
+        )
+        .map((artifact) => ({
+          artifact,
+          repositoryFullName: repository.fullName,
+          repositoryId: repository.id,
+        })),
+    );
   }
 
   async loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData> {

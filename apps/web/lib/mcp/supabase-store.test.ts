@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { MCP_WORKSPACE_READ_LIMIT } from "@alrescha/mcp";
 import type { McpAccessEvent } from "@alrescha/mcp";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -49,6 +50,10 @@ class FakeQueryBuilder<T = unknown> {
 
   limit(...args: unknown[]) {
     return this.#record("limit", args);
+  }
+
+  in(...args: unknown[]) {
+    return this.#record("in", args);
   }
 
   async insert(...args: unknown[]) {
@@ -557,5 +562,232 @@ describe("SupabaseMcpStore.loadWorkspace — edge provenance", () => {
       provenance: { method: null, reason: null, span: null },
       tier: null,
     });
+  });
+});
+
+/**
+ * Codex remedy P0-B / R-01. None of the workspace reads set a limit or an
+ * order, so PostgREST answered with an arbitrary `max_rows` and the result
+ * was presented as the whole graph. They now order by id, ask for one row
+ * more than they will use, and report the tables that ran out.
+ */
+describe("SupabaseMcpStore.loadWorkspace — read coverage", () => {
+  const REPOSITORY_ID = "01K287J3D18V7A1MZG9E8D1Y20";
+
+  function artifactRows(count: number) {
+    return Array.from({ length: count }, (_unused, index) => ({
+      id: `01K287J3D18V7A1MZG9E8${index.toString().padStart(5, "0")}`,
+      kind: "code_metadata",
+      metadata: {},
+      path: `src/file-${index}.ts`,
+      repository_id: REPOSITORY_ID,
+      source_blob_sha: "a".repeat(40),
+    }));
+  }
+
+  function client(artifacts: unknown[]) {
+    return new FakeSupabaseClient({
+      artifacts: { data: artifacts, error: null },
+      repositories: {
+        data: [
+          {
+            default_branch: "main",
+            full_name: "2klips/alrescha-app",
+            id: REPOSITORY_ID,
+          },
+        ],
+        error: null,
+      },
+    });
+  }
+
+  async function workspaceOf(fake: FakeSupabaseClient) {
+    const store = new SupabaseMcpStore(asClient(fake));
+    return store.loadWorkspace({
+      scopes: ["mcp:read"],
+      tokenId: TOKEN_ID,
+      userId: USER_ID,
+      workspaceId: WORKSPACE_ID,
+    });
+  }
+
+  it("orders every read and asks for one row past the budget", async () => {
+    const fake = client([]);
+    await workspaceOf(fake);
+
+    const bounded = fake.builders.filter((builder) =>
+      builder.calls.some(({ method }) => method === "limit"),
+    );
+    expect(bounded.length).toBeGreaterThan(10);
+    for (const builder of bounded) {
+      expect(
+        builder.calls.find(({ method }) => method === "limit")?.args,
+      ).toEqual([MCP_WORKSPACE_READ_LIMIT + 1]);
+      expect(
+        builder.calls.find(({ method }) => method === "order")?.args,
+      ).toEqual(["id", { ascending: true }]);
+      // The budget never replaces the tenant predicate.
+      expect(
+        builder.calls.some(
+          ({ args, method }) => method === "eq" && args[0] === "workspace_id",
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("reports a read that ran out instead of presenting it as everything", async () => {
+    const workspace = await workspaceOf(
+      client(artifactRows(MCP_WORKSPACE_READ_LIMIT + 1)),
+    );
+
+    expect(workspace.repositories[0]?.artifacts).toHaveLength(
+      MCP_WORKSPACE_READ_LIMIT,
+    );
+    expect(workspace.coverage).toEqual({
+      result: "partial",
+      truncated: [{ limit: MCP_WORKSPACE_READ_LIMIT, table: "artifacts" }],
+    });
+  });
+
+  it("calls a read that fit complete", async () => {
+    const workspace = await workspaceOf(client(artifactRows(3)));
+    expect(workspace.coverage).toEqual({ result: "complete", truncated: [] });
+  });
+});
+
+/**
+ * The other half of P0-B: a file the user names is a lookup, not a search,
+ * and a lookup must not depend on where the file sorts inside a row budget.
+ */
+describe("SupabaseMcpStore.findArtifacts", () => {
+  const REPOSITORY_ID = "01K287J3D18V7A1MZG9E8D1Y20";
+  const OTHER_REPOSITORY_ID = "01K287J3D18V7A1MZG9E8D1Y21";
+
+  function client(artifacts: unknown[], repositories?: unknown[]) {
+    return new FakeSupabaseClient({
+      artifacts: { data: artifacts, error: null },
+      graph_nodes: { data: [], error: null },
+      repositories: {
+        data: repositories ?? [
+          {
+            full_name: "2klips/alrescha-app",
+            id: REPOSITORY_ID,
+          },
+        ],
+        error: null,
+      },
+    });
+  }
+
+  function found(fake: FakeSupabaseClient, path: string) {
+    return new SupabaseMcpStore(asClient(fake)).findArtifacts(
+      {
+        scopes: ["mcp:read"],
+        tokenId: TOKEN_ID,
+        userId: USER_ID,
+        workspaceId: WORKSPACE_ID,
+      },
+      { path },
+    );
+  }
+
+  it("asks the database for the path rather than filtering a page", async () => {
+    const fake = client([
+      {
+        id: "01K287J3D18V7A1MZG9E8D1Y99",
+        kind: "code_metadata",
+        metadata: {},
+        path: "src/session.ts",
+        repository_id: REPOSITORY_ID,
+        source_blob_sha: "a".repeat(40),
+      },
+    ]);
+    const matches = await found(fake, "src/session.ts");
+
+    expect(matches).toEqual([
+      {
+        artifact: expect.objectContaining({
+          id: "01K287J3D18V7A1MZG9E8D1Y99",
+          path: "src/session.ts",
+        }),
+        repositoryFullName: "2klips/alrescha-app",
+        repositoryId: REPOSITORY_ID,
+      },
+    ]);
+    // The lookup is the query, not a filter over everything: the artifacts
+    // read is scoped by path, so the 1,001st file answers like the first.
+    const artifactQuery = fake.builders[0];
+    expect(
+      artifactQuery?.calls
+        .filter(({ method }) => method === "eq")
+        .map(({ args }) => args[0]),
+    ).toEqual(["workspace_id", "path"]);
+  });
+
+  it("returns every repository that answers to the path", async () => {
+    const fake = client(
+      [
+        {
+          id: "01K287J3D18V7A1MZG9E8D1Y99",
+          kind: "code_metadata",
+          metadata: {},
+          path: "src/index.ts",
+          repository_id: REPOSITORY_ID,
+          source_blob_sha: "a".repeat(40),
+        },
+        {
+          id: "01K287J3D18V7A1MZG9E8D1Y98",
+          kind: "code_metadata",
+          metadata: {},
+          path: "src/index.ts",
+          repository_id: OTHER_REPOSITORY_ID,
+          source_blob_sha: "b".repeat(40),
+        },
+      ],
+      [
+        { full_name: "2klips/alrescha-app", id: REPOSITORY_ID },
+        { full_name: "2klips/other", id: OTHER_REPOSITORY_ID },
+      ],
+    );
+
+    expect(
+      (await found(fake, "src/index.ts")).map(
+        ({ repositoryFullName }) => repositoryFullName,
+      ),
+    ).toEqual(["2klips/alrescha-app", "2klips/other"]);
+  });
+
+  it("drops a match whose repository the principal cannot see", async () => {
+    const fake = client(
+      [
+        {
+          id: "01K287J3D18V7A1MZG9E8D1Y98",
+          kind: "code_metadata",
+          metadata: {},
+          path: "src/index.ts",
+          repository_id: OTHER_REPOSITORY_ID,
+          source_blob_sha: "b".repeat(40),
+        },
+      ],
+      [],
+    );
+
+    expect(await found(fake, "src/index.ts")).toEqual([]);
+  });
+
+  it("answers an empty selector with nothing rather than everything", async () => {
+    const fake = client([]);
+    expect(
+      await new SupabaseMcpStore(asClient(fake)).findArtifacts(
+        {
+          scopes: ["mcp:read"],
+          tokenId: TOKEN_ID,
+          userId: USER_ID,
+          workspaceId: WORKSPACE_ID,
+        },
+        {},
+      ),
+    ).toEqual([]);
+    expect(fake.fromCalls).toEqual([]);
   });
 });

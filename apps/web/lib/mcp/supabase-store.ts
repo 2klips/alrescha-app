@@ -2,12 +2,16 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   MCP_EDGE_FAMILIES,
   MCP_EDGE_RELATIONS,
+  MCP_ARTIFACT_MATCH_LIMIT,
   MCP_EDGE_TIERS,
   MCP_SCOPES,
+  MCP_WORKSPACE_READ_LIMIT,
   createAccessTokenSecret,
   createUlid,
   hashAccessToken,
   type AgentAssertionRelation,
+  type McpArtifactData,
+  type McpArtifactMatch,
   type IssueAccessTokenInput,
   type IssuedAccessToken,
   type McpAccessEvent,
@@ -20,6 +24,7 @@ import {
   type McpEdgeProvenance,
   type McpEdgeRelation,
   type McpEdgeTier,
+  type McpReadTruncation,
   type McpFindingProvenance,
   type McpNodeType,
   type McpSourceSpan,
@@ -137,6 +142,49 @@ function edgeProvenance(value: unknown): McpEdgeProvenance {
     method: typeof stored.method === "string" ? stored.method : null,
     reason: typeof stored.reason === "string" ? stored.reason : null,
     span: sourceSpan(stored.span),
+  };
+}
+
+/**
+ * One artifact row, decoded once for both readers — the workspace load and
+ * the targeted lookup. Two decoders would be two freshness rules, and the
+ * whole point of S1 was that there is one.
+ */
+function artifactData(
+  row: Row,
+  labels: ReadonlyMap<string, string>,
+): McpArtifactData {
+  const metadata = record(row.metadata);
+  const id = requiredString(row, "id");
+  const path = requiredString(row, "path");
+  // The one freshness rule (Codex remedy P0-A): prose written for an older
+  // blob is not served as a description of the file now. `artifacts.metadata`
+  // is merged on rescan, so a stale summary survives every scan until enrich
+  // replaces it — and until then every excerpt, pack and `get_artifact`
+  // answer built from it described a file that had already changed.
+  const fresh = currentSummaryText({
+    currentBlobSha: nullableString(row.source_blob_sha),
+    summary: typeof metadata.summary === "string" ? metadata.summary : null,
+    summaryBlobSha:
+      typeof metadata.summaryBlobSha === "string"
+        ? metadata.summaryBlobSha
+        : null,
+  });
+  return {
+    blobSha: nullableString(row.source_blob_sha) ?? "",
+    content: fresh ?? "",
+    headings: strings(metadata.headings),
+    id,
+    kind: requiredString(row, "kind"),
+    path,
+    status: typeof metadata.status === "string" ? metadata.status : "active",
+    summary: fresh ?? labels.get(id) ?? path,
+    symbols: strings(metadata.symbols),
+    tags: strings(metadata.tags),
+    title:
+      typeof metadata.title === "string"
+        ? metadata.title
+        : (labels.get(id) ?? path),
   };
 }
 
@@ -520,8 +568,100 @@ export class SupabaseMcpStore implements McpStore {
     };
   }
 
+  /**
+   * A targeted lookup, not a filtered workspace load (Codex remedy P0-B).
+   * `loadWorkspace` carries a row budget; on a repository past it an
+   * artifact the user named simply was not in the answer, and nothing said
+   * so. This asks the database for that path.
+   */
+  async findArtifacts(
+    principal: McpPrincipal,
+    selector: { id?: string | undefined; path?: string | undefined },
+  ): Promise<readonly McpArtifactMatch[]> {
+    const workspaceId = principal.workspaceId;
+    if (!selector.id && !selector.path) return [];
+    const query = this.client
+      .from("artifacts")
+      .select("id, repository_id, kind, path, metadata, source_blob_sha")
+      .eq("workspace_id", workspaceId);
+    const matches = await (
+      selector.id
+        ? query.eq("id", selector.id)
+        : query.eq("path", selector.path ?? "")
+    )
+      .order("repository_id", { ascending: true })
+      .limit(MCP_ARTIFACT_MATCH_LIMIT);
+    queryError("MCP artifact lookup failed", matches.error);
+
+    const matchRows = rows(matches.data);
+    if (matchRows.length === 0) return [];
+
+    const repositoryIds = [
+      ...new Set(matchRows.map((row) => requiredString(row, "repository_id"))),
+    ];
+    const repositories = await this.client
+      .from("repositories")
+      .select("id, full_name")
+      .eq("workspace_id", workspaceId)
+      .in("id", repositoryIds);
+    queryError("MCP artifact repository lookup failed", repositories.error);
+    const fullNames = new Map(
+      rows(repositories.data).map((row) => [
+        requiredString(row, "id"),
+        requiredString(row, "full_name"),
+      ]),
+    );
+
+    const labels = await this.client
+      .from("graph_nodes")
+      .select("id, label")
+      .eq("workspace_id", workspaceId)
+      .in(
+        "id",
+        matchRows.map((row) => requiredString(row, "id")),
+      );
+    queryError("MCP artifact label lookup failed", labels.error);
+    const labelById = new Map(
+      rows(labels.data).map((row) => [
+        requiredString(row, "id"),
+        requiredString(row, "label"),
+      ]),
+    );
+
+    return matchRows.flatMap((row) => {
+      const repositoryId = requiredString(row, "repository_id");
+      const fullName = fullNames.get(repositoryId);
+      // A repository the principal cannot see returns no name, and an
+      // artifact with no visible repository is not this workspace's answer.
+      if (!fullName) return [];
+      return [
+        {
+          artifact: artifactData(row, labelById),
+          repositoryFullName: fullName,
+          repositoryId,
+        },
+      ];
+    });
+  }
+
   async loadWorkspace(principal: McpPrincipal): Promise<McpWorkspaceData> {
     const workspaceId = principal.workspaceId;
+    /**
+     * Every read below orders by `id` and asks for one row more than it will
+     * use, so "there is more" becomes an observation instead of an
+     * assumption (Codex remedy P0-B, REMEDY §5.2). Before this, none of them
+     * set a limit or an order at all: PostgREST answered with an arbitrary,
+     * unordered `max_rows` and the result was presented as the whole graph.
+     * Raising `max_rows` was the rejected alternative — it moves the cliff
+     * without telling anyone where it is.
+     */
+    const truncated: McpReadTruncation[] = [];
+    const kept = (table: string, data: unknown): Row[] => {
+      const all = rows(data);
+      if (all.length <= MCP_WORKSPACE_READ_LIMIT) return all;
+      truncated.push({ limit: MCP_WORKSPACE_READ_LIMIT, table });
+      return all.slice(0, MCP_WORKSPACE_READ_LIMIT);
+    };
     const [
       repositories,
       nodes,
@@ -541,48 +681,66 @@ export class SupabaseMcpStore implements McpStore {
       this.client
         .from("repositories")
         .select("id, full_name, default_branch")
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("graph_nodes")
         .select("id, label")
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("artifacts")
         .select("id, repository_id, kind, path, metadata, source_blob_sha")
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("requirements")
         .select("id, repository_id, source_artifact_id, statement, status")
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("evidence")
         .select(
           "id, repository_id, source_artifact_id, kind, verdict, metadata",
         )
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("edges")
         .select(
           "id, repository_id, source_node_id, target_node_id, relation, " +
             "family, confidence, provenance",
         )
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("findings")
         .select(
           "id, repository_id, title, source_node_id, target_node_id, kind, severity, status, provenance, confidence, evidence_grade",
         )
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("receipts")
         .select("id, repository_id, commit_sha, status, summary, digest")
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("index_entries")
         .select(
           "id, repository_id, node_id, neighbor_ids, search_key, entry_type, title, path, headings, tags, symbols",
         )
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("memory_block_entries")
         .select("id, anchor_node_id, name, entry_key, text, valid_from")
@@ -593,19 +751,27 @@ export class SupabaseMcpStore implements McpStore {
         .select(
           "repository_id, module_key, name, member_paths, member_digest, summary",
         )
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("routes")
         .select("id, repository_id, url, tier, methods")
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("db_objects")
         .select("id, repository_id, name, kind, source_path, source_line")
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client
         .from("sections")
         .select("id, repository_id, token, heading, source_path")
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
     ]);
     for (const [label, result] of [
       ["repositories", repositories],
@@ -626,15 +792,15 @@ export class SupabaseMcpStore implements McpStore {
       queryError(`MCP ${label} query failed`, result.error);
 
     const labels = new Map(
-      rows(nodes.data).map((row) => [
+      kept("graph_nodes", nodes.data).map((row) => [
         requiredString(row, "id"),
         requiredString(row, "label"),
       ]),
     );
-    const artifactRows = rows(artifacts.data);
-    const requirementRows = rows(requirements.data);
-    const evidenceRows = rows(evidence.data);
-    const edgeRows = rows(edges.data);
+    const artifactRows = kept("artifacts", artifacts.data);
+    const requirementRows = kept("requirements", requirements.data);
+    const evidenceRows = kept("evidence", evidence.data);
+    const edgeRows = kept("edges", edges.data);
     /**
      * What the vocabulary filter left behind, per repository and relation.
      * A read that returns less than it found without saying so makes a
@@ -661,13 +827,13 @@ export class SupabaseMcpStore implements McpStore {
           relation,
         }));
     };
-    const findingRows = rows(findings.data);
-    const receiptRows = rows(receipts.data);
-    const indexRows = rows(indexEntries.data);
-    const moduleSummaryRows = rows(moduleSummaries.data);
-    const routeRows = rows(routes.data);
-    const dbObjectRows = rows(dbObjects.data);
-    const sectionRows = rows(sections.data);
+    const findingRows = kept("findings", findings.data);
+    const receiptRows = kept("receipts", receipts.data);
+    const indexRows = kept("index_entries", indexEntries.data);
+    const moduleSummaryRows = kept("module_summaries", moduleSummaries.data);
+    const routeRows = kept("routes", routes.data);
+    const dbObjectRows = kept("db_objects", dbObjects.data);
+    const sectionRows = kept("sections", sections.data);
 
     const artifactPathById = new Map(
       artifactRows.map((row) => [
@@ -677,30 +843,36 @@ export class SupabaseMcpStore implements McpStore {
     );
 
     return {
+      coverage: {
+        result: truncated.length === 0 ? "complete" : "partial",
+        truncated,
+      },
       id: workspaceId,
-      memoryEntries: rows(memoryEntries.data).flatMap((row) => {
-        const name = String(row.name);
-        if (
-          name !== "conventions" &&
-          name !== "decisions" &&
-          name !== "gotchas"
-        )
-          return [];
-        const anchorNodeId = nullableString(row.anchor_node_id);
-        return [
-          {
-            anchorNodeId,
-            anchorPath: anchorNodeId
-              ? (artifactPathById.get(anchorNodeId) ?? null)
-              : null,
-            entryKey: requiredString(row, "entry_key"),
-            id: requiredString(row, "id"),
-            name,
-            text: requiredString(row, "text"),
-            updatedAt: requiredString(row, "valid_from"),
-          },
-        ];
-      }),
+      memoryEntries: kept("memory_block_entries", memoryEntries.data).flatMap(
+        (row) => {
+          const name = String(row.name);
+          if (
+            name !== "conventions" &&
+            name !== "decisions" &&
+            name !== "gotchas"
+          )
+            return [];
+          const anchorNodeId = nullableString(row.anchor_node_id);
+          return [
+            {
+              anchorNodeId,
+              anchorPath: anchorNodeId
+                ? (artifactPathById.get(anchorNodeId) ?? null)
+                : null,
+              entryKey: requiredString(row, "entry_key"),
+              id: requiredString(row, "id"),
+              name,
+              text: requiredString(row, "text"),
+              updatedAt: requiredString(row, "valid_from"),
+            },
+          ];
+        },
+      ),
       ownerUserId: principal.userId,
       repositories: rows(repositories.data).map((repository) => {
         const repositoryId = requiredString(repository, "id");
@@ -720,45 +892,7 @@ export class SupabaseMcpStore implements McpStore {
               name: requiredString(row, "name"),
               summary: requiredString(row, "summary"),
             })),
-          artifacts: repoArtifacts.map((row) => {
-            const metadata = record(row.metadata);
-            const id = requiredString(row, "id");
-            const path = requiredString(row, "path");
-            // The one freshness rule (Codex remedy P0-A): prose written for
-            // an older blob is not served as a description of the file now.
-            // `artifacts.metadata` is merged on rescan, so a stale summary
-            // survives every scan until enrich replaces it — and until then
-            // every excerpt, pack and `get_artifact` answer built from it
-            // described a file that had already changed.
-            const fresh = currentSummaryText({
-              currentBlobSha: nullableString(row.source_blob_sha),
-              summary:
-                typeof metadata.summary === "string" ? metadata.summary : null,
-              summaryBlobSha:
-                typeof metadata.summaryBlobSha === "string"
-                  ? metadata.summaryBlobSha
-                  : null,
-            });
-            return {
-              blobSha: nullableString(row.source_blob_sha) ?? "",
-              content: fresh ?? "",
-              headings: strings(metadata.headings),
-              id,
-              kind: requiredString(row, "kind"),
-              path,
-              status:
-                typeof metadata.status === "string"
-                  ? metadata.status
-                  : "active",
-              summary: fresh ?? labels.get(id) ?? path,
-              symbols: strings(metadata.symbols),
-              tags: strings(metadata.tags),
-              title:
-                typeof metadata.title === "string"
-                  ? metadata.title
-                  : (labels.get(id) ?? path),
-            };
-          }),
+          artifacts: repoArtifacts.map((row) => artifactData(row, labels)),
           contextPacks:
             repoIndex.length === 0
               ? []

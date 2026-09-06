@@ -63,7 +63,9 @@ Phase 3까지 "push → 스캔 → 그래프 → MCP 22툴 → enrich → 벤치
 
 동봉된 probe(`docs/reports/research-upgrade-2026-09-05.probe.mjs`)는 **옛 동작을 확인하는 연구 코드**다. 제품 수정 뒤 실패할 수 있고, 통과시키려고 옛 동작을 복원하지 않는다(HANDOFF §5).
 
-**진행:** S1(요약 freshness 읽기 + 쓰기 CAS + 실제 반영 건수) 완료 — [evidence](../.omo/evidence/phase4/remedy-s1.md). todo 19·20이 산문을 노출하기 전에 필요한 기반이므로 그 앞에 넣었다. `module_summaries`·concept의 digest 조건부 저장은 todo 20 소관으로 남는다. S2~S6 미착수.
+**진행:** S1(요약 freshness 읽기 + 쓰기 CAS + 실제 반영 건수) 완료 — [evidence](../.omo/evidence/phase4/remedy-s1.md). `module_summaries`·concept의 digest 조건부 저장은 todo 20 소관으로 남는다.
+S2 완료 — [S2a 근거 무손실](../.omo/evidence/phase4/remedy-s2a.md)(한 어휘·edge provenance·누락 보고), [S2b 경계 있는 읽기](../.omo/evidence/phase4/remedy-s2b.md)(order+limit+coverage·부정 질의 unknown·targeted lookup·경로 ambiguity·batch 입력별 결과). 커서/페이징과 revision fence는 S3.
+S3~S6 미착수.
 
 ---
 

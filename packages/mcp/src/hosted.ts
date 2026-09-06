@@ -228,6 +228,22 @@ const GET_ARTIFACT_TOOL = {
       "Provide exactly one of id or path",
     ),
   outputSchema: z.object({
+    /**
+     * Present when a path matched in more than one repository: the caller
+     * picks, and gets the candidates to pick from (Codex remedy §9.1).
+     */
+    ambiguous: z
+      .object({
+        candidates: z.array(
+          z.object({
+            artifactId: z.string(),
+            repositoryFullName: z.string(),
+            repositoryId: z.string(),
+          }),
+        ),
+        path: z.string(),
+      })
+      .optional(),
     artifact: z
       .object({
         content: z.string(),
@@ -352,16 +368,26 @@ const GET_NODE_CONTENT_TOOL = {
         type: NODE_TYPE_SCHEMA,
       })
       .nullable(),
+    /**
+     * One entry per requested id, in the order asked (Codex remedy §9.1).
+     * A miss says `found: false` rather than vanishing: an id that never
+     * comes back is one the caller can neither retry nor report. Whether it
+     * was absent or out of scope is deliberately the same answer.
+     */
     nodes: z.array(
-      z.object({
-        content: z.string(),
-        id: z.string(),
-        kind: z.string(),
-        path: z.string().nullable(),
-        repositoryId: z.string(),
-        requestedId: z.string(),
-        type: NODE_TYPE_SCHEMA,
-      }),
+      z.union([
+        z.object({
+          content: z.string(),
+          found: z.literal(true),
+          id: z.string(),
+          kind: z.string(),
+          path: z.string().nullable(),
+          repositoryId: z.string(),
+          requestedId: z.string(),
+          type: NODE_TYPE_SCHEMA,
+        }),
+        z.object({ found: z.literal(false), requestedId: z.string() }),
+      ]),
     ),
     workspaceId: z.string(),
   }),
@@ -489,6 +515,14 @@ const QUERY_BRAIN_TOOL = {
   }),
   outputSchema: z.object({
     count: z.number().int().nonnegative(),
+    /**
+     * What this answer is worth. `partial` with a `withoutRelations` entry
+     * means the absence was not established, only not observed.
+     */
+    coverage: z.object({
+      result: z.enum(["complete", "partial"]),
+      unanswered: z.array(z.object({ filter: z.string(), reason: z.string() })),
+    }),
     nodes: z.array(
       z.object({
         id: z.string(),
@@ -1050,8 +1084,14 @@ function createServer(
   );
 
   server.registerTool("get_artifact", GET_ARTIFACT_TOOL, async (selector) => {
-    const workspace = await readWorkspace();
-    const result = getWorkspaceArtifact(workspace, selector);
+    const [workspace, found] = await Promise.all([
+      readWorkspace(),
+      // Targeted: the artifact is looked up by id or path rather than
+      // filtered out of the budgeted workspace read, so a repository past
+      // that budget still answers for its own files (Codex remedy P0-B).
+      store.findArtifacts(principal, selector),
+    ]);
+    const result = getWorkspaceArtifact(workspace, selector, found);
     emitAccessEvent(store, principal, "get_artifact", [
       ...(result.artifact ? [result.artifact.id] : []),
       ...result.neighbors.map(({ id }) => id),
@@ -1123,9 +1163,15 @@ function createServer(
       }
       const workspace = await readWorkspace();
       const requested = node_ids ?? (node_id ? [node_id] : []);
-      const nodes = requested.flatMap((requestedId) => {
+      // One result per input, in input order (Codex remedy §9.1). The
+      // `flatMap` this replaced dropped the misses, so a batch of four came
+      // back as three with no way to tell which id had failed — and a
+      // caller cannot retry, or report, an id it was never handed back.
+      const nodes = requested.map((requestedId) => {
         const found = getNodeContent(workspace, requestedId);
-        return found ? [{ ...found, requestedId }] : [];
+        return found
+          ? { ...found, found: true as const, requestedId }
+          : { found: false as const, requestedId };
       });
       // `node` keeps the original single-node contract; `nodes` is the batch.
       const node = node_id
@@ -1135,7 +1181,7 @@ function createServer(
         store,
         principal,
         "get_node_content",
-        nodes.map(({ id }) => id),
+        nodes.flatMap((entry) => (entry.found ? [entry.id] : [])),
       );
       return toolResult({ node, nodes, workspaceId: principal.workspaceId });
     },
@@ -1239,7 +1285,7 @@ function createServer(
 
   server.registerTool("query_brain", QUERY_BRAIN_TOOL, async ({ filter }) => {
     const workspace = await readWorkspace();
-    const nodes = queryWorkspaceBrain(workspace, filter);
+    const { coverage, nodes } = queryWorkspaceBrain(workspace, filter);
     emitAccessEvent(
       store,
       principal,
@@ -1248,6 +1294,7 @@ function createServer(
     );
     return toolResult({
       count: nodes.length,
+      coverage,
       nodes,
       workspaceId: principal.workspaceId,
     });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { getWorkspaceArtifact, queryWorkspaceBrain } from "./data-brain";
 import {
   collectNeighbors,
   getNodeContent,
@@ -437,5 +438,102 @@ describe("neighbourhood provenance", () => {
       "the document this requirement was read from",
     );
     expect(derived?.tier).toBe("resolved");
+  });
+});
+
+/**
+ * Codex remedy §9.1 and P0-B. A path is not a name one repository owns, and
+ * a negative answer is only as good as the edge read behind it.
+ */
+describe("targeted reads and what they can claim", () => {
+  it("reports every repository that answers to a path instead of picking one", () => {
+    const base = workspace();
+    const first = base.repositories[0]!;
+    const twoRepositories: McpWorkspaceData = {
+      ...base,
+      repositories: [
+        first,
+        {
+          ...first,
+          fullName: "2klips/other",
+          id: "01K200000000000000000000R2",
+        },
+      ],
+    };
+
+    const result = getWorkspaceArtifact(twoRepositories, {
+      path: "src/session.ts",
+    });
+    expect(result.artifact).toBeNull();
+    expect(result.ambiguous?.path).toBe("src/session.ts");
+    expect(
+      result.ambiguous?.candidates.map(({ repositoryId }) => repositoryId),
+    ).toEqual([first.id, "01K200000000000000000000R2"]);
+
+    // An id cannot be ambiguous — ids are unique — so the same workspace
+    // answers an id selector outright.
+    expect(
+      getWorkspaceArtifact(twoRepositories, { id: CODE }).artifact?.id,
+    ).toBe(CODE);
+  });
+
+  it("answers from the targeted matches, not from the budgeted page", () => {
+    const base = workspace();
+    const emptied: McpWorkspaceData = {
+      ...base,
+      repositories: [{ ...base.repositories[0]!, artifacts: [] }],
+    };
+    const artifact = base.repositories[0]!.artifacts[0]!;
+
+    // The workspace read carried no artifacts at all — the row budget ran
+    // out before this one. The lookup still finds it.
+    expect(
+      getWorkspaceArtifact(emptied, { path: artifact.path }).artifact,
+    ).toBeNull();
+    expect(
+      getWorkspaceArtifact(emptied, { path: artifact.path }, [
+        {
+          artifact,
+          repositoryFullName: base.repositories[0]!.fullName,
+          repositoryId: base.repositories[0]!.id,
+        },
+      ]).artifact?.id,
+    ).toBe(artifact.id);
+  });
+
+  it("will not call an absence established when the edge read ran out", () => {
+    const base = workspace();
+    const complete = queryWorkspaceBrain(base, { withoutRelations: ["tests"] });
+    expect(complete.coverage).toEqual({ result: "complete", unanswered: [] });
+
+    const partial = queryWorkspaceBrain(
+      {
+        ...base,
+        coverage: {
+          result: "partial",
+          truncated: [{ limit: 2_000, table: "edges" }],
+        },
+      },
+      { withoutRelations: ["tests"] },
+    );
+    expect(partial.nodes.length).toBeGreaterThan(0);
+    expect(partial.coverage.result).toBe("partial");
+    expect(partial.coverage.unanswered[0]?.filter).toBe("withoutRelations");
+    expect(partial.coverage.unanswered[0]?.reason).toMatch(/row budget/);
+
+    // A query that asks nothing about relations is unaffected by the same
+    // truncation: coverage is about the question, not only the read.
+    expect(
+      queryWorkspaceBrain(
+        {
+          ...base,
+          coverage: {
+            result: "partial",
+            truncated: [{ limit: 2_000, table: "edges" }],
+          },
+        },
+        { types: ["artifact"] },
+      ).coverage.result,
+    ).toBe("complete");
   });
 });
