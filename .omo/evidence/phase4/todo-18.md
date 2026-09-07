@@ -145,3 +145,5 @@ cover the parsers and the archive split.
 - **No e2e.** Docker is unavailable, so every Playwright spec Waves A/A′/C
   touched still owes a run — including a map snapshot showing a `verified`
   node, which is now producible for the first time.
+
+> **정정(2026-09-07):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제 상태는 [e2e-debt.md](e2e-debt.md)에 있다.

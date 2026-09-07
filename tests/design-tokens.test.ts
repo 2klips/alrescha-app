@@ -1,4 +1,11 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import {
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -71,15 +78,30 @@ function listFiles(directory: string): string[] {
 }
 
 /**
+ * Blank out the bodies of `/* … *\/`, keeping every newline so the line
+ * numbers a finding reports still point at the right line.
+ */
+function withoutCssComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, (block) =>
+    block.replace(/[^\n]/g, " "),
+  );
+}
+
+/**
  * Reports every literal colour in a file. TS/TSX are matched on whole string
  * literals only so that copy such as "issue (#8721)" is not a false positive;
- * stylesheets are matched anywhere because every hex there is a colour.
+ * stylesheets are matched anywhere *outside a comment*, because every hex in
+ * a declaration is a colour and every hex in a comment is prose. The rule
+ * used to read the whole stylesheet, so writing down the value a rule was
+ * fixed away from — the thing a reader most wants to know — tripped the gate
+ * that value no longer violates.
  */
 function findColorLiterals(absolutePath: string): ColorFinding[] {
   const relativePath = relative(repoRoot, absolutePath).split(sep).join("/");
-  const source = readFileSync(absolutePath, "utf8");
-  const findings: ColorFinding[] = [];
   const isStylesheet = relativePath.endsWith(".css");
+  const raw = readFileSync(absolutePath, "utf8");
+  const source = isStylesheet ? withoutCssComments(raw) : raw;
+  const findings: ColorFinding[] = [];
 
   source.split(/\r?\n/).forEach((text, index) => {
     if (isStylesheet) {
@@ -579,6 +601,36 @@ describe("hardcoded colour gate", () => {
       "#123456",
       "#fff",
     ]);
+  });
+
+  test("a hex in a stylesheet comment is prose, but the declaration beside it is not", () => {
+    const fixture = join(tmpdir(), `alrescha-hex-${process.pid}.css`);
+    writeFileSync(
+      fixture,
+      [
+        "/* explaining #4493f8, which this rule moved away from */",
+        "/* a block comment",
+        "   spanning lines and naming #abcdef */",
+        ".a {",
+        "  color: var(--accent-emphasis); /* was #ff0000 */",
+        "}",
+        "/* comment */ .b { color: #123456; }",
+      ].join("\n"),
+      "utf8",
+    );
+    try {
+      // Only the declaration is reported — and it is reported on line 7, so
+      // blanking the comments did not shift the line numbers.
+      expect(findColorLiterals(fixture)).toEqual([
+        {
+          file: relative(repoRoot, fixture).split(sep).join("/"),
+          line: 7,
+          value: "#123456",
+        },
+      ]);
+    } finally {
+      rmSync(fixture);
+    }
   });
 
   test("issue references and shas in copy are not treated as colours", () => {

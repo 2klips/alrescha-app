@@ -134,3 +134,5 @@ totals are the numbers above.
   what each meter says and refuses to subtract one from another. Turning
   served bytes and reported usage into a savings figure needs OQ-060 settled
   first, and the plan's own RULE 4 is the reason not to guess it.
+
+> **정정(2026-09-07):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제 상태는 [e2e-debt.md](e2e-debt.md)에 있다.
