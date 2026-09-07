@@ -21,6 +21,7 @@ import {
   DEFAULT_VIEWPORT,
 } from "./render-frame";
 import { fitToView } from "./camera";
+import { buildHitIndex, type HitIndex } from "./hit-test";
 import { createPositionBuffer, type PositionBuffer } from "./position-buffer";
 import {
   clampForceConfig,
@@ -129,6 +130,15 @@ export interface GraphEngine {
   cameraForFit(padding?: number): Camera | null;
   /** Where the camera would have to be to centre one node. */
   cameraForNode(nodeId: string): Camera | null;
+  /**
+   * The node painted under this point on screen, or null (todo 10).
+   *
+   * Asked of the frame the backend last painted, so the answer is about what
+   * is on the screen rather than about where the simulation has since moved
+   * things. The index is rebuilt only when that frame changes, so panning and
+   * zooming cost nothing.
+   */
+  nodeAt(screenX: number, screenY: number): string | null;
   forceConfig(): ForceConfig;
   /** The render plan for the current instant, without painting it. */
   frame(): RenderFrame;
@@ -179,6 +189,9 @@ export interface GraphEngine {
   setDirectionalFocus(enabled: boolean): void;
   setPalette(palette: GraphPalette): void;
   setSelectedNode(nodeId: string | null): void;
+  /** The node under the pointer: its neighbourhood stays lit, the rest fades. */
+  setHoveredNode(nodeId: string | null): void;
+  hoveredNode(): string | null;
   setTextFadeThreshold(value: number): void;
   setViewport(viewport: Viewport): void;
 }
@@ -199,6 +212,7 @@ export async function createGraphEngine(
   let camera: Camera = { ...DEFAULT_CAMERA };
   let palette = options.palette;
   let selectedNodeId: string | null = null;
+  let hoveredNodeId: string | null = null;
   let directionalFocus = false;
   let viewport: Viewport = options.viewport ?? DEFAULT_VIEWPORT;
   let textFadeThreshold = options.textFadeThreshold ?? 0;
@@ -275,6 +289,23 @@ export async function createGraphEngine(
     };
   }
 
+  /**
+   * The index for the frame most recently built, rebuilt only when that
+   * frame changes. It is keyed on frame identity rather than on a revision
+   * counter because that is exactly the question it needs answered: is the
+   * picture I indexed still the picture on screen?
+   */
+  let indexedFrame: RenderFrame | null = null;
+  let hitIndex: HitIndex | null = null;
+
+  function indexFor(built: RenderFrame): HitIndex {
+    if (indexedFrame !== built || !hitIndex) {
+      indexedFrame = built;
+      hitIndex = buildHitIndex(built, viewport);
+    }
+    return hitIndex;
+  }
+
   function frameAt(positions: ReadonlyMap<string, Position>): RenderFrame {
     return buildRenderFrame({
       afterglow,
@@ -284,6 +315,7 @@ export async function createGraphEngine(
       directionalFocus,
       expanded,
       glow,
+      hoveredNodeId,
       palette,
       positions,
       selectedNodeId,
@@ -295,6 +327,9 @@ export async function createGraphEngine(
   function frame(): RenderFrame {
     return frameAt(buffer.at(now()));
   }
+
+  /** The last frame handed to the backend, so a hit test asks about what is on screen. */
+  let lastBuilt: RenderFrame | null = null;
 
   return {
     camera: () => ({ ...camera }),
@@ -339,7 +374,9 @@ export async function createGraphEngine(
     layoutRestarts: () => layoutRestarts,
     paint(prebuilt) {
       if (disposed) return;
-      backend.render(prebuilt ?? frame());
+      const built = prebuilt ?? frame();
+      lastBuilt = built;
+      backend.render(built);
     },
     paintIfChanged() {
       if (disposed) return null;
@@ -348,6 +385,7 @@ export async function createGraphEngine(
         return null;
       }
       const built = frameAt(positions);
+      lastBuilt = built;
       backend.render(built);
       paintedRevision = revision;
       paintedPositions = positions;
@@ -400,6 +438,16 @@ export async function createGraphEngine(
     setSelectedNode(nodeId) {
       selectedNodeId = nodeId;
       touch();
+    },
+    hoveredNode: () => hoveredNodeId,
+    setHoveredNode(nodeId) {
+      if (hoveredNodeId === nodeId) return;
+      hoveredNodeId = nodeId;
+      touch();
+    },
+    nodeAt(screenX, screenY) {
+      const built = lastBuilt ?? frame();
+      return indexFor(built).at(screenX, screenY)?.id ?? null;
     },
     setTextFadeThreshold(value) {
       textFadeThreshold = Math.min(1, Math.max(0, value));

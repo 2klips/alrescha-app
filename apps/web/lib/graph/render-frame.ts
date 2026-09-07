@@ -286,6 +286,26 @@ function medianNodeRadius(
   return value;
 }
 
+const EMPTY_NEIGHBORHOOD: ReadonlySet<string> = new Set();
+
+/**
+ * A node and everything one edge away. Empty for no node, so a caller can
+ * ask unconditionally; a lone node yields just itself, which is how the two
+ * callers below tell "nothing to relate this to" from a real neighbourhood.
+ */
+export function neighborhoodOf(
+  data: { readonly edges: readonly { source: string; target: string }[] },
+  nodeId: string | null,
+): ReadonlySet<string> {
+  if (!nodeId) return EMPTY_NEIGHBORHOOD;
+  const near = new Set<string>([nodeId]);
+  for (const edge of data.edges) {
+    if (edge.source === nodeId) near.add(edge.target);
+    if (edge.target === nodeId) near.add(edge.source);
+  }
+  return near;
+}
+
 export interface FrameInput {
   /** Nodes carrying the residual afterglow tint. */
   afterglow?: ReadonlySet<string>;
@@ -303,6 +323,11 @@ export interface FrameInput {
   expanded?: ReadonlySet<string>;
   /** Node id → 0..1 glow intensity. */
   glow?: ReadonlyMap<string, number>;
+  /**
+   * The node under the pointer, from the canvas hit test (todo 10). Its
+   * neighbourhood stays lit and the rest of the graph fades.
+   */
+  hoveredNodeId?: string | null;
   palette: GraphPalette;
   positions: ReadonlyMap<string, Position>;
   selectedNodeId?: string | null;
@@ -357,18 +382,34 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     input.directionalFocus && input.selectedNodeId
       ? input.selectedNodeId
       : null;
-  const focusNeighborhood = new Set<string>();
-  if (focusedNodeId) {
-    focusNeighborhood.add(focusedNodeId);
-    for (const edge of data.edges) {
-      if (edge.source === focusedNodeId) focusNeighborhood.add(edge.target);
-      if (edge.target === focusedNodeId) focusNeighborhood.add(edge.source);
-    }
+  let focusNeighborhood = neighborhoodOf(data, focusedNodeId);
+  if (focusedNodeId && focusNeighborhood.size <= 1) {
     // An isolated node has no direction to show — fading the whole map to
     // highlight nothing would just make the graph vanish (common while scan
     // data has few edges), so focus only engages with at least one neighbor.
-    if (focusNeighborhood.size <= 1) focusedNodeId = null;
+    focusedNodeId = null;
+    focusNeighborhood = EMPTY_NEIGHBORHOOD;
   }
+
+  /**
+   * Hover, from the canvas hit test (todo 10). It answers a different
+   * question from directional focus — "what is this joined to" rather than
+   * "which way does it flow" — and it wins while the pointer is on a node,
+   * because it is the more immediate signal and it leaves the moment the
+   * pointer does. Applying both at once would dim the map to the
+   * intersection of two answers, which is almost nothing.
+   */
+  let hoveredNodeId = input.hoveredNodeId ?? null;
+  let hoverNeighborhood = neighborhoodOf(data, hoveredNodeId);
+  if (hoveredNodeId && hoverNeighborhood.size <= 1) {
+    // Nothing to relate it to: highlighting one dot by dimming the entire
+    // graph says "nothing here is connected" far louder than it says "this
+    // is the node".
+    hoveredNodeId = null;
+    hoverNeighborhood = EMPTY_NEIGHBORHOOD;
+  }
+  const dimmedNodeId = hoveredNodeId ?? focusedNodeId;
+  const keptNear = hoveredNodeId ? hoverNeighborhood : focusNeighborhood;
 
   const nodes: RenderNode[] = data.nodes.map((node) => {
     const position = collapsed.positions.get(node.id) ?? {
@@ -391,7 +432,7 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     });
     return {
       afterglow: input.afterglow?.has(node.id) ?? false,
-      alpha: focusedNodeId && !focusNeighborhood.has(node.id) ? 0.22 : 1,
+      alpha: dimmedNodeId && !keptNear.has(node.id) ? 0.22 : 1,
       badge: badges ? node.grade : null,
       clusterCount: node.clusterCount ?? null,
       color: resolveColor(input.palette, nodeColorToken(node.type)),
@@ -430,6 +471,16 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
       } else {
         alpha = stroke.alpha * 0.15;
       }
+    }
+    // Hover reads over the top: an edge that touches the hovered node is
+    // lit whatever the focus mode had decided, and one that does not fades.
+    // Direction is not recoloured here — hover asks what this is joined to,
+    // not which way it flows.
+    if (hoveredNodeId) {
+      alpha =
+        edge.source === hoveredNodeId || edge.target === hoveredNodeId
+          ? Math.max(alpha, 0.9)
+          : stroke.alpha * 0.12;
     }
     edges.push({
       alpha,

@@ -57,6 +57,12 @@ export interface BrainMapProps {
    */
   hitLayer?: RefObject<HTMLDivElement | null>;
   onLodChange?: (lod: string, labelCount: number) => void;
+  /** Fires when the canvas hit test changes what is under the pointer. */
+  onHoverChange?: (nodeId: string | null) => void;
+  /** Double-click on a node the canvas hit test found. */
+  onNodeActivate?: (nodeId: string) => void;
+  /** Click on a node the canvas hit test found. */
+  onNodeSelect?: (nodeId: string) => void;
   /** Fires on every change of "the layout has stopped moving". */
   onSettledChange?: (settled: boolean) => void;
   seed?: number;
@@ -96,7 +102,10 @@ export function BrainMap({
   forceConfig,
   glow,
   hitLayer,
+  onHoverChange,
   onLodChange,
+  onNodeActivate,
+  onNodeSelect,
   onSettledChange,
   seed,
   selectedNodeId,
@@ -146,6 +155,12 @@ export function BrainMap({
   onLodChangeRef.current = onLodChange;
   const onSettledChangeRef = useRef(onSettledChange);
   onSettledChangeRef.current = onSettledChange;
+  const onNodeSelectRef = useRef(onNodeSelect);
+  onNodeSelectRef.current = onNodeSelect;
+  const onNodeActivateRef = useRef(onNodeActivate);
+  onNodeActivateRef.current = onNodeActivate;
+  const onHoverChangeRef = useRef(onHoverChange);
+  onHoverChangeRef.current = onHoverChange;
 
   useEffect(() => {
     const host = viewportRef.current;
@@ -366,18 +381,64 @@ export function BrainMap({
      * in-flight glide from dragging the view out from under the hand.
      */
     const onPointerMove = (event: PointerEvent) => {
-      if (!dragging) return;
-      const current = engine?.camera();
-      if (!current) return;
-      cameraTouchedRef.current = true;
-      cameraTargetRef.current = null;
-      engine?.setCamera(panBy(current, event.movementX, event.movementY));
+      if (dragging) {
+        const current = engine?.camera();
+        if (!current) return;
+        cameraTouchedRef.current = true;
+        cameraTargetRef.current = null;
+        engine?.setCamera(panBy(current, event.movementX, event.movementY));
+        return;
+      }
+      // Hover, from the canvas rather than the DOM layer (todo 10). The DOM
+      // layer is capped and a real scan exceeds the cap, so a pointer that
+      // could only find buttons could not reach most of the graph.
+      const bounds = host.getBoundingClientRect();
+      const hit =
+        engine?.nodeAt(
+          event.clientX - bounds.left,
+          event.clientY - bounds.top,
+        ) ?? null;
+      setHover(hit);
+    };
+    const onPointerLeave = () => setHover(null);
+    const setHover = (hit: string | null) => {
+      if (engine?.hoveredNode() === hit) return;
+      engine?.setHoveredNode(hit);
+      host.style.cursor = hit ? "pointer" : "";
+      onHoverChangeRef.current?.(hit);
+    };
+    /**
+     * Selection from the canvas. A press that landed on a DOM hit target is
+     * already handled by that button, so this only answers for the canvas —
+     * which is every node past the accessibility layer's cap, and the whole
+     * graph once a repository is larger than a demo fixture.
+     */
+    const nodeUnder = (event: MouseEvent): string | null => {
+      if (event.target !== canvas) return null;
+      const bounds = host.getBoundingClientRect();
+      return (
+        engine?.nodeAt(
+          event.clientX - bounds.left,
+          event.clientY - bounds.top,
+        ) ?? null
+      );
+    };
+    const onClick = (event: MouseEvent) => {
+      const hit = nodeUnder(event);
+      if (hit) onNodeSelectRef.current?.(hit);
+    };
+    const onDoubleClick = (event: MouseEvent) => {
+      const hit = nodeUnder(event);
+      if (hit) onNodeActivateRef.current?.(hit);
     };
     // Listeners live on the host, not the canvas: the hit layer sits on top of
     // the canvas, and zoom must keep working while the pointer is over a node.
     host.addEventListener("wheel", onWheel, { passive: false });
     host.addEventListener("pointerdown", onPointerDown);
     host.addEventListener("pointermove", onPointerMove);
+    host.addEventListener("pointerleave", onPointerLeave);
+    host.addEventListener("click", onClick);
+    host.addEventListener("dblclick", onDoubleClick);
     window.addEventListener("pointerup", onPointerUp);
 
     return () => {
@@ -387,6 +448,9 @@ export function BrainMap({
       host.removeEventListener("wheel", onWheel);
       host.removeEventListener("pointerdown", onPointerDown);
       host.removeEventListener("pointermove", onPointerMove);
+      host.removeEventListener("pointerleave", onPointerLeave);
+      host.removeEventListener("click", onClick);
+      host.removeEventListener("dblclick", onDoubleClick);
       window.removeEventListener("pointerup", onPointerUp);
       themeObserver.disconnect();
       resizeObserver.disconnect();

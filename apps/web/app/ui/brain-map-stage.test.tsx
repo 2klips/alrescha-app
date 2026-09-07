@@ -7,7 +7,8 @@ import {
   createFixtureGraph,
 } from "../../lib/dashboard/graph-model";
 import { DASHBOARD } from "../../lib/strings";
-import { BrainMapStage, HIT_TARGET_LIMIT, hitTargets } from "./brain-map-stage";
+import { HIT_TARGET_LIMIT, hitTargets } from "../../lib/graph/hit-targets";
+import { BrainMapStage } from "./brain-map-stage";
 
 describe("brain map hit targets", () => {
   test("every node of a normal graph gets one", () => {

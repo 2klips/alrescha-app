@@ -9,11 +9,14 @@
  * force panel lives here because it owns the persisted settings that the
  * renderer consumes.
  *
- * A canvas has no accessibility tree and no click targets, so the stage also
- * renders a transparent **hit layer** — one button per node, parked over its
- * painted position by `BrainMap`. That single layer serves the pointer, the
- * keyboard, assistive technology and the e2e suite, which is why the node
- * affordance is DOM rather than canvas hit-testing.
+ * A canvas has no accessibility tree, so the stage also renders a transparent
+ * **hit layer** — one button per node, parked over its painted position by
+ * `BrainMap` — for the keyboard, assistive technology and the e2e suite.
+ *
+ * It is no longer the pointer's route (Phase 4 Wave B todo 10). It is capped,
+ * and a real repository exceeds the cap, so serving the pointer from here
+ * left most of a scanned graph painted and inert. The canvas hit-tests
+ * itself; this layer answers for the things a canvas cannot.
  */
 
 import dynamic from "next/dynamic";
@@ -29,6 +32,7 @@ import {
   type GraphPanelSettings,
 } from "../../lib/graph/graph-panel-settings";
 import type { LodLevel } from "../../lib/graph/lod";
+import { hitTargets } from "../../lib/graph/hit-targets";
 import { DASHBOARD } from "../../lib/strings";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
 
@@ -36,13 +40,6 @@ const BrainMap = dynamic(
   () => import("./brain-map").then((module_) => module_.BrainMap),
   { ssr: false },
 );
-
-/**
- * Upper bound on DOM hit targets. Past this the graph is a constellation to
- * navigate by camera, not a list to tab through, and the highest-degree nodes
- * are the ones worth reaching; the renderer still paints every node.
- */
-export const HIT_TARGET_LIMIT = 600;
 
 export interface BrainMapStageProps {
   /** Nodes carrying the residual afterglow tint. */
@@ -72,25 +69,6 @@ export interface BrainMapStageProps {
   showForcePanel?: boolean;
 }
 
-/** The nodes that get a DOM hit target: highest degree first, capped. */
-export function hitTargets(
-  data: GraphData,
-  limit = HIT_TARGET_LIMIT,
-): GraphNode[] {
-  if (data.nodes.length <= limit) return [...data.nodes];
-  const degrees = new Map<string, number>();
-  for (const edge of data.edges) {
-    degrees.set(edge.source, (degrees.get(edge.source) ?? 0) + 1);
-    degrees.set(edge.target, (degrees.get(edge.target) ?? 0) + 1);
-  }
-  return [...data.nodes]
-    .sort((left, right) => {
-      const delta = (degrees.get(right.id) ?? 0) - (degrees.get(left.id) ?? 0);
-      return delta === 0 ? left.id.localeCompare(right.id) : delta;
-    })
-    .slice(0, limit);
-}
-
 export function BrainMapStage({
   afterglow,
   data,
@@ -118,6 +96,7 @@ export function BrainMapStage({
   // the camera, and "true" twice is one value.
   const [fitRequest, setFitRequest] = useState(0);
   const [settled, setSettled] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
   const forceConfig = useMemo(() => forceConfigOf(settings), [settings]);
   const hitLayerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -168,6 +147,14 @@ export function BrainMapStage({
         directionalFocus && selectedNodeId ? selectedNodeId : undefined
       }
       data-glow-active={glow ? glow.size : 0}
+      // What the canvas hit test currently has under the pointer. Empty is a
+      // state, not an absence: a test that waited for the attribute to appear
+      // could not tell "nothing hovered" from "hover is broken".
+      data-hovered={hovered ?? ""}
+      // How many nodes the DOM layer speaks for, so a browser test can state
+      // the relationship between the accessibility budget and what is painted
+      // rather than restating the cap.
+      data-hit-targets={targets.length}
       data-lod={lod.level}
       data-lod-labels={lod.labels}
       // "The layout has stopped moving" — the worker has always known it and
@@ -191,6 +178,15 @@ export function BrainMapStage({
             setLod({ labels, level: level as LodLevel });
             onLodReport?.(level as LodLevel, labels);
           }}
+          onNodeActivate={(nodeId) => {
+            const node = data.nodes.find((entry) => entry.id === nodeId);
+            if (node) onNodeActivate?.(node);
+          }}
+          onNodeSelect={(nodeId) => {
+            const node = data.nodes.find((entry) => entry.id === nodeId);
+            if (node) onNodeSelect?.(node);
+          }}
+          onHoverChange={setHovered}
           onSettledChange={setSettled}
           {...(seed === undefined ? {} : { seed })}
           selectedNodeId={selectedNodeId ?? null}

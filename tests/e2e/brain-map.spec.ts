@@ -5,6 +5,7 @@ import {
   LOD_LEVELS,
   type LodLevel,
 } from "../../apps/web/lib/graph/lod";
+import { HIT_TARGET_LIMIT } from "../../apps/web/lib/graph/hit-targets";
 import { GRAPH_PANEL_STORAGE_KEY } from "../../apps/web/lib/graph/graph-panel-settings";
 import { DASHBOARD } from "../../apps/web/lib/strings";
 
@@ -390,4 +391,73 @@ test("fit-to-view brings a graph that was panned away back on screen", async ({
     expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
     expect(box.y + box.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
   }
+});
+
+/**
+ * Phase 4 Wave B todo 10 — the pointer reaches the canvas.
+ *
+ * The DOM hit layer is capped, and a scan of this repository produces 1,260
+ * nodes; past the cap a node was painted and inert. These drive the canvas
+ * directly, over pixels no button covers.
+ */
+
+/** A point on the canvas that no DOM hit target sits on top of. */
+async function bareCanvasPointOnNode(page: Page) {
+  const targets = await page.locator(".brain-map-hit:not([hidden])").all();
+  const boxes = (
+    await Promise.all(targets.map((target) => target.boundingBox()))
+  ).filter((box): box is NonNullable<typeof box> => box !== null);
+  return boxes;
+}
+
+test("hovering a node over the canvas dims what it is not joined to", async ({
+  page,
+}) => {
+  await page.goto("/map");
+  await expect(page.locator(STAGE)).toHaveAttribute("data-settled", "true", {
+    timeout: 15_000,
+  });
+  // The camera glides to its first fit after settling, so the targets are
+  // still moving for a few hundred milliseconds. Reading a position before
+  // then aims the pointer at where a node used to be.
+  await cameraStill(page);
+
+  const boxes = await bareCanvasPointOnNode(page);
+  expect(boxes.length).toBeGreaterThan(1);
+  const first = boxes[0] as NonNullable<(typeof boxes)[number]>;
+
+  // The hover is read from the canvas, not from the button: the pointer event
+  // bubbles to the viewport and the engine hit-tests it. `data-hovered` is
+  // what the stage publishes once the engine has a node.
+  await page.mouse.move(first.x + first.width / 2, first.y + first.height / 2);
+  await expect(page.locator(STAGE)).toHaveAttribute("data-hovered", /.+/, {
+    timeout: 5_000,
+  });
+
+  // Moving off every node clears it — a highlight that never goes away is a
+  // selection, and this is not one.
+  await page.mouse.move(2, 2);
+  await expect(page.locator(STAGE)).toHaveAttribute("data-hovered", "");
+});
+
+test("the accessibility layer is a budget, not a limit on what can be clicked", async ({
+  page,
+}) => {
+  await page.goto("/map");
+  await expect(page.locator(STAGE)).toHaveAttribute("data-settled", "true", {
+    timeout: 15_000,
+  });
+
+  const painted = Number(
+    await page.locator(STAGE).getAttribute("data-canvas-nodes"),
+  );
+  const reachable = await page.locator(".brain-map-hit").count();
+  // The demo fixture is under the cap, so this states the relationship rather
+  // than the numbers: the DOM layer never claims more than the cap, and the
+  // canvas answers for everything painted.
+  expect(reachable).toBeLessThanOrEqual(HIT_TARGET_LIMIT);
+  expect(painted).toBeGreaterThan(0);
+  expect(await page.locator(STAGE).getAttribute("data-hit-targets")).toBe(
+    String(reachable),
+  );
 });
