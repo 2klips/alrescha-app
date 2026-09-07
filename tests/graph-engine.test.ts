@@ -927,6 +927,47 @@ describe("camera focus (Phase 2A todo 7)", () => {
     engine.dispose();
   });
 
+  /**
+   * Phase 4 Wave B todo 13. Filtering used to build a new `GraphData` and
+   * call `setData`, which posts a fresh `start` to the worker: every
+   * keystroke in the search box threw the layout away and re-ran it from the
+   * seeded spiral.
+   */
+  test("filtering changes what is drawn and never restarts the layout", async () => {
+    const data = fixture(15);
+    const { emit, engine } = await engineOn(data);
+    emit({
+      alpha: 0.1,
+      positions: encodePositions(
+        data.nodes.map((_, index) => ({ x: index * 10, y: 0 })),
+      ),
+      revision: 1,
+      type: "positions",
+    });
+    const restarts = engine.layoutRestarts();
+    const before = engine
+      .frame()
+      .nodes.map((node) => [node.id, node.x, node.y]);
+
+    const keep = new Set(data.nodes.slice(0, 4).map((node) => node.id));
+    engine.setVisibility(keep);
+
+    expect(engine.layoutRestarts()).toBe(restarts);
+    expect(engine.visibleNodes()).toBe(keep);
+    const after = engine.frame().nodes;
+    expect(after.map((node) => node.id).sort()).toEqual([...keep].sort());
+    // Every surviving node is exactly where it was — that is the whole point.
+    const byId = new Map(before.map(([id, x, y]) => [id, [x, y]]));
+    for (const node of after) {
+      expect([node.x, node.y], node.id).toEqual(byId.get(node.id));
+    }
+
+    engine.setVisibility(null);
+    expect(engine.frame().nodes).toHaveLength(data.nodes.length);
+    expect(engine.layoutRestarts()).toBe(restarts);
+    engine.dispose();
+  });
+
   test("agrees with focusNode about where a node is", async () => {
     const data = fixture(9);
     const { engine } = await engineOn(data);

@@ -580,3 +580,63 @@ test("a press on empty canvas still pans, and never picks a node up", async ({
     expect(Math.abs(shift.dy - first.dy)).toBeLessThanOrEqual(2);
   }
 });
+
+/**
+ * Phase 4 Wave B todo 13 — a filter is visibility, not a new graph.
+ *
+ * Typing in the search box used to hand the canvas a filtered `GraphData`,
+ * which restarted the simulation: the map exploded and re-formed letter by
+ * letter. This asserts the layout survives.
+ */
+test("filtering hides nodes without moving the ones that stay", async ({
+  page,
+}) => {
+  await page.goto("/map");
+  const stage = page.locator(STAGE);
+  await expect(stage).toHaveAttribute("data-settled", "true", {
+    timeout: 15_000,
+  });
+  await cameraStill(page);
+
+  const inLayout = Number(await stage.getAttribute("data-layout-nodes"));
+  const before = new Map<string, { x: number; y: number }>();
+  for (const target of await page
+    .locator(".brain-map-hit:not([hidden])")
+    .all()) {
+    const id = await target.getAttribute("data-node-id");
+    const box = await target.boundingBox();
+    if (id && box) before.set(id, { x: box.x, y: box.y });
+  }
+  expect(before.size).toBeGreaterThan(2);
+
+  // A query that matches some nodes and not others.
+  await page
+    .getByRole("searchbox", { name: DASHBOARD.search.label })
+    .fill("auth");
+  await expect(stage).not.toHaveAttribute(
+    "data-canvas-nodes",
+    String(inLayout),
+  );
+  const visible = Number(await stage.getAttribute("data-canvas-nodes"));
+
+  // Fewer nodes are drawn…
+  expect(visible).toBeGreaterThan(0);
+  expect(visible).toBeLessThan(inLayout);
+  // …the layout still holds every one of them…
+  expect(Number(await stage.getAttribute("data-layout-nodes"))).toBe(inLayout);
+  // …and `data-settled` never went back to false, which is what a restarted
+  // simulation would have done.
+  await expect(stage).toHaveAttribute("data-settled", "true");
+
+  // Every node that survived the filter is exactly where it was.
+  for (const target of await page
+    .locator(".brain-map-hit:not([hidden])")
+    .all()) {
+    const id = await target.getAttribute("data-node-id");
+    const box = await target.boundingBox();
+    if (!id || !box || !before.has(id)) continue;
+    const was = before.get(id) as { x: number; y: number };
+    expect(Math.abs(box.x - was.x), id).toBeLessThanOrEqual(2);
+    expect(Math.abs(box.y - was.y), id).toBeLessThanOrEqual(2);
+  }
+});

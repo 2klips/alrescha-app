@@ -29,7 +29,11 @@ import {
   wrapWorker,
   type GraphEngine,
 } from "../../lib/graph/engine";
-import type { Camera, RenderFrame } from "../../lib/graph/render-frame";
+import type {
+  Camera,
+  GraphLayer,
+  RenderFrame,
+} from "../../lib/graph/render-frame";
 import type { ForceConfig } from "../../lib/graph/simulation-protocol";
 import { readDesignToken, readRendererPalette } from "../../lib/theme/tokens";
 
@@ -66,6 +70,13 @@ export interface BrainMapProps {
   onNodeSelect?: (nodeId: string) => void;
   /** Fires on every change of "the layout has stopped moving". */
   onSettledChange?: (settled: boolean) => void;
+  /**
+   * Which nodes to draw, or absent for all of them (todo 13). Filtering goes
+   * through here rather than through `data`, so it never restarts the layout.
+   */
+  visibleNodeIds?: ReadonlySet<string> | undefined;
+  /** Layers the viewer switched off (todo 13). */
+  hiddenLayers?: ReadonlySet<GraphLayer> | undefined;
   seed?: number;
   selectedNodeId?: string | null;
   textFadeThreshold?: number;
@@ -111,7 +122,9 @@ export function BrainMap({
   seed,
   selectedNodeId,
   textFadeThreshold,
+  hiddenLayers,
   viewport: viewportRef,
+  visibleNodeIds,
 }: BrainMapProps) {
   const engineRef = useRef<GraphEngine | null>(null);
   /**
@@ -604,6 +617,16 @@ export function BrainMap({
   useEffect(() => {
     engineRef.current?.setGlow(glow ?? new Map(), afterglow ?? new Set());
   }, [afterglow, glow]);
+
+  // …and so is visibility. A filter changes what is drawn, never where
+  // anything sits (todo 13).
+  useEffect(() => {
+    engineRef.current?.setVisibility(visibleNodeIds ?? null);
+  }, [visibleNodeIds]);
+
+  useEffect(() => {
+    engineRef.current?.setHiddenLayers(hiddenLayers ?? null);
+  }, [hiddenLayers]);
 
   // The canvas is owned by the effect above, not by React's reconciler.
   return null;

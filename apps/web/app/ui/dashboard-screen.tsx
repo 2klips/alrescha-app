@@ -53,7 +53,11 @@ import {
   type RealtimeGraphState,
 } from "../../lib/realtime/access-events";
 import type { LodLevel } from "../../lib/graph/lod";
-import { RISK_RING_BANDS } from "../../lib/graph/render-frame";
+import {
+  GRAPH_LAYERS,
+  RISK_RING_BANDS,
+  type GraphLayer,
+} from "../../lib/graph/render-frame";
 import { DASHBOARD, GRADE } from "../../lib/strings";
 import { BrainMapStage } from "./brain-map-stage";
 import { Button } from "./button";
@@ -264,6 +268,8 @@ interface GraphStageSurfaceProps {
   selectedNodeId: string | null;
   settings: PanelSettings;
   visibleGraph: GraphData;
+  visibleNodeIds: ReadonlySet<string> | null;
+  hiddenLayers: ReadonlySet<GraphLayer>;
 }
 
 /**
@@ -285,7 +291,9 @@ function GraphStageSurface({
   realtime,
   selectedNodeId,
   settings,
+  hiddenLayers,
   visibleGraph,
+  visibleNodeIds,
 }: GraphStageSurfaceProps) {
   const clock = useRealtimeClock(realtime.feed.length, realtime.renderBatches);
   // The renderer takes continuous intensity, not phases: `glowFromRealtime`
@@ -315,7 +323,9 @@ function GraphStageSurface({
       ) : (
         <BrainMapStage
           afterglow={afterglow}
-          data={visibleGraph}
+          // The whole graph, always. Filtering is `visibleNodeIds` below, so
+          // the layout survives a keystroke (todo 13).
+          data={model.graph}
           focusNodeId={focusNodeId}
           glow={glow}
           onLodReport={onLodReport}
@@ -325,6 +335,8 @@ function GraphStageSurface({
           selectedNodeId={selectedNodeId}
           settings={settings}
           showForcePanel={false}
+          {...(visibleNodeIds ? { visibleNodeIds } : {})}
+          {...(hiddenLayers.size > 0 ? { hiddenLayers } : {})}
         />
       )}
       {model.isClustered ? (
@@ -442,6 +454,11 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
     level: "near",
   });
   const [recovered, setRecovered] = useState(false);
+  // Layers a viewer switched off. A Set rather than a record: "which are
+  // hidden" is the question every consumer asks.
+  const [hiddenLayers, setHiddenLayers] = useState<ReadonlySet<GraphLayer>>(
+    () => new Set(),
+  );
   const [realtime, setRealtime] = useState(() =>
     createRealtimeGraphState(DEMO_WORKSPACE_ID),
   );
@@ -457,6 +474,27 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
     [baseGraph, localFocus, selectedNode],
   );
   const visibleGraph = focusedGraph;
+  /**
+   * The same answer as `visibleGraph`, as a set of ids (Phase 4 Wave B todo
+   * 13).
+   *
+   * The canvas takes **the whole graph** plus this, rather than the filtered
+   * graph: handing it a filtered `GraphData` restarted the simulation on
+   * every keystroke, so typing a filename made the map explode and re-form
+   * letter by letter. Where a node sits is a property of the repository, not
+   * of what someone is currently looking for.
+   *
+   * The other views still take `visibleGraph` itself — a table and a band
+   * chart have no layout to preserve, and a list of rows *is* the filtered
+   * set.
+   */
+  const visibleNodeIds = useMemo(
+    () =>
+      visibleGraph.nodes.length === model.graph.nodes.length
+        ? null
+        : new Set(visibleGraph.nodes.map((node) => node.id)),
+    [model.graph.nodes.length, visibleGraph],
+  );
   const evidenceChain = useMemo(() => {
     if (!selectedNode) return [];
     const connected = new Set([selectedNode.id]);
@@ -817,6 +855,34 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             {DASHBOARD.legend.test}
           </span>
         </div>
+        {/* Layer toggles (Wave B todo 13). Beside the filters and not among
+            them: a filter says what to look for, a layer says what kind of
+            thing not to look at, and neither should clear the other. */}
+        <div
+          aria-label={DASHBOARD.layers.label}
+          className="arr-legend arr-layer-toggles"
+          data-testid="graph-layer-toggles"
+          title={DASHBOARD.layers.note}
+        >
+          {GRAPH_LAYERS.map((layer) => (
+            <button
+              aria-pressed={!hiddenLayers.has(layer)}
+              data-layer={layer}
+              key={layer}
+              onClick={() =>
+                setHiddenLayers((current) => {
+                  const next = new Set(current);
+                  if (next.has(layer)) next.delete(layer);
+                  else next.add(layer);
+                  return next;
+                })
+              }
+              type="button"
+            >
+              {DASHBOARD.layers.names[layer]}
+            </button>
+          ))}
+        </div>
         {/* The risk ring's own key (Wave B todo 12). Separate from the colour
             legend above because it is a different axis: colour says what a
             node is, the ring says what todo 21 thinks of it. */}
@@ -862,7 +928,9 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
                 realtime={realtime}
                 selectedNodeId={selectedNode?.id ?? null}
                 settings={panelSettings}
+                hiddenLayers={hiddenLayers}
                 visibleGraph={visibleGraph}
+                visibleNodeIds={visibleNodeIds}
               />
             ) : (
               <GraphTableView

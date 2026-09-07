@@ -9,12 +9,13 @@
  */
 
 import type { GraphData } from "../dashboard/graph-model";
-import { communityAssignment } from "./clustering";
+import { hierarchyAssignment, hierarchyTemplates } from "./clustering";
 import type { LodLevel } from "./lod";
 import {
   buildRenderFrame,
   type Camera,
   type GraphPalette,
+  type GraphLayer,
   type RenderFrame,
   type Viewport,
   DEFAULT_CAMERA,
@@ -189,6 +190,20 @@ export interface GraphEngine {
   setDirectionalFocus(enabled: boolean): void;
   setPalette(palette: GraphPalette): void;
   setSelectedNode(nodeId: string | null): void;
+  /**
+   * Which nodes to draw, or null for all of them (Phase 4 Wave B todo 13).
+   *
+   * **This never restarts the layout.** Filtering used to build a new
+   * `GraphData` and call `setData`, which re-ran the simulation from the
+   * seeded spiral: every keystroke in the search box threw the layout away,
+   * so the graph exploded and re-formed while someone was typing a filename.
+   * Where a node sits is a property of the repository, not of what a viewer
+   * is looking at.
+   */
+  setVisibility(nodeIds: ReadonlySet<string> | null): void;
+  visibleNodes(): ReadonlySet<string> | null;
+  /** Layers the viewer switched off. Also a visual change, also no restart. */
+  setHiddenLayers(layers: ReadonlySet<GraphLayer> | null): void;
   /** The node under the pointer: its neighbourhood stays lit, the rest fades. */
   setHoveredNode(nodeId: string | null): void;
   hoveredNode(): string | null;
@@ -226,6 +241,8 @@ export async function createGraphEngine(
   let selectedNodeId: string | null = null;
   let hoveredNodeId: string | null = null;
   let pinnedNodeId: string | null = null;
+  let visibleNodeIds: ReadonlySet<string> | null = null;
+  let hiddenLayers: ReadonlySet<GraphLayer> | null = null;
   let directionalFocus = false;
   let viewport: Viewport = options.viewport ?? DEFAULT_VIEWPORT;
   let textFadeThreshold = options.textFadeThreshold ?? 0;
@@ -240,7 +257,13 @@ export async function createGraphEngine(
 
   // Community detection runs once per graph, not per frame: collapsing is a
   // display decision, the assignment is a property of the structure.
-  let assignment = communityAssignment(data, { seed: options.seed ?? 1 });
+  // Far is the only level that collapses, so that is the level the
+  // assignment is built for (todo 13). It is the directory tree where there
+  // is one and Louvain where there is not.
+  let assignment = hierarchyAssignment(data, "far", {
+    seed: options.seed ?? 1,
+  });
+  let templates = hierarchyTemplates(data);
   const expanded = new Set<string>();
 
   /**
@@ -344,7 +367,10 @@ export async function createGraphEngine(
       expanded,
       geometryRevision,
       glow,
+      templates,
       hoveredNodeId,
+      ...(visibleNodeIds ? { visible: visibleNodeIds } : {}),
+      ...(hiddenLayers ? { hiddenLayers } : {}),
       palette,
       positions,
       selectedNodeId,
@@ -435,7 +461,10 @@ export async function createGraphEngine(
     setData(next) {
       data = next;
       nodeIds = next.nodes.map((node) => node.id);
-      assignment = communityAssignment(next, { seed: options.seed ?? 1 });
+      assignment = hierarchyAssignment(next, "far", {
+        seed: options.seed ?? 1,
+      });
+      templates = hierarchyTemplates(next);
       expanded.clear();
       buffer.reset();
       settled = false;
@@ -466,6 +495,17 @@ export async function createGraphEngine(
     },
     setSelectedNode(nodeId) {
       selectedNodeId = nodeId;
+      touch();
+    },
+    visibleNodes: () => visibleNodeIds,
+    setHiddenLayers(layers) {
+      hiddenLayers = layers;
+      touch();
+    },
+    setVisibility(nodeIds) {
+      visibleNodeIds = nodeIds;
+      // A visual change, not a layout one: no `createStartMessage`, no
+      // `layoutRestarts`, no reheat. The test asserts exactly that.
       touch();
     },
     hoveredNode: () => hoveredNodeId,

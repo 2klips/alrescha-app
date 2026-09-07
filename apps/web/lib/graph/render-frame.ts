@@ -122,8 +122,71 @@ const FAR_HIDDEN_RELATIONS: ReadonlySet<string> = new Set([
   "contains",
 ]);
 
+/**
+ * The layers a viewer can switch off (Phase 4 Wave B todo 13).
+ *
+ * Not a filter. A filter answers "show me the nodes matching this", and what
+ * it hides is a consequence; a layer answers "I am not looking at
+ * containment right now", and it is about a whole *kind* of thing. They are
+ * separate controls because they are separate questions, and a viewer who
+ * turns off co-change should not have their search box cleared.
+ *
+ * These are the kinds that mostly add texture: containment and co-change are
+ * edges, concepts, sections and prose are nodes.
+ *
+ * The plan names seven. Five are here, and the two that are not — `style`
+ * and `config` — are absent for a stated reason: the scanner classifies them,
+ * but a stylesheet and a `tsconfig.json` both arrive at the map as `code`
+ * nodes, so there is nothing on a `GraphNode` to switch off. Offering the
+ * toggle anyway would give a viewer a control that silently does nothing.
+ */
+export const GRAPH_LAYERS = [
+  "co_changed",
+  "concept",
+  "contains",
+  "doc",
+  "section",
+] as const;
+
+export type GraphLayer = (typeof GRAPH_LAYERS)[number];
+
+/**
+ * Node types the given layers switch off. Exported because the DOM hit layer
+ * has to hide the same nodes the canvas does — a keyboard user tabbing to a
+ * node nobody can see is worse than one who cannot reach it at all.
+ */
+export function hiddenNodeTypesFor(
+  layers: ReadonlySet<GraphLayer> | undefined,
+): ReadonlySet<string> {
+  return new Set(
+    [...(layers ?? [])].flatMap((layer) =>
+      LAYER_NODE_TYPES[layer] ? [LAYER_NODE_TYPES[layer] as string] : [],
+    ),
+  );
+}
+
+/** Edge relations a layer switches off. */
+const LAYER_RELATIONS: Readonly<Partial<Record<GraphLayer, string>>> = {
+  co_changed: "co_changed",
+  contains: "contains",
+};
+
+/** Node types a layer switches off. */
+const LAYER_NODE_TYPES: Readonly<Partial<Record<GraphLayer, string>>> = {
+  concept: "concept",
+  doc: "document",
+  section: "section",
+};
+
 /** How faintly a layout-only edge is drawn where it is drawn at all. */
 const LAYOUT_ONLY_ALPHA = 0.08;
+
+/**
+ * How much a merged edge thickens per decade of merged edges (todo 13). At
+ * 1.0 a pair with a thousand real edges is four times the width of a pair
+ * with one, which is legible without turning a hub into a slab.
+ */
+const MERGED_EDGE_WIDTH_SCALE = 1;
 
 export interface RenderEdge {
   alpha: number;
@@ -290,6 +353,7 @@ let collapseMemo: {
   expanded: ReadonlySet<string> | undefined;
   positions: ReadonlyMap<string, Position>;
   result: { data: GraphData; positions: ReadonlyMap<string, Position> };
+  templates: ReadonlyMap<string, GraphNode> | undefined;
 } | null = null;
 
 function collapseFor(
@@ -297,13 +361,15 @@ function collapseFor(
   data: GraphData,
   expanded: ReadonlySet<string> | undefined,
   positions: ReadonlyMap<string, Position>,
+  templates: ReadonlyMap<string, GraphNode> | undefined,
 ): { data: GraphData; positions: ReadonlyMap<string, Position> } {
   if (
     collapseMemo &&
     collapseMemo.assignment === assignment &&
     collapseMemo.data === data &&
     collapseMemo.expanded === expanded &&
-    collapseMemo.positions === positions
+    collapseMemo.positions === positions &&
+    collapseMemo.templates === templates
   ) {
     return collapseMemo.result;
   }
@@ -312,8 +378,9 @@ function collapseFor(
     data,
     ...(expanded ? { expanded } : {}),
     positions,
+    ...(templates ? { templates } : {}),
   });
-  collapseMemo = { assignment, data, expanded, positions, result };
+  collapseMemo = { assignment, data, expanded, positions, result, templates };
   return result;
 }
 
@@ -430,8 +497,30 @@ export interface FrameInput {
   expanded?: ReadonlySet<string>;
   /** Bumped by the engine on every change a camera move is not. */
   geometryRevision?: number;
+  /**
+   * Which nodes to draw, or absent for all of them (Phase 4 Wave B todo 13).
+   *
+   * Filtering used to build a *new* `GraphData` and hand it to the engine,
+   * which restarted the simulation: every keystroke in the search box threw
+   * the layout away and re-ran it from the seeded spiral, so the graph
+   * exploded and re-formed while someone was typing a filename.
+   *
+   * A visibility set is the same answer without that. The layout is a
+   * property of the repository, not of what a viewer is currently looking
+   * at, so nodes stay exactly where they are and filtering reads as things
+   * fading out.
+   */
+  visible?: ReadonlySet<string> | undefined;
+  /**
+   * Layers the viewer has switched off (todo 13). Separate from `visible`
+   * because they are separate questions: a filter says what to look for, a
+   * layer says what kind of thing not to look at.
+   */
+  hiddenLayers?: ReadonlySet<GraphLayer> | undefined;
   /** Node id → 0..1 glow intensity. */
   glow?: ReadonlyMap<string, number>;
+  /** Community key → the node that is that community (todo 13). */
+  templates?: ReadonlyMap<string, GraphNode> | undefined;
   /**
    * The node under the pointer, from the canvas hit test (todo 10). Its
    * neighbourhood stays lit and the rest of the graph fades.
@@ -474,6 +563,7 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
           input.data,
           input.expanded,
           input.positions,
+          input.templates,
         )
       : { data: input.data, positions: input.positions };
 
@@ -520,12 +610,41 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
   const dimmedNodeId = hoveredNodeId ?? focusedNodeId;
   const keptNear = hoveredNodeId ? hoverNeighborhood : focusNeighborhood;
 
-  const nodes: RenderNode[] = data.nodes.map((node) => {
+  /**
+   * A hidden node still has a position — it is in the layout, it is simply
+   * not drawn — so `placed` is filled for every node and the visibility test
+   * happens when the render list is built. An edge between two hidden nodes
+   * then falls out for free, and one that reaches a hidden node is dropped
+   * explicitly below: a line to nowhere is worse than no line.
+   */
+  const visible = input.visible;
+  /** Node types the switched-off layers cover. */
+  const hiddenTypes = new Set(
+    [...(input.hiddenLayers ?? [])].flatMap((layer) =>
+      LAYER_NODE_TYPES[layer] ? [LAYER_NODE_TYPES[layer] as string] : [],
+    ),
+  );
+  /** Edge relations they cover. */
+  const hiddenRelations = new Set(
+    [...(input.hiddenLayers ?? [])].flatMap((layer) =>
+      LAYER_RELATIONS[layer] ? [LAYER_RELATIONS[layer] as string] : [],
+    ),
+  );
+  const typeById = new Map(data.nodes.map((node) => [node.id, node.type]));
+  const isVisible = (nodeId: string): boolean =>
+    (!visible || visible.has(nodeId)) &&
+    !hiddenTypes.has(typeById.get(nodeId) ?? "");
+
+  const nodes: RenderNode[] = data.nodes.flatMap((node) => {
     const position = collapsed.positions.get(node.id) ?? {
       x: node.x,
       y: node.y,
     };
     placed.set(node.id, position);
+    // Hidden: it keeps its place in the layout and gets no label candidate
+    // and no render node. A label for something nobody can see is a label
+    // pointing at nothing.
+    if (!isVisible(node.id)) return [];
     const degree = degrees.get(node.id) ?? 0;
     const radius = nodeRadius(
       importance.get(node.id) ?? degree,
@@ -542,25 +661,27 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
       screenX: viewport.width / 2 + camera.x + position.x * camera.scale,
       screenY: viewport.height / 2 + camera.y + position.y * camera.scale,
     });
-    return {
-      afterglow: input.afterglow?.has(node.id) ?? false,
-      alpha: dimmedNodeId && !keptNear.has(node.id) ? 0.22 : 1,
-      badge: badges ? node.grade : null,
-      clusterCount: node.clusterCount ?? null,
-      color: resolveColor(input.palette, nodeColorToken(node.type)),
-      glow: glow?.get(node.id) ?? 0,
-      id: node.id,
-      radius,
-      ring: node.findingCount > 0,
-      // Only code carries a risk ring. Todo 21 ranks files; a requirement or
-      // a route has no untested-ness or fan-in of its own, and ringing one
-      // would put a judgement on a node the judgement was never about.
-      riskBand: node.type === "code" ? riskRingBand(node.risk) : null,
-      selected: node.id === input.selectedNodeId,
-      shape: NODE_SHAPE[node.type],
-      x: position.x,
-      y: position.y,
-    };
+    return [
+      {
+        afterglow: input.afterglow?.has(node.id) ?? false,
+        alpha: dimmedNodeId && !keptNear.has(node.id) ? 0.22 : 1,
+        badge: badges ? node.grade : null,
+        clusterCount: node.clusterCount ?? null,
+        color: resolveColor(input.palette, nodeColorToken(node.type)),
+        glow: glow?.get(node.id) ?? 0,
+        id: node.id,
+        radius,
+        ring: node.findingCount > 0,
+        // Only code carries a risk ring. Todo 21 ranks files; a requirement or
+        // a route has no untested-ness or fan-in of its own, and ringing one
+        // would put a judgement on a node the judgement was never about.
+        riskBand: node.type === "code" ? riskRingBand(node.risk) : null,
+        selected: node.id === input.selectedNodeId,
+        shape: NODE_SHAPE[node.type],
+        x: position.x,
+        y: position.y,
+      },
+    ];
   });
 
   /**
@@ -577,6 +698,8 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     const source = placed.get(edge.source);
     const target = placed.get(edge.target);
     if (!source || !target) continue;
+    if (!isVisible(edge.source) || !isVisible(edge.target)) continue;
+    if (hiddenRelations.has(edge.provenance.relation)) continue;
     // Per-family draw policy (Phase 4 Wave B todo 12). At Far the graph is a
     // constellation and only the wires that shape it are worth pixels:
     // containment, co-change, meaning-links and section haze are all real
@@ -622,6 +745,15 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
           ? Math.max(alpha, 0.9)
           : stroke.alpha * 0.12;
     }
+    // A merged supernode edge stands for many real ones, and one line drawn
+    // identically whether it is one import or four hundred says the same
+    // thing about both. Logarithmic, so a folder pair with ten times the
+    // traffic reads as thicker without a hub pair becoming a slab.
+    const merged = edge.mergedCount ?? 1;
+    const width =
+      merged > 1
+        ? stroke.width * (1 + Math.log10(merged) * MERGED_EDGE_WIDTH_SCALE)
+        : stroke.width;
     // Containment is drawn, faintly, at the zooms where it means something.
     // It is what makes a directory read as a cluster; at full strength 885 of
     // them bury the imports they exist to make legible (OQ-037), which is why
@@ -639,7 +771,7 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
       sourceY: source.y,
       targetX: target.x,
       targetY: target.y,
-      width: stroke.width,
+      width,
     });
   }
 

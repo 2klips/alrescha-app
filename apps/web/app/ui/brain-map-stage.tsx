@@ -32,6 +32,10 @@ import {
   type GraphPanelSettings,
 } from "../../lib/graph/graph-panel-settings";
 import type { LodLevel } from "../../lib/graph/lod";
+import {
+  hiddenNodeTypesFor,
+  type GraphLayer,
+} from "../../lib/graph/render-frame";
 import { hitTargets } from "../../lib/graph/hit-targets";
 import { DASHBOARD } from "../../lib/strings";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
@@ -67,6 +71,13 @@ export interface BrainMapStageProps {
   settings?: GraphPanelSettings;
   /** Set false when a surrounding HUD supplies its own controls. */
   showForcePanel?: boolean;
+  /**
+   * Which nodes the current filters leave visible, or absent for all (todo
+   * 13). `data` stays the whole graph so the layout survives a filter.
+   */
+  visibleNodeIds?: ReadonlySet<string> | undefined;
+  /** Layers the viewer switched off (todo 13). */
+  hiddenLayers?: ReadonlySet<GraphLayer> | undefined;
 }
 
 export function BrainMapStage({
@@ -83,7 +94,9 @@ export function BrainMapStage({
   seed,
   selectedNodeId,
   settings: externalSettings,
+  hiddenLayers,
   showForcePanel = true,
+  visibleNodeIds,
 }: BrainMapStageProps) {
   const [internalSettings, updateInternalSettings] = useGraphPanelSettings();
   const settings = externalSettings ?? internalSettings;
@@ -100,7 +113,25 @@ export function BrainMapStage({
   const forceConfig = useMemo(() => forceConfigOf(settings), [settings]);
   const hitLayerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const targets = useMemo(() => hitTargets(data), [data]);
+  // The accessibility layer follows visibility (todo 13): a keyboard user
+  // must not tab to a node the canvas is not drawing.
+  const reachable = useMemo(() => {
+    const hiddenTypes = hiddenNodeTypesFor(hiddenLayers);
+    if (!visibleNodeIds && hiddenTypes.size === 0) return data;
+    const nodes = data.nodes.filter(
+      (node) =>
+        (!visibleNodeIds || visibleNodeIds.has(node.id)) &&
+        !hiddenTypes.has(node.type),
+    );
+    const ids = new Set(nodes.map((node) => node.id));
+    return {
+      edges: data.edges.filter(
+        (edge) => ids.has(edge.source) && ids.has(edge.target),
+      ),
+      nodes,
+    };
+  }, [data, hiddenLayers, visibleNodeIds]);
+  const targets = useMemo(() => hitTargets(reachable), [reachable]);
 
   // OQ-006: roving tabindex. 600 buttons were 600 tab stops — unusable for a
   // keyboard or screen-reader user. The layer is now ONE stop: Tab enters on
@@ -140,9 +171,15 @@ export function BrainMapStage({
 
   return (
     <div
-      aria-label={DASHBOARD.canvasLabel(data.nodes.length)}
+      aria-label={DASHBOARD.canvasLabel(reachable.nodes.length)}
       className="brain-map-stage"
-      data-canvas-nodes={data.nodes.length}
+      // What is drawn. It keeps that meaning now that `data` is the whole
+      // graph rather than the filtered one — the count a reader sees on the
+      // screen is the count this reports.
+      data-canvas-nodes={reachable.nodes.length}
+      // …and what the layout holds, which a filter never changes. The two
+      // being different is the whole point of todo 13.
+      data-layout-nodes={data.nodes.length}
       data-focus-node={
         directionalFocus && selectedNodeId ? selectedNodeId : undefined
       }
@@ -155,6 +192,11 @@ export function BrainMapStage({
       // the relationship between the accessibility budget and what is painted
       // rather than restating the cap.
       data-hit-targets={targets.length}
+      // What the filters currently leave on screen. The layout still holds
+      // every node, which is the point: a filter is not a new graph.
+      data-hidden-layers={
+        hiddenLayers ? [...hiddenLayers].sort().join(" ") : ""
+      }
       data-lod={lod.level}
       data-lod-labels={lod.labels}
       // "The layout has stopped moving" — the worker has always known it and
@@ -192,6 +234,8 @@ export function BrainMapStage({
           selectedNodeId={selectedNodeId ?? null}
           textFadeThreshold={settings.textFadeThreshold}
           viewport={viewportRef}
+          {...(visibleNodeIds ? { visibleNodeIds } : {})}
+          {...(hiddenLayers ? { hiddenLayers } : {})}
         />
         <button
           className="brain-map-fit"

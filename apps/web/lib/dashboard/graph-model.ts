@@ -186,6 +186,11 @@ export interface GraphEdgeProvenance {
 
 export interface GraphEdge {
   broken: boolean;
+  /**
+   * How many real edges a merged supernode edge stands for (Wave B todo 13).
+   * Absent on a raw edge, which stands for exactly itself.
+   */
+  mergedCount?: number;
   /** Absent on demo fixtures; every stored edge carries one (todo 2). */
   family?: GraphEdgeFamily;
   grade: EvidenceGrade;

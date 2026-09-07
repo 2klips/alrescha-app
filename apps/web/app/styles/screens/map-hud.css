@@ -1444,3 +1444,27 @@
 .arr-legend-risk i.risk-ring.moderate {
   color: var(--border-default);
 }
+
+/*
+ * Layer toggles (Phase 4 Wave B todo 13). Pressed means the layer is *on*,
+ * which is the state a viewer starts in — an unpressed toggle for something
+ * that is currently visible would read backwards.
+ */
+.arr-layer-toggles button {
+  background: transparent;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-pill);
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: var(--text-2xs);
+  padding: 0.1rem 0.5rem;
+}
+
+.arr-layer-toggles button[aria-pressed="true"] {
+  border-color: var(--accent-fg);
+  color: var(--fg-default);
+}
+
+.arr-layer-toggles button:hover {
+  border-color: var(--border-default);
+}

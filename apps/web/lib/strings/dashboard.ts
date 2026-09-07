@@ -41,6 +41,22 @@ export const DASHBOARD = {
    * The risk ring (Wave B todo 12). Three bands, because `low` draws no ring
    * at all — a ring on every node is a texture, not a warning.
    */
+  /**
+   * Layer toggles (Wave B todo 13). A layer is not a filter: it says what
+   * kind of thing not to look at, and it leaves the search box alone.
+   */
+  layers: {
+    label: "레이어",
+    note: "종류째로 끄고 켭니다 — 검색·필터와 별개이고, 레이아웃은 그대로입니다.",
+    names: {
+      co_changed: "공변경",
+      concept: "개념",
+      contains: "포함",
+      doc: "문서",
+      section: "문서 섹션",
+    },
+  },
+
   riskLegend: {
     label: "위험 링 — 코드 노드만",
     note: "todo 21 위험 지도의 등급입니다. 링이 없으면 요인이 없거나 아무도 재지 않은 것이고, 안전하다는 뜻이 아닙니다.",
