@@ -249,9 +249,23 @@ export async function createGraphEngine(
    * which is stable exactly when the interpolation has nothing left to do.
    */
   let revision = 0;
+  /**
+   * Bumped by everything a camera move is not (Phase 4 Wave B todo 12).
+   *
+   * The renderer keeps its world geometry across frames and rebuilds it only
+   * when this changes: panning and zooming move the container, and nothing
+   * about the graph itself is different. Separating the two counters is what
+   * lets a settled graph be panned for free.
+   */
+  let geometryRevision = 0;
   let paintedRevision = -1;
   let paintedPositions: ReadonlyMap<string, Position> | null = null;
   const touch = () => {
+    revision += 1;
+    geometryRevision += 1;
+  };
+  /** A camera move: the frame changes, the world geometry does not. */
+  const touchCamera = () => {
     revision += 1;
   };
 
@@ -265,6 +279,7 @@ export async function createGraphEngine(
     }
     if (message.type === "positions") {
       settled = false;
+      geometryRevision += 1;
       buffer.push(nodeIds, message.positions, now());
       return;
     }
@@ -327,6 +342,7 @@ export async function createGraphEngine(
       data,
       directionalFocus,
       expanded,
+      geometryRevision,
       glow,
       hoveredNodeId,
       palette,
@@ -414,7 +430,7 @@ export async function createGraphEngine(
     },
     setCamera(next) {
       camera = { ...next };
-      touch();
+      touchCamera();
     },
     setData(next) {
       data = next;

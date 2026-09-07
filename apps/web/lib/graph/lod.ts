@@ -30,7 +30,26 @@ export const LABEL_SIZE_THRESHOLD = 6;
 export const LABEL_GRID_CELL_SIZE = 96;
 
 /** Hub labels kept at Far zoom, where the grid would otherwise show nothing. */
-export const FAR_HUB_LABEL_LIMIT = 6;
+export const FAR_HUB_LABEL_LIMIT = 12;
+
+/**
+ * What a Far label is worth, before degree breaks the ties (Phase 4 Wave B
+ * todo 12).
+ *
+ * Degree alone answers "what is busiest", which at Far is almost always a
+ * barrel file or a config nobody navigates by. The question a viewer is
+ * actually asking is *where am I* — and a package name, a URL and a folder
+ * answer that; a file with forty imports does not. So kind leads and degree
+ * decides within a kind.
+ *
+ * A kind with no entry weighs nothing extra, which is the honest default: it
+ * has to earn its label on degree like everything else.
+ */
+export const FAR_LABEL_KIND_WEIGHT: Readonly<Record<string, number>> = {
+  directory: 1,
+  package: 3,
+  route: 2,
+};
 
 /** Obsidian's single "text fade threshold" slider, normalised to 0…1. */
 export const DEFAULT_TEXT_FADE_THRESHOLD = 0.5;
@@ -65,6 +84,12 @@ export function resolveLod(radii: readonly number[], scale: number): LodLevel {
 export interface LabelCandidate {
   degree: number;
   id: string;
+  /**
+   * What the node is, for the Far ranking. A package or a route earns its
+   * label ahead of a busier file, because at that zoom a label is a landmark
+   * rather than a description.
+   */
+  kind?: string;
   label: string;
   pixelSize: number;
   screenX: number;
@@ -105,6 +130,22 @@ function betterThan(left: LabelCandidate, right: LabelCandidate): boolean {
 }
 
 /**
+ * The Far ranking: kind first, then the general one.
+ *
+ * Kept separate from `betterThan` because they answer different questions.
+ * Mid and Near are decluttering a screen that already shows the graph, so the
+ * best label in a cell is the biggest, busiest node in it. Far is choosing
+ * twelve landmarks for a constellation, and a landmark is a place — a
+ * package, a URL, a folder — not whatever happens to import the most.
+ */
+function betterFarLabel(left: LabelCandidate, right: LabelCandidate): boolean {
+  const leftWeight = FAR_LABEL_KIND_WEIGHT[left.kind ?? ""] ?? 0;
+  const rightWeight = FAR_LABEL_KIND_WEIGHT[right.kind ?? ""] ?? 0;
+  if (leftWeight !== rightWeight) return leftWeight > rightWeight;
+  return betterThan(left, right);
+}
+
+/**
  * The rendered-size floor a label must clear. The slider scales it, so dragging
  * "text fade threshold" up thins labels out exactly the way Obsidian's does.
  */
@@ -137,7 +178,7 @@ export function selectLabels(
     const limit = options.farHubLimit ?? FAR_HUB_LABEL_LIMIT;
     if (limit <= 0) return [];
     const hubs = [...visible]
-      .sort((left, right) => (betterThan(left, right) ? -1 : 1))
+      .sort((left, right) => (betterFarLabel(left, right) ? -1 : 1))
       .slice(0, limit);
     return hubs.map((candidate) => candidate.id).sort();
   }
@@ -159,6 +200,26 @@ export function selectLabels(
     if (!current || betterThan(candidate, current)) best.set(cell, candidate);
   }
   return [...best.values()].map((candidate) => candidate.id).sort();
+}
+
+/**
+ * How far above the floor a label has to be to reach full opacity (Phase 4
+ * Wave B todo 12), as a multiple of the floor itself.
+ */
+const LABEL_FADE_BAND = 0.6;
+
+/**
+ * A label's opacity, ramped rather than switched.
+ *
+ * The threshold slider used to dim *every* label by a flat amount, which is
+ * not a fade — it is a dimmer. What a viewer sees while zooming is labels
+ * appearing and vanishing at a hard edge, one frame opaque and the next gone.
+ * Ramping over a band just above the floor makes them arrive.
+ */
+export function labelFade(pixelSize: number, floor: number): number {
+  if (floor <= 0) return 1;
+  const band = floor * LABEL_FADE_BAND;
+  return Math.min(1, Math.max(0, (pixelSize - floor) / band));
 }
 
 /** Status badges are a Near-zoom affordance only. */

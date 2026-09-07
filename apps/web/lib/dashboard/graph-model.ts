@@ -4,7 +4,7 @@ import {
   type ArtifactUnit,
   type BrainArea,
 } from "@alrescha/core/artifact-facets";
-import type { ArtifactClassification } from "@alrescha/core";
+import type { ArtifactClassification, RiskLevel } from "@alrescha/core";
 
 import { DASHBOARD } from "../strings";
 
@@ -119,6 +119,16 @@ export interface GraphNode {
   id: string;
   label: string;
   path: string;
+  /**
+   * `package` for a directory that is a workspace root. Read only by the Far
+   * label ranking, which treats a package name as a landmark.
+   */
+  role?: string;
+  /**
+   * The risk band todo 21 ranked this file into, when it ranked it at all.
+   * Absent means "no factors, or nobody measured" — never "safe".
+   */
+  risk?: RiskLevel;
   type: GraphNodeType;
   /** Shape and filter chip (R5 §2.4): what role this file plays. */
   unit?: ArtifactUnit;
@@ -757,12 +767,34 @@ export interface DashboardViewModel {
   state: DashboardState;
 }
 
+/**
+ * How big a demo graph `?nodes=` may ask for (Phase 4 Wave B todo 12).
+ *
+ * The browser benchmark needs a five-thousand-node page to pan and zoom, and
+ * there is no other way to get one in front of a real GPU. Clamped, and only
+ * ever reachable on the **demo** route: `/app/map` reads a workspace and this
+ * parameter cannot touch it.
+ */
+export const MAX_DEMO_NODES = 5_000;
+
+export function parseDemoNodeCount(
+  value: string | string[] | undefined,
+): number | null {
+  const raw = Number.parseInt(
+    Array.isArray(value) ? (value[0] ?? "") : (value ?? ""),
+    10,
+  );
+  if (!Number.isFinite(raw) || raw <= 0) return null;
+  return Math.min(MAX_DEMO_NODES, raw);
+}
+
 export function buildDashboardViewModel(
   state: DashboardState,
   repo = "2klips/alrescha-app",
+  nodeCount?: number | null,
 ): DashboardViewModel {
   const source = createFixtureGraph(
-    state === "large" ? 500 : BASE_NODES.length,
+    nodeCount ?? (state === "large" ? 500 : BASE_NODES.length),
   );
   const graph =
     state === "large" ? clusterGraph(source) : forceDirectedLayout(source);

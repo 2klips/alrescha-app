@@ -37,6 +37,20 @@ export const DASHBOARD = {
     database: "테이블·함수",
   },
 
+  /**
+   * The risk ring (Wave B todo 12). Three bands, because `low` draws no ring
+   * at all — a ring on every node is a texture, not a warning.
+   */
+  riskLegend: {
+    label: "위험 링 — 코드 노드만",
+    note: "todo 21 위험 지도의 등급입니다. 링이 없으면 요인이 없거나 아무도 재지 않은 것이고, 안전하다는 뜻이 아닙니다.",
+    bands: {
+      high: "높음",
+      elevated: "주의",
+      moderate: "보통",
+    },
+  },
+
   views: {
     aria: "Graph 보기 방식",
     canvas: "Graph",

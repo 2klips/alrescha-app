@@ -10,16 +10,21 @@
 
 import { personalizedPageRank } from "@alrescha/core";
 
-import type {
-  EvidenceGrade,
-  GraphData,
-  GraphEdge,
-  GraphNode,
+import {
+  NODE_SHAPE,
+  type EvidenceGrade,
+  type GraphData,
+  type GraphEdge,
+  type GraphEdgeFamily,
+  type GraphNode,
+  type GraphNodeShape,
 } from "../dashboard/graph-model";
 import type { DesignToken } from "../theme/tokens";
 import { collapseGraph, shouldCollapse } from "./clustering";
 import { nodeRadius } from "./node-size";
 import {
+  labelFade,
+  labelSizeFloor,
   lodForPixelSize,
   nodePixelSize,
   selectLabels,
@@ -47,6 +52,23 @@ export interface Viewport {
 
 export const DEFAULT_VIEWPORT: Viewport = { height: 800, width: 1200 };
 
+/**
+ * Risk bands that earn a ring (Phase 4 Wave B todo 12).
+ *
+ * Three, not four: `low` draws nothing. A ring on every node is not a
+ * warning, it is a texture — and todo 21's own rule is that a file with no
+ * risk factor is absent from the map rather than present with a zero.
+ */
+export const RISK_RING_BANDS = ["moderate", "elevated", "high"] as const;
+
+export type RiskRingBand = (typeof RISK_RING_BANDS)[number];
+
+export function riskRingBand(risk?: string | null): RiskRingBand | null {
+  return RISK_RING_BANDS.includes(risk as RiskRingBand)
+    ? (risk as RiskRingBand)
+    : null;
+}
+
 export interface RenderNode {
   /** Residual tint on a recently-touched node. */
   afterglow: boolean;
@@ -62,16 +84,54 @@ export interface RenderNode {
   radius: number;
   /** Open-findings drift ring. */
   ring: boolean;
+  /**
+   * The risk band this file is in, or null for "no factors, or nobody
+   * measured". Distinct from `ring`, which counts open findings: risk is the
+   * ranked judgement todo 21 builds, and a file can carry one without the
+   * other.
+   */
+  riskBand: RiskRingBand | null;
   selected: boolean;
+  /** Which of the four sprites paints it (`NODE_SHAPE`). */
+  shape: GraphNodeShape;
   x: number;
   y: number;
 }
+
+/**
+ * Families the Far view stops drawing (Phase 4 Wave B todo 12).
+ *
+ * At Far the graph is a constellation, and the only wires worth pixels are
+ * the ones that shape it. Containment, co-change and meaning-links are all
+ * real edges; drawn together at that zoom they are a grey wash over the
+ * structure they were supposed to sit behind.
+ */
+const FAR_HIDDEN_FAMILIES: ReadonlySet<string> = new Set([
+  "hierarchy",
+  "semantic",
+  "statistical",
+]);
+
+/**
+ * The same policy for the two relations whose family does not isolate them.
+ * `co_changed` derives to `structure` in the database's own mapping, so
+ * hiding it by family would take imports with it.
+ */
+const FAR_HIDDEN_RELATIONS: ReadonlySet<string> = new Set([
+  "co_changed",
+  "contains",
+]);
+
+/** How faintly a layout-only edge is drawn where it is drawn at all. */
+const LAYOUT_ONLY_ALPHA = 0.08;
 
 export interface RenderEdge {
   alpha: number;
   color: number;
   /** Broken evidence is drawn as a red dashed line. */
   dashed: boolean;
+  /** Which family this edge belongs to — the renderer batches by it. */
+  family: GraphEdgeFamily;
   /** 0..1 additive propagation along a freshly touched edge. */
   flow: number;
   id: string;
@@ -92,6 +152,13 @@ export interface RenderLabel {
 
 export interface RenderFrame {
   camera: Camera;
+  /**
+   * Changes whenever the graph itself does, and *not* when only the camera
+   * moves (Phase 4 Wave B todo 12). The renderer keeps its world geometry
+   * across frames and rebuilds it only when this differs, so panning a
+   * settled graph costs a container transform and nothing else.
+   */
+  geometryRevision: number;
   /** Ring/dash colour for drift overlays — resolved once per frame. */
   driftColor: number;
   edges: RenderEdge[];
@@ -201,6 +268,54 @@ export function edgeStroke(
  * GraphData because frames redraw far more often than graphs change.
  */
 const importanceCache = new WeakMap<GraphData, Map<string, number>>();
+
+/**
+ * The last collapse, and the four things it was computed from (Phase 4 Wave B
+ * todo 12).
+ *
+ * Collapsing is the most expensive thing a frame does, and the browser
+ * benchmark caught it: at 5,000 nodes a zoom dropped 33 frames of 187 while a
+ * pan across the same graph dropped none. The difference is the scale — a
+ * zoom crosses the Far threshold and rebuilt the supernode graph on every
+ * frame of the glide.
+ *
+ * None of its four inputs depends on the camera, so the answer is the same on
+ * every one of those frames. One entry is enough: a frame loop asks about the
+ * same graph over and over, and a second slot would only serve a caller
+ * alternating between two graphs.
+ */
+let collapseMemo: {
+  assignment: ReadonlyMap<string, string>;
+  data: GraphData;
+  expanded: ReadonlySet<string> | undefined;
+  positions: ReadonlyMap<string, Position>;
+  result: { data: GraphData; positions: ReadonlyMap<string, Position> };
+} | null = null;
+
+function collapseFor(
+  assignment: ReadonlyMap<string, string>,
+  data: GraphData,
+  expanded: ReadonlySet<string> | undefined,
+  positions: ReadonlyMap<string, Position>,
+): { data: GraphData; positions: ReadonlyMap<string, Position> } {
+  if (
+    collapseMemo &&
+    collapseMemo.assignment === assignment &&
+    collapseMemo.data === data &&
+    collapseMemo.expanded === expanded &&
+    collapseMemo.positions === positions
+  ) {
+    return collapseMemo.result;
+  }
+  const result = collapseGraph({
+    assignment,
+    data,
+    ...(expanded ? { expanded } : {}),
+    positions,
+  });
+  collapseMemo = { assignment, data, expanded, positions, result };
+  return result;
+}
 
 export function importanceMap(data: GraphData): Map<string, number> {
   const cached = importanceCache.get(data);
@@ -313,6 +428,8 @@ export interface FrameInput {
   directionalFocus?: boolean;
   /** Communities the user clicked open. */
   expanded?: ReadonlySet<string>;
+  /** Bumped by the engine on every change a camera move is not. */
+  geometryRevision?: number;
   /** Node id → 0..1 glow intensity. */
   glow?: ReadonlyMap<string, number>;
   /**
@@ -352,12 +469,12 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
 
   const collapsed =
     input.assignment && shouldCollapse(input.data.nodes.length, lod)
-      ? collapseGraph({
-          assignment: input.assignment,
-          data: input.data,
-          ...(input.expanded ? { expanded: input.expanded } : {}),
-          positions: input.positions,
-        })
+      ? collapseFor(
+          input.assignment,
+          input.data,
+          input.expanded,
+          input.positions,
+        )
       : { data: input.data, positions: input.positions };
 
   const data = collapsed.data;
@@ -417,6 +534,9 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     candidates.push({
       degree,
       id: node.id,
+      // A package is a directory node the loader marked as one; the Far
+      // ranking reads it, and nothing else does.
+      kind: node.role === "package" ? "package" : node.type,
       label: node.label,
       pixelSize: nodePixelSize(radius, camera.scale),
       screenX: viewport.width / 2 + camera.x + position.x * camera.scale,
@@ -432,17 +552,45 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
       id: node.id,
       radius,
       ring: node.findingCount > 0,
+      // Only code carries a risk ring. Todo 21 ranks files; a requirement or
+      // a route has no untested-ness or fan-in of its own, and ringing one
+      // would put a judgement on a node the judgement was never about.
+      riskBand: node.type === "code" ? riskRingBand(node.risk) : null,
       selected: node.id === input.selectedNodeId,
+      shape: NODE_SHAPE[node.type],
       x: position.x,
       y: position.y,
     };
   });
+
+  /**
+   * Section nodes, for the Far draw policy. A section is a heading other
+   * documents cite; at Far its edges are a haze around a hub nobody can read
+   * the name of yet.
+   */
+  const sectionIds = new Set(
+    data.nodes.filter((node) => node.type === "section").map((node) => node.id),
+  );
 
   const edges: RenderEdge[] = [];
   for (const edge of data.edges) {
     const source = placed.get(edge.source);
     const target = placed.get(edge.target);
     if (!source || !target) continue;
+    // Per-family draw policy (Phase 4 Wave B todo 12). At Far the graph is a
+    // constellation and only the wires that shape it are worth pixels:
+    // containment, co-change, meaning-links and section haze are all real
+    // edges that, drawn together at that zoom, are a grey wash over the
+    // structure they were supposed to sit behind.
+    if (
+      lod === "far" &&
+      (FAR_HIDDEN_FAMILIES.has(edge.family ?? "structure") ||
+        FAR_HIDDEN_RELATIONS.has(edge.provenance.relation) ||
+        sectionIds.has(edge.source) ||
+        sectionIds.has(edge.target))
+    ) {
+      continue;
+    }
     const touch = Math.max(
       glow?.get(edge.source) ?? 0,
       glow?.get(edge.target) ?? 0,
@@ -474,10 +622,17 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
           ? Math.max(alpha, 0.9)
           : stroke.alpha * 0.12;
     }
+    // Containment is drawn, faintly, at the zooms where it means something.
+    // It is what makes a directory read as a cluster; at full strength 885 of
+    // them bury the imports they exist to make legible (OQ-037), which is why
+    // the loader marks them `layoutOnly` and why that used to mean "drawn
+    // exactly like everything else".
+    if (edge.layoutOnly) alpha = Math.min(alpha, LAYOUT_ONLY_ALPHA);
     edges.push({
       alpha,
       color,
       dashed: stroke.dashed,
+      family: edge.family ?? "structure",
       flow: touch,
       id: edge.id,
       sourceX: source.x,
@@ -500,7 +655,7 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
   const byId = new Map(
     candidates.map((candidate) => [candidate.id, candidate]),
   );
-  const labelAlpha = 1 - (input.textFadeThreshold ?? 0) * 0.25;
+  const floor = labelSizeFloor(lod, input.textFadeThreshold);
   const labels: RenderLabel[] = [];
   for (const node of nodes) {
     if (!selected.has(node.id)) continue;
@@ -510,17 +665,22 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     const candidate = byId.get(node.id);
     if (!candidate) continue;
     labels.push({
-      alpha: labelAlpha,
+      alpha: labelFade(candidate.pixelSize, floor),
       id: node.id,
+      // Screen space, not world (Phase 4 Wave B todo 12). Labels used to live
+      // inside the camera's container, so text grew with the zoom: at Near a
+      // filename was the width of the screen and at Far it was a smear. A
+      // label is chrome over the graph, and chrome does not scale.
       text: candidate.label,
-      x: node.x + node.radius + 5,
-      y: node.y,
+      x: candidate.screenX + (node.radius * camera.scale + 5),
+      y: candidate.screenY,
     });
   }
 
   return {
     camera,
     driftColor: resolveColor(input.palette, "danger"),
+    geometryRevision: input.geometryRevision ?? 0,
     edges,
     labelColor: resolveColor(input.palette, "text"),
     labels,

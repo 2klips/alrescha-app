@@ -37,7 +37,9 @@ function node(id: string, x: number, y: number, radius = 8): RenderNode {
     id,
     radius,
     ring: false,
+    riskBand: null,
     selected: false,
+    shape: "circle",
     x,
     y,
   };
@@ -48,6 +50,7 @@ function frameOf(nodes: RenderNode[], camera: Camera): RenderFrame {
     camera,
     driftColor: 0,
     edges: [],
+    geometryRevision: 1,
     labelColor: 0,
     labels: [],
     lod: "near",

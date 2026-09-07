@@ -53,6 +53,7 @@ import {
   type RealtimeGraphState,
 } from "../../lib/realtime/access-events";
 import type { LodLevel } from "../../lib/graph/lod";
+import { RISK_RING_BANDS } from "../../lib/graph/render-frame";
 import { DASHBOARD, GRADE } from "../../lib/strings";
 import { BrainMapStage } from "./brain-map-stage";
 import { Button } from "./button";
@@ -815,6 +816,22 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             <i className="test" />
             {DASHBOARD.legend.test}
           </span>
+        </div>
+        {/* The risk ring's own key (Wave B todo 12). Separate from the colour
+            legend above because it is a different axis: colour says what a
+            node is, the ring says what todo 21 thinks of it. */}
+        <div
+          aria-label={DASHBOARD.riskLegend.label}
+          className="arr-legend arr-legend-risk"
+          data-testid="graph-risk-legend"
+          title={DASHBOARD.riskLegend.note}
+        >
+          {RISK_RING_BANDS.map((band) => (
+            <span key={band}>
+              <i className={`risk-ring ${band}`} />
+              {DASHBOARD.riskLegend.bands[band]}
+            </span>
+          ))}
         </div>
         <span className="graph-visible-count">
           {DASHBOARD.visibleCount(visibleGraph.nodes.length)}

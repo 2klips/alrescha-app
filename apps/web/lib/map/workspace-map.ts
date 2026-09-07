@@ -511,6 +511,8 @@ export function buildWorkspaceMapModel(
     let type: GraphNodeType;
     let label = row.label;
     let path: string;
+    /** `package` for a workspace root; the Far label ranking is the only reader. */
+    let role: string | null = null;
     if (row.kind === "requirement") {
       const requirement = requirementById.get(row.id);
       type = "requirement";
@@ -531,6 +533,10 @@ export function buildWorkspaceMapModel(
       type = "directory";
       path = directory?.path ?? row.label;
       label = truncate(basename(path), 96);
+      // A workspace root is a landmark, not just another folder: the Far
+      // label ranking puts a package name ahead of a busier file, because at
+      // that zoom a label answers "where am I" rather than "what is this".
+      if (directory?.role === "package") role = "package";
     } else if (row.kind === "route") {
       // A URL is a hub: its handlers hang off it (Wave A′ todo 6). The
       // anchor path is one of them, so the route sits in their band.
@@ -594,6 +600,7 @@ export function buildWorkspaceMapModel(
       id: row.id,
       label,
       path,
+      ...(role ? { role } : {}),
       type,
       ...(artifact && isClassification(artifact.classification)
         ? {
