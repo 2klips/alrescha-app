@@ -192,6 +192,18 @@ export interface GraphEngine {
   /** The node under the pointer: its neighbourhood stays lit, the rest fades. */
   setHoveredNode(nodeId: string | null): void;
   hoveredNode(): string | null;
+  /**
+   * Hold a node at a world point while a pointer drags it (todo 11), and
+   * show it there immediately rather than waiting for the worker to answer.
+   * The rest of the graph keeps simulating around it: dragging a hub pulls
+   * its neighbourhood after it, which is the feedback that makes a graph feel
+   * like a thing rather than a picture.
+   */
+  pinNode(nodeId: string, x: number, y: number): void;
+  /** Let go, and let the layout reclaim the node. */
+  releaseNode(nodeId: string): void;
+  /** The node a pointer is currently holding, or null. */
+  pinnedNode(): string | null;
   setTextFadeThreshold(value: number): void;
   setViewport(viewport: Viewport): void;
 }
@@ -213,6 +225,7 @@ export async function createGraphEngine(
   let palette = options.palette;
   let selectedNodeId: string | null = null;
   let hoveredNodeId: string | null = null;
+  let pinnedNodeId: string | null = null;
   let directionalFocus = false;
   let viewport: Viewport = options.viewport ?? DEFAULT_VIEWPORT;
   let textFadeThreshold = options.textFadeThreshold ?? 0;
@@ -440,6 +453,27 @@ export async function createGraphEngine(
       touch();
     },
     hoveredNode: () => hoveredNodeId,
+    pinnedNode: () => pinnedNodeId,
+    pinNode(nodeId, x, y) {
+      const slot = nodeIds.indexOf(nodeId);
+      if (slot === -1) return;
+      pinnedNodeId = nodeId;
+      // Held in the buffer as well as sent to the worker. A drag that waited
+      // for the round trip would lag the pointer by a frame at 30Hz, and the
+      // node would trail the finger it is supposed to be under.
+      buffer.hold(nodeId, { x, y });
+      touch();
+      if (!disposed) worker.postMessage({ slot, type: "pin", x, y });
+    },
+    releaseNode(nodeId) {
+      const slot = nodeIds.indexOf(nodeId);
+      pinnedNodeId = null;
+      buffer.release(nodeId);
+      touch();
+      if (slot !== -1 && !disposed) {
+        worker.postMessage({ slot, type: "unpin" });
+      }
+    },
     setHoveredNode(nodeId) {
       if (hoveredNodeId === nodeId) return;
       hoveredNodeId = nodeId;

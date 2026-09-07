@@ -1,9 +1,11 @@
 import { describe, expect, test, vi } from "vitest";
 
 import {
+  GRAPH_EDGE_FAMILIES,
   buildDashboardViewModel,
   createFixtureGraph,
   type GraphData,
+  type GraphEdgeFamily,
 } from "../apps/web/lib/dashboard/graph-model";
 import {
   collapseGraph,
@@ -26,20 +28,23 @@ import {
   runForceLayout,
   seededInitialPositions,
 } from "../apps/web/lib/graph/force-simulation";
+import { nodeRadius } from "../apps/web/lib/graph/node-size";
 import { createPositionBuffer } from "../apps/web/lib/graph/position-buffer";
 import {
   buildRenderFrame,
   degreeMap,
   edgeColorToken,
   nodeColorToken,
-  nodeRadius,
   resolveColor,
   type Camera,
   type GraphPalette,
 } from "../apps/web/lib/graph/render-frame";
 import {
   DEFAULT_FORCE_CONFIG,
+  LINK_FAMILIES,
+  LINK_FAMILY_FORCES,
   clampForceConfig,
+  linkFamilyCode,
   createStartMessage,
   decodePositions,
   encodePositions,
@@ -162,6 +167,9 @@ describe("simulation wire protocol", () => {
       [
         data.nodes.findIndex((node) => node.id === "req-auth"),
         data.nodes.findIndex((node) => node.id === "code-auth"),
+        // A demo edge states no family, and the baseline is what the old
+        // numbers were, so a fixture lays out exactly as it always did.
+        linkFamilyCode("structure"),
       ],
     ]);
     expect(message.config).toEqual(DEFAULT_FORCE_CONFIG);
@@ -191,7 +199,59 @@ describe("simulation wire protocol", () => {
     const message = createStartMessage(data);
 
     expect(message.links).toHaveLength(1);
-    expect(message.links[0]).toEqual([source, target]);
+    expect(message.links[0]).toEqual([source, target, linkFamilyCode(null)]);
+  });
+
+  test("one spring per pair takes the strongest family, not the last one seen", () => {
+    // Two files joined by an import *and* by a co-change are wired together.
+    // Letting the weaker claim decide the spring would file a real dependency
+    // under "they tend to change at the same time" and lay the graph out as
+    // if nothing connected them.
+    const base = fixture(15).edges[0]!;
+    const nodes = fixture(15).nodes;
+    const source = nodes.findIndex((node) => node.id === "req-auth");
+    const target = nodes.findIndex((node) => node.id === "code-auth");
+    const pair = (family: GraphEdgeFamily, id: string) => ({
+      ...base,
+      family,
+      id,
+      source: "req-auth",
+      target: "code-auth",
+    });
+
+    for (const edges of [
+      [pair("statistical", "a"), pair("structure", "b")],
+      // …and in the other order, so this is not an accident of iteration.
+      [pair("structure", "b"), pair("statistical", "a")],
+    ]) {
+      const message = createStartMessage({ edges, nodes });
+      expect(message.links).toEqual([
+        [source, target, linkFamilyCode("structure")],
+      ]);
+    }
+  });
+
+  test("every family the graph model knows has a force to lay it out with", () => {
+    // A family with no entry would fall back to the baseline silently, which
+    // is how a co-change ends up pulling as hard as an import.
+    for (const family of GRAPH_EDGE_FAMILIES) {
+      expect(LINK_FAMILIES, family).toContain(family);
+      expect(LINK_FAMILY_FORCES[family].strength).toBeGreaterThan(0);
+      expect(LINK_FAMILY_FORCES[family].distance).toBeGreaterThan(0);
+    }
+    // The baseline is the old default, so a graph with no family data lays
+    // out exactly as it did before this existed.
+    expect(LINK_FAMILY_FORCES.structure).toEqual({
+      distance: DEFAULT_FORCE_CONFIG.linkDistance,
+      strength: DEFAULT_FORCE_CONFIG.linkStrength,
+    });
+    // A correlation must never pull as hard as a wire.
+    expect(LINK_FAMILY_FORCES.statistical.strength).toBeLessThan(
+      LINK_FAMILY_FORCES.structure.strength,
+    );
+    expect(LINK_FAMILY_FORCES.statistical.distance).toBeGreaterThan(
+      LINK_FAMILY_FORCES.structure.distance,
+    );
   });
 });
 
@@ -419,7 +479,7 @@ describe("deterministic force layout", () => {
 
   test("setConfig on a live layout reheats it", () => {
     const layout = createForceLayout({
-      links: [[0, 1]],
+      links: [[0, 1, linkFamilyCode("structure")]],
       nodeCount: 2,
       seed: 1,
     });

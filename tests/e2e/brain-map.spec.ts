@@ -270,6 +270,15 @@ async function nodeCentre(page: Page, index: number) {
   return box ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : null;
 }
 
+/** Which nodes the accessibility layer reports as selected, in DOM order. */
+async function selectedIds(page: Page): Promise<string[]> {
+  return page
+    .locator(".brain-map-hit[aria-pressed='true']")
+    .evaluateAll((nodes) =>
+      nodes.map((node) => (node as HTMLElement).dataset.nodeId ?? ""),
+    );
+}
+
 /** Wait until the hit layer stops moving, so a glide is not measured mid-flight. */
 async function cameraStill(page: Page) {
   let previous = "";
@@ -460,4 +469,114 @@ test("the accessibility layer is a budget, not a limit on what can be clicked", 
   expect(await page.locator(STAGE).getAttribute("data-hit-targets")).toBe(
     String(reachable),
   );
+});
+
+/**
+ * Phase 4 Wave B todo 11 — dragging a node.
+ *
+ * The unit suite proves the physics; this proves the gesture reaches it, and
+ * that a press on background still pans the camera rather than grabbing
+ * whatever happens to be nearest.
+ */
+test("dragging a node moves it, and dragging background moves the camera", async ({
+  page,
+}) => {
+  await page.goto("/map");
+  await expect(page.locator(STAGE)).toHaveAttribute("data-settled", "true", {
+    timeout: 15_000,
+  });
+  await cameraStill(page);
+
+  const selectedBefore = await selectedIds(page);
+  const before = await nodeCentre(page, 0);
+  const other = await nodeCentre(page, 1);
+  expect(before).not.toBeNull();
+  expect(other).not.toBeNull();
+  const start = before as { x: number; y: number };
+  const drop = { x: start.x + 140, y: start.y - 90 };
+
+  // Pick the node up and carry it somewhere else, and measure it **while it
+  // is still held**. Releasing hands it back to the physics, which is the
+  // next assertion rather than a spoiled one.
+  await page.mouse.move(start.x, start.y);
+  await page.mouse.down();
+  await page.mouse.move(drop.x, drop.y, { steps: 12 });
+  await expect
+    .poll(async () => {
+      const held = await nodeCentre(page, 0);
+      return held
+        ? Math.hypot(held.x - drop.x, held.y - drop.y)
+        : Number.POSITIVE_INFINITY;
+    })
+    // The hit layer rounds to whole pixels and syncs at 10Hz, so "under the
+    // pointer" is a few pixels, not zero.
+    .toBeLessThan(12);
+
+  // The camera did not move: if the whole view had panned, the other node
+  // would have travelled the same vector.
+  const otherHeld = await nodeCentre(page, 1);
+  const otherMoved = Math.hypot(
+    (otherHeld as { x: number }).x - (other as { x: number }).x,
+    (otherHeld as { y: number }).y - (other as { y: number }).y,
+  );
+  expect(otherMoved).toBeLessThan(Math.hypot(140, 90) / 2);
+
+  await page.mouse.up();
+  await cameraStill(page);
+  const released = await nodeCentre(page, 0);
+  // Letting go hands the node back to the layout, which pulls it toward its
+  // neighbours instead of leaving it wherever the pointer stopped.
+  expect(
+    Math.hypot(
+      (released as { x: number }).x - drop.x,
+      (released as { y: number }).y - drop.y,
+    ),
+  ).toBeGreaterThan(12);
+
+  // A drag is not a click: releasing over a node must not change what is
+  // selected. Every node you moved used to be selected the moment you let go.
+  // Stated as "unchanged" rather than "nothing", because the demo opens with
+  // a node already selected.
+  expect(await selectedIds(page)).toEqual(selectedBefore);
+});
+
+test("a press on empty canvas still pans, and never picks a node up", async ({
+  page,
+}) => {
+  await page.goto("/map");
+  await expect(page.locator(STAGE)).toHaveAttribute("data-settled", "true", {
+    timeout: 15_000,
+  });
+  await cameraStill(page);
+
+  const boxes = await bareCanvasPointOnNode(page);
+  const before = boxes.map((box) => ({ x: box.x, y: box.y }));
+  const box = await page.locator(".brain-map-viewport").boundingBox();
+  expect(box).not.toBeNull();
+  const frame = box as { height: number; width: number; x: number; y: number };
+
+  // The top-left corner of the viewport: far from the graph, which the
+  // camera framed in the middle when it settled.
+  await page.mouse.move(frame.x + 6, frame.y + 6);
+  await page.mouse.down();
+  await page.mouse.move(frame.x + 96, frame.y + 66, { steps: 10 });
+  await page.mouse.up();
+  await cameraStill(page);
+
+  const after = (await bareCanvasPointOnNode(page)).map((box) => ({
+    x: box.x,
+    y: box.y,
+  }));
+  // Everything moved by the same vector — that is a camera pan, not a drag.
+  const shifts = after.map((box, index) => ({
+    dx: box.x - (before[index]?.x ?? 0),
+    dy: box.y - (before[index]?.y ?? 0),
+  }));
+  expect(shifts.length).toBeGreaterThan(1);
+  const first = shifts[0] as { dx: number; dy: number };
+  expect(Math.hypot(first.dx, first.dy)).toBeGreaterThan(40);
+  for (const shift of shifts) {
+    expect(Math.abs(shift.dx - first.dx)).toBeLessThanOrEqual(2);
+    expect(Math.abs(shift.dy - first.dy)).toBeLessThanOrEqual(2);
+  }
 });

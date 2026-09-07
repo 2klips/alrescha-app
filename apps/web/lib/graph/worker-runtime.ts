@@ -66,6 +66,24 @@ export function createSimulationRuntime(
         settled = false;
         return;
       }
+      // Pin, unpin and reheat all wake a layout that had stopped (todo 11).
+      // Clearing `settled` here rather than inside the layout keeps the
+      // "am I still streaming frames" decision in one place.
+      if (message.type === "pin") {
+        layout?.pin(message.slot, message.x, message.y);
+        settled = false;
+        return;
+      }
+      if (message.type === "unpin") {
+        layout?.unpin(message.slot);
+        settled = false;
+        return;
+      }
+      if (message.type === "reheat") {
+        layout?.reheat();
+        settled = false;
+        return;
+      }
       layout?.stop();
       revision += 1;
       settled = false;

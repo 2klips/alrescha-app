@@ -18,6 +18,7 @@ import type {
 } from "../dashboard/graph-model";
 import type { DesignToken } from "../theme/tokens";
 import { collapseGraph, shouldCollapse } from "./clustering";
+import { nodeRadius } from "./node-size";
 import {
   lodForPixelSize,
   nodePixelSize,
@@ -220,15 +221,6 @@ export function importanceMap(data: GraphData): Map<string, number> {
   }
   importanceCache.set(data, scaled);
   return scaled;
-}
-
-/** Importance-proportional dot size — the Obsidian "constellation" cue. */
-export function nodeRadius(degree: number, clusterCount?: number): number {
-  const base = 3.2 + Math.sqrt(Math.max(0, degree)) * 1.9;
-  const size = clusterCount
-    ? base + Math.min(14, Math.sqrt(clusterCount) * 2.4)
-    : base;
-  return Math.min(26, size);
 }
 
 /**

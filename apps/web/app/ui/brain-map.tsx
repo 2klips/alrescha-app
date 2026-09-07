@@ -20,6 +20,7 @@ import {
   approachCamera,
   cameraEquals,
   panBy,
+  screenToWorld,
   worldToScreen,
   zoomAt,
 } from "../../lib/graph/camera";
@@ -366,13 +367,84 @@ export function BrainMap({
       );
     };
     let dragging = false;
-    // Panning starts on the canvas only: a press that lands on a hit target is
-    // the user reaching for a node, not for the background.
-    const onPointerDown = (event: PointerEvent) => {
-      dragging = event.target === canvas;
+    /** The node a press picked up, or null when the press was on background. */
+    let draggingNode: string | null = null;
+    /** Whether that press has moved far enough to be a drag rather than a click. */
+    let dragMoved = false;
+    const worldAt = (event: PointerEvent | MouseEvent) => {
+      const bounds = host.getBoundingClientRect();
+      const current = engine?.camera();
+      if (!current) return null;
+      return screenToWorld(current, viewport, {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
+      });
     };
-    const onPointerUp = () => {
+    /**
+     * A press on a node picks that node up; a press on background pans the
+     * camera (todo 11). Both are the same gesture to a hand, and which one it
+     * is has to be decided at press time, from what is under the pointer.
+     */
+    /**
+     * A drag captures the pointer — on the first *movement*, not on the press.
+     *
+     * Capture is needed because a gesture otherwise stops the moment the
+     * pointer leaves the map: the events stop bubbling here and the node
+     * freezes mid-drag while the hand keeps going. Dragging a node toward the
+     * edge is exactly when someone overshoots.
+     *
+     * Waiting for movement matters just as much. Capturing on `pointerdown`
+     * redirects the following `click` to this element, so the accessibility
+     * layer's own button never sees it — a plain click stopped selecting and
+     * a double-click stopped opening the node, because both had quietly
+     * become drags of zero distance.
+     */
+    let captured = false;
+    const capture = (event: PointerEvent) => {
+      if (captured) return;
+      captured = true;
+      try {
+        host.setPointerCapture(event.pointerId);
+      } catch {
+        // Some pointer types refuse capture; the drag still works inside the
+        // viewport, which is where it started.
+      }
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      dragMoved = false;
+      // A press that lands on an accessibility target is a press on the node
+      // that target stands for. The layer sits over the canvas, so without
+      // this the top 200 nodes would be the only ones that could not be
+      // dragged — the exact inconsistency todo 10 removed for clicking.
+      const target = event.target as HTMLElement | null;
+      const labelled = target?.closest?.<HTMLElement>("[data-node-id]");
+      if (labelled?.dataset.nodeId) {
+        draggingNode = labelled.dataset.nodeId;
+        dragging = false;
+        return;
+      }
+      if (event.target !== canvas) return;
+      const bounds = host.getBoundingClientRect();
+      const hit =
+        engine?.nodeAt(
+          event.clientX - bounds.left,
+          event.clientY - bounds.top,
+        ) ?? null;
+      if (hit) {
+        draggingNode = hit;
+        dragging = false;
+        return;
+      }
+      dragging = true;
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      if (draggingNode) engine?.releaseNode(draggingNode);
+      draggingNode = null;
       dragging = false;
+      if (captured && host.hasPointerCapture?.(event.pointerId)) {
+        host.releasePointerCapture(event.pointerId);
+      }
+      captured = false;
     };
     /**
      * A drag is direct, not glided. Easing a wheel step reads as movement;
@@ -381,7 +453,16 @@ export function BrainMap({
      * in-flight glide from dragging the view out from under the hand.
      */
     const onPointerMove = (event: PointerEvent) => {
+      if (draggingNode) {
+        const world = worldAt(event);
+        if (!world) return;
+        dragMoved = true;
+        capture(event);
+        engine?.pinNode(draggingNode, world.x, world.y);
+        return;
+      }
       if (dragging) {
+        capture(event);
         const current = engine?.camera();
         if (!current) return;
         cameraTouchedRef.current = true;
@@ -423,7 +504,19 @@ export function BrainMap({
         ) ?? null
       );
     };
+    /**
+     * Capture phase, so a drag that ended on an accessibility target can stop
+     * the click before that button's own handler sees it. A drag is not a
+     * click: without this, every node you moved was also selected the moment
+     * you let go.
+     */
     const onClick = (event: MouseEvent) => {
+      if (dragMoved) {
+        dragMoved = false;
+        event.stopPropagation();
+        event.preventDefault();
+        return;
+      }
       const hit = nodeUnder(event);
       if (hit) onNodeSelectRef.current?.(hit);
     };
@@ -437,7 +530,7 @@ export function BrainMap({
     host.addEventListener("pointerdown", onPointerDown);
     host.addEventListener("pointermove", onPointerMove);
     host.addEventListener("pointerleave", onPointerLeave);
-    host.addEventListener("click", onClick);
+    host.addEventListener("click", onClick, { capture: true });
     host.addEventListener("dblclick", onDoubleClick);
     window.addEventListener("pointerup", onPointerUp);
 
@@ -449,7 +542,7 @@ export function BrainMap({
       host.removeEventListener("pointerdown", onPointerDown);
       host.removeEventListener("pointermove", onPointerMove);
       host.removeEventListener("pointerleave", onPointerLeave);
-      host.removeEventListener("click", onClick);
+      host.removeEventListener("click", onClick, { capture: true });
       host.removeEventListener("dblclick", onDoubleClick);
       window.removeEventListener("pointerup", onPointerUp);
       themeObserver.disconnect();

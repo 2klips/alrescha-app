@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import { nodeRadius } from "../apps/web/lib/graph/node-size";
+
 import {
   createFixtureGraph,
   type GraphData,
@@ -35,7 +37,6 @@ import {
 } from "../apps/web/lib/graph/lod";
 import {
   buildRenderFrame,
-  nodeRadius,
   type GraphPalette,
 } from "../apps/web/lib/graph/render-frame";
 import { DEFAULT_FORCE_CONFIG } from "../apps/web/lib/graph/simulation-protocol";

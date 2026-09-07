@@ -77,15 +77,23 @@ export const NODE_SHAPE: Readonly<Record<GraphNodeType, GraphNodeShape>> = {
  * family rather than per relation, because the same relation means different
  * things depending on who wrote it.
  */
-export type GraphEdgeFamily =
-  | "database"
-  | "doc"
-  | "evidence"
-  | "hierarchy"
-  | "route"
-  | "semantic"
-  | "statistical"
-  | "structure";
+/**
+ * A list first and a type second (Phase 4 Wave B todo 11), so a consumer can
+ * prove it handles every family rather than asserting it handles the eight it
+ * happened to think of. The layout's force table is checked against this.
+ */
+export const GRAPH_EDGE_FAMILIES = [
+  "database",
+  "doc",
+  "evidence",
+  "hierarchy",
+  "route",
+  "semantic",
+  "statistical",
+  "structure",
+] as const;
+
+export type GraphEdgeFamily = (typeof GRAPH_EDGE_FAMILIES)[number];
 
 /**
  * How a link was derived (Phase 3 Wave A todo 2) — separate from the evidence
