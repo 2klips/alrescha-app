@@ -20,6 +20,7 @@ import {
   DEFAULT_CAMERA,
   DEFAULT_VIEWPORT,
 } from "./render-frame";
+import { fitToView } from "./camera";
 import { createPositionBuffer, type PositionBuffer } from "./position-buffer";
 import {
   clampForceConfig,
@@ -119,6 +120,15 @@ export interface GraphEngine {
    * "click an event, fly to the node" gesture. Returns false for an unknown id.
    */
   focusNode(nodeId: string): boolean;
+  /**
+   * Where the camera would have to be to frame every simulated node, or
+   * `null` when there is nothing to frame. Computed, never applied: the
+   * mounted map glides to it, and a caller that wants it now passes it
+   * straight to `setCamera`.
+   */
+  cameraForFit(padding?: number): Camera | null;
+  /** Where the camera would have to be to centre one node. */
+  cameraForNode(nodeId: string): Camera | null;
   forceConfig(): ForceConfig;
   /** The render plan for the current instant, without painting it. */
   frame(): RenderFrame;
@@ -151,6 +161,12 @@ export interface GraphEngine {
   paintIfChanged(): RenderFrame | null;
   positions(): ReadonlyMap<string, Position>;
   ready(): boolean;
+  /**
+   * True once the worker has reported that the layout converged, false again
+   * the moment anything restarts it. A browser test can wait on this instead
+   * of sleeping, and the map uses the first transition to frame the graph.
+   */
+  settled(): boolean;
   resize(width: number, height: number): void;
   setCamera(camera: Camera): void;
   setData(data: GraphData): void;
@@ -188,6 +204,8 @@ export async function createGraphEngine(
   let textFadeThreshold = options.textFadeThreshold ?? 0;
   let ready = false;
   let disposed = false;
+  /** Set by the worker when alpha falls under its floor; cleared by anything that restarts the layout. */
+  let settled = false;
   let layoutRestarts = 0;
   let glow: ReadonlyMap<string, number> = new Map();
   let afterglow: ReadonlySet<string> = new Set();
@@ -219,13 +237,43 @@ export async function createGraphEngine(
       return;
     }
     if (message.type === "positions") {
+      settled = false;
       buffer.push(nodeIds, message.positions, now());
+      return;
+    }
+    // The worker says when the layout has converged; until todo 9 nobody
+    // listened, so "the graph has stopped moving" was a fact the engine
+    // received every run and threw away. It is the moment a first fit is
+    // worth doing and the signal a browser test can wait on instead of
+    // sleeping for a second and hoping.
+    if (message.type === "settled") {
+      settled = true;
+      touch();
     }
   });
 
   worker.postMessage(createStartMessage(data, config, options.seed ?? 1));
   layoutRestarts += 1;
   backend.setPalette(palette);
+
+  /**
+   * Where the camera would have to be to centre this node, without moving
+   * it. Separating the arithmetic from the move is what lets the mounted map
+   * *glide* to a node while `focusNode` keeps its jump-there semantics for
+   * everyone else.
+   */
+  function cameraForNode(nodeId: string): Camera | null {
+    const simulated = buffer.at(now()).get(nodeId);
+    const fallback = data.nodes.find((node) => node.id === nodeId);
+    const position =
+      simulated ?? (fallback ? { x: fallback.x, y: fallback.y } : null);
+    if (!position) return null;
+    return {
+      scale: camera.scale,
+      x: -position.x * camera.scale,
+      y: -position.y * camera.scale,
+    };
+  }
 
   function frameAt(positions: ReadonlyMap<string, Position>): RenderFrame {
     return buildRenderFrame({
@@ -268,17 +316,19 @@ export async function createGraphEngine(
       buffer.reset();
     },
     disposed: () => disposed,
+    cameraForFit: (padding) =>
+      fitToView(
+        buffer.at(now()).values(),
+        viewport,
+        padding === undefined
+          ? { scale: camera.scale }
+          : { padding, scale: camera.scale },
+      ),
+    cameraForNode,
     focusNode(nodeId) {
-      const simulated = buffer.at(now()).get(nodeId);
-      const fallback = data.nodes.find((node) => node.id === nodeId);
-      const position =
-        simulated ?? (fallback ? { x: fallback.x, y: fallback.y } : null);
-      if (!position) return false;
-      camera = {
-        scale: camera.scale,
-        x: -position.x * camera.scale,
-        y: -position.y * camera.scale,
-      };
+      const next = cameraForNode(nodeId);
+      if (!next) return false;
+      camera = next;
       touch();
       return true;
     },
@@ -305,6 +355,7 @@ export async function createGraphEngine(
     },
     positions: () => buffer.at(now()),
     ready: () => ready,
+    settled: () => settled,
     resize(width, height) {
       viewport = { height, width };
       touch();
@@ -320,6 +371,7 @@ export async function createGraphEngine(
       assignment = communityAssignment(next, { seed: options.seed ?? 1 });
       expanded.clear();
       buffer.reset();
+      settled = false;
       touch();
       if (disposed) return;
       worker.postMessage(createStartMessage(next, config, options.seed ?? 1));
@@ -327,6 +379,8 @@ export async function createGraphEngine(
     },
     setForceConfig(partial) {
       config = clampForceConfig({ ...config, ...partial });
+      // New forces mean the layout is moving again, whatever it was doing.
+      settled = false;
       if (!disposed) worker.postMessage({ config, type: "config" });
     },
     setGlow(intensities, nextAfterglow) {

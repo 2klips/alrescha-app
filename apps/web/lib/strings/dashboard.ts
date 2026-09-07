@@ -141,6 +141,8 @@ export const DASHBOARD = {
 
   /** 히트 레이어(단일 탭 정지) — 방향키로 노드 순회 (OQ-006) */
   hitLayerLabel: "Graph 노드 — 방향키로 이동, Enter로 상세",
+  /** The camera control that frames the whole graph. */
+  fitToView: "전체 보기 — 그래프 전부가 화면에 들어오게",
 
   /**
    * Accessible name of one node hit target on the canvas —

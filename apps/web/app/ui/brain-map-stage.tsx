@@ -114,6 +114,10 @@ export function BrainMapStage({
     labels: 0,
     level: "near",
   });
+  // A counter, not a boolean: pressing the button a second time has to reach
+  // the camera, and "true" twice is one value.
+  const [fitRequest, setFitRequest] = useState(0);
+  const [settled, setSettled] = useState(false);
   const forceConfig = useMemo(() => forceConfigOf(settings), [settings]);
   const hitLayerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
@@ -166,6 +170,10 @@ export function BrainMapStage({
       data-glow-active={glow ? glow.size : 0}
       data-lod={lod.level}
       data-lod-labels={lod.labels}
+      // "The layout has stopped moving" — the worker has always known it and
+      // until todo 9 nobody could see it. A browser test waits on this
+      // instead of sleeping and hoping.
+      data-settled={settled}
       data-testid="brain-map-stage"
       role="group"
     >
@@ -174,6 +182,7 @@ export function BrainMapStage({
           {...(afterglow ? { afterglow } : {})}
           data={data}
           {...(directionalFocus === undefined ? {} : { directionalFocus })}
+          fitRequest={fitRequest}
           {...(focusNodeId === undefined ? {} : { focusNodeId })}
           forceConfig={forceConfig}
           {...(glow ? { glow } : {})}
@@ -182,11 +191,30 @@ export function BrainMapStage({
             setLod({ labels, level: level as LodLevel });
             onLodReport?.(level as LodLevel, labels);
           }}
+          onSettledChange={setSettled}
           {...(seed === undefined ? {} : { seed })}
           selectedNodeId={selectedNodeId ?? null}
           textFadeThreshold={settings.textFadeThreshold}
           viewport={viewportRef}
         />
+        <button
+          className="brain-map-fit"
+          data-testid="brain-map-fit"
+          onClick={() => setFitRequest((count) => count + 1)}
+          title={DASHBOARD.fitToView}
+          type="button"
+        >
+          <span className="sr-only">{DASHBOARD.fitToView}</span>
+          <svg aria-hidden="true" viewBox="0 0 16 16">
+            <path
+              d="M1.5 5.5v-4h4M14.5 5.5v-4h-4M1.5 10.5v4h4M14.5 10.5v4h-4"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeWidth="1.5"
+            />
+          </svg>
+        </button>
         {/* Positions below are the pre-simulation fixture layout; `BrainMap`
             takes over as soon as the renderer produces its first frame. */}
         <div

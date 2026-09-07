@@ -10,6 +10,7 @@ import {
   communityAssignment,
   isSupernodeId,
 } from "../apps/web/lib/graph/clustering";
+import { worldToScreen } from "../apps/web/lib/graph/camera";
 import {
   createGraphEngine,
   readEngineCounters,
@@ -33,6 +34,7 @@ import {
   nodeColorToken,
   nodeRadius,
   resolveColor,
+  type Camera,
   type GraphPalette,
 } from "../apps/web/lib/graph/render-frame";
 import {
@@ -791,6 +793,91 @@ describe("camera focus (Phase 2A todo 7)", () => {
     engine.focusNode((data.nodes[0] as { id: string }).id);
 
     expect(engine.layoutRestarts()).toBe(restarts);
+    engine.dispose();
+  });
+
+  /**
+   * Phase 4 Wave B todo 9. The worker has always announced that the layout
+   * converged and the engine has always thrown the message away, so "the
+   * graph has stopped moving" was a fact nobody downstream could read.
+   */
+  test("reports the layout settling, and unreports it whenever it restarts", async () => {
+    const data = fixture(6);
+    const { emit, engine } = await engineOn(data);
+    expect(engine.settled()).toBe(false);
+
+    emit({ revision: 1, type: "settled" });
+    expect(engine.settled()).toBe(true);
+
+    // Positions mean it is moving again, whatever it said before.
+    emit({
+      alpha: 0.3,
+      positions: encodePositions(data.nodes.map(() => ({ x: 0, y: 0 }))),
+      revision: 2,
+      type: "positions",
+    });
+    expect(engine.settled()).toBe(false);
+
+    emit({ revision: 2, type: "settled" });
+    expect(engine.settled()).toBe(true);
+    // New forces restart the layout; so does new data.
+    engine.setForceConfig({ linkDistance: 200 });
+    expect(engine.settled()).toBe(false);
+
+    emit({ revision: 3, type: "settled" });
+    engine.setData(fixture(7));
+    expect(engine.settled()).toBe(false);
+    engine.dispose();
+  });
+
+  test("computes the camera that frames every node without moving to it", async () => {
+    const data = fixture(3);
+    const { emit, engine } = await engineOn(data);
+    const viewport = { height: 600, width: 800 };
+    engine.setViewport(viewport);
+    const positions = [
+      { x: -400, y: -200 },
+      { x: 400, y: 200 },
+      { x: 0, y: 0 },
+    ];
+    emit({
+      alpha: 0.1,
+      positions: encodePositions(positions),
+      revision: 1,
+      type: "positions",
+    });
+    const before = engine.camera();
+
+    const fit = engine.cameraForFit(0);
+    expect(fit).not.toBeNull();
+    // Computed, not applied — the mounted map glides to it, and a reader
+    // that wants it now hands it to `setCamera` itself.
+    expect(engine.camera()).toEqual(before);
+    // The 800-unit span across an 800px viewport is the tighter of the two
+    // axes, so that is the scale; the assertion below is the point.
+    for (const position of positions) {
+      const screen = worldToScreen(fit as Camera, viewport, position);
+      expect(screen.x).toBeGreaterThanOrEqual(0);
+      expect(screen.x).toBeLessThanOrEqual(viewport.width);
+      expect(screen.y).toBeGreaterThanOrEqual(0);
+      expect(screen.y).toBeLessThanOrEqual(viewport.height);
+    }
+    expect((fit as Camera).scale).toBe(1);
+
+    engine.dispose();
+  });
+
+  test("agrees with focusNode about where a node is", async () => {
+    const data = fixture(9);
+    const { engine } = await engineOn(data);
+    const id = (data.nodes[4] as { id: string }).id;
+
+    const computed = engine.cameraForNode(id);
+    engine.focusNode(id);
+
+    // One piece of arithmetic with two callers, not two that happen to agree.
+    expect(engine.camera()).toEqual(computed);
+    expect(engine.cameraForNode("not-a-node")).toBeNull();
     engine.dispose();
   });
 });

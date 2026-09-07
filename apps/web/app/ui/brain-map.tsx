@@ -17,11 +17,18 @@ import { useEffect, useRef, type RefObject } from "react";
 
 import type { GraphData } from "../../lib/dashboard/graph-model";
 import {
+  approachCamera,
+  cameraEquals,
+  panBy,
+  worldToScreen,
+  zoomAt,
+} from "../../lib/graph/camera";
+import {
   createGraphEngine,
   wrapWorker,
   type GraphEngine,
 } from "../../lib/graph/engine";
-import type { RenderFrame } from "../../lib/graph/render-frame";
+import type { Camera, RenderFrame } from "../../lib/graph/render-frame";
 import type { ForceConfig } from "../../lib/graph/simulation-protocol";
 import { readDesignToken, readRendererPalette } from "../../lib/theme/tokens";
 
@@ -31,6 +38,13 @@ export interface BrainMapProps {
   data: GraphData;
   /** Directional focus mode: selection tints edges by direction (todo 2). */
   directionalFocus?: boolean;
+  /**
+   * Increment to ask the camera to frame the whole graph. A number rather
+   * than a callback because the request travels *into* this component: the
+   * button lives in the surrounding markup and the camera lives here, and a
+   * changing token says "again" where a boolean could not.
+   */
+  fitRequest?: number;
   /** Camera target — the activity feed's "fly to this node" gesture. */
   focusNodeId?: string | null;
   forceConfig?: Partial<ForceConfig>;
@@ -43,6 +57,8 @@ export interface BrainMapProps {
    */
   hitLayer?: RefObject<HTMLDivElement | null>;
   onLodChange?: (lod: string, labelCount: number) => void;
+  /** Fires on every change of "the layout has stopped moving". */
+  onSettledChange?: (settled: boolean) => void;
   seed?: number;
   selectedNodeId?: string | null;
   textFadeThreshold?: number;
@@ -50,8 +66,16 @@ export interface BrainMapProps {
   viewport: RefObject<HTMLDivElement | null>;
 }
 
-const MIN_SCALE = 0.15;
-const MAX_SCALE = 4;
+/**
+ * One wheel notch. Multiplicative, so a notch out undoes a notch in exactly.
+ */
+const ZOOM_STEP = 1.15;
+
+/**
+ * Screen margin left around the graph when the camera frames it. Enough that
+ * the outermost nodes are not clipped by their own radius or their label.
+ */
+const FIT_PADDING = 64;
 
 /**
  * Hit targets are pointer/keyboard affordances, not pixels — syncing them at
@@ -67,17 +91,34 @@ export function BrainMap({
   afterglow,
   data,
   directionalFocus,
+  fitRequest,
   focusNodeId,
   forceConfig,
   glow,
   hitLayer,
   onLodChange,
+  onSettledChange,
   seed,
   selectedNodeId,
   textFadeThreshold,
   viewport: viewportRef,
 }: BrainMapProps) {
   const engineRef = useRef<GraphEngine | null>(null);
+  /**
+   * Where the camera is heading, or null when it is not heading anywhere.
+   *
+   * This component owns the camera while the map is mounted: a gesture moves
+   * the target and the animation loop eases the engine toward it. The loop
+   * stops writing the moment it arrives, so `engine.setCamera` from anywhere
+   * else still takes effect — it is adopted rather than fought.
+   */
+  const cameraTargetRef = useRef<Camera | null>(null);
+  /**
+   * Whether a person has moved the camera. The first automatic fit is a
+   * courtesy for someone who has not touched anything yet; doing it to
+   * someone who has just panned somewhere would be the map taking the wheel.
+   */
+  const cameraTouchedRef = useRef(false);
   const latest = useRef({
     data,
     directionalFocus,
@@ -103,6 +144,8 @@ export function BrainMap({
    */
   const onLodChangeRef = useRef(onLodChange);
   onLodChangeRef.current = onLodChange;
+  const onSettledChangeRef = useRef(onSettledChange);
+  onSettledChangeRef.current = onSettledChange;
 
   useEffect(() => {
     const host = viewportRef.current;
@@ -154,8 +197,9 @@ export function BrainMap({
         const size = Math.round(
           Math.max(MIN_HIT_SIZE, node.radius * 2 * scale),
         );
-        target.style.left = `${Math.round(viewport.width / 2 + camera.x + node.x * scale)}px`;
-        target.style.top = `${Math.round(viewport.height / 2 + camera.y + node.y * scale)}px`;
+        const screen = worldToScreen(camera, viewport, node);
+        target.style.left = `${Math.round(screen.x)}px`;
+        target.style.top = `${Math.round(screen.y)}px`;
         target.style.width = `${size}px`;
         target.style.height = `${size}px`;
       }
@@ -197,9 +241,35 @@ export function BrainMap({
       created.setDirectionalFocus(latest.current.directionalFocus ?? false);
       let reportedLod = "";
       let reportedLabels = -1;
+      let reportedSettled: boolean | null = null;
       let syncedAt = 0;
+      let steppedAt = performance.now();
       let lastFrame: RenderFrame | null = null;
       const paint = () => {
+        const elapsed = performance.now() - steppedAt;
+        steppedAt += elapsed;
+
+        // The layout stopping is a fact worth acting on exactly once: frame
+        // the graph for someone who has not moved the camera themselves.
+        // Without this the first thing a new workspace shows is whatever
+        // fraction of its nodes happened to land inside the viewport.
+        const isSettled = created.settled();
+        if (isSettled !== reportedSettled) {
+          if (isSettled && !cameraTouchedRef.current) {
+            cameraTargetRef.current = created.cameraForFit(FIT_PADDING);
+          }
+          reportedSettled = isSettled;
+          onSettledChangeRef.current?.(isSettled);
+        }
+
+        const target = cameraTargetRef.current;
+        if (target) {
+          const current = created.camera();
+          const next = approachCamera(current, target, elapsed);
+          if (cameraEquals(next, target)) cameraTargetRef.current = null;
+          if (!cameraEquals(next, current)) created.setCamera(next);
+        }
+
         // Built once per tick and handed to both the backend and the hit-layer
         // sync below — each used to call back into the engine for its own
         // frame, tripling the frame-plan cost (degree map, radii sort,
@@ -260,17 +330,25 @@ export function BrainMap({
     });
     resizeObserver.observe(host);
 
+    /**
+     * Zoom about the pointer, not the origin. The wheel used to scale the
+     * camera and leave `x`/`y` where they were, which pulls the graph toward
+     * the centre of the screen: you aimed at a node, zoomed, and watched it
+     * leave. The glide target is the base when one exists, so a fast flick of
+     * three notches compounds into one movement instead of three that fight.
+     */
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
-      const current = engine?.camera();
-      if (!current) return;
-      engine?.setCamera({
-        ...current,
-        scale: Math.min(
-          MAX_SCALE,
-          Math.max(MIN_SCALE, current.scale * (event.deltaY > 0 ? 0.9 : 1.1)),
-        ),
-      });
+      const base = cameraTargetRef.current ?? engine?.camera();
+      if (!base) return;
+      const bounds = host.getBoundingClientRect();
+      cameraTouchedRef.current = true;
+      cameraTargetRef.current = zoomAt(
+        base,
+        viewport,
+        { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
+        event.deltaY > 0 ? 1 / ZOOM_STEP : ZOOM_STEP,
+      );
     };
     let dragging = false;
     // Panning starts on the canvas only: a press that lands on a hit target is
@@ -281,15 +359,19 @@ export function BrainMap({
     const onPointerUp = () => {
       dragging = false;
     };
+    /**
+     * A drag is direct, not glided. Easing a wheel step reads as movement;
+     * easing a drag reads as lag, because the pointer is already showing the
+     * viewer where the map should be. Cancelling the target is what stops an
+     * in-flight glide from dragging the view out from under the hand.
+     */
     const onPointerMove = (event: PointerEvent) => {
       if (!dragging) return;
       const current = engine?.camera();
       if (!current) return;
-      engine?.setCamera({
-        ...current,
-        x: current.x + event.movementX,
-        y: current.y + event.movementY,
-      });
+      cameraTouchedRef.current = true;
+      cameraTargetRef.current = null;
+      engine?.setCamera(panBy(current, event.movementX, event.movementY));
     };
     // Listeners live on the host, not the canvas: the hit layer sits on top of
     // the canvas, and zoom must keep working while the pointer is over a node.
@@ -337,10 +419,29 @@ export function BrainMap({
   }, [directionalFocus]);
 
   // Camera moves are not layout moves: focusing re-aims the view and leaves the
-  // simulation running exactly as it was.
+  // simulation running exactly as it was. It glides rather than cutting —
+  // arriving somewhere is what tells a viewer the map moved rather than
+  // changed, which matters when the gesture came from a list on the far side
+  // of the screen.
   useEffect(() => {
-    if (focusNodeId) engineRef.current?.focusNode(focusNodeId);
+    if (!focusNodeId) return;
+    const next = engineRef.current?.cameraForNode(focusNodeId);
+    if (next) {
+      cameraTouchedRef.current = true;
+      cameraTargetRef.current = next;
+    }
   }, [focusNodeId]);
+
+  // Framing the graph is always deliberate, so it never checks whether the
+  // camera was touched — that guard belongs to the automatic first fit.
+  useEffect(() => {
+    if (fitRequest === undefined) return;
+    const next = engineRef.current?.cameraForFit(FIT_PADDING);
+    if (next) {
+      cameraTouchedRef.current = true;
+      cameraTargetRef.current = next;
+    }
+  }, [fitRequest]);
 
   // Glow is an in-place attribute write: no `setData`, no reheat, no relayout.
   useEffect(() => {

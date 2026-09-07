@@ -251,3 +251,143 @@ test("remounting the stage ten times leaks no WebGL context", async ({
     failures.filter((text) => /webgl|context lost|shader|worker/i.test(text)),
   ).toEqual([]);
 });
+
+/**
+ * Phase 4 Wave B todo 9 — the camera, in a real browser.
+ *
+ * The unit suite proves the arithmetic; these prove it is wired to the
+ * gestures. The invariant a viewer actually feels is the one asserted: what
+ * you point at stays where it is.
+ */
+
+/** The page-space centre of a node's hit target, or null when it has none. */
+async function nodeCentre(page: Page, index: number) {
+  const box = await page
+    .locator(".brain-map-hit:not([hidden])")
+    .nth(index)
+    .boundingBox();
+  return box ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : null;
+}
+
+/** Wait until the hit layer stops moving, so a glide is not measured mid-flight. */
+async function cameraStill(page: Page) {
+  let previous = "";
+  await expect
+    .poll(
+      async () => {
+        const current = JSON.stringify([
+          await nodeCentre(page, 0),
+          await nodeCentre(page, 1),
+        ]);
+        const stable = current === previous;
+        previous = current;
+        return stable;
+      },
+      { intervals: [150, 150, 150, 150, 150, 150, 150, 150], timeout: 8_000 },
+    )
+    .toBe(true);
+}
+
+test("the layout announces that it has settled", async ({ page }) => {
+  await page.goto("/map");
+  // The worker has always known this and nothing downstream could read it.
+  // A browser test waiting on it is the point: no sleeping and hoping.
+  await expect(page.locator(STAGE)).toHaveAttribute("data-settled", "true", {
+    timeout: 15_000,
+  });
+});
+
+test("zooming keeps what is under the pointer under the pointer", async ({
+  page,
+}) => {
+  await page.goto("/map");
+  await expect(page.locator(STAGE)).toHaveAttribute("data-settled", "true", {
+    timeout: 15_000,
+  });
+  await cameraStill(page);
+
+  const anchor = await nodeCentre(page, 0);
+  const other = await nodeCentre(page, 1);
+  expect(anchor).not.toBeNull();
+  expect(other).not.toBeNull();
+  const gapBefore = Math.hypot(
+    (other as { x: number }).x - (anchor as { x: number }).x,
+    (other as { y: number }).y - (anchor as { y: number }).y,
+  );
+
+  for (let step = 0; step < 4; step += 1) {
+    await page.locator(".brain-map-viewport").dispatchEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      clientX: (anchor as { x: number }).x,
+      clientY: (anchor as { y: number }).y,
+      deltaY: -120,
+    });
+  }
+  await cameraStill(page);
+
+  const anchorAfter = await nodeCentre(page, 0);
+  const otherAfter = await nodeCentre(page, 1);
+  // The graph grew — so this is a zoom, not a no-op…
+  const gapAfter = Math.hypot(
+    (otherAfter as { x: number }).x - (anchorAfter as { x: number }).x,
+    (otherAfter as { y: number }).y - (anchorAfter as { y: number }).y,
+  );
+  expect(gapAfter).toBeGreaterThan(gapBefore * 1.3);
+  // …and the node under the pointer did not move. Before todo 9 the camera
+  // scaled about the origin, so this node slid away from the cursor by more
+  // than its own width on every notch. The tolerance is the hit layer's
+  // whole-pixel rounding plus its 10Hz sync, not a fudge factor.
+  expect((anchorAfter as { x: number }).x).toBeCloseTo(
+    (anchor as { x: number }).x,
+    -0.7,
+  );
+  expect((anchorAfter as { y: number }).y).toBeCloseTo(
+    (anchor as { y: number }).y,
+    -0.7,
+  );
+});
+
+test("fit-to-view brings a graph that was panned away back on screen", async ({
+  page,
+}) => {
+  await page.goto("/map");
+  await expect(page.locator(STAGE)).toHaveAttribute("data-settled", "true", {
+    timeout: 15_000,
+  });
+  await cameraStill(page);
+
+  const viewport = page.locator(".brain-map-viewport");
+  const stage = await viewport.boundingBox();
+  expect(stage).not.toBeNull();
+  const frame = stage as {
+    height: number;
+    width: number;
+    x: number;
+    y: number;
+  };
+
+  // Drag the graph most of the way off the screen.
+  await page.mouse.move(frame.x + frame.width - 20, frame.y + frame.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(frame.x + 20, frame.y + frame.height / 2, {
+    steps: 10,
+  });
+  await page.mouse.up();
+  await cameraStill(page);
+
+  await page.getByTestId("brain-map-fit").click();
+  await cameraStill(page);
+
+  // Every reachable node is back inside the viewport, with room to spare.
+  const boxes = await page.locator(".brain-map-hit:not([hidden])").all();
+  expect(boxes.length).toBeGreaterThan(0);
+  for (const target of boxes) {
+    const box = await target.boundingBox();
+    if (!box) continue;
+    expect(box.x).toBeGreaterThanOrEqual(frame.x - 1);
+    expect(box.y).toBeGreaterThanOrEqual(frame.y - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(frame.x + frame.width + 1);
+    expect(box.y + box.height).toBeLessThanOrEqual(frame.y + frame.height + 1);
+  }
+});
