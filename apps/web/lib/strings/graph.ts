@@ -12,7 +12,9 @@ export const GRAPH = {
   regionLabel: "2단계 증거 세부 Graph",
 
   canvas: {
-    label: "로컬 Graph · 깊이 2 · 레이아웃 고정",
+    // "레이아웃 고정"이었다. Phase 4 Wave B todo 14에서 이 화면도 힘 기반
+    // 렌더러를 쓰므로, 배치는 고정이 아니라 안정화된다.
+    label: "로컬 Graph · 깊이 2 · 힘 기반 배치",
   },
 
   inspector: {

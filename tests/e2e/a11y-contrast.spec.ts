@@ -49,13 +49,22 @@ const SURFACES = [
   // renders its empty state there and its colours — the level chips and the
   // grey unmeasured line — would never reach axe.
   ["inspection", "/inspection"],
+  // The evidence detail. It was outside every axe sweep for as long as it
+  // drew its own SVG graph — `.local-graph-canvas` was on the exclusion list
+  // below, and excluding the container excluded the provenance inspector
+  // beside it. Phase 4 Wave B todo 14 put the shared Pixi stage on this
+  // route, so only the canvas needs excluding and the screen can be audited
+  // like any other.
+  ["graph-detail", "/graph?node=req-auth"],
 ] as const;
 
 const THEMES = ["dark", "light"] as const;
 
 /** Pixi paints into a canvas; axe cannot read pixels, so it is out of scope.
-    The DOM hit layer is deliberately NOT excluded any more (OQ-006). */
-const EXCLUDED = [".local-graph-canvas", "canvas"];
+    The DOM hit layer is deliberately NOT excluded any more (OQ-006), and
+    neither is the evidence detail's graph column (todo 14) — one renderer
+    means one exclusion. */
+const EXCLUDED = ["canvas"];
 
 test.use({ colorScheme: "dark" });
 

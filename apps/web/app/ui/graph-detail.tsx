@@ -17,8 +17,9 @@ import { useMemo, useState } from "react";
 
 import {
   buildDashboardViewModel,
-  type GraphEdge,
-  type GraphNode,
+  topHubNodes,
+  type DashboardState,
+  type GraphData,
 } from "../../lib/dashboard/graph-model";
 import {
   buildLocalEvidenceGraph,
@@ -26,38 +27,54 @@ import {
   inspectEdgeProvenance,
 } from "../../lib/dashboard/local-graph";
 import { GRAPH } from "../../lib/strings";
-import { GraphCanvas } from "./graph-canvas";
+import { BrainMapStage } from "./brain-map-stage";
 import { GraphTableView } from "./graph-table-view";
 
+const EMPTY_GRAPH: GraphData = { edges: [], nodes: [] };
+
 interface GraphDetailProps {
-  initialNodeId: string;
+  /** The route's `?node=`, or absent — this screen picks its own root then. */
+  initialNodeId: string | null;
+  state: DashboardState;
 }
 
-export function GraphDetail({ initialNodeId }: GraphDetailProps) {
+export function GraphDetail({ initialNodeId, state }: GraphDetailProps) {
   const completeGraph = useMemo(
-    () => buildDashboardViewModel("scanned").graph,
-    [],
+    () => buildDashboardViewModel(state).graph,
+    [state],
   );
-  const rootNode = completeGraph.nodes.some((node) => node.id === initialNodeId)
-    ? initialNodeId
-    : "req-auth";
+  // No hardcoded starting node. A request for one that this graph does not
+  // hold — and a request for none at all — lands on the most-connected node,
+  // which is the same "start here" rule the dashboard's hub chips use.
+  const rootNode =
+    (initialNodeId &&
+    completeGraph.nodes.some((node) => node.id === initialNodeId)
+      ? initialNodeId
+      : (topHubNodes(completeGraph, 1)[0]?.node.id ??
+        completeGraph.nodes[0]?.id)) ?? null;
   const [includeOrphans, setIncludeOrphans] = useState(false);
   const [view, setView] = useState<"canvas" | "table">("canvas");
   const localGraph = useMemo(
     () =>
-      buildLocalEvidenceGraph(completeGraph, rootNode, {
-        depth: 2,
-        includeOrphans,
-      }),
+      rootNode
+        ? buildLocalEvidenceGraph(completeGraph, rootNode, {
+            depth: 2,
+            includeOrphans,
+          })
+        : EMPTY_GRAPH,
     [completeGraph, includeOrphans, rootNode],
   );
   const displayEdges = useMemo(
     () => graphEdgesWithDisplayableProvenance(localGraph),
     [localGraph],
   );
-  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(
-    completeGraph.nodes.find((node) => node.id === rootNode) ?? null,
-  );
+  // The selection is derived, not stored: `?node=` can change under this
+  // component, and a node id held in state would keep pointing at the
+  // neighbourhood the viewer just left.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedNode =
+    completeGraph.nodes.find((node) => node.id === (selectedId ?? rootNode)) ??
+    null;
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(
     displayEdges[0]?.id ?? null,
   );
@@ -100,12 +117,17 @@ export function GraphDetail({ initialNodeId }: GraphDetailProps) {
         <div className="local-graph-canvas">
           {view === "canvas" ? (
             <>
-              <GraphCanvas
+              {/* One renderer for the whole product (Phase 4 Wave B todo 14).
+                  The camera frames this neighbourhood itself once the layout
+                  settles, which is what the SVG renderer's fixed centre-on-
+                  the-root could not do without clipping the rest. */}
+              <BrainMapStage
                 data={localGraph}
-                focusNodeId={selectedNode?.id ?? rootNode}
-                onEdgeSelect={(edge: GraphEdge) => setSelectedEdgeId(edge.id)}
-                onNodeSelect={setSelectedNode}
-                selectedEdgeId={selectedEdge?.id ?? null}
+                onEdgeSelect={(edge) => setSelectedEdgeId(edge.id)}
+                onNodeActivate={(node) => setSelectedId(node.id)}
+                onNodeSelect={(node) => setSelectedId(node.id)}
+                selectedNodeId={selectedNode?.id ?? null}
+                showForcePanel={false}
               />
               <div className="local-graph-label">
                 <Orbit aria-hidden size={14} />
@@ -115,8 +137,8 @@ export function GraphDetail({ initialNodeId }: GraphDetailProps) {
           ) : (
             <GraphTableView
               data={localGraph}
-              onNodeActivate={setSelectedNode}
-              onNodeSelect={setSelectedNode}
+              onNodeActivate={(node) => setSelectedId(node.id)}
+              onNodeSelect={(node) => setSelectedId(node.id)}
               selectedNodeId={selectedNode?.id ?? null}
             />
           )}
@@ -208,7 +230,7 @@ export function GraphDetail({ initialNodeId }: GraphDetailProps) {
 
           <footer>
             <Link
-              href={`/findings?node=${encodeURIComponent(selectedNode?.id ?? rootNode)}`}
+              href={`/findings?node=${encodeURIComponent(selectedNode?.id ?? rootNode ?? "")}`}
             >
               <FileSearch size={14} />
               {GRAPH.footer.relatedFindings}
