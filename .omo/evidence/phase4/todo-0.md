@@ -130,3 +130,10 @@ the layout itself is covered by the 43 unit tests in
 The e2e specs that touch the graph (`brain-map`, `graph-facets`,
 `live-graph`, `workspace-map`, `dashboard-hud`) still need a run on a machine
 with Docker before Wave B lands.
+
+> **정정(2026-09-09):** 위 문단의 "no Docker daemon is installed on this
+> machine" 전제는 틀렸다. Docker는 이 머신에 설치되어 있고, 로컬 Supabase 위에서
+> Playwright 전체 스위트가 돈다 — 경위는 [e2e-debt.md](e2e-debt.md), 재실행
+> 기준 **149 passed / 1 skipped**. 이 문단이 "Wave B 전에 실행이 필요하다"고
+> 미뤄둔 다섯 스펙(`brain-map`, `graph-facets`, `live-graph`, `workspace-map`,
+> `dashboard-hud`)은 그 실행에 포함되어 11개 테스트가 모두 통과했다.
