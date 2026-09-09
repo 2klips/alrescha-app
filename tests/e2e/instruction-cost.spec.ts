@@ -192,6 +192,13 @@ test("the stats page carries the benchmark caveat beside the link", async ({
     await page.goto("/app/stats");
     // Consent first: nothing is collected or shown before it (ADR-011).
     await page.getByRole("button", { name: STATS.consent.enable }).click();
+    // The button submits a server action, and the click resolves as soon as it
+    // is dispatched. Wait for the gate to be gone before reloading: a reload
+    // that races the write re-renders `consent-required`, and none of the
+    // measured screen below it ever appears.
+    await expect(
+      page.getByRole("button", { name: STATS.consent.enable }),
+    ).toBeHidden();
     await seedServedCalls(user.workspaceId, user.userId);
     await page.reload();
 
