@@ -121,3 +121,7 @@ new Korean labels — 프론트엔드 · 백엔드 · 데이터베이스 · 문�
   of the graph until Wave B has a toggle to hide it with.
 - **`todoFiles` / `progressDocs`** are stored and not yet read by the todo
   parser; that wiring belongs with the todo identity work in todo 5.
+
+> **정정(2026-09-09):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제
+> 상태는 [e2e-debt.md](e2e-debt.md)에 있다 — 재실행 기준 **149 passed /
+> 1 skipped**.

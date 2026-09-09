@@ -117,3 +117,7 @@ each repository's basis reaches the caller.
 - **No measurement.** How often the fence moves under real traffic, and what
   the extra two RPC round trips cost, are unmeasured.
 - **Playwright** (no Docker daemon).
+
+> **정정(2026-09-09):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제
+> 상태는 [e2e-debt.md](e2e-debt.md)에 있다 — 재실행 기준 **149 passed /
+> 1 skipped**.

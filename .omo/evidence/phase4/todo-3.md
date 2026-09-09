@@ -134,3 +134,7 @@ families they are about instead of reading every edge in the table.
   **OQ-049**.
 - `scripts/measure-graph-density.ts` measures the plan, so its report does not
   include the hierarchy layer. The report now says so in its own header.
+
+> **정정(2026-09-09):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제
+> 상태는 [e2e-debt.md](e2e-debt.md)에 있다 — 재실행 기준 **149 passed /
+> 1 skipped**.

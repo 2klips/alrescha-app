@@ -106,3 +106,7 @@ deliberately the same answer.
 - **`get_findings`, `search_index` and `request_context_pack`** consume the
   same workspace read and do not surface its coverage yet.
 - **Playwright** (no Docker daemon).
+
+> **정정(2026-09-09):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제
+> 상태는 [e2e-debt.md](e2e-debt.md)에 있다 — 재실행 기준 **149 passed /
+> 1 skipped**.

@@ -144,3 +144,7 @@ still appears — with no summary rather than last week's.
   into `artifacts.metadata`; only the enrich summary path is conditional.
 - **Playwright** (no Docker daemon): `/app/inspection` renders the changed
   freshness widget and no e2e has run against it.
+
+> **정정(2026-09-09):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제
+> 상태는 [e2e-debt.md](e2e-debt.md)에 있다 — 재실행 기준 **149 passed /
+> 1 skipped**.
