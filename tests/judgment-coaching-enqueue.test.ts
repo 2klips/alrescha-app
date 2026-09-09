@@ -148,7 +148,9 @@ describe("judgment/coaching enqueue functions (Phase 2C follow-up)", () => {
     // The statement travels as context, tagged with where it came from.
     const context = job?.payload["context"] as string[];
     expect(context[0]).toContain("source spec/auth.md");
-    expect(context[1]).toBe("statement: 세션은 적절한 시간 뒤에 만료되어야 한다");
+    expect(context[1]).toBe(
+      "statement: 세션은 적절한 시간 뒤에 만료되어야 한다",
+    );
   });
 
   it("refuses requirements that are not active", async () => {
@@ -158,20 +160,26 @@ describe("judgment/coaching enqueue functions (Phase 2C follow-up)", () => {
   });
 
   it("gives requirement judgments their own retry generation", async () => {
-    const first = (await enqueueRequirementJudgment(requirement, "byok")).rows[0]?.id ?? "";
-    expect((await enqueueRequirementJudgment(requirement, "byok")).rows[0]?.id).toBe(first);
+    const first =
+      (await enqueueRequirementJudgment(requirement, "byok")).rows[0]?.id ?? "";
+    expect(
+      (await enqueueRequirementJudgment(requirement, "byok")).rows[0]?.id,
+    ).toBe(first);
     await database.query(
       `update public.jobs set status = 'failed', attempt_count = max_attempts,
          completed_at = now(), last_error = 'terminal' where id = $1`,
       [first],
     );
-    const retry = (await enqueueRequirementJudgment(requirement, "byok")).rows[0]?.id ?? "";
+    const retry =
+      (await enqueueRequirementJudgment(requirement, "byok")).rows[0]?.id ?? "";
     expect(retry).not.toBe(first);
     const rows = await database.query<{ idempotency_key: string }>(
       "select idempotency_key from public.jobs where id = $1",
       [retry],
     );
-    expect(rows.rows[0]?.idempotency_key).toBe(`requirement-judgment:${requirement}:r1`);
+    expect(rows.rows[0]?.idempotency_key).toBe(
+      `requirement-judgment:${requirement}:r1`,
+    );
   });
 
   afterEach(async () => {
@@ -305,20 +313,25 @@ describe("judgment/coaching enqueue functions (Phase 2C follow-up)", () => {
   }
 
   it("mints a new generation after a terminal judgment failure, but never redoes a success", async () => {
-    const first = (await enqueueJudgment(contradiction, "credits")).rows[0]?.id ?? "";
+    const first =
+      (await enqueueJudgment(contradiction, "credits")).rows[0]?.id ?? "";
     expect(await keyOf(first)).toBe(`judgment:${contradiction}`);
 
     // Live attempt: the same job comes back.
-    expect((await enqueueJudgment(contradiction, "credits")).rows[0]?.id).toBe(first);
+    expect((await enqueueJudgment(contradiction, "credits")).rows[0]?.id).toBe(
+      first,
+    );
 
     await markTerminal(first, "failed");
-    const second = (await enqueueJudgment(contradiction, "credits")).rows[0]?.id ?? "";
+    const second =
+      (await enqueueJudgment(contradiction, "credits")).rows[0]?.id ?? "";
     expect(second).not.toBe(first);
     expect(await keyOf(second)).toBe(`judgment:${contradiction}:r1`);
 
     // A second terminal failure counts up, so the key never collides.
     await markTerminal(second, "cancelled");
-    const third = (await enqueueJudgment(contradiction, "credits")).rows[0]?.id ?? "";
+    const third =
+      (await enqueueJudgment(contradiction, "credits")).rows[0]?.id ?? "";
     expect(await keyOf(third)).toBe(`judgment:${contradiction}:r2`);
 
     // Success is final: the request resolves to the succeeded job, no new one.
@@ -326,7 +339,9 @@ describe("judgment/coaching enqueue functions (Phase 2C follow-up)", () => {
       "update public.jobs set status = 'succeeded', completed_at = now() where id = $1",
       [third],
     );
-    expect((await enqueueJudgment(contradiction, "credits")).rows[0]?.id).toBe(third);
+    expect((await enqueueJudgment(contradiction, "credits")).rows[0]?.id).toBe(
+      third,
+    );
     const total = await database.query<{ n: number }>(
       "select count(*)::int as n from public.jobs where kind = 'judge'",
     );

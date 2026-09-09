@@ -30,10 +30,17 @@ const statement: InTotoStatement = {
 };
 const legacy = {
   ...statement,
-  predicate: { ...statement.predicate, tool: { name: "arr", version: "0.1.0" } },
+  predicate: {
+    ...statement.predicate,
+    tool: { name: "arr", version: "0.1.0" },
+  },
 };
 const repositories = [
-  { full_name: "2klips/alrescha-app", id: "repo-1", last_scanned_commit_sha: COMMIT },
+  {
+    full_name: "2klips/alrescha-app",
+    id: "repo-1",
+    last_scanned_commit_sha: COMMIT,
+  },
 ];
 
 async function receipts() {
@@ -50,7 +57,10 @@ async function receipts() {
         repository_id: "repo-1",
         run_id: "run-1",
         status: "generated",
-        summary: { findings: { open_total: 5, opened: ["a"], resolved: [] }, statement },
+        summary: {
+          findings: { open_total: 5, opened: ["a"], resolved: [] },
+          statement,
+        },
       },
       {
         commit_sha: COMMIT,
@@ -125,7 +135,9 @@ describe("WorkspaceReceiptsBoard", () => {
     const html = await render("current");
 
     expect(html).toContain('data-testid="receipt-verification-summary"');
-    expect(html).toContain(ASSURANCE.receipts.live.verificationSummary(2, 0, 1));
+    expect(html).toContain(
+      ASSURANCE.receipts.live.verificationSummary(2, 0, 1),
+    );
   });
 
   it("counts a tampered receipt in the rail tally", async () => {
@@ -147,7 +159,9 @@ describe("WorkspaceReceiptsBoard", () => {
 
     const html = await render("tampered", Promise.resolve(list));
 
-    expect(html).toContain(ASSURANCE.receipts.live.verificationSummary(0, 1, 0));
+    expect(html).toContain(
+      ASSURANCE.receipts.live.verificationSummary(0, 1, 0),
+    );
   });
 
   it("shows a server-computed verified verdict and the commit card link", async () => {
@@ -162,7 +176,9 @@ describe("WorkspaceReceiptsBoard", () => {
 
   it("verifies a pre-rename receipt and names the legacy issuer (OQ-022 ⑴)", async () => {
     const html = await render("legacy");
-    expect(html).toContain('data-testid="receipt-detail" data-verification="verified"');
+    expect(html).toContain(
+      'data-testid="receipt-detail" data-verification="verified"',
+    );
     expect(html).toContain('data-testid="receipt-legacy-issuer"');
     expect(html).toContain(ASSURANCE.receipts.live.legacyIssuer);
     expect(html).toContain("arr 0.1.0");
@@ -188,8 +204,12 @@ describe("WorkspaceReceiptsBoard", () => {
       [{ ...repositories[0]!, last_scanned_commit_sha: head }],
     );
     const html = await render("older", Promise.resolve(list));
-    expect(html).toContain(ASSURANCE.receipts.live.staleBanner(head.slice(0, 7)));
-    expect(html).not.toContain(ASSURANCE.receipts.live.staleBanner(COMMIT.slice(0, 7)));
+    expect(html).toContain(
+      ASSURANCE.receipts.live.staleBanner(head.slice(0, 7)),
+    );
+    expect(html).not.toContain(
+      ASSURANCE.receipts.live.staleBanner(COMMIT.slice(0, 7)),
+    );
   });
 
   it("keeps an unreadable receipt visible as invalid with its parse issues", async () => {

@@ -60,7 +60,10 @@ function latestJobByTarget(
 function latestJudgmentByTarget(
   rows: readonly RequirementJudgmentRow[],
 ): ReadonlyMap<string, { explanation: string; verdict: Verdict | null }> {
-  const latest = new Map<string, { explanation: string; verdict: Verdict | null }>();
+  const latest = new Map<
+    string,
+    { explanation: string; verdict: Verdict | null }
+  >();
   for (const row of rows) {
     if (latest.has(row.target_id)) continue;
     const verdict = row.payload?.verdict;
@@ -142,7 +145,8 @@ export default async function WorkspaceInspectionPage({
   }
   const findings = (openFindings.data ?? []) as OpenFindingRow[];
   const latest = latestJobByTarget((judgeJobs.data ?? []) as JudgeJobRow[]);
-  const activeRequirements = (requirements.data ?? []) as ActiveRequirementRow[];
+  const activeRequirements = (requirements.data ??
+    []) as ActiveRequirementRow[];
   const verdicts = latestJudgmentByTarget(
     (judgments.data ?? []) as RequirementJudgmentRow[],
   );

@@ -139,8 +139,11 @@ export const ASSURANCE = {
        * tampered or unreadable receipt is visible without opening each one.
        * `verified <v> · 변조 <t> · 무효 <i>`
        */
-      verificationSummary: (verified: number, tampered: number, invalid: number) =>
-        `verified ${verified} · 변조 ${tampered} · 무효 ${invalid}`,
+      verificationSummary: (
+        verified: number,
+        tampered: number,
+        invalid: number,
+      ) => `verified ${verified} · 변조 ${tampered} · 무효 ${invalid}`,
       empty: {
         title: "발급된 Receipt 없음",
         body: "레포를 연결하고 push하면 첫 분석이 Receipt를 발급합니다.",
@@ -165,9 +168,11 @@ export const ASSURANCE = {
         `+${opened} / -${resolved} · 열린 Findings ${openTotal}건`,
       findingsMissing: "스냅샷 없음",
       digestMissing: "저장된 digest 없음",
-      computedNote: "페이지를 렌더할 때 서버가 Statement를 다시 계산한 digest입니다.",
+      computedNote:
+        "페이지를 렌더할 때 서버가 Statement를 다시 계산한 digest입니다.",
       commitAction: "commit 카드 보기",
-      unreadable: "저장된 Statement가 스키마와 맞지 않아 필드를 표시하지 않습니다.",
+      unreadable:
+        "저장된 Statement가 스키마와 맞지 않아 필드를 표시하지 않습니다.",
     },
   },
 } as const;

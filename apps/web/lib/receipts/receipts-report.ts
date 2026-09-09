@@ -137,7 +137,9 @@ export async function loadWorkspaceReceipts(
   const [receiptsResult, repositoriesResult] = await Promise.all([
     client
       .from("receipts")
-      .select("id,commit_sha,created_at,digest,repository_id,run_id,status,summary")
+      .select(
+        "id,commit_sha,created_at,digest,repository_id,run_id,status,summary",
+      )
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false })
       .limit(50),

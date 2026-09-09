@@ -194,7 +194,9 @@ test("stored receipts are listed, re-verified on the server and linked to their 
     // Newest first: the current-issuer receipt, verified against its digest.
     const detail = page.getByTestId("receipt-detail");
     await expect(detail).toHaveAttribute("data-verification", "verified");
-    await expect(detail).toContainText(ASSURANCE.receipts.verification.verified);
+    await expect(detail).toContainText(
+      ASSURANCE.receipts.verification.verified,
+    );
     await expect(page.getByTestId("receipt-verdict")).toContainText(
       ASSURANCE.receipts.verdict.counts(3, 1),
     );

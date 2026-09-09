@@ -37,11 +37,18 @@ const statement: InTotoStatement = {
 
 const legacyStatement = {
   ...statement,
-  predicate: { ...statement.predicate, tool: { name: "arr", version: "0.1.0" } },
+  predicate: {
+    ...statement.predicate,
+    tool: { name: "arr", version: "0.1.0" },
+  },
 };
 
 const repositories: readonly ReceiptRepositoryRow[] = [
-  { full_name: "2klips/alrescha-app", id: "repo-1", last_scanned_commit_sha: COMMIT },
+  {
+    full_name: "2klips/alrescha-app",
+    id: "repo-1",
+    last_scanned_commit_sha: COMMIT,
+  },
 ];
 
 function row(overrides: Partial<WorkspaceReceiptRow>): WorkspaceReceiptRow {
@@ -64,7 +71,10 @@ function row(overrides: Partial<WorkspaceReceiptRow>): WorkspaceReceiptRow {
 describe("buildWorkspaceReceipts", () => {
   it("re-verifies a stored statement against its stored digest and keeps the row's facts", async () => {
     const digest = await digestInTotoStatement(statement);
-    const [receipt] = await buildWorkspaceReceipts([row({ digest })], repositories);
+    const [receipt] = await buildWorkspaceReceipts(
+      [row({ digest })],
+      repositories,
+    );
 
     expect(receipt).toMatchObject({
       commitSha: COMMIT,
@@ -73,7 +83,11 @@ describe("buildWorkspaceReceipts", () => {
       repository: "2klips/alrescha-app",
       runId: "run-1",
       stale: false,
-      verification: { actualDigest: digest, state: "verified", toolName: "alrescha" },
+      verification: {
+        actualDigest: digest,
+        state: "verified",
+        toolName: "alrescha",
+      },
     });
     expect(receipt?.statement?.predicate.coverage).toEqual({
       implVerified: 2,
@@ -109,7 +123,10 @@ describe("buildWorkspaceReceipts", () => {
           summary: {
             statement: {
               ...statement,
-              predicate: { ...statement.predicate, evidence: { inferred: 0, verified: 9 } },
+              predicate: {
+                ...statement.predicate,
+                evidence: { inferred: 0, verified: 9 },
+              },
             },
           },
         }),
@@ -125,12 +142,18 @@ describe("buildWorkspaceReceipts", () => {
   it("shows an unreadable or digest-less row as invalid instead of dropping it", async () => {
     const receipts = await buildWorkspaceReceipts(
       [
-        row({ digest: "0".repeat(64), id: "garbled", summary: { statement: { predicate: {} } } }),
+        row({
+          digest: "0".repeat(64),
+          id: "garbled",
+          summary: { statement: { predicate: {} } },
+        }),
         row({ digest: null, id: "no-digest" }),
       ],
       repositories,
     );
-    expect(receipts.map((receipt) => [receipt.id, receipt.verification.state])).toEqual([
+    expect(
+      receipts.map((receipt) => [receipt.id, receipt.verification.state]),
+    ).toEqual([
       ["garbled", "invalid"],
       ["no-digest", "invalid"],
     ]);
@@ -141,10 +164,16 @@ describe("buildWorkspaceReceipts", () => {
   it("marks a receipt stale once the repository has scanned a newer commit, and falls back to the repository id", async () => {
     const digest = await digestInTotoStatement(statement);
     const receipts = await buildWorkspaceReceipts(
-      [row({ digest }), row({ digest, id: "orphan", repository_id: "repo-gone" })],
+      [
+        row({ digest }),
+        row({ digest, id: "orphan", repository_id: "repo-gone" }),
+      ],
       [{ ...repositories[0]!, last_scanned_commit_sha: NEWER_COMMIT }],
     );
-    expect(receipts[0]).toMatchObject({ headCommitSha: NEWER_COMMIT, stale: true });
+    expect(receipts[0]).toMatchObject({
+      headCommitSha: NEWER_COMMIT,
+      stale: true,
+    });
     expect(receipts[1]).toMatchObject({
       headCommitSha: null,
       repository: "repo-gone",

@@ -142,7 +142,9 @@ describe("GitHub repository scanner", () => {
     expect(
       classifyArtifactPath("fixtures/drifted-demo/.cursor/rules/testing.mdc"),
     ).toBeNull();
-    expect(classifyArtifactPath("fixtures/drifted-demo/spec/auth.md")).toBeNull();
+    expect(
+      classifyArtifactPath("fixtures/drifted-demo/spec/auth.md"),
+    ).toBeNull();
     expect(classifyArtifactPath("fixtures/drifted-demo/AGENTS.md")).toBeNull();
     expect(classifyArtifactPath("packages/x/__fixtures__/spec.md")).toBeNull();
     expect(classifyArtifactPath("testdata/src/auth.ts")).toBeNull();

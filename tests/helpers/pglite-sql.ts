@@ -41,7 +41,9 @@ function tag(target: Queryable) {
 
 export function pgliteSql(database: PGlite) {
   const root = tag(database) as ReturnType<typeof tag> & {
-    begin: <T>(callback: (tx: ReturnType<typeof tag>) => Promise<T>) => Promise<T>;
+    begin: <T>(
+      callback: (tx: ReturnType<typeof tag>) => Promise<T>,
+    ) => Promise<T>;
     json: (value: unknown) => JsonParam;
   };
   root.json = (value: unknown) => ({ __json: JSON.stringify(value) });
