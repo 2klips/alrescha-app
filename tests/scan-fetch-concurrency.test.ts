@@ -329,14 +329,38 @@ describe("scan content fetch concurrency (perf research MT-3)", () => {
   });
 });
 
+/** A promise the test itself decides when to settle. */
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((settle) => {
+    resolve = settle;
+  });
+  return { promise, resolve };
+}
+
 describe("mapWithConcurrency", () => {
   it("returns results in input order, not completion order", async () => {
+    // Distinct values, so each task can be keyed by the item it was handed.
+    const items = [5, 1, 4, 2];
+    const gate = new Map(items.map((item) => [item, deferred()]));
+    const done = new Map(items.map((item) => [item, deferred()]));
     const order: number[] = [];
-    const results = await mapWithConcurrency([5, 1, 4, 2], 4, async (item) => {
-      await new Promise((resolve) => setTimeout(resolve, item));
+
+    const pending = mapWithConcurrency(items, 4, async (item) => {
+      await gate.get(item)!.promise;
       order.push(item);
+      done.get(item)!.resolve();
       return item * 10;
     });
+
+    // Release the tasks one at a time, in an order deliberately unlike the
+    // input order. Completion order is forced rather than raced: the next task
+    // is only let go once the previous one has recorded itself.
+    for (const item of [1, 2, 4, 5]) {
+      gate.get(item)!.resolve();
+      await done.get(item)!.promise;
+    }
+    const results = await pending;
 
     expect(results).toEqual([50, 10, 40, 20]);
     expect(order).toEqual([1, 2, 4, 5]);
