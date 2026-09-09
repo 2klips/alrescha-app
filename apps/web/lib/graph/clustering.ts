@@ -360,7 +360,7 @@ function collapseStructure(
   }
   // Content key, not identity: the engine mutates one long-lived `expanded`
   // set rather than replacing it.
-  const key = [...expanded].sort().join(" ");
+  const key = [...expanded].sort().join("\u0000");
   const cached = byExpanded.get(key);
   if (cached) return cached;
   const structure = buildStructure(data, assignment, expanded, templates);
