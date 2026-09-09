@@ -1,4 +1,9 @@
-import { personalizedPageRank, type PageRankEdge } from "@alrescha/core";
+import {
+  AGENT_FLOW_SENTENCE,
+  estimateTokens,
+  personalizedPageRank,
+  type PageRankEdge,
+} from "@alrescha/core";
 
 import type { McpNodeType, McpWorkspaceData } from "./store";
 
@@ -16,15 +21,29 @@ import type { McpNodeType, McpWorkspaceData } from "./store";
  * agent speaks this graph's vocabulary instead of guessing one.
  */
 
-const CHARS_PER_TOKEN = 4;
+/**
+ * The workflow, in one sentence.
+ *
+ * Todo 22 found `get_graph_schema.text` carrying its own copy, which after
+ * the catalogue diet named three tools that no longer existed. Todo 22 ⑵
+ * finished the job: the sentence and the instruction block are now rendered
+ * from one array of steps in `@alrescha/core`, so there is no second copy to
+ * fall behind. Re-exported here because every caller imports it from here.
+ */
+export { AGENT_FLOW_SENTENCE };
+
 const MAX_SYMBOLS_PER_LINE = 12;
 export const REPO_MAP_MIN_BUDGET = 100;
 export const REPO_MAP_MAX_BUDGET = 8_000;
 export const REPO_MAP_DEFAULT_BUDGET = 1_200;
 
-export function estimateTokens(text: string): number {
-  return Math.ceil(text.length / CHARS_PER_TOKEN);
-}
+/**
+ * The ratio moved to `@alrescha/core` in todo 24 so the repo map, the served
+ * -bytes column and the instruction cost table share one assumption instead
+ * of three. Re-exported here because every caller of this module already
+ * imports it from here, and a rename would have been churn with no reader.
+ */
+export { estimateTokens };
 
 interface WorkspaceGraph {
   readonly edges: readonly PageRankEdge[];
@@ -160,6 +179,8 @@ export function buildRepoMap(
 }
 
 export interface GraphSchemaResult {
+  /** Edge counts by family — the bands a traversal filter can name. */
+  readonly familyCounts: Readonly<Record<string, number>>;
   readonly nodeCounts: Readonly<Partial<Record<McpNodeType, number>>>;
   readonly relationCounts: Readonly<Record<string, number>>;
   readonly repositories: readonly {
@@ -176,6 +197,10 @@ export function buildGraphSchema(
 ): GraphSchemaResult {
   const nodeCounts: Partial<Record<McpNodeType, number>> = {};
   const relationCounts: Record<string, number> = {};
+  // Families as well as relations (todo 22 ⑸): a caller narrowing a
+  // traversal by band needs to know which bands this workspace actually
+  // has, and a family with no edges should not be offered as a filter.
+  const familyCounts: Record<string, number> = {};
   const repositories: {
     artifactCount: number;
     fullName: string;
@@ -200,6 +225,9 @@ export function buildGraphSchema(
     add("context_pack", repository.contextPacks.length);
     for (const edge of repository.edges) {
       relationCounts[edge.relation] = (relationCounts[edge.relation] ?? 0) + 1;
+      if (edge.family) {
+        familyCounts[edge.family] = (familyCounts[edge.family] ?? 0) + 1;
+      }
     }
   }
 
@@ -211,6 +239,10 @@ export function buildGraphSchema(
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([relation, count]) => `${relation}:${count}`)
     .join(" ");
+  const familyLine = Object.entries(familyCounts)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([family, count]) => `${family}:${count}`)
+    .join(" ");
 
   const text = [
     `repositories: ${repositories
@@ -220,8 +252,9 @@ export function buildGraphSchema(
       .join(", ")}`,
     `nodes: ${nodeLine || "none"}`,
     `edges: ${relationLine || "none"}`,
-    "flow: search_nodes → get_neighbors/trace_path → get_node_content (ids first, bodies last)",
+    `families: ${familyLine || "none"}`,
+    AGENT_FLOW_SENTENCE,
   ].join("\n");
 
-  return { nodeCounts, relationCounts, repositories, text };
+  return { familyCounts, nodeCounts, relationCounts, repositories, text };
 }

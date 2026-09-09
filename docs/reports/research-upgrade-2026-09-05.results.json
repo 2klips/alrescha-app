@@ -1,0 +1,232 @@
+{
+  "date": "2026-09-05",
+  "mainHead": "75f60fa",
+  "claudeHeadAtInspection": "51d0efe",
+  "claudeWorkingTree": "dirty; task 5 in progress; no edits by this research",
+  "main": {
+    "sourceRoot": "C:\\Users\\axz14\\Desktop\\Project\\Arr\\app",
+    "scope": "Actual graph functions + actual loader with a synthetic, capped REST stub; not a live database",
+    "impact": {
+      "commonDependency": {
+        "edges": [
+          {
+            "sourceNodeId": "A",
+            "targetNodeId": "B",
+            "relation": "imports"
+          },
+          {
+            "sourceNodeId": "C",
+            "targetNodeId": "B",
+            "relation": "imports"
+          }
+        ],
+        "impactOfA": {
+          "dependencies": {
+            "edges": [
+              {
+                "derived": false,
+                "relation": "imports",
+                "sourceNodeId": "A",
+                "targetNodeId": "B"
+              }
+            ],
+            "nodeIds": ["B"]
+          },
+          "dependents": {
+            "edges": [],
+            "nodeIds": []
+          },
+          "transitiveNodeIds": ["C"]
+        }
+      },
+      "sharedDocument": {
+        "edges": [
+          {
+            "sourceNodeId": "README",
+            "targetNodeId": "A",
+            "relation": "references"
+          },
+          {
+            "sourceNodeId": "README",
+            "targetNodeId": "C",
+            "relation": "references"
+          }
+        ],
+        "impactOfA": {
+          "dependencies": {
+            "edges": [],
+            "nodeIds": []
+          },
+          "dependents": {
+            "edges": [
+              {
+                "derived": false,
+                "relation": "references",
+                "sourceNodeId": "README",
+                "targetNodeId": "A"
+              }
+            ],
+            "nodeIds": ["README"]
+          },
+          "transitiveNodeIds": ["C"]
+        },
+        "pathAtoC": {
+          "edges": [
+            {
+              "derived": false,
+              "relation": "references",
+              "sourceNodeId": "README",
+              "targetNodeId": "A"
+            },
+            {
+              "derived": false,
+              "relation": "references",
+              "sourceNodeId": "README",
+              "targetNodeId": "C"
+            }
+          ],
+          "explain": ["README -references-> A", "README -references-> C"],
+          "hops": 2,
+          "nodeIds": ["A", "README", "C"]
+        }
+      },
+      "interpretation": "Undirected neighborhoods are valid discovery results, but are not causal blast radius."
+    },
+    "loader": {
+      "apiRowCap": 1000,
+      "storedArtifactCount": 1001,
+      "returnedArtifactCount": 1000,
+      "queryCount": 11,
+      "paginationRequested": false,
+      "freshBlobSha": "new-blob",
+      "servedSummary": "summary from old-blob",
+      "storedSummaryBlobSha": "old-blob",
+      "exposedFreshness": [],
+      "storedEdgeFields": [
+        "id",
+        "repository_id",
+        "source_node_id",
+        "target_node_id",
+        "relation",
+        "family",
+        "confidence",
+        "provenance"
+      ],
+      "returnedEdgeFields": ["id", "relation", "sourceNodeId", "targetNodeId"]
+    },
+    "result": "All baseline-observation assertions passed. These assert existing behavior, not desired behavior."
+  },
+  "claude": {
+    "sourceRoot": "C:\\Users\\axz14\\Desktop\\Project\\Arr\\app\\.claude\\worktrees\\awesome-lehmann-a47e28",
+    "scope": "Actual graph functions + actual loader with a synthetic, capped REST stub; not a live database",
+    "impact": {
+      "commonDependency": {
+        "edges": [
+          {
+            "sourceNodeId": "A",
+            "targetNodeId": "B",
+            "relation": "imports"
+          },
+          {
+            "sourceNodeId": "C",
+            "targetNodeId": "B",
+            "relation": "imports"
+          }
+        ],
+        "impactOfA": {
+          "dependencies": {
+            "edges": [
+              {
+                "derived": false,
+                "relation": "imports",
+                "sourceNodeId": "A",
+                "targetNodeId": "B"
+              }
+            ],
+            "nodeIds": ["B"]
+          },
+          "dependents": {
+            "edges": [],
+            "nodeIds": []
+          },
+          "transitiveNodeIds": ["C"]
+        }
+      },
+      "sharedDocument": {
+        "edges": [
+          {
+            "sourceNodeId": "README",
+            "targetNodeId": "A",
+            "relation": "references"
+          },
+          {
+            "sourceNodeId": "README",
+            "targetNodeId": "C",
+            "relation": "references"
+          }
+        ],
+        "impactOfA": {
+          "dependencies": {
+            "edges": [],
+            "nodeIds": []
+          },
+          "dependents": {
+            "edges": [
+              {
+                "derived": false,
+                "relation": "references",
+                "sourceNodeId": "README",
+                "targetNodeId": "A"
+              }
+            ],
+            "nodeIds": ["README"]
+          },
+          "transitiveNodeIds": ["C"]
+        },
+        "pathAtoC": {
+          "edges": [
+            {
+              "derived": false,
+              "relation": "references",
+              "sourceNodeId": "README",
+              "targetNodeId": "A"
+            },
+            {
+              "derived": false,
+              "relation": "references",
+              "sourceNodeId": "README",
+              "targetNodeId": "C"
+            }
+          ],
+          "explain": ["README -references-> A", "README -references-> C"],
+          "hops": 2,
+          "nodeIds": ["A", "README", "C"]
+        }
+      },
+      "interpretation": "Undirected neighborhoods are valid discovery results, but are not causal blast radius."
+    },
+    "loader": {
+      "apiRowCap": 1000,
+      "storedArtifactCount": 1001,
+      "returnedArtifactCount": 1000,
+      "queryCount": 11,
+      "paginationRequested": false,
+      "freshBlobSha": "new-blob",
+      "servedSummary": "summary from old-blob",
+      "storedSummaryBlobSha": "old-blob",
+      "exposedFreshness": [],
+      "storedEdgeFields": [
+        "id",
+        "repository_id",
+        "source_node_id",
+        "target_node_id",
+        "relation",
+        "family",
+        "confidence",
+        "provenance"
+      ],
+      "returnedEdgeFields": ["id", "relation", "sourceNodeId", "targetNodeId"]
+    },
+    "result": "All baseline-observation assertions passed. These assert existing behavior, not desired behavior."
+  }
+}

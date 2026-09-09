@@ -1,5 +1,7 @@
 import { describe, expect, test } from "vitest";
 
+import { nodeRadius } from "../apps/web/lib/graph/node-size";
+
 import {
   createFixtureGraph,
   type GraphData,
@@ -23,6 +25,7 @@ import {
   serializePanelSettings,
 } from "../apps/web/lib/graph/graph-panel-settings";
 import {
+  FAR_HUB_LABEL_LIMIT,
   LABEL_GRID_CELL_SIZE,
   LOD_PIXEL_THRESHOLDS,
   labelSizeFloor,
@@ -35,7 +38,6 @@ import {
 } from "../apps/web/lib/graph/lod";
 import {
   buildRenderFrame,
-  nodeRadius,
   type GraphPalette,
 } from "../apps/web/lib/graph/render-frame";
 import { DEFAULT_FORCE_CONFIG } from "../apps/web/lib/graph/simulation-protocol";
@@ -238,8 +240,10 @@ describe("render frame level of detail", () => {
     expect(near.labels).toHaveLength(onScreenCount(near));
     // Mid: the grid can only ever remove labels, never add them.
     expect(mid.labels.length).toBeLessThanOrEqual(onScreenCount(mid));
-    // Far: hub labels only.
-    expect(far.labels.length).toBeLessThanOrEqual(6);
+    // Far: hub labels only. Against the constant, not a copy of it — the
+    // limit moved from 6 to 12 in todo 12 and a hardcoded number would have
+    // failed for stating the old rule rather than a broken one.
+    expect(far.labels.length).toBeLessThanOrEqual(FAR_HUB_LABEL_LIMIT);
 
     // On a crowded graph the grid visibly declutters.
     const denseMid = at(1.1, dense, densePositions);

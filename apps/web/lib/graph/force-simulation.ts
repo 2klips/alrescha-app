@@ -10,6 +10,7 @@
 
 import {
   forceCenter,
+  forceCollide,
   forceLink,
   forceManyBody,
   forceSimulation,
@@ -20,13 +21,32 @@ import {
 import Graph from "graphology";
 
 import type { GraphData, GraphNode } from "../dashboard/graph-model";
+import { nodeRadius } from "./node-size";
 import {
+  BASELINE_LINK_FAMILY,
+  LINK_FAMILY_FORCES,
   clampForceConfig,
   encodePositions,
+  linkFamilyCode,
+  linkFamilyOf,
   type ForceConfig,
+  type LinkFamily,
   type LinkPair,
   type Position,
 } from "./simulation-protocol";
+
+/**
+ * Breathing room between two touching discs, in layout units. Zero makes
+ * neighbours sit rim to rim, which reads as one blob rather than two nodes.
+ */
+const COLLIDE_PADDING = 2;
+
+/**
+ * How hot a reheat gets. d3's own drag examples use 0.3: enough for the
+ * layout to answer a change, low enough that it settles again quickly rather
+ * than re-running the whole layout every time someone nudges a node.
+ */
+const REHEAT_ALPHA = 0.3;
 
 export interface LayoutNode extends SimulationNodeDatum {
   /** Position in the original node array — the transfer buffer's ordering. */
@@ -96,6 +116,14 @@ export interface ForceLayoutOptions {
 export interface ForceLayout {
   alpha(): number;
   config(): ForceConfig;
+  /**
+   * Hold a node at a point while a pointer drags it (todo 11). The rest of
+   * the graph keeps simulating around it, which is the whole point: dragging
+   * a hub should pull its neighbourhood after it.
+   */
+  pin(slot: number, x: number, y: number): void;
+  /** Let go. The node rejoins the physics from wherever it was left. */
+  unpin(slot: number): void;
   /** Encoded `[x0, y0, …]` snapshot, ready to transfer. */
   positions(): Float32Array<ArrayBuffer>;
   reheat(): void;
@@ -123,22 +151,104 @@ export function createForceLayout(options: ForceLayoutOptions): ForceLayout {
     target,
   }));
 
+  /**
+   * Family by node pair. d3 rewrites a link's endpoints into node objects
+   * when it initialises the force, and it hands the *link object* to the
+   * strength and distance accessors — not its index — so the family has to
+   * be recoverable from the endpoints rather than from position in an array.
+   */
+  const pairKey = (link: LayoutLink): number => {
+    const source = slotOf(link.source);
+    const target = slotOf(link.target);
+    const low = source < target ? source : target;
+    const high = source < target ? target : source;
+    return low * (options.nodeCount + 1) + high;
+  };
+  const familyByPair = new Map<number, number>();
+  for (const [source, target, family] of options.links) {
+    const low = source < target ? source : target;
+    const high = source < target ? target : source;
+    familyByPair.set(low * (options.nodeCount + 1) + high, family);
+  }
+
+  const slotOf = (endpoint: LayoutLink["source"]): number => {
+    // d3 replaces the numeric endpoints with node objects on initialisation,
+    // so this reads slots both before and after that swap.
+    if (typeof endpoint === "number") return endpoint;
+    if (typeof endpoint === "string") return Number.parseInt(endpoint, 10);
+    return endpoint.slot;
+  };
+  const degree = new Map<number, number>();
+  for (const link of links) {
+    const source = slotOf(link.source);
+    const target = slotOf(link.target);
+    degree.set(source, (degree.get(source) ?? 0) + 1);
+    degree.set(target, (degree.get(target) ?? 0) + 1);
+  }
+  /**
+   * A family's share of the baseline (Phase 4 Wave B todo 11). The table is
+   * absolute at the default slider positions and `structure` is what those
+   * defaults are, so expressing every family as a ratio keeps the sliders
+   * meaning what they say: moving one scales the whole spread rather than
+   * flattening it.
+   */
+  const baseline = LINK_FAMILY_FORCES[BASELINE_LINK_FAMILY];
+  const familyOfLink = (link: LayoutLink): LinkFamily =>
+    linkFamilyOf(familyByPair.get(pairKey(link)) ?? 0);
+
+  /**
+   * Degree-normalised link strength — d3's own default shape, restored.
+   *
+   * A flat strength pulls every spring equally hard, so a node with 40 links
+   * is dragged 40 times harder than a leaf and the neighbourhood collapses
+   * into the hairball the galaxy work is trying to undo (R5 §2.2 D3).
+   * Dividing by the sparser endpoint's degree makes a hub's individual pull
+   * proportionally gentle while a leaf's stays exactly as strong as before:
+   * at degree 1 this is `config.linkStrength` times the family share, which
+   * for `structure` is what the existing default was tuned against.
+   */
+  const linkStrengthOf = (link: LayoutLink): number => {
+    const sparsest = Math.min(
+      degree.get(slotOf(link.source)) ?? 1,
+      degree.get(slotOf(link.target)) ?? 1,
+    );
+    const share =
+      LINK_FAMILY_FORCES[familyOfLink(link)].strength / baseline.strength;
+    return (config.linkStrength * share) / Math.max(1, sparsest);
+  };
+  const linkDistanceOf = (link: LayoutLink): number =>
+    config.linkDistance *
+    (LINK_FAMILY_FORCES[familyOfLink(link)].distance / baseline.distance);
+
   const linkForce = forceLink<LayoutNode, LayoutLink>(links)
     .id((node) => node.slot)
-    .distance(config.linkDistance)
-    .strength(config.linkStrength);
+    .distance(linkDistanceOf)
+    .strength(linkStrengthOf);
   const chargeForce = forceManyBody<LayoutNode>().strength(
     -config.repelStrength,
   );
   const centerForce = forceCenter<LayoutNode>(0, 0).strength(
     config.centerStrength,
   );
+  /**
+   * Nodes stop overlapping (todo 11). The radius is the renderer's own, from
+   * the shared `node-size` curve, plus a hair of breathing room — a collision
+   * force whose idea of a node's size differs from the paint's separates
+   * nodes to a distance the paint then covers up.
+   *
+   * Two iterations, as the plan asks: one pass resolves a pair, and a hub
+   * with forty neighbours is not a pair.
+   */
+  const collideForce = forceCollide<LayoutNode>(
+    (node) => nodeRadius(degree.get(node.slot) ?? 0) + COLLIDE_PADDING,
+  ).iterations(2);
 
   const simulation: Simulation<LayoutNode, LayoutLink> = forceSimulation(nodes)
     .randomSource(createRandomSource(seed ^ 0x9e3779b9))
     .force("link", linkForce)
     .force("charge", chargeForce)
     .force("center", centerForce)
+    .force("collide", collideForce)
     .stop();
 
   return {
@@ -149,18 +259,34 @@ export function createForceLayout(options: ForceLayoutOptions): ForceLayout {
         nodes.map((node) => ({ x: node.x ?? 0, y: node.y ?? 0 })),
       );
     },
+    pin(slot, x, y) {
+      const node = nodes[slot];
+      if (!node) return;
+      node.fx = x;
+      node.fy = y;
+      // A pinned node that nothing is simulating around is a node stuck to
+      // the cursor in a frozen picture, so a pin is also a reheat.
+      simulation.alpha(Math.max(simulation.alpha(), REHEAT_ALPHA));
+    },
     reheat() {
-      simulation.alpha(Math.max(simulation.alpha(), 0.3));
+      simulation.alpha(Math.max(simulation.alpha(), REHEAT_ALPHA));
     },
     setConfig(partial) {
       config = clampForceConfig({ ...config, ...partial });
-      linkForce.distance(config.linkDistance).strength(config.linkStrength);
+      linkForce.distance(linkDistanceOf).strength(linkStrengthOf);
       chargeForce.strength(-config.repelStrength);
       centerForce.strength(config.centerStrength);
-      simulation.alpha(Math.max(simulation.alpha(), 0.3));
+      simulation.alpha(Math.max(simulation.alpha(), REHEAT_ALPHA));
     },
     stop() {
       simulation.stop();
+    },
+    unpin(slot) {
+      const node = nodes[slot];
+      if (!node) return;
+      delete node.fx;
+      delete node.fy;
+      simulation.alpha(Math.max(simulation.alpha(), REHEAT_ALPHA));
     },
     tick(count = 1) {
       simulation.tick(count);
@@ -183,7 +309,7 @@ export function runForceLayout(
     const target = indexById.get(edge.target);
     if (source === undefined || target === undefined || source === target)
       continue;
-    links.push([source, target]);
+    links.push([source, target, linkFamilyCode(edge.family)]);
   }
   const layout = createForceLayout({
     ...(config ? { config } : {}),

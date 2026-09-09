@@ -105,8 +105,83 @@ export function decodePositions(
   return positions;
 }
 
-/** Index pair into `nodeIds` — links never carry strings across the wire. */
-export type LinkPair = readonly [number, number];
+/**
+ * Edge families, in the order their wire code indexes (Phase 4 Wave B todo
+ * 11). A family travels as a number for the same reason a node does: links
+ * never carry strings across the wire.
+ *
+ * `structure` is first because it is the baseline the sliders are calibrated
+ * against — see `LINK_FAMILY_FORCES`.
+ */
+export const LINK_FAMILIES = [
+  "structure",
+  "doc",
+  "hierarchy",
+  "database",
+  "route",
+  "statistical",
+  "semantic",
+  "evidence",
+] as const;
+
+export type LinkFamily = (typeof LINK_FAMILIES)[number];
+
+/**
+ * What each family does to a spring, at the default slider positions.
+ *
+ * The same relation means different things depending on who wrote it, and a
+ * layout that pulls all of them equally hard says they are all the same kind
+ * of relatedness. They are not:
+ *
+ * - `structure` is the baseline — an import is the strongest claim that two
+ *   files belong together, and its numbers are exactly the old defaults, so
+ *   a repository with no family data lays out precisely as it did before.
+ * - `hierarchy` (a directory containing a file) is short and slack: it is
+ *   real containment, so members should sit near their folder, but it is not
+ *   a dependency and must not out-pull one.
+ * - `statistical` (co-change) is the weakest and longest. Two files that
+ *   changed together are a hint, not a wire, and letting a correlation drag
+ *   the layout as hard as an import is exactly how a graph starts asserting
+ *   things nobody measured.
+ * - `evidence` and `route` sit near structure because a test that runs a file
+ *   and a route that reaches a handler are both real, traversable paths.
+ *
+ * Applied as a **ratio to the structure baseline**, so the sliders still
+ * mean what they say: moving `linkStrength` scales the whole spread rather
+ * than flattening it.
+ */
+export const LINK_FAMILY_FORCES: Readonly<
+  Record<LinkFamily, { readonly distance: number; readonly strength: number }>
+> = {
+  database: { distance: 100, strength: 0.4 },
+  doc: { distance: 120, strength: 0.3 },
+  evidence: { distance: 90, strength: 0.45 },
+  hierarchy: { distance: 30, strength: 0.3 },
+  route: { distance: 70, strength: 0.45 },
+  semantic: { distance: 110, strength: 0.3 },
+  statistical: { distance: 140, strength: 0.1 },
+  structure: { distance: 90, strength: 0.55 },
+};
+
+/** The family every other one is expressed relative to. */
+export const BASELINE_LINK_FAMILY: LinkFamily = "structure";
+
+/**
+ * A family's wire code. An edge with no family — every demo fixture — is
+ * `structure`, whose numbers are the defaults, so nothing about the existing
+ * layout changes by adding this.
+ */
+export function linkFamilyCode(family?: string | null): number {
+  const index = LINK_FAMILIES.indexOf(family as LinkFamily);
+  return index === -1 ? LINK_FAMILIES.indexOf(BASELINE_LINK_FAMILY) : index;
+}
+
+export function linkFamilyOf(code: number): LinkFamily {
+  return LINK_FAMILIES[code] ?? BASELINE_LINK_FAMILY;
+}
+
+/** Index pair into `nodeIds`, plus the family code (todo 11). */
+export type LinkPair = readonly [number, number, number];
 
 export type SimulationHostMessage =
   | {
@@ -117,6 +192,16 @@ export type SimulationHostMessage =
       type: "start";
     }
   | { config: Partial<ForceConfig>; type: "config" }
+  /**
+   * Hold a node at a point while a pointer drags it (todo 11). Sent on every
+   * pointer move, so it carries the position rather than asking the worker
+   * to track one.
+   */
+  | { slot: number; type: "pin"; x: number; y: number }
+  /** Let go. The node rejoins the physics from wherever it was left. */
+  | { slot: number; type: "unpin" }
+  /** Wake a settled layout without changing anything about it. */
+  | { type: "reheat" }
   | { type: "stop" };
 
 export type SimulationWorkerMessage =
@@ -146,6 +231,25 @@ export function parseHostMessage(value: unknown): SimulationHostMessage | null {
     }
     return { config, type: "config" };
   }
+  if (value.type === "reheat") return { type: "reheat" };
+  if (value.type === "pin" || value.type === "unpin") {
+    const slot = value.slot;
+    if (typeof slot !== "number" || !Number.isInteger(slot) || slot < 0) {
+      return null;
+    }
+    if (value.type === "unpin") return { slot, type: "unpin" };
+    // A pin without a finite point is not a pin: `fx = NaN` fixes a node at
+    // nowhere and takes the rest of the layout with it.
+    if (
+      typeof value.x !== "number" ||
+      typeof value.y !== "number" ||
+      !Number.isFinite(value.x) ||
+      !Number.isFinite(value.y)
+    ) {
+      return null;
+    }
+    return { slot, type: "pin", x: value.x, y: value.y };
+  }
   if (value.type !== "start") return null;
   if (!Array.isArray(value.nodeIds) || !Array.isArray(value.links)) return null;
   const nodeIds = value.nodeIds.filter(
@@ -154,9 +258,15 @@ export function parseHostMessage(value: unknown): SimulationHostMessage | null {
   if (nodeIds.length !== value.nodeIds.length) return null;
   const links: LinkPair[] = [];
   for (const link of value.links) {
-    if (!Array.isArray(link) || link.length !== 2) return null;
-    const [source, target] = link as [unknown, unknown];
-    if (typeof source !== "number" || typeof target !== "number") return null;
+    if (!Array.isArray(link) || link.length !== 3) return null;
+    const [source, target, family] = link as [unknown, unknown, unknown];
+    if (
+      typeof source !== "number" ||
+      typeof target !== "number" ||
+      typeof family !== "number"
+    ) {
+      return null;
+    }
     if (
       !Number.isInteger(source) ||
       !Number.isInteger(target) ||
@@ -167,7 +277,10 @@ export function parseHostMessage(value: unknown): SimulationHostMessage | null {
     ) {
       return null;
     }
-    links.push([source, target]);
+    // An unknown family code is read as the baseline rather than dropped: a
+    // link the layout cannot classify is still a link, and losing it would
+    // change the shape of the graph over a vocabulary mismatch.
+    links.push([source, target, linkFamilyCode(linkFamilyOf(family))]);
   }
   return {
     config: clampForceConfig(value.config as Partial<ForceConfig>),
@@ -217,12 +330,41 @@ export function createStartMessage(
   const nodeIds = data.nodes.map((node) => node.id);
   const indexById = new Map(nodeIds.map((id, index) => [id, index]));
   const links: LinkPair[] = [];
+  /**
+   * One spring per node *pair*, not per edge. Two files that both import and
+   * call each other are one relationship as far as the layout is concerned;
+   * counting it twice doubled the pull on exactly the pairs that already sit
+   * closest, and the derived `tests` relation would have made it three
+   * (R5 §2.2 D3). Direction is irrelevant to a spring, so the key is ordered.
+   */
+  /** Pair key → where its spring sits in `links`, so a stronger family can replace it in place. */
+  const slotOfPair = new Map<number, number>();
   for (const edge of data.edges) {
     const source = indexById.get(edge.source);
     const target = indexById.get(edge.target);
     if (source === undefined || target === undefined || source === target)
       continue;
-    links.push([source, target]);
+    const low = source < target ? source : target;
+    const high = source < target ? target : source;
+    const key = low * nodeIds.length + high;
+    const family = linkFamilyCode(edge.family);
+    const at = slotOfPair.get(key);
+    if (at === undefined) {
+      slotOfPair.set(key, links.length);
+      links.push([source, target, family]);
+      continue;
+    }
+    // One pair, one spring — but which family? The **strongest** one wins.
+    // Two files joined by both an import and a co-change are wired together;
+    // letting the weaker claim decide the spring would file a real
+    // dependency under "they tend to change at the same time".
+    const existing = links[at] as LinkPair;
+    if (
+      LINK_FAMILY_FORCES[linkFamilyOf(family)].strength >
+      LINK_FAMILY_FORCES[linkFamilyOf(existing[2])].strength
+    ) {
+      links[at] = [existing[0], existing[1], family];
+    }
   }
   return {
     config: clampForceConfig(config),

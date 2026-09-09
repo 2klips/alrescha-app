@@ -24,14 +24,27 @@ import {
   assuranceCoverage,
   assuranceSourceRequired,
   digestInTotoStatement,
+  ingestCiTestReports,
+  ingestCoverageReports,
   prepareAssuranceContexts,
+  requirementImplementationLinks,
   RECEIPT_PREDICATE_TYPE,
   RECEIPT_TOOL,
   type AssuranceFinding,
   type AssuranceSourceFile,
+  type CiCheckRun,
+  type CiReportArtifact,
+  type CoverageReportArtifact,
   type InTotoStatement,
+  type RequirementImplementationLink,
 } from "@alrescha/core";
 
+import {
+  ciEvidenceRecords,
+  type CiEvidenceInput,
+  type PersistedEvidence,
+  type PersistedEvidenceEdge,
+} from "./ci-evidence";
 import { deterministicUlid } from "./deterministic-id";
 import type { ClaimedJob } from "./queue";
 import type { JobHandler } from "./worker";
@@ -54,7 +67,27 @@ export interface PersistedFinding {
   readonly provenance: unknown;
   readonly severity: AssuranceFinding["severity"];
   readonly sourceNodeId: string | null;
+  /**
+   * The code node the finding is about, when the rule named one. The source
+   * node stays the document that raised it; this is the second anchor, so a
+   * risk view over code is reachable at all (R5 §2.2 D8).
+   */
+  readonly targetNodeId: string | null;
   readonly title: string;
+}
+
+/**
+ * A requirement→code `implements` edge (Phase 4 Wave A todo 1).
+ *
+ * `reference` tier, confidence capped by the engine: the link is a name
+ * match between a requirement statement and an exported symbol, which is
+ * evidence of intent, not of execution (WORK_SPEC §3-1).
+ */
+export interface PersistedImplementsEdge {
+  readonly confidence: number;
+  readonly provenance: unknown;
+  readonly requirementId: string;
+  readonly targetNodeId: string;
 }
 
 export interface FindingsDelta {
@@ -120,17 +153,71 @@ export interface AnalysisJobStore {
     workspaceId: string;
   }): Promise<FindingsDelta>;
   /**
-   * Upsert the requirements this analysis extracted (graph node + row) and
-   * mark the active ones that no longer appear as superseded.
+   * Paths carrying an incoming `tests` edge — what the scan derived from the
+   * repository's own test imports. Read from the graph rather than guessed
+   * here so both ingest paths (GitHub, CLI) feed the rules the same set.
+   */
+  loadTestedPaths(input: {
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<readonly string[]>;
+  /**
+   * Upsert the requirements this analysis extracted (graph node + row), the
+   * `implements` edges they carry, and mark the active ones that no longer
+   * appear as superseded. One call because the edges reference the nodes:
+   * a separate write could land between the two and violate the key.
    */
   reconcileRequirements(input: {
+    implementsEdges: readonly PersistedImplementsEdge[];
     repositoryId: string;
     requirements: readonly PersistedRequirement[];
     workspaceId: string;
   }): Promise<RequirementsDelta>;
+  /**
+   * Replace this repository's CI-sourced evidence with what this analysis
+   * found (Wave C todo 18). Wholesale, because an evidence row is a claim
+   * about one commit: keeping the previous commit's rows would leave the map
+   * showing a `verified` file whose test no longer runs.
+   */
+  reconcileCiEvidence(input: {
+    edges: readonly PersistedEvidenceEdge[];
+    evidence: readonly PersistedEvidence[];
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<EvidenceDelta>;
+}
+
+export interface EvidenceDelta {
+  readonly removed: number;
+  /** Rows with a `supports` verdict — the only ones that carry a grade. */
+  readonly supporting: number;
+  readonly written: number;
+}
+
+/**
+ * The CI artifacts and check runs for one commit, fetched from the host
+ * (Wave C todo 18). Optional: a repository with no installation, no Actions,
+ * or a throttled API still analyses — it simply produces no execution
+ * evidence, which is the honest reading rather than a failed job.
+ */
+export interface CiEvidenceCollector {
+  (input: {
+    analyzedCommitSha: string;
+    repositoryFullName: string;
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<CollectedCiEvidence | null>;
+}
+
+export interface CollectedCiEvidence {
+  readonly checkRuns: readonly CiCheckRun[];
+  readonly coverage: readonly CoverageReportArtifact[];
+  readonly reports: readonly CiReportArtifact[];
 }
 
 export interface AnalysisJobDependencies {
+  /** Fetches CI evidence for the analysed commit; omitted disables it. */
+  readonly collectCiEvidence?: CiEvidenceCollector;
   /**
    * Transient read of one file at the analysed commit. Returning null drops the
    * file from the analysis rather than failing the job: a file can vanish
@@ -174,6 +261,9 @@ function persisted(
     },
     severity: finding.severity,
     sourceNodeId: firstPath ? (nodeByPath.get(firstPath) ?? null) : null,
+    targetNodeId: finding.targetPath
+      ? (nodeByPath.get(finding.targetPath) ?? null)
+      : null,
     title: finding.summary,
   };
 }
@@ -185,6 +275,65 @@ const REQUIREMENT_LABEL_LIMIT = 80;
  * REQ code is the identity when the document names one; otherwise the
  * statement itself is, so a reworded sentence supersedes rather than mutates.
  */
+function requirementNodeId(
+  documentPath: string,
+  identity: string,
+  scope: { readonly repositoryId: string; readonly workspaceId: string },
+): string {
+  return deterministicUlid(
+    `${scope.workspaceId}|${scope.repositoryId}|${documentPath}|${identity}`,
+  );
+}
+
+/**
+ * The `implements` edges the same requirements carry (Phase 4 Wave A todo 1).
+ *
+ * Until this, `reconcileRequirements` wrote requirement nodes and rows and no
+ * edge at all, so every requirement was an isolated node and coverage was not
+ * a low number but an unmeasurable one (R5 §2.2 D6). The identity keying is
+ * the same one `persistedRequirements` uses, so an edge cannot point at a
+ * requirement node this analysis did not also write.
+ */
+export function persistedImplementsEdges(
+  links: readonly RequirementImplementationLink[],
+  nodeByPath: ReadonlyMap<string, string>,
+  scope: { readonly repositoryId: string; readonly workspaceId: string },
+): PersistedImplementsEdge[] {
+  const seen = new Set<string>();
+  const edges: PersistedImplementsEdge[] = [];
+  for (const link of links) {
+    const sourceArtifactId = nodeByPath.get(link.documentPath);
+    const targetNodeId = nodeByPath.get(link.targetPath);
+    if (!sourceArtifactId || !targetNodeId) continue;
+    const requirementId = requirementNodeId(
+      link.documentPath,
+      link.identity,
+      scope,
+    );
+    const key = `${requirementId}|${targetNodeId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    edges.push({
+      confidence: link.confidence,
+      provenance: {
+        method: link.method,
+        reason: `requirement statement names the exported symbol ${link.symbol}`,
+        sourceArtifactId,
+        span: {
+          endLine: link.span.endLine,
+          path: link.span.path,
+          startLine: link.span.startLine,
+        },
+        symbol: link.symbol,
+        tier: link.tier,
+      },
+      requirementId,
+      targetNodeId,
+    });
+  }
+  return edges;
+}
+
 export function persistedRequirements(
   prepared: ReturnType<typeof prepareAssuranceContexts>,
   nodeByPath: ReadonlyMap<string, string>,
@@ -197,9 +346,7 @@ export function persistedRequirements(
     if (!sourceArtifactId) continue;
     for (const requirement of context.requirements) {
       const identity = requirement.id ?? requirement.statement;
-      const id = deterministicUlid(
-        `${scope.workspaceId}|${scope.repositoryId}|${context.file.path}|${identity}`,
-      );
+      const id = requirementNodeId(context.file.path, identity, scope);
       if (seen.has(id)) continue;
       seen.add(id);
       const label = requirement.id ?? requirement.statement;
@@ -223,10 +370,84 @@ export function persistedRequirements(
   return requirements;
 }
 
+/**
+ * Requirement graph nodes by the REQ code they carry.
+ *
+ * `ingestCiTestReports` keys evidence by the code it finds in a test name;
+ * the graph keys requirements by a content-derived id. This is the join, and
+ * it is a multimap because two documents may state the same code — a report
+ * naming it supports both, and picking one would be a guess.
+ */
+export function requirementNodesByCode(
+  requirements: readonly PersistedRequirement[],
+): Map<string, string[]> {
+  const byCode = new Map<string, string[]>();
+  for (const requirement of requirements) {
+    if (!/^REQ-[A-Z\d]+(?:-[A-Z\d]+)*$/.test(requirement.label)) continue;
+    byCode.set(requirement.label, [
+      ...(byCode.get(requirement.label) ?? []),
+      requirement.id,
+    ]);
+  }
+  return byCode;
+}
+
+/**
+ * Collect and parse the CI evidence for one commit, or return an empty set.
+ *
+ * Every failure mode ends the same way — no evidence — because none of them
+ * is a defect in the repository being analysed: no collector wired, no
+ * installation, no Actions, a throttled API, a report that will not parse.
+ * Failing the analysis over any of them would replace a missing grade with a
+ * missing analysis.
+ */
+async function collectedCiEvidence(input: {
+  analyzedCommitSha: string;
+  collect: CiEvidenceCollector | undefined;
+  nodeByPath: ReadonlyMap<string, string>;
+  repositoryFullName: string;
+  requirementNodesByCode: ReadonlyMap<string, readonly string[]>;
+  scope: { readonly repositoryId: string; readonly workspaceId: string };
+}): Promise<CiEvidenceInput> {
+  const empty = {
+    analyzedCommitSha: input.analyzedCommitSha,
+    measured: [],
+    nodeByPath: input.nodeByPath,
+    requirementNodesByCode: input.requirementNodesByCode,
+    scope: input.scope,
+    testEvidence: [],
+  } satisfies CiEvidenceInput;
+  if (!input.collect) return empty;
+
+  let collected: CollectedCiEvidence | null;
+  try {
+    collected = await input.collect({
+      analyzedCommitSha: input.analyzedCommitSha,
+      repositoryFullName: input.repositoryFullName,
+      repositoryId: input.scope.repositoryId,
+      workspaceId: input.scope.workspaceId,
+    });
+  } catch {
+    return empty;
+  }
+  if (!collected) return empty;
+
+  const ingestion = ingestCiTestReports({
+    analyzedCommitSha: input.analyzedCommitSha,
+    checkRuns: collected.checkRuns,
+    reports: collected.reports,
+  });
+  return {
+    ...empty,
+    measured: ingestCoverageReports(collected.coverage).measured,
+    testEvidence: ingestion.evidence,
+  };
+}
+
 export function createAnalysisJobHandler(
   dependencies: AnalysisJobDependencies,
 ): JobHandler {
-  const { readSource, store } = dependencies;
+  const { collectCiEvidence, readSource, store } = dependencies;
 
   return async (job, context) => {
     const commitSha = commitShaOf(job);
@@ -272,18 +493,60 @@ export function createAnalysisJobHandler(
     // document) independently by default; preparing once here halves that
     // work for the one job that always needs both.
     const prepared = prepareAssuranceContexts(files);
+    const scope = { repositoryId, workspaceId };
     // The requirements the rules reason about become graph rows too (OQ-023):
     // until now they were extracted, used for findings, and dropped, which
-    // left every requirement surface empty in production.
+    // left every requirement surface empty in production. Their `implements`
+    // edges land in the same call (Phase 4 Wave A todo 1).
+    const requirements = persistedRequirements(prepared, nodeByPath, scope);
     await store.reconcileRequirements({
+      implementsEdges: persistedImplementsEdges(
+        requirementImplementationLinks({ files, prepared }),
+        nodeByPath,
+        scope,
+      ),
       repositoryId,
-      requirements: persistedRequirements(prepared, nodeByPath, {
-        repositoryId,
-        workspaceId,
-      }),
+      requirements,
       workspaceId,
     });
-    const findings = analyzeRepositoryAssurance({ files, prepared });
+    // CI evidence, after the requirements so a `supports` edge has a node to
+    // point at (Wave C todo 18). It runs whatever the collector returns,
+    // including nothing: a repository with no Actions produces no evidence
+    // and no `verified` node, which is the honest reading of "we have not
+    // seen this run".
+    const evidenceDelta = await store.reconcileCiEvidence({
+      ...ciEvidenceRecords(
+        await collectedCiEvidence({
+          analyzedCommitSha: commitSha,
+          collect: collectCiEvidence,
+          nodeByPath,
+          repositoryFullName,
+          requirementNodesByCode: requirementNodesByCode(requirements),
+          scope,
+        }),
+      ),
+      repositoryId,
+      workspaceId,
+    });
+    if (evidenceDelta.written > 0 || evidenceDelta.removed > 0) {
+      // The one number worth saying out loud: how much of this run's evidence
+      // actually carries a grade. Rows with an `unknown` verdict are recorded
+      // and promote nothing, and a silent count would hide that difference.
+      console.log(
+        `  ci evidence ${evidenceDelta.written} row(s), ${evidenceDelta.supporting} supporting, ${evidenceDelta.removed} removed`,
+      );
+    }
+    // What the repository's own tests reach, as the scan resolved it — the
+    // input the `untested-code` rule needs and cannot derive from metadata.
+    const testedPaths = await store.loadTestedPaths({
+      repositoryId,
+      workspaceId,
+    });
+    const findings = analyzeRepositoryAssurance({
+      files,
+      prepared,
+      testedPaths,
+    });
     const delta = await store.reconcileFindings({
       findings: findings.map((finding) => persisted(finding, nodeByPath)),
       repositoryId,

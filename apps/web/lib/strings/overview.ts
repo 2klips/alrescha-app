@@ -31,6 +31,12 @@ export const OVERVIEW = {
       code: "코드",
       test: "테스트",
       concept: "개념",
+      rationale: "근거 주석",
+      directory: "폴더",
+      route: "라우트",
+      database: "테이블·함수",
+      section: "결정 문단",
+      unknown: "미분류",
     },
   },
 
@@ -61,8 +67,10 @@ export const OVERVIEW = {
     areas: {
       frontend: "프론트엔드",
       backend: "백엔드",
+      database: "데이터베이스",
       docs: "문서",
       tests: "테스트",
+      other: "기타",
     },
     /** `<n>개 노드` */
     count: (count: number) => `${count}개 노드`,

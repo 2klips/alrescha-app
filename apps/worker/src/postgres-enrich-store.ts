@@ -6,6 +6,7 @@ import type { EnrichProvider } from "./ai-providers";
 import type {
   EnrichJobStore,
   EnrichPendingFile,
+  EnrichApplyOutcome,
   EnrichResultItem,
 } from "./enrich-job";
 import { PostgresByokKeyStore } from "./postgres-judgment-store";
@@ -149,12 +150,38 @@ export class PostgresEnrichJobStore implements EnrichJobStore {
     readonly items: readonly EnrichResultItem[];
     readonly repositoryId: string;
     readonly workspaceId: string;
-  }): Promise<void> {
-    await this.sql`
+  }): Promise<EnrichApplyOutcome> {
+    const rows = await this.sql<{ outcome: unknown }[]>`
       select public.apply_artifact_summaries(
         ${input.workspaceId}, ${input.repositoryId},
         ${this.sql.json(input.items as unknown as postgres.JSONValue)}
-      )
+      ) as outcome
     `;
+    return applyOutcome(rows[0]?.outcome);
   }
+}
+
+/**
+ * The function reports rows written, not items sent (Codex remedy P0-A). A
+ * shape this does not recognise counts as nothing applied rather than as a
+ * silent success — the whole point of the change is that the caller stops
+ * assuming its own item count.
+ */
+function applyOutcome(value: unknown): EnrichApplyOutcome {
+  const source =
+    typeof value === "object" && value !== null
+      ? (value as Record<string, unknown>)
+      : {};
+  const count = (key: string): number => {
+    const raw = source[key];
+    const parsed = typeof raw === "number" ? raw : Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? Math.trunc(parsed) : 0;
+  };
+  return {
+    applied: count("applied"),
+    invalid: count("invalid"),
+    missing: count("missing"),
+    skipsApplied: count("skipsApplied"),
+    superseded: count("superseded"),
+  };
 }

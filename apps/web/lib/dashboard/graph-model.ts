@@ -1,9 +1,10 @@
 import {
   BRAIN_AREAS,
   deriveBrainArea,
+  type ArtifactUnit,
   type BrainArea,
 } from "@alrescha/core/artifact-facets";
-import type { ArtifactClassification } from "@alrescha/core";
+import type { ArtifactClassification, RiskLevel } from "@alrescha/core";
 
 import { DASHBOARD } from "../strings";
 
@@ -19,8 +20,80 @@ export type DashboardState =
   | "large";
 
 export type EvidenceGrade = "verified" | "inferred" | "broken";
+/**
+ * `rationale` and `unknown` join the display vocabulary in Phase 4 Wave A
+ * todo 1. A rationale is a WHY/NOTE comment lifted out of a code file, and
+ * mapping it to `document` sent all 86 of this repository's rationale nodes
+ * into the docs band with the specs (R5 §2.2 D5). `unknown` is the honest
+ * name for a node whose artifact row did not come back with it — a state
+ * the loader's pagination could produce silently as `document`.
+ */
 export type GraphNodeType =
-  "requirement" | "document" | "code" | "test" | "concept";
+  | "requirement"
+  | "document"
+  | "code"
+  | "test"
+  | "concept"
+  | "database"
+  | "directory"
+  | "rationale"
+  | "route"
+  | "section"
+  | "unknown";
+
+/**
+ * The four-shape grammar (Wave A′ todo 8). Colour already carries the domain
+ * band, so shape carries what kind of thing a node is — a leaf, a container,
+ * a URL, a table — and a reader can tell them apart in a band of one colour.
+ *
+ * Defined here as data and **rendered in Wave B todo 12**, which owns the
+ * texture sprite pool. Stating the grammar in the data layer is what keeps
+ * the renderer, the legend and the overview from each inventing one.
+ */
+export type GraphNodeShape = "circle" | "diamond" | "ring" | "square";
+
+export const NODE_SHAPE: Readonly<Record<GraphNodeType, GraphNodeShape>> = {
+  // Leaves: a file, or something anchored to one.
+  code: "circle",
+  document: "circle",
+  rationale: "circle",
+  test: "circle",
+  unknown: "circle",
+  // Containers and abstractions: things other nodes hang off.
+  concept: "ring",
+  directory: "ring",
+  requirement: "ring",
+  section: "ring",
+  // A URL.
+  route: "diamond",
+  // A table, view or function.
+  database: "square",
+};
+
+/**
+ * Which family an edge belongs to (R5 §2.5, `edges.family`).
+ *
+ * Read limits, force strength, draw policy and MCP defaults are decided per
+ * family rather than per relation, because the same relation means different
+ * things depending on who wrote it.
+ */
+/**
+ * A list first and a type second (Phase 4 Wave B todo 11), so a consumer can
+ * prove it handles every family rather than asserting it handles the eight it
+ * happened to think of. The layout's force table is checked against this.
+ */
+export const GRAPH_EDGE_FAMILIES = [
+  "database",
+  "doc",
+  "evidence",
+  "hierarchy",
+  "route",
+  "semantic",
+  "statistical",
+  "structure",
+] as const;
+
+export type GraphEdgeFamily = (typeof GRAPH_EDGE_FAMILIES)[number];
 
 /**
  * How a link was derived (Phase 3 Wave A todo 2) — separate from the evidence
@@ -34,50 +107,101 @@ export type EdgeConfidenceTier =
 
 export interface GraphNode {
   clusterCount?: number;
+  /**
+   * The colour axis (R5 §2.6), derived once by the loader with the
+   * repository's own conventions rather than re-derived at each call site
+   * from the path alone. Absent on demo fixtures, which have no repository
+   * to state conventions.
+   */
+  domain?: BrainArea;
   findingCount: number;
   grade: EvidenceGrade;
   id: string;
   label: string;
   path: string;
+  /**
+   * `package` for a directory that is a workspace root. Read only by the Far
+   * label ranking, which treats a package name as a landmark.
+   */
+  role?: string;
+  /**
+   * The risk band todo 21 ranked this file into, when it ranked it at all.
+   * Absent means "no factors, or nobody measured" — never "safe".
+   */
+  risk?: RiskLevel;
   type: GraphNodeType;
+  /** Shape and filter chip (R5 §2.4): what role this file plays. */
+  unit?: ArtifactUnit;
   x: number;
   y: number;
 }
+
+/**
+ * The demo vocabulary (`declares`, `co_changed`) plus every value the
+ * `edges_relation` CHECK allows — `/app/map` renders stored rows verbatim
+ * (Phase 3 Wave A).
+ *
+ * One array, not a type beside a hand-written guard: a relation the database
+ * accepts but this list omits used to be relabelled `references` on the way
+ * to the screen, which is a silent loss of the thing the edge actually says
+ * (Codex remedy P0-D). `tests/graph-density.test.ts` asserts every stored
+ * relation survives the trip unchanged, so an added relation fails a test
+ * instead of quietly becoming a citation.
+ */
+export const DISPLAY_RELATIONS = [
+  "calls",
+  "co_changed",
+  "configures",
+  "contains",
+  "contradicts",
+  "declares",
+  "defines",
+  "depends_on",
+  "handles",
+  "implements",
+  "imports",
+  "modifies",
+  "part_of",
+  "produces",
+  "queries",
+  "references",
+  "requires",
+  "supersedes",
+  "supports",
+  "tests",
+  "uses",
+  "validates",
+] as const;
+
+export type GraphDisplayRelation = (typeof DISPLAY_RELATIONS)[number];
 
 export interface GraphEdgeProvenance {
   confidence: number;
   endLine: number;
   grade: EvidenceGrade;
-  /**
-   * The demo vocabulary (`declares`) plus the persisted `edges.relation`
-   * vocabulary — `/app/map` renders stored rows verbatim (Phase 3 Wave A).
-   */
-  relation:
-    | "calls"
-    | "co_changed"
-    | "configures"
-    | "contradicts"
-    | "declares"
-    | "depends_on"
-    | "implements"
-    | "imports"
-    | "part_of"
-    | "produces"
-    | "references"
-    | "requires"
-    | "supersedes"
-    | "supports"
-    | "tests"
-    | "uses"
-    | "validates";
+  relation: GraphDisplayRelation;
   sourcePath: string;
   startLine: number;
 }
 
 export interface GraphEdge {
   broken: boolean;
+  /**
+   * How many real edges a merged supernode edge stands for (Wave B todo 13).
+   * Absent on a raw edge, which stands for exactly itself.
+   */
+  mergedCount?: number;
+  /** Absent on demo fixtures; every stored edge carries one (todo 2). */
+  family?: GraphEdgeFamily;
   grade: EvidenceGrade;
   id: string;
+  /**
+   * An input to the layout that is not a relationship to draw (OQ-037).
+   * `contains` is the case: a folder pulls its files together, which is what
+   * makes a directory read as a cluster, but drawing 885 containment lines
+   * would bury the imports they are there to make legible.
+   */
+  layoutOnly?: boolean;
   provenance: GraphEdgeProvenance;
   source: string;
   target: string;
@@ -108,13 +232,37 @@ const NODE_TYPE_CLASSIFICATION: Readonly<
 > = {
   code: "code_metadata",
   concept: "spec",
+  // A table's anchor path is the migration that declares it, which is where
+  // the database band already is (Wave A′ todo 7).
+  database: "code_metadata",
+  // A folder's area is the area of what it holds, derived from its path.
+  directory: "code_metadata",
+  // A section is a heading inside a document, so it belongs with the docs.
+  section: "spec",
+  // A route is served by code, and its anchor path is one of its handlers.
+  route: "code_metadata",
   document: "spec",
+  // A rationale's path is the code file it was lifted from, so deriving its
+  // area from that path puts it beside the code it explains.
+  rationale: "code_metadata",
   requirement: "spec",
   test: "code_metadata",
+  // Path-derived rather than claimed: an unresolved node is not a document.
+  unknown: "code_metadata",
 };
 
 export function graphNodeArea(node: GraphNode): BrainArea {
-  return deriveBrainArea(node.path, NODE_TYPE_CLASSIFICATION[node.type]);
+  // The loader derives this once with the repository's own conventions; a
+  // demo fixture has none, so the path conventions answer for it.
+  if (node.domain) return node.domain;
+  // A directory's own path has no trailing slash, and the layout conventions
+  // are written in terms of prefixes (`spec/`, `apps/web/`). Reading `spec`
+  // as a root-level file would file the specs directory under backend.
+  const path =
+    node.type === "directory" && node.path.length > 0
+      ? `${node.path}/`
+      : node.path;
+  return deriveBrainArea(path, NODE_TYPE_CLASSIFICATION[node.type]);
 }
 
 export const DASHBOARD_STATES: readonly DashboardState[] = [
@@ -624,12 +772,34 @@ export interface DashboardViewModel {
   state: DashboardState;
 }
 
+/**
+ * How big a demo graph `?nodes=` may ask for (Phase 4 Wave B todo 12).
+ *
+ * The browser benchmark needs a five-thousand-node page to pan and zoom, and
+ * there is no other way to get one in front of a real GPU. Clamped, and only
+ * ever reachable on the **demo** route: `/app/map` reads a workspace and this
+ * parameter cannot touch it.
+ */
+export const MAX_DEMO_NODES = 5_000;
+
+export function parseDemoNodeCount(
+  value: string | string[] | undefined,
+): number | null {
+  const raw = Number.parseInt(
+    Array.isArray(value) ? (value[0] ?? "") : (value ?? ""),
+    10,
+  );
+  if (!Number.isFinite(raw) || raw <= 0) return null;
+  return Math.min(MAX_DEMO_NODES, raw);
+}
+
 export function buildDashboardViewModel(
   state: DashboardState,
   repo = "2klips/alrescha-app",
+  nodeCount?: number | null,
 ): DashboardViewModel {
   const source = createFixtureGraph(
-    state === "large" ? 500 : BASE_NODES.length,
+    nodeCount ?? (state === "large" ? 500 : BASE_NODES.length),
   );
   const graph =
     state === "large" ? clusterGraph(source) : forceDirectedLayout(source);

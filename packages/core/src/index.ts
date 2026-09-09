@@ -50,9 +50,11 @@ export {
 export type { PageRankEdge, PageRankInput } from "./brain/pagerank";
 
 export {
+  LINK_SCHEMA_VERSION,
   parsePythonLinks,
   parseTypeScriptLinks,
   resolveCodeLinks,
+  resolveModuleSpecifier,
   resolvePythonModule,
   resolveTypeScriptSpecifier,
 } from "./ingest/code-links";
@@ -64,11 +66,89 @@ export type {
 } from "./ingest/code-links";
 
 export {
+  MAX_DOC_LINKS_PER_DOCUMENT,
+  resolveDocLinks,
+} from "./ingest/doc-links";
+export { nextRouteFile, parsePythonRoutes } from "./ingest/route-links";
+export {
+  parseQueryReferences,
+  parseSchemaFile,
+  resolveSchemaLinks,
+} from "./ingest/schema-links";
+export type {
+  DbObject,
+  DbObjectKind,
+  ParsedQueryReference,
+  ParsedSchemaFile,
+  SchemaLink,
+  SchemaLinkKind,
+} from "./ingest/schema-links";
+export {
+  bestHome,
+  DEFAULT_SECTION_TOKEN_PREFIXES,
+  MAX_SECTION_HEADING,
+  MAX_SECTION_LINKS_PER_DOCUMENT,
+  parseDocumentSections,
+  parseSectionReferences,
+  resolveSectionLinks,
+} from "./ingest/section-links";
+export type {
+  DocumentSection,
+  ParsedSectionReference,
+  SectionLink,
+} from "./ingest/section-links";
+export type {
+  NextRouteFile,
+  ParsedRouteDeclaration,
+  RouteDeclaration,
+  RouteMethod,
+} from "./ingest/route-links";
+export {
+  EMPTY_REPOSITORY_CONFIG,
+  REPOSITORY_CONFIG_PATH,
+  parseRepositoryConfig,
+  repositoryIgnoreMatcher,
+  repositoryTodoMatcher,
+} from "./ingest/repository-config";
+export type { RepositoryScanConfig } from "./ingest/repository-config";
+export type {
+  DocLink,
+  DocLinkKind,
+  DocLinkMethod,
+  ResolveDocLinksInput,
+} from "./ingest/doc-links";
+
+export {
+  DEFAULT_IGNORED_PATHS,
+  DEFAULT_IGNORED_SEGMENTS,
+  isDefaultIgnoredPath,
+} from "./ingest/path-conventions";
+
+export {
+  EMPTY_MODULE_RESOLUTION,
+  aliasCandidates,
+  buildModuleResolution,
+  isManifestPath,
+} from "./ingest/module-resolution";
+export type {
+  AliasRule,
+  AliasSource,
+  ModuleResolutionConfig,
+} from "./ingest/module-resolution";
+
+export {
+  directoryOf,
+  isTestPath,
+  normalizeRepositoryPath,
+} from "./ingest/path-conventions";
+
+export {
   DEFAULT_SCAN_FETCH_CONCURRENCY,
   classifyArtifactPath,
   extractExportedSymbols,
   extractRationales,
   extractSymbols,
+  isMarkdownArtifact,
   persistedKind,
   scanRepository,
 } from "./ingest/repository-scanner";
@@ -80,6 +160,7 @@ export {
 export type {
   ArtifactClassification,
   ExportedSymbolMetadata,
+  LinkScope,
   PersistedArtifactKind,
   PreviousScannedArtifact,
   RationaleKind,
@@ -128,7 +209,17 @@ export type {
   ParsedTask,
 } from "./parser/markdown";
 
-export { parseTodoDocument } from "./progress/todos";
+export {
+  MAX_TODO_TITLE,
+  parseTodoDocument,
+  todoSourceKey,
+  truncateTodoTitle,
+} from "./progress/todos";
+export {
+  beadsSourceKey,
+  isBeadsExportPath,
+  parseBeadsExport,
+} from "./progress/beads";
 export type {
   DocumentTodoSource,
   ParsedTodoItem,
@@ -145,13 +236,25 @@ export type {
   LibrarySnapshot,
 } from "./library/items";
 
-export { buildProgressDashboard } from "./progress/dashboard";
+export {
+  LOCAL_SCAN_SUMMARY,
+  NO_STATED_BLOCKER,
+  STALE_AFTER_DAYS,
+  buildProgressDashboard,
+} from "./progress/dashboard";
 export type {
   BuildProgressDashboardInput,
+  ProgressAttention,
+  ProgressAttentionItem,
   ProgressCommitInput,
   ProgressDashboard,
+  ProgressDigest,
+  ProgressDigestWindow,
   ProgressEventInput,
   ProgressFindingInput,
+  ProgressLocalScanInput,
+  ProgressMetric,
+  ProgressMetricBasis,
   ProgressTodo,
 } from "./progress/dashboard";
 
@@ -165,10 +268,12 @@ export type {
 export {
   AI_ASSIST_STATUS,
   DISABLED_ASSURANCE_AI_ASSIST,
+  REQUIREMENT_IMPLEMENTATION_CONFIDENCE,
   analyzeRepositoryAssurance,
   assuranceCoverage,
   assuranceSourceRequired,
   prepareAssuranceContexts,
+  requirementImplementationLinks,
 } from "./assurance/rules";
 
 export {
@@ -197,17 +302,20 @@ export type {
   FindingEvidenceLink,
   FindingProvenance,
   PreparedAssuranceContexts,
+  RequirementImplementationLink,
 } from "./assurance/rules";
 
-export { probeRepositoryEvidence } from "./evidence/probes";
+export {
+  ingestCoverageReports,
+  resolveReportedPath,
+} from "./evidence/coverage-reports";
 export type {
-  EvidenceProbeKind,
-  ProbeArtifactMetadata,
-  ProbeRepositoryEvidenceInput,
-  RepositoryEvidenceProbe,
-  RepositoryEvidenceProbeResult,
-  SymbolExtractionMethod,
-} from "./evidence/probes";
+  CoverageIngestionResult,
+  CoverageReportArtifact,
+  CoverageReportDiagnostic,
+  CoverageReportFormat,
+  MeasuredFile,
+} from "./evidence/coverage-reports";
 
 export { ingestCiTestReports } from "./evidence/ci-reports";
 export type {
@@ -355,6 +463,79 @@ export type {
   DependencyFixAvailability,
 } from "./inspection/dependency-audit";
 
+export {
+  DOC_PAGE_NODE_SCOPES,
+  buildDocPageSkeleton,
+  docPageNeedsNode,
+  docPageSlug,
+  memberDirectories,
+  validateDocPageProse,
+} from "./docs/doc-page";
+export type {
+  DocPageCitation,
+  DocPageProse,
+  DocPageScope,
+  DocPageSkeleton,
+  DocPageSkeletonInput,
+} from "./docs/doc-page";
+
+export {
+  AGENT_FLOW_SENTENCE,
+  AGENT_FLOW_STEPS,
+  AGENT_FORCED_CALL_CEILING,
+  AGENT_INSTRUCTION_BLOCK_TOKEN_BUDGET,
+  CURSOR_ALWAYS_APPLY_NOTE,
+  agentFlowTools,
+  forcedCallsBeforeFirstRead,
+  renderAgentInstructionBlock,
+} from "./context/agent-instructions";
+export type { AgentFlowStep } from "./context/agent-instructions";
+export {
+  AGENT_HOOK_AGENTS,
+  AGENT_HOOK_SNIPPETS,
+  agentHookSnippets,
+} from "./context/agent-hooks";
+export type { AgentHookAgent, AgentHookSnippet } from "./context/agent-hooks";
+export {
+  CHARS_PER_TOKEN,
+  estimateTokens,
+  estimateTokensFromBytes,
+} from "./stats/token-estimate";
+export type {
+  TokenEstimateAssumption,
+  TokenEstimateBasis,
+} from "./stats/token-estimate";
+export {
+  INSTRUCTION_CLASSIFICATIONS,
+  INSTRUCTION_LOADERS,
+  buildInstructionCostTable,
+} from "./inspection/instruction-cost";
+export type {
+  InstructionArtifactInput,
+  InstructionClassification,
+  InstructionCostRow,
+  InstructionCostTable,
+  InstructionCostTotals,
+  InstructionLoadMode,
+  InstructionLoadRule,
+  InstructionLoader,
+  InstructionLoaderTotal,
+} from "./inspection/instruction-cost";
+export { buildRiskMap } from "./inspection/risk-map";
+export type {
+  BuildRiskMapInput,
+  RiskArtifactInput,
+  RiskCoChangeInput,
+  RiskEdgeInput,
+  RiskEntry,
+  RiskFactor,
+  RiskFactorKind,
+  RiskFindingInput,
+  RiskLevel,
+  RiskMap,
+  UnmeasuredSignal,
+} from "./inspection/risk-map";
+
 export { buildInspectionDashboard } from "./inspection/dashboard";
 export type {
   BuildInspectionDashboardInput,
@@ -362,6 +543,7 @@ export type {
   InspectionDashboard,
   InspectionDocumentEntry,
   InspectionDocumentInput,
+  InspectionFindingDetail,
   InspectionFindingInput,
   InspectionFindingKind,
   InspectionSectionState,
@@ -426,6 +608,8 @@ export type {
 } from "./stats/pilot-stats";
 export {
   BRAIN_AREAS,
+  FACET_DOMAINS,
+  FACET_UNITS,
   deriveArtifactFacets,
   deriveBrainArea,
 } from "./ingest/artifact-facets";
@@ -436,16 +620,27 @@ export type {
   FacetUnit,
 } from "./ingest/artifact-facets";
 
+export { buildArtifactCard } from "./brain/artifact-card";
+export type {
+  ArtifactCard,
+  ArtifactCardBasis,
+  ArtifactCardRelation,
+} from "./brain/artifact-card";
 export {
   EnrichValidationError,
   SUMMARY_INPUT_MAX_CHARS,
   clipSummaryInput,
+  currentSummaryText,
   selectFilesForSummarization,
+  summaryAbsence,
+  summaryState,
   validateProseSummary,
 } from "./enrich/prose-summary";
 export type {
   ClippedSummaryInput,
   SummaryCandidate,
+  SummaryAbsence,
+  SummaryState,
 } from "./enrich/prose-summary";
 export {
   CONCEPT_BATCH_MAX_CHARS,
@@ -475,3 +670,5 @@ export {
   moduleMemberDigest,
 } from "./brain/modules";
 export type { ModuleCluster, ModuleGraphEdge } from "./brain/modules";
+
+export { normalizeTodoTitle } from "./progress/todo-title";

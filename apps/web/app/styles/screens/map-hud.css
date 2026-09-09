@@ -422,6 +422,10 @@
 .arr-legend i.test {
   background: var(--node-test);
 }
+.arr-legend i.database {
+  background: var(--node-database);
+  border-radius: var(--radius-small);
+}
 
 .graph-visible-count {
   color: var(--fg-muted);
@@ -1091,6 +1095,22 @@
 .facet-band-node.concept::before {
   background: var(--node-concept);
 }
+.facet-band-node.directory::before {
+  background: var(--node-directory);
+}
+.facet-band-node.route::before {
+  background: var(--node-route);
+}
+/* A table is square. Shape carries kind where colour already carries the
+   band, so the schema layer reads as one thing at a glance; the canvas
+   sprite pool that makes this true everywhere is Wave B todo 12. */
+.facet-band-node.database::before {
+  background: var(--node-database);
+  border-radius: var(--radius-small);
+}
+.facet-band-node.unknown::before {
+  background: var(--border-muted);
+}
 .facet-band-node:hover,
 .facet-band-node[aria-pressed="true"] {
   border-color: var(--accent-fg);
@@ -1400,4 +1420,51 @@
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/*
+ * The risk ring's key (Phase 4 Wave B todo 12). A ring, not a dot: it stands
+ * for a ring drawn around a node, and a filled swatch would read as one of
+ * the node-colour legend's entries.
+ */
+.arr-legend-risk i.risk-ring {
+  background: transparent;
+  border: 2px solid currentColor;
+  border-radius: var(--radius-full);
+}
+
+.arr-legend-risk i.risk-ring.high {
+  color: var(--danger-fg);
+}
+
+.arr-legend-risk i.risk-ring.elevated {
+  color: var(--attention-fg);
+}
+
+.arr-legend-risk i.risk-ring.moderate {
+  color: var(--border-default);
+}
+
+/*
+ * Layer toggles (Phase 4 Wave B todo 13). Pressed means the layer is *on*,
+ * which is the state a viewer starts in — an unpressed toggle for something
+ * that is currently visible would read backwards.
+ */
+.arr-layer-toggles button {
+  background: transparent;
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-pill);
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: var(--text-2xs);
+  padding: 0.1rem 0.5rem;
+}
+
+.arr-layer-toggles button[aria-pressed="true"] {
+  border-color: var(--accent-fg);
+  color: var(--fg-default);
+}
+
+.arr-layer-toggles button:hover {
+  border-color: var(--border-default);
 }

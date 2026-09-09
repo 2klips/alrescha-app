@@ -85,7 +85,9 @@ describe("background worker orchestration", () => {
     vi.mocked(workerQueue.finish).mockResolvedValue("retrying");
     const handler = vi
       .fn()
-      .mockRejectedValue(new Error("Anthropic coaching request failed with status 529."));
+      .mockRejectedValue(
+        new Error("Anthropic coaching request failed with status 529."),
+      );
     const log = vi.fn();
     await runWorkerOnce({
       handlers: {
@@ -115,9 +117,11 @@ describe("background worker orchestration", () => {
       const workerQueue = queue(job({ creditCost: 1, kind: "coach" }));
       // A 100s model call — the production coaching smoke measured exactly
       // that — against a 30s lease; without renewal it would have been reaped.
-      const handler = vi.fn().mockImplementation(
-        () => new Promise<void>((resolve) => setTimeout(resolve, 100_000)),
-      );
+      const handler = vi
+        .fn()
+        .mockImplementation(
+          () => new Promise<void>((resolve) => setTimeout(resolve, 100_000)),
+        );
       const running = runWorkerOnce({
         handlers: {
           analyze: handler,
@@ -136,7 +140,9 @@ describe("background worker orchestration", () => {
       expect(await running).toBe("succeeded");
       // Ten seconds apart for a hundred seconds: nine or ten renewals, and
       // none once the job is finished.
-      expect(vi.mocked(workerQueue.heartbeat).mock.calls.length).toBeGreaterThanOrEqual(9);
+      expect(
+        vi.mocked(workerQueue.heartbeat).mock.calls.length,
+      ).toBeGreaterThanOrEqual(9);
       const renewals = vi.mocked(workerQueue.heartbeat).mock.calls.length;
       await vi.advanceTimersByTimeAsync(30_000);
       expect(vi.mocked(workerQueue.heartbeat).mock.calls.length).toBe(renewals);

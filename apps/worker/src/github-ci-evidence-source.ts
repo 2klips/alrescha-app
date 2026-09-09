@@ -3,6 +3,8 @@ import {
   type CiCheckRun,
   type CiReportArtifact,
   type CiReportFormat,
+  type CoverageReportArtifact,
+  type CoverageReportFormat,
 } from "@alrescha/core";
 import { unzipSync } from "fflate";
 
@@ -17,6 +19,8 @@ interface GitHubArtifactDescriptor {
 
 export interface CollectedGitHubCiEvidence {
   readonly checkRuns: readonly CiCheckRun[];
+  /** Coverage traces, kept apart from the test reports that parse them. */
+  readonly coverage: readonly CoverageReportArtifact[];
   readonly reports: readonly CiReportArtifact[];
 }
 
@@ -84,21 +88,51 @@ function checkRunsResponse(value: unknown): readonly CiCheckRun[] {
   });
 }
 
-function reportFormat(fileName: string): CiReportFormat | null {
+/**
+ * What one file in an artifact archive is.
+ *
+ * Coverage is classified **before** the test-report formats, and that order
+ * is load-bearing: `coverage-final.json` ends in `.json`, and reading it as a
+ * Vitest report produces a parse diagnostic — which makes
+ * `ingestCiTestReports` discard the whole run's evidence, including the
+ * reports that parsed. A repository that uploads its coverage alongside its
+ * test results would have lost its `verified` grade to a file that was never
+ * a test report (Wave C todo 18).
+ */
+function entryFormat(fileName: string):
+  | { format: CiReportFormat; kind: "report" }
+  | {
+      format: CoverageReportFormat;
+      kind: "coverage";
+    }
+  | null {
   const lower = fileName.toLowerCase();
+  const base = lower.replace(/^.*\//, "");
+  if (lower.endsWith(".lcov") || base.includes("lcov")) {
+    return { format: "lcov", kind: "coverage" };
+  }
+  if (lower.endsWith(".json") && base.includes("coverage")) {
+    return { format: "istanbul-json", kind: "coverage" };
+  }
   if (lower.endsWith(".xml")) {
-    return "junit";
+    return { format: "junit", kind: "report" };
   }
   if (!lower.endsWith(".json")) {
     return null;
   }
-  return lower.includes("jest") ? "jest-json" : "vitest-json";
+  return {
+    format: lower.includes("jest") ? "jest-json" : "vitest-json",
+    kind: "report",
+  };
 }
 
-function reportsFromArchive(
+function archiveContents(
   descriptor: GitHubArtifactDescriptor,
   bytes: Uint8Array,
-): readonly CiReportArtifact[] {
+): {
+  coverage: readonly CoverageReportArtifact[];
+  reports: readonly CiReportArtifact[];
+} {
   const maxCompressedBytes = 25 * 1024 * 1024;
   const maxExpandedBytes = 50 * 1024 * 1024;
   const maxEntries = 100;
@@ -119,26 +153,30 @@ function reportsFromArchive(
           `GitHub Actions artifact ${descriptor.id} exceeds extraction limits.`,
         );
       }
-      return reportFormat(file.name) !== null;
+      return entryFormat(file.name) !== null;
     },
   });
   const decoder = new TextDecoder("utf-8", { fatal: true });
-  return Object.entries(files)
-    .flatMap(([fileName, content]) => {
-      const format = reportFormat(fileName);
-      return format
-        ? [
-            {
-              artifactId: descriptor.id,
-              artifactName: descriptor.name,
-              content: decoder.decode(content),
-              format,
-              headSha: descriptor.headSha,
-            } satisfies CiReportArtifact,
-          ]
-        : [];
-    })
-    .sort((left, right) => left.format.localeCompare(right.format));
+  const coverage: CoverageReportArtifact[] = [];
+  const reports: CiReportArtifact[] = [];
+  for (const [fileName, content] of Object.entries(files)) {
+    const entry = entryFormat(fileName);
+    if (!entry) continue;
+    const common = {
+      artifactId: descriptor.id,
+      artifactName: descriptor.name,
+      content: decoder.decode(content),
+      headSha: descriptor.headSha,
+    };
+    if (entry.kind === "coverage") {
+      coverage.push({ ...common, format: entry.format });
+    } else {
+      reports.push({ ...common, format: entry.format });
+    }
+  }
+  const byFormat = <T extends { format: string }>(rows: T[]): T[] =>
+    rows.sort((left, right) => left.format.localeCompare(right.format));
+  return { coverage: byFormat(coverage), reports: byFormat(reports) };
 }
 
 export class GitHubCiEvidenceSource {
@@ -189,14 +227,12 @@ export class GitHubCiEvidenceSource {
     return checkRunsResponse(await response.json());
   }
 
-  private async downloadReports(
-    descriptor: GitHubArtifactDescriptor,
-  ): Promise<readonly CiReportArtifact[]> {
+  private async downloadReports(descriptor: GitHubArtifactDescriptor) {
     const response = await this.request(
       `${this.repositoryPath()}/actions/artifacts/${descriptor.id}/zip`,
       "application/octet-stream",
     );
-    return reportsFromArchive(
+    return archiveContents(
       descriptor,
       new Uint8Array(await response.arrayBuffer()),
     );
@@ -215,13 +251,17 @@ export class GitHubCiEvidenceSource {
         "GitHub CI evidence collection exceeds the 20-artifact safety limit.",
       );
     }
-    const reports = (
-      await Promise.all(
-        candidates.map((artifact) => this.downloadReports(artifact)),
-      )
-    )
-      .flat()
-      .sort((left, right) => left.artifactId - right.artifactId);
-    return { checkRuns, reports };
+    const archives = await Promise.all(
+      candidates.map((artifact) => this.downloadReports(artifact)),
+    );
+    const byArtifactId = <T extends { artifactId: number }>(
+      rows: readonly T[],
+    ): T[] =>
+      [...rows].sort((left, right) => left.artifactId - right.artifactId);
+    return {
+      checkRuns,
+      coverage: byArtifactId(archives.flatMap(({ coverage }) => coverage)),
+      reports: byArtifactId(archives.flatMap(({ reports }) => reports)),
+    };
   }
 }

@@ -54,7 +54,7 @@ export function buildDemoProgressReport(
       commits: [],
       findings: [],
       progressEvents: [],
-      requirements: { covered: 0, total: 0 },
+      requirements: { covered: 0, links: 0, total: 0 },
       todos: [],
     });
   }
@@ -108,7 +108,9 @@ export function buildDemoProgressReport(
       },
     ],
     requirements:
-      state === "full" ? { covered: 5, total: 5 } : { covered: 3, total: 5 },
+      state === "full"
+        ? { covered: 5, links: 7, total: 5 }
+        : { covered: 3, links: 4, total: 5 },
     todos,
   });
 }

@@ -78,7 +78,7 @@ export class SupabaseLocalIngestStore implements LocalIngestStore {
     const [repository, artifacts] = await Promise.all([
       this.client
         .from("repositories")
-        .select("last_scanned_commit_sha")
+        .select("last_scanned_commit_sha,link_schema_version")
         .eq("workspace_id", workspaceId)
         .eq("id", repositoryId)
         .maybeSingle(),
@@ -110,6 +110,8 @@ export class SupabaseLocalIngestStore implements LocalIngestStore {
       })),
       commitSha:
         (repository.data?.last_scanned_commit_sha as string | null) ?? null,
+      linkSchemaVersion:
+        (repository.data?.link_schema_version as number | null) ?? 1,
     };
   }
 

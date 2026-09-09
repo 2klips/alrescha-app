@@ -1,15 +1,18 @@
 import { describe, expect, test, vi } from "vitest";
 
 import {
+  GRAPH_EDGE_FAMILIES,
   buildDashboardViewModel,
   createFixtureGraph,
   type GraphData,
+  type GraphEdgeFamily,
 } from "../apps/web/lib/dashboard/graph-model";
 import {
   collapseGraph,
   communityAssignment,
   isSupernodeId,
 } from "../apps/web/lib/graph/clustering";
+import { worldToScreen } from "../apps/web/lib/graph/camera";
 import {
   createGraphEngine,
   readEngineCounters,
@@ -25,19 +28,23 @@ import {
   runForceLayout,
   seededInitialPositions,
 } from "../apps/web/lib/graph/force-simulation";
+import { nodeRadius } from "../apps/web/lib/graph/node-size";
 import { createPositionBuffer } from "../apps/web/lib/graph/position-buffer";
 import {
   buildRenderFrame,
   degreeMap,
   edgeColorToken,
   nodeColorToken,
-  nodeRadius,
   resolveColor,
+  type Camera,
   type GraphPalette,
 } from "../apps/web/lib/graph/render-frame";
 import {
   DEFAULT_FORCE_CONFIG,
+  LINK_FAMILIES,
+  LINK_FAMILY_FORCES,
   clampForceConfig,
+  linkFamilyCode,
   createStartMessage,
   decodePositions,
   encodePositions,
@@ -160,9 +167,91 @@ describe("simulation wire protocol", () => {
       [
         data.nodes.findIndex((node) => node.id === "req-auth"),
         data.nodes.findIndex((node) => node.id === "code-auth"),
+        // A demo edge states no family, and the baseline is what the old
+        // numbers were, so a fixture lays out exactly as it always did.
+        linkFamilyCode("structure"),
       ],
     ]);
     expect(message.config).toEqual(DEFAULT_FORCE_CONFIG);
+  });
+
+  test("start message gives a node pair one spring, however many relations join it", () => {
+    // Two files that import each other, call each other and are joined by a
+    // derived `tests` edge are three edges but one relationship as far as the
+    // layout is concerned. Counting each one pulled the closest pairs three
+    // times harder than the graph says they are related, and the scanner now
+    // emits exactly this shape (R5 §2.2 D3).
+    const base = fixture(15).edges[0]!;
+    const nodes = fixture(15).nodes;
+    const source = nodes.findIndex((node) => node.id === "req-auth");
+    const target = nodes.findIndex((node) => node.id === "code-auth");
+    const data: GraphData = {
+      edges: [
+        { ...base, id: "e-imports", source: "req-auth", target: "code-auth" },
+        { ...base, id: "e-calls", source: "req-auth", target: "code-auth" },
+        // Reversed: direction is meaningless to a spring, so this is the
+        // same pair and must not add a second one.
+        { ...base, id: "e-tests", source: "code-auth", target: "req-auth" },
+      ],
+      nodes,
+    };
+
+    const message = createStartMessage(data);
+
+    expect(message.links).toHaveLength(1);
+    expect(message.links[0]).toEqual([source, target, linkFamilyCode(null)]);
+  });
+
+  test("one spring per pair takes the strongest family, not the last one seen", () => {
+    // Two files joined by an import *and* by a co-change are wired together.
+    // Letting the weaker claim decide the spring would file a real dependency
+    // under "they tend to change at the same time" and lay the graph out as
+    // if nothing connected them.
+    const base = fixture(15).edges[0]!;
+    const nodes = fixture(15).nodes;
+    const source = nodes.findIndex((node) => node.id === "req-auth");
+    const target = nodes.findIndex((node) => node.id === "code-auth");
+    const pair = (family: GraphEdgeFamily, id: string) => ({
+      ...base,
+      family,
+      id,
+      source: "req-auth",
+      target: "code-auth",
+    });
+
+    for (const edges of [
+      [pair("statistical", "a"), pair("structure", "b")],
+      // …and in the other order, so this is not an accident of iteration.
+      [pair("structure", "b"), pair("statistical", "a")],
+    ]) {
+      const message = createStartMessage({ edges, nodes });
+      expect(message.links).toEqual([
+        [source, target, linkFamilyCode("structure")],
+      ]);
+    }
+  });
+
+  test("every family the graph model knows has a force to lay it out with", () => {
+    // A family with no entry would fall back to the baseline silently, which
+    // is how a co-change ends up pulling as hard as an import.
+    for (const family of GRAPH_EDGE_FAMILIES) {
+      expect(LINK_FAMILIES, family).toContain(family);
+      expect(LINK_FAMILY_FORCES[family].strength).toBeGreaterThan(0);
+      expect(LINK_FAMILY_FORCES[family].distance).toBeGreaterThan(0);
+    }
+    // The baseline is the old default, so a graph with no family data lays
+    // out exactly as it did before this existed.
+    expect(LINK_FAMILY_FORCES.structure).toEqual({
+      distance: DEFAULT_FORCE_CONFIG.linkDistance,
+      strength: DEFAULT_FORCE_CONFIG.linkStrength,
+    });
+    // A correlation must never pull as hard as a wire.
+    expect(LINK_FAMILY_FORCES.statistical.strength).toBeLessThan(
+      LINK_FAMILY_FORCES.structure.strength,
+    );
+    expect(LINK_FAMILY_FORCES.statistical.distance).toBeGreaterThan(
+      LINK_FAMILY_FORCES.structure.distance,
+    );
   });
 });
 
@@ -309,9 +398,88 @@ describe("deterministic force layout", () => {
     expect(meanEdgeLength(far)).toBeGreaterThan(meanEdgeLength(near) * 1.5);
   });
 
+  test("containment pulls a folder's files into a tighter cluster", () => {
+    // Phase 4 Wave A todo 3: `contains` is a layout input, not a line to
+    // draw. Its whole job is this — two folders' worth of files that import
+    // nothing sit in one undifferentiated cloud until the folder pulls its
+    // own together (R5 §2.2 D4, §2.6).
+    const members = (prefix: string, count: number) =>
+      Array.from({ length: count }, (_, index) => ({
+        findingCount: 0,
+        grade: "inferred" as const,
+        id: `${prefix}/file-${index}.ts`,
+        label: `file-${index}.ts`,
+        path: `${prefix}/file-${index}.ts`,
+        type: "code" as const,
+        x: 0,
+        y: 0,
+      }));
+    const folders = ["apps/web/src", "packages/core/src"];
+    const files = folders.flatMap((prefix) => members(prefix, 24));
+    const directories = folders.map((path) => ({
+      findingCount: 0,
+      grade: "inferred" as const,
+      id: path,
+      label: path,
+      path,
+      type: "directory" as const,
+      x: 0,
+      y: 0,
+    }));
+    const containment = files.map((file) => ({
+      broken: false,
+      family: "hierarchy" as const,
+      grade: "inferred" as const,
+      id: `contains:${file.id}`,
+      layoutOnly: true,
+      provenance: {
+        confidence: 1,
+        endLine: 0,
+        grade: "inferred" as const,
+        relation: "part_of" as const,
+        sourcePath: "",
+        startLine: 0,
+      },
+      source: file.path.slice(0, file.path.lastIndexOf("/")),
+      target: file.id,
+    }));
+
+    const radiusOf = (data: GraphData): number => {
+      const positions = runForceLayout(data, undefined, 200, 11);
+      const spreads = folders.map((prefix) => {
+        const points = data.nodes
+          .filter((node) => node.id.startsWith(`${prefix}/`))
+          .flatMap((node) => {
+            const position = positions.get(node.id);
+            return position ? [position] : [];
+          });
+        const centreX =
+          points.reduce((sum, point) => sum + point.x, 0) / points.length;
+        const centreY =
+          points.reduce((sum, point) => sum + point.y, 0) / points.length;
+        return (
+          points.reduce(
+            (sum, point) =>
+              sum + Math.hypot(point.x - centreX, point.y - centreY),
+            0,
+          ) / points.length
+        );
+      });
+      return spreads.reduce((sum, spread) => sum + spread, 0) / spreads.length;
+    };
+
+    const loose = radiusOf({ edges: [], nodes: [...files, ...directories] });
+    const held = radiusOf({
+      edges: containment,
+      nodes: [...files, ...directories],
+    });
+
+    expect(held).toBeLessThan(loose);
+  });
+
   test("setConfig on a live layout reheats it", () => {
     const layout = createForceLayout({
-      links: [[0, 1]],
+      links: [[0, 1, linkFamilyCode("structure")]],
       nodeCount: 2,
       seed: 1,
     });
@@ -685,6 +853,132 @@ describe("camera focus (Phase 2A todo 7)", () => {
     engine.focusNode((data.nodes[0] as { id: string }).id);
 
     expect(engine.layoutRestarts()).toBe(restarts);
+    engine.dispose();
+  });
+
+  /**
+   * Phase 4 Wave B todo 9. The worker has always announced that the layout
+   * converged and the engine has always thrown the message away, so "the
+   * graph has stopped moving" was a fact nobody downstream could read.
+   */
+  test("reports the layout settling, and unreports it whenever it restarts", async () => {
+    const data = fixture(6);
+    const { emit, engine } = await engineOn(data);
+    expect(engine.settled()).toBe(false);
+
+    emit({ revision: 1, type: "settled" });
+    expect(engine.settled()).toBe(true);
+
+    // Positions mean it is moving again, whatever it said before.
+    emit({
+      alpha: 0.3,
+      positions: encodePositions(data.nodes.map(() => ({ x: 0, y: 0 }))),
+      revision: 2,
+      type: "positions",
+    });
+    expect(engine.settled()).toBe(false);
+
+    emit({ revision: 2, type: "settled" });
+    expect(engine.settled()).toBe(true);
+    // New forces restart the layout; so does new data.
+    engine.setForceConfig({ linkDistance: 200 });
+    expect(engine.settled()).toBe(false);
+
+    emit({ revision: 3, type: "settled" });
+    engine.setData(fixture(7));
+    expect(engine.settled()).toBe(false);
+    engine.dispose();
+  });
+
+  test("computes the camera that frames every node without moving to it", async () => {
+    const data = fixture(3);
+    const { emit, engine } = await engineOn(data);
+    const viewport = { height: 600, width: 800 };
+    engine.setViewport(viewport);
+    const positions = [
+      { x: -400, y: -200 },
+      { x: 400, y: 200 },
+      { x: 0, y: 0 },
+    ];
+    emit({
+      alpha: 0.1,
+      positions: encodePositions(positions),
+      revision: 1,
+      type: "positions",
+    });
+    const before = engine.camera();
+
+    const fit = engine.cameraForFit(0);
+    expect(fit).not.toBeNull();
+    // Computed, not applied — the mounted map glides to it, and a reader
+    // that wants it now hands it to `setCamera` itself.
+    expect(engine.camera()).toEqual(before);
+    // The 800-unit span across an 800px viewport is the tighter of the two
+    // axes, so that is the scale; the assertion below is the point.
+    for (const position of positions) {
+      const screen = worldToScreen(fit as Camera, viewport, position);
+      expect(screen.x).toBeGreaterThanOrEqual(0);
+      expect(screen.x).toBeLessThanOrEqual(viewport.width);
+      expect(screen.y).toBeGreaterThanOrEqual(0);
+      expect(screen.y).toBeLessThanOrEqual(viewport.height);
+    }
+    expect((fit as Camera).scale).toBe(1);
+
+    engine.dispose();
+  });
+
+  /**
+   * Phase 4 Wave B todo 13. Filtering used to build a new `GraphData` and
+   * call `setData`, which posts a fresh `start` to the worker: every
+   * keystroke in the search box threw the layout away and re-ran it from the
+   * seeded spiral.
+   */
+  test("filtering changes what is drawn and never restarts the layout", async () => {
+    const data = fixture(15);
+    const { emit, engine } = await engineOn(data);
+    emit({
+      alpha: 0.1,
+      positions: encodePositions(
+        data.nodes.map((_, index) => ({ x: index * 10, y: 0 })),
+      ),
+      revision: 1,
+      type: "positions",
+    });
+    const restarts = engine.layoutRestarts();
+    const before = engine
+      .frame()
+      .nodes.map((node) => [node.id, node.x, node.y]);
+
+    const keep = new Set(data.nodes.slice(0, 4).map((node) => node.id));
+    engine.setVisibility(keep);
+
+    expect(engine.layoutRestarts()).toBe(restarts);
+    expect(engine.visibleNodes()).toBe(keep);
+    const after = engine.frame().nodes;
+    expect(after.map((node) => node.id).sort()).toEqual([...keep].sort());
+    // Every surviving node is exactly where it was — that is the whole point.
+    const byId = new Map(before.map(([id, x, y]) => [id, [x, y]]));
+    for (const node of after) {
+      expect([node.x, node.y], node.id).toEqual(byId.get(node.id));
+    }
+
+    engine.setVisibility(null);
+    expect(engine.frame().nodes).toHaveLength(data.nodes.length);
+    expect(engine.layoutRestarts()).toBe(restarts);
+    engine.dispose();
+  });
+
+  test("agrees with focusNode about where a node is", async () => {
+    const data = fixture(9);
+    const { engine } = await engineOn(data);
+    const id = (data.nodes[4] as { id: string }).id;
+
+    const computed = engine.cameraForNode(id);
+    engine.focusNode(id);
+
+    // One piece of arithmetic with two callers, not two that happen to agree.
+    expect(engine.camera()).toEqual(computed);
+    expect(engine.cameraForNode("not-a-node")).toBeNull();
     engine.dispose();
   });
 });

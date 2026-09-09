@@ -1,126 +1,12 @@
 /* Alrescha F3 local evidence graph and provenance inspector. */
 
-.graph-stage {
-  background: var(--bg-inset);
-  height: 100%;
-  isolation: isolate;
-  overflow: hidden;
-  position: relative;
-}
-
-.graph-stage .graph-grid {
-  background-image: radial-gradient(
-    circle,
-    var(--border-default) var(--space-0),
-    transparent var(--space-0)
-  );
-  background-size: var(--space-6) var(--space-6);
-  inset: 0;
-  opacity: 0.36;
-  pointer-events: none;
-  position: absolute;
-}
-
-.graph-canvas-wrap,
-.graph-canvas {
-  height: 100%;
-  inset: 0;
-  position: absolute;
-  width: 100%;
-}
-
-.graph-canvas {
-  cursor: grab;
-  touch-action: none;
-}
-.graph-canvas:active {
-  cursor: grabbing;
-}
-
-.graph-edge {
-  pointer-events: none;
-  stroke: color-mix(in srgb, var(--success-fg) 48%, transparent);
-  stroke-width: 1.2;
-  vector-effect: non-scaling-stroke;
-}
-
-.graph-edge.interactive {
-  cursor: pointer;
-  pointer-events: stroke;
-}
-
-.graph-edge.inferred {
-  stroke: color-mix(in srgb, var(--attention-fg) 52%, transparent);
-  stroke-dasharray: 3 5;
-}
-
-.graph-edge.broken {
-  stroke: color-mix(in srgb, var(--danger-fg) 92%, transparent);
-  stroke-dasharray: 7 6;
-  stroke-width: 1.8;
-}
-
-.graph-edge.flowing {
-  animation: evidence-flow 0.85s linear infinite;
-  stroke-dasharray: 5 7;
-  stroke-width: 2;
-}
-
-.graph-edge.selected {
-  stroke: var(--fg-default);
-  stroke-width: 2.4;
-}
-.graph-node {
-  cursor: grab;
-}
-.node-core {
-  fill: var(--bg-overlay);
-  stroke-width: 1.4;
-}
-.graph-node.selected .node-core {
-  stroke-width: 2.8;
-}
-.node-halo {
-  fill: var(--tint-verified);
-}
-.graph-node.inferred .node-halo {
-  fill: var(--tint-inferred);
-}
-.graph-node.broken .node-halo {
-  fill: var(--tint-danger);
-}
-
-.graph-node.pulse .node-core {
-  animation: neuron-pulse 0.75s ease-out infinite;
-  filter: drop-shadow(0 0 var(--space-2) var(--accent-fg));
-}
-
-.graph-node.inferred.pulse .node-core {
-  filter: drop-shadow(0 0 var(--space-2) var(--attention-fg));
-}
-.graph-node.broken.pulse .node-core {
-  filter: drop-shadow(0 0 var(--space-2) var(--danger-fg));
-}
-.graph-node.decay .node-core {
-  filter: drop-shadow(0 0 var(--space-1) var(--accent-fg));
-}
-.graph-node.afterglow .node-core {
-  fill: var(--bg-subtle);
-}
-.node-glyph {
-  font: 600 var(--text-body-sm) var(--font-mono);
-  pointer-events: none;
-}
-.node-label {
-  fill: var(--fg-default);
-  font: 600 var(--text-body-sm) var(--font-sans);
-  pointer-events: none;
-}
-.node-type {
-  fill: var(--fg-muted);
-  font: var(--text-body-sm) var(--font-mono);
-  pointer-events: none;
-}
+/*
+ * The SVG renderer's own vocabulary — `.graph-canvas`, `.graph-edge`,
+ * `.graph-node`, `.node-*` and the dead `.graph-stage` wrapper — lived here
+ * until Phase 4 Wave B todo 14. This screen draws through the Pixi stage now,
+ * which takes its colours from the renderer palette rather than from CSS, so
+ * everything below is the DOM chrome around the canvas.
+ */
 
 .graph-detail-shell {
   background: var(--bg-default);
@@ -233,8 +119,10 @@
   display: flex;
   font: var(--text-body-sm) / var(--line-body-sm) var(--font-mono);
   gap: var(--space-1);
-  left: var(--space-4);
   padding: var(--space-2) var(--space-3);
+  /* The stage parks its fit-to-view button in the bottom-left corner, so this
+     caption moved out of it rather than sitting on top of a control. */
+  right: var(--space-4);
   position: absolute;
   z-index: var(--z-hud);
 }
@@ -443,12 +331,5 @@
   .provenance-inspector {
     border-left: 0;
     border-top: 1px solid var(--border-muted);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .graph-edge.flowing,
-  .graph-node.pulse .node-core {
-    animation: none;
   }
 }

@@ -136,7 +136,8 @@ function ReceiptDetail({
             <div>
               <dt>{LIVE.fields.issuer}</dt>
               <dd data-testid="receipt-issuer">
-                {statement.predicate.tool.name} {statement.predicate.tool.version}
+                {statement.predicate.tool.name}{" "}
+                {statement.predicate.tool.version}
               </dd>
             </div>
             <div>
@@ -236,7 +237,9 @@ export function WorkspaceReceiptsBoard({
   selectedId,
 }: WorkspaceReceiptsBoardProps) {
   const selected =
-    receipts.find((receipt) => receipt.id === selectedId) ?? receipts[0] ?? null;
+    receipts.find((receipt) => receipt.id === selectedId) ??
+    receipts[0] ??
+    null;
   const counts = countVerifications(receipts);
   return (
     <main className="assurance-main receipts-layout product-page">
@@ -272,7 +275,9 @@ export function WorkspaceReceiptsBoard({
               >
                 {receipts.map((receipt) => (
                   <Link
-                    aria-current={receipt.id === selected?.id ? "true" : undefined}
+                    aria-current={
+                      receipt.id === selected?.id ? "true" : undefined
+                    }
                     data-verification={receipt.verification.state}
                     href={`${basePath}?receipt=${encodeURIComponent(receipt.id)}`}
                     key={receipt.id}
@@ -288,7 +293,11 @@ export function WorkspaceReceiptsBoard({
                           ? ASSURANCE.receipts.stale
                           : ASSURANCE.receipts.current}
                         {" · "}
-                        {ASSURANCE.receipts.verification[receipt.verification.state]}
+                        {
+                          ASSURANCE.receipts.verification[
+                            receipt.verification.state
+                          ]
+                        }
                       </small>
                     </span>
                     <Icon icon={ChevronRight} size="xs" />

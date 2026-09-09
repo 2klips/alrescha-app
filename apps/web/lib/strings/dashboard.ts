@@ -34,6 +34,37 @@ export const DASHBOARD = {
     document: "문서",
     code: "코드",
     test: "verified 테스트",
+    database: "테이블·함수",
+  },
+
+  /**
+   * The risk ring (Wave B todo 12). Three bands, because `low` draws no ring
+   * at all — a ring on every node is a texture, not a warning.
+   */
+  /**
+   * Layer toggles (Wave B todo 13). A layer is not a filter: it says what
+   * kind of thing not to look at, and it leaves the search box alone.
+   */
+  layers: {
+    label: "레이어",
+    note: "종류째로 끄고 켭니다 — 검색·필터와 별개이고, 레이아웃은 그대로입니다.",
+    names: {
+      co_changed: "공변경",
+      concept: "개념",
+      contains: "포함",
+      doc: "문서",
+      section: "문서 섹션",
+    },
+  },
+
+  riskLegend: {
+    label: "위험 링 — 코드 노드만",
+    note: "todo 21 위험 지도의 등급입니다. 링이 없으면 요인이 없거나 아무도 재지 않은 것이고, 안전하다는 뜻이 아닙니다.",
+    bands: {
+      high: "높음",
+      elevated: "주의",
+      moderate: "보통",
+    },
   },
 
   views: {
@@ -71,6 +102,18 @@ export const DASHBOARD = {
       code: "코드",
       test: "테스트",
       concept: "개념",
+      /** 코드에서 뽑은 WHY/NOTE 주석 — 문서가 아니라 코드 쪽에 붙는다. */
+      rationale: "근거 주석",
+      /** 경로에서 유도된 폴더 노드 (Wave A todo 3). */
+      directory: "폴더",
+      /** URL 하나 — 그 URL을 서빙하는 파일들이 매달린다 (Wave A′ todo 6). */
+      route: "라우트",
+      /** 마이그레이션이 선언한 테이블·함수·뷰 (Wave A′ todo 7). */
+      database: "테이블·함수",
+      /** ADR·OQ처럼 이름을 가진 결정 하나 (Wave A′ todo 8). */
+      section: "결정 문단",
+      /** 아티팩트 행을 못 찾은 노드. 분류를 지어내지 않는다. */
+      unknown: "미분류",
     },
     grades: {
       all: "전체 증거",
@@ -84,8 +127,12 @@ export const DASHBOARD = {
       all: "전체 영역",
       frontend: "프론트엔드",
       backend: "백엔드",
+      /** 스키마·마이그레이션 — Wave A todo 4에서 자기 영역을 갖는다. */
+      database: "데이터베이스",
       docs: "문서",
       tests: "테스트",
+      /** 어떤 관례에도 맞지 않는 경로. 조용히 backend로 흡수하지 않는다. */
+      other: "기타",
     },
     groupMode: "영역별로 묶기",
     groupModeAria: "노드를 영역별 띠로 배치",
@@ -124,6 +171,8 @@ export const DASHBOARD = {
 
   /** 히트 레이어(단일 탭 정지) — 방향키로 노드 순회 (OQ-006) */
   hitLayerLabel: "Graph 노드 — 방향키로 이동, Enter로 상세",
+  /** The camera control that frames the whole graph. */
+  fitToView: "전체 보기 — 그래프 전부가 화면에 들어오게",
 
   /**
    * Accessible name of one node hit target on the canvas —

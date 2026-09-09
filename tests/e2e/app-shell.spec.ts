@@ -10,8 +10,9 @@ test("opens the Alrescha repository shell", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: DASHBOARD.title }),
   ).toBeVisible();
-  // The dashboard renders the WebGL brain map (Phase 2A todo 7); the SVG
-  // `evidence-graph-canvas` now exists only on the evidence-detail route.
+  // The dashboard renders the WebGL brain map (Phase 2A todo 7). So does the
+  // evidence-detail route now — Phase 4 Wave B todo 14 retired the SVG
+  // renderer that used to own it, so this is the product's one stage.
   await expect(page.getByTestId("brain-map-stage")).toBeVisible();
 });
 

@@ -7,10 +7,16 @@
  * without a session. `helpers/session.ts` mints one, so these screens are now
  * held to the same bar as the public ones.
  *
- * Two routes are deliberately absent: `/app/connect/github` reads
- * `GITHUB_APP_ID` and friends at render time and answers 500 without them, and
- * `/app/connect/github/repositories` redirects into it. Those two need the G2
- * gate (a registered GitHub App); they join the sweep when the live pilot runs.
+ * `/app/connect/github` joined them once the GitHub App credentials were
+ * supplied: it reads `GITHUB_APP_ID` and friends at render time and used to
+ * answer 500 without them. Registering the app is what a reader would call
+ * "the G2 gate", and half of it is open — the screen renders, so it is held
+ * to the same bar as the rest.
+ *
+ * One route is still absent. `/app/connect/github/repositories` redirects to
+ * the connect screen until an installation exists, and a test workspace has
+ * none; the redirect is correct behaviour, and `walkBothThemes` refuses to
+ * audit a screen it did not land on. It joins when a live installation does.
  */
 export const AUTHENTICATED_SCREENS = [
   ["app-workspace", "/app"],
@@ -26,4 +32,5 @@ export const AUTHENTICATED_SCREENS = [
   ["app-settings-mcp", "/app/settings/mcp"],
   ["app-settings-ai", "/app/settings/ai"],
   ["app-settings-privacy", "/app/settings/privacy"],
+  ["app-connect-github", "/app/connect/github"],
 ] as const;

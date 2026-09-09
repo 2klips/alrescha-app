@@ -1,0 +1,9 @@
+{
+  "name": "@demo/core",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./util": "./src/util.ts"
+  }
+}

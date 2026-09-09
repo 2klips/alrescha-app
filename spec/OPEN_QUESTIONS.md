@@ -219,6 +219,7 @@
 - 내용: `createMcpHandler`는 요청마다 서버 팩토리를 호출한다. MT-10에서 22개 툴 정의와 66개 인라인 `z.object`를 모듈 스코프로 호이스트해 지배적 비용(동일 형태 스키마 44개 생성 실측 7.287ms)을 제거했고, `tools/call` p50 3.242ms → 1.415ms로 측정됐다. 남은 것은 `new McpServer` + `registerTool` × 22 = 실측 약 2.041ms/요청이며 이는 SDK 내부 비용이다. 리서치 보고서의 제안대로 `z.toJSONSchema` 사전 계산 + SDK의 `fromJsonSchema()` 등록으로 이를 없앨 수 있으나, `fromJsonSchema<T = unknown>`이므로 22개 핸들러 전부가 인자 타입을 잃는다(현재는 zod 스키마에서 추론된 타입으로 정적 검사됨).
 - 임시 결정: 호이스트까지만 적용하고 `registerTool` 잔여 비용은 남긴다. 타입 안전성을 조용히 맞바꾸지 않는다.
 - 필요한 결정: ⑴ 현행 유지 — 약 2ms/요청을 정적 타입 검사의 대가로 수용(기본값) ⑵ `fromJsonSchema` 등록으로 전환하되 각 핸들러에 명시적 인자 타입 주석을 달아 검사를 복원 ⑶ 요청당 서버 재구축 자체를 없애는 상류 SDK 변경을 기다린다(팩토리는 SDK 계약이라 이 저장소에서 단독으로 바꿀 수 없음)
+- 갱신(2026-09-06, todo 22): 툴 수가 23 → 20(다이어트) → 21(`report_session_usage`)로 바뀌었다. 잔여 비용은 `registerTool` 호출 수에 비례하므로 **약 9% 줄었을 것**이지만 **재측정하지 않았다** — 2.041ms는 23개일 때의 실측이고, 새 수를 곱해 적는 것은 측정이 아니라 산수다. 판정은 그대로 ⑴이며, 다음 벤치(todo 25)가 `tools/list` 출력을 하네스로 쓰므로 그때 같은 방법으로 다시 잰다.
 - 상태: open
 
 ## OQ-025 — 파일럿에 자격증명 없는 알림 수단이 없다
@@ -252,3 +253,295 @@
 - 임시 결정: 이번 작업 범위(체크리스트 정합·운영 항목)에서 제외하고 기록만 남겼다. 세 테이블은 `docs/SECURITY_CHECKLIST.md`가 RLS 격리를 명시적으로 요구하는 대상(evidence·credits·MCP 토큰·access events·`security_audit_events`)에 포함되지 않으므로 배포 항목을 막지 않는다.
 - 필요한 결정: ⑴ **관행에 맞추는 마이그레이션 추가** — 세 테이블에 `force row level security`를 켜고 `ALL_MIGRATIONS`에 등록, RLS 격리 테스트에 세 테이블을 편입. 작고 되돌릴 수 있으며 관행 이탈을 없앤다(기본 후보). ⑵ 관행 자체를 재검토 — `force`가 실제로 무엇을 막는지 판정하고 필요 없다면 40개에서 빼는 방향으로 통일. ⑶ 현행 유지 — 이탈을 문서로만 남김, 비권장.
 - 상태: open. ⑴은 별도 작업 단위로 분리했다(이 세션의 범위를 넘는 보안 의미 변경이므로 테스트 동반이 필요).
+
+## OQ-029 — 레포 연결만으로는 첫 스캔이 인큐되지 않는다 (WORK_SPEC §4.1-4 미구현)
+
+- 발견: Phase 4 사전 조사(2026-09-03) / `spec/RESEARCH_GRAPH_SECONDBRAIN_2026-09-03.md` §4.3, `apps/web/lib/github/connect-repository.ts`, `apps/web/lib/github/onboarding-store.ts:102-140`, `supabase/migrations/202608100004_worker_credit_lifecycle.sql:511-520`
+- 내용: `scan`·`analyze` 잡을 인큐하는 유일한 코드는 `ingest_github_webhook_event`(push/check_run/workflow_run 웹훅)다. 레포 연결(`connectSelectedRepository` → `saveSelectedRepository`)은 `repositories` upsert와 감사 이벤트만 남긴다. WORK_SPEC §4.1-4 "레포 선택 → 첫 스캔이 백그라운드 잡으로 시작"은 구현되지 않았고, 따라서 **더 이상 푸시가 없는 완성된 레포는 연결해도 영원히 빈 그래프**다. 오늘의 유일한 우회는 더미 커밋 푸시다.
+- 임시 결정: 현행 유지(코드 무변경). 사용자에게는 "연결 후 한 번 푸시"를 안내.
+- 필요한 결정: ⑴ **연결 직후 백필 스캔** — `enqueue_backfill_scan(workspace, repo, head_sha)` SQL 함수(멱등 키 `backfill:<repoId>:<headSha>`)를 연결 성공 경로에서 호출하고, 같은 함수를 "다시 스캔" 버튼과 MCP `request_rescan`이 재사용. scan/analyze는 `enqueue_job`이 credit_cost≠0을 거부하므로 구조상 0크레딧(하드룰 ⑦ 자동 준수) ⑵ 웹훅 전용 유지 + 온보딩 카피로 "첫 푸시" 유도 ⑶ 설치(`installation`/`installation_repositories`) 이벤트에서 인큐 — 단 이벤트는 레포 목록만 싣고 HEAD sha가 없어 별도 조회 필요.
+- 상태: open. 기본 후보 ⑴ — `BUILD_PLAN_PHASE4.md` Wave C todo 11.
+
+## OQ-030 — 로컬 인제스트(`alrescha push`) 레포는 analyze·enrich를 받을 수 없다
+
+- 발견: Phase 4 사전 조사(2026-09-03) / `supabase/migrations/202608170002_local_ingest.sql:147-160`(`ensure_local_repository`가 `installation_id` 미기록), `apps/worker/src/run-local.ts:144-151`(`join public.github_installations` → "repository … is not connected" throw)
+- 내용: 로컬 경로는 `apply_repository_scan`으로 artifacts·graph_nodes·index_entries·imports/calls까지는 채우지만, 워커의 소스 팩토리가 GitHub 설치를 전제하므로 analyze(요구사항·findings)와 enrich(요약·concept)는 영원히 돌지 않는다. ADR-015는 receipt 부재를 이미 확정했지만, **요약·concept 부재**는 ADR-015의 범위(보증) 밖이며 판정된 적이 없다.
+- 임시 결정: 현행 유지. CLI 출력의 "GitHub 연결 시 보증이 열린다" 안내를 "분석·요약도 열린다"로 정확히 하는 것만 허용.
+- 필요한 결정: ⑴ **로컬 서빙 모드** — `alrescha serve --local <dir>`: 로컬 스캔 → `InMemoryMcpStore`(이미 export) → stdio MCP, enrich는 BYOK 키가 있을 때만 프로바이더 직접 호출(산문 검증기 동일). 서버 본문 전송 없음 → 하드룰 ③ 준수 ⑵ 호스티드 워커가 로컬 레포를 분석 — 본문 전송이 필요해 하드룰 ③·ADR-013 위반 위험, 기각 후보 ⑶ 현행 유지(로컬 경로는 그래프 전용 가교).
+- 상태: **resolved(Wave C todo 17, 2026-09-06)** — ⑴ 채택, ⑵ 기각. `alrescha serve --local [디렉터리]`가 로컬 스캔을 그 자리에서 `InMemoryMcpStore`로 투영해 stdio MCP로 서빙한다. 서버·토큰·네트워크가 없고 본문은 머신을 떠나지 않는다(하드룰 ③). 툴 표면은 호스티드와 같은 팩토리를 쓰고(`createMcpServerFor`), 투영은 `apply_repository_scan`과 실DB에서 픽스처 2종 전수 비교로 묶어 둔다 — 두 번째 구현이 조용히 어긋나는 것이 이 방식의 유일한 위험이기 때문이다. ⑵는 본문 업로드가 필요해 기각했고, 그 판정을 큐가 말하게 했다: `enqueue_repository_rescan`이 installation 없는 레포의 스캔 잡을 **만들기 전에** 거절하고 CLI를 가리킨다(todo 16의 `request_rescan`이 열어 둔, 워커가 3회 실패하던 경로). 쓰기 도구는 `mcp:read`만 주어 거절한다 — 세션과 함께 사라지는 저장소에 기록이 남은 것처럼 보이면 안 된다. **BYOK enrich는 미구현**: 프로바이더 클라이언트가 `apps/worker`에 있어 옮기는 것이 별도 변경이다 — [evidence](../.omo/evidence/phase4/todo-17.md).
+
+## OQ-031 — 심볼(함수·클래스) 노드 1급화는 읽기 상한·클러스터 임계와 충돌한다
+
+- 발견: Phase 4 사전 조사(2026-09-03) / R4 §3.2·§3.8 ④, `apps/web/lib/map/workspace-map.ts:162,543-545`(`MAP_CLUSTER_THRESHOLD 600`, `NODE_LIMIT 2000`, `EDGE_LIMIT 6000`), `packages/core/src/ingest/code-links.ts:397`(엣지는 `(kind, sourcePath, targetPath)`당 1개)
+- 내용: 심볼은 `artifacts.exported_symbols`·`index_entries.symbols`에만 있고 `graph_nodes` 행이 아니다. 따라서 "함수↔함수" 엣지는 원리적으로 불가능하고 call 엣지는 파일↔파일로 집계되어 `utils.ts`류 허브가 헤어볼을 만든다. 심볼을 노드로 승격하면 파일럿 370파일 레포에서 노드가 수천 개로 늘어 읽기 상한(2,000)과 클러스터 임계(600)를 즉시 넘고, 현재 `clusterGraph`는 `type:grade` 15개 슈퍼노드를 인접 인덱스 사슬로 잇는 임의 구조다(`graph-model.ts:433-467`).
+- 임시 결정: Wave A~E는 파일·폴더·문서·요구사항·개념 계층만으로 진행(심볼 노드 없음). 파일↔파일 `calls` provenance의 심볼 목록(≤8)은 인스펙터에 표시.
+- 필요한 결정: ⑴ **계층 LOD 로딩** — 기본 로드는 파일 레벨(폴더 접힘 포함 ≤ 2,000), 포커스·확대 시 해당 파일의 심볼과 `declares`·심볼 `calls`를 `get_neighbors`형 부분 쿼리로 로드, 슈퍼노드는 폴더/모듈 기반으로 교체 ⑵ 심볼을 노드로 두되 맵은 파일 레벨만 렌더하고 MCP만 심볼 레벨 노출 ⑶ 현행 유지(심볼은 메타데이터).
+- 상태: open. 기본 후보 ⑴ — Wave F todo 18의 전제. 다언어 심볼 정밀도는 OQ-019와 결합.
+
+## OQ-032 — 지시 블록은 id-first를 강제하지만 기법 실측은 id-first를 off로 권고했다
+
+- 발견: Phase 4 사전 조사(2026-09-03) / `apps/web/lib/mcp/instruction-blocks.ts:24-37`, `packages/mcp/src/repo-map.ts:223`(`flow: search_nodes → get_neighbors/trace_path → get_node_content (ids first, bodies last)`), `benchmarks/databrain/techniques.real.md`(id-first −26.84% 토큰·−2.78pp 회수율 → off), `benchmarks/graph-surface/results.v1.md`·`results.v2.md`(NOT MET: 턴 +2.0–2.3, PASS −8.3–−12.5pp), `.omo/evidence/phase3/followups-2026-08-25.md` §3
+- 내용: 실측은 두 방향에서 같은 말을 한다 — ⓐ id-first 계층 로딩은 토큰을 크게 줄이지만 회수율을 깎는다(사전등록 게이트 "하락 = off") ⓑ 그래프군은 다단계 프로토콜(schema→map→search→neighbors→content) 때문에 최소 3–4턴을 강제해 파일 탐색(grep 1–2회)에 턴·정확도에서 지고, 일부 모델은 턴 캡을 소진한다(정지 문제). 그런데 제품이 출하하는 지시 블록·`get_graph_schema.text`·5종 그래프 툴은 id-first를 기본 경로로 강제하고, 최소 인덱스 PR은 전혀 다른 워크플로(`request_context_pack` 우선)를 지시한다.
+- 임시 결정: 문안 무변경. Wave E 전까지 지시 블록은 현행.
+- 필요한 결정: ⑴ **하나의 워크플로로 통일하고 id-first를 관계형 질의로 한정** — 기본 진입은 `search_index`(발췌 포함), 관계·영향·경로 질의만 그래프 툴, 3회 조회 후 미해결이면 파일 탐색으로 폴스루한다는 정지 규율을 문안에 포함; 두 생성기(`instruction-blocks.ts`·`minimal-index.ts`)가 같은 상수를 참조 ⑵ Graphify식 훅 strict(파일 읽기 차단) — 정지 문제를 악화시킬 위험이 크므로 옵트인 스니펫으로만 ⑶ 현행 유지 + v3 벤치로 먼저 측정.
+- 상태: open. 기본 후보 ⑴ + v3 사전등록에 "설치된 지시 블록" 포함 — Wave E todo 16·17.
+
+## OQ-033 — `doc_page`(사람이 읽는 AI 문서 페이지)와 WORK_SPEC §1.6 ② "주문형 서빙 전용" 문구
+
+- 발견: Phase 4 사전 조사(2026-09-03) / R4 §3.6·§4.5 G3, `spec/WORK_SPEC.md:66`(② LLM Wiki — "주문형 서빙 전용 — 정적 파일에 절대 인라인하지 않음"), 하드룰 ③·⑤
+- 내용: 사용자는 MCP가 완성된 레포를 문서로 정리해 그래프 뷰에서 보이길 원한다. 현재 산문 3종(파일·모듈·concept 요약)은 MCP 또는 그래프 라벨로만 노출되고 사람이 읽는 페이지·노드 타입·라우트가 없다. `doc_page`를 그래프 노드 + 웹 라우트 + MCP 툴로 서빙하는 것은 "정적 파일 인라인 금지"(⑤)와 충돌하지 않는다 — 레포 파일로 커밋하지 않고 주문형으로 서빙하며, 본문은 이미 저장된 산문의 조합이므로 원본 코드 비저장(③)도 자동 준수한다. 다만 §1.6 ②의 "문서 간 상호링크·백링크 그래프 + 문서별 요약·관련문서 캐시"라는 정의는 **생성된 페이지**를 명시적으로 포함하지 않는다.
+- 임시 결정: `doc_page`는 `inferred` CHECK 제약·`source_node_ids NOT NULL`·코드 스니펫 금지 검증기로 설계하고(Wave D todo 14), §1.6 ② 문구는 개정하지 않는다(에이전트는 spec 수정 불가).
+- 필요한 결정: ⑴ WORK_SPEC §1.6 ②에 "생성된 문서 페이지(`inferred`, 근거 노드 필수, 저장 산문만 조합)는 LLM Wiki 레이어의 일부이며 주문형 서빙 대상"을 추가(사용자 결정) ⑵ 현행 문구로 충분하다고 판정 ⑶ 위키 페이지를 비목표로 되돌림.
+- 상태: open. 기본 후보 ⑴.
+
+## OQ-034 — `.alrescha.json` 레이아웃 관례 설정과 "facet은 읽기 시점 유도, 저장 사본은 드리프트한다" 원칙
+
+- 발견: Phase 4 사전 조사(2026-09-03) / `packages/core/src/ingest/artifact-facets.ts:3-10,44-53,92`, `spec/BUILD_PLAN_PHASE2D_UI.md` todo 4의 구현 판단, ADR-013
+- 내용: facet은 경로 규약에서 읽기 시점에 유도되며(사본 드리프트 방지, 두 경로 동등성 자명), 규약은 이 레포의 모노레포 관례(`apps/web/`·`apps/`·`packages/`)로 하드코딩되어 있다. 다른 레이아웃은 `unclassified`가 되고 `deriveBrainArea`가 이를 `backend`로 흡수해 밴드가 2개로 붕괴한다. `database` 도메인은 어휘에 없다. 관례를 레포별로 설정 가능하게 하려면 설정의 출처와 저장 위치를 정해야 한다.
+- 임시 결정: Wave A todo 4는 ⓐ 기본 관례를 일반화(`frontend/ backend/ server/ api/ src/app/ prisma/ migrations/ …`)하고 ⓑ `unclassified`를 `기타`로 정직 표시하며 ⓒ `.alrescha.json`은 **레포 내 파일**로만 받아 스캐너가 아티팩트로 읽고 커밋 sha와 함께 `repositories.layout_config`에 저장, `deriveArtifactFacets`에 선택 인자로 주입한다(설정 없는 레포는 기본값 — 회귀 스냅샷 불변).
+- 필요한 결정: ⑴ 위 임시 결정을 정식화 — 설정은 커밋에 묶인 아티팩트이므로 "저장 사본 드리프트"가 아니라 "커밋의 일부"이고, CLI/GitHub 두 경로가 같은 커밋에서 같은 파일을 보므로 ADR-013 동등성 유지 ⑵ DB(워크스페이스 설정 UI)만 허용 — CLI 경로가 설정을 볼 수 없어 동등성 위반, 기각 후보 ⑶ 설정 불허, 기본 관례 일반화만.
+- 상태: open. 기본 후보 ⑴.
+
+## OQ-035 — co_changed 백필과 ADR-013 동등성
+
+- 발견: Phase 4 은하수 설계 판정(2026-09-04) / `spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md` §2.3·§2.5, `apps/web/lib/github/webhook-store.ts:31-44`, `supabase/migrations/202608230003_file_co_changes.sql:45-88`, `apps/web/lib/map/workspace-map.ts:443-470`
+- 내용: co_changed는 오늘도 `record_push_co_changes`가 웹훅 배달(inserted)에서만 기록되어 CLI(`alrescha push`) 레포에는 존재하지 않는다 — 이미 두 경로가 불평등하다. 통합 설계는 정적 패밀리가 못 잇는 doc↔sql↔css 사이클의 원천으로 co_changed를 쓰되 기존 레포의 히스토리 백필(GitHub commits API 최근 N커밋)을 제안했는데, 이는 GitHub 경로 전용이라 ADR-013(두 경로 동일 그래프)의 비대칭을 키운다.
+- 임시 결정: 백필 없음. co_changed는 웹훅 누적분만 읽기 시점 유도(표시 전용·토글, PageRank·MCP 기본 제외).
+- 필요한 결정: ⑴ 플랜에 `coChanges[]`를 실어 CLI(로컬 git log)와 서버(GitHub commits API)가 동일 규칙(최근 400커밋·커밋당 2–50파일·sha 정렬)으로 계산하고 플랜 바이트 동등성 테스트로 고정 ⑵ co_changed를 "표시 전용 파생층"으로 규정해 동등성 계약 밖에 둔다(현행 확장) ⑶ 백필을 GitHub 경로 전용 옵션으로 두고 CLI 카드에 부재를 표기.
+- 상태: open. 기본 후보 ⑵ — ADR-015가 로컬 경로를 "그래프 전용 가교"로 규정한 정신과 정합.
+
+## OQ-036 — `tests` relation의 의미와 영수증 `implVerified` 라벨 — verified 정의가 제품 안에 둘이다
+
+- 발견: Phase 4 설계 판정·감사 반박(2026-09-04) / `apps/web/lib/map/workspace-map.ts:168`(SUPPORTING_RELATIONS), `packages/core/src/assurance/rules.ts:610-655`(assuranceCoverage implVerified = 체크박스 또는 명시 심볼), `apps/web/lib/strings/assurance.ts:161-162`, `tests/workspace-map.test.ts:200`
+- 내용: ⑴ 통합 설계는 테스트 파일→대상 파일 import에서 `tests` 엣지를 파생한다(reference 0.6). `tests`는 `SUPPORTING_RELATIONS`에 속해 있어 이름만으로는 "실행 증거"처럼 읽힐 수 있다 — 승격 자체는 소스가 evidence 노드일 때만 일어나 구조상 막히지만, `impact_of`가 이를 커버리지로 읽으면 하드룰 ①의 정신에 닿는다. ⑵ 영수증은 체크박스(사용자 주장)를 "구현 verified"로 세는 반면 맵은 실행 증거 없이는 verified를 주지 않는다 — 같은 단어가 두 의미로 쓰인다.
+- 임시 결정: `tests`는 reference 0.6·method `test-import`로 기록하고 "아티팩트 소스 tests 엣지는 verified를 만들지 않는다"를 테스트로 고정. 영수증 라벨은 현행 유지.
+- 필요한 결정: ⑴ relation 이름을 `covers`(구조 관계)로 분리하고 `tests`는 실행 증거 엣지 전용으로 예약; 영수증의 `implVerified`를 "체크됨(사용자 주장)"으로 라벨 정정 ⑵ 이름 유지 + method로 구분 + 카피 정정 ⑶ 현행 유지.
+- 상태: open. 기본 후보 ⑴.
+
+## OQ-037 — `layoutOnly` 엣지와 도메인 forceX/forceY 앵커는 "그래프 엣지가 아닌 레이아웃 입력"이다 — 하드룰 ②의 적용 범위
+
+- 발견: Phase 4 설계 판정(2026-09-04) / `spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md` §2.5·§2.6, WORK_SPEC §3-2
+- 내용: 통합 설계는 `contains`를 힘장 전용(`GraphData.layoutOnly`, near에서만 α 0.08)으로 두고, 파일→domain은 엣지로 만들지 않는 대신(차수 300 허브 = 헤어볼) 옵트인 forceX/forceY 앵커(강도 ≤0.05, 기본 off)로 카테고리 방향을 준다. contains는 저장 엣지(provenance `{reason:'path containment', tier:'resolved'}`)라 하드룰 ②를 지키지만, 앵커는 저장되지 않는 레이아웃 입력이며 "그래프에 없는 링크가 레이아웃을 정한다"는 회색지대다.
+- 임시 결정: 앵커·layoutOnly 플래그를 `GraphData` 타입으로 격리하고 MCP·인스펙터·표에 노출하지 않는다. 기본 off.
+- 필요한 결정: ⑴ WORK_SPEC §3-2에 "provenance 요구는 저장 엣지(`edges` 행)에 적용되며 렌더 레이아웃 입력은 엣지가 아니다"는 한 문장을 추가(사용자 결정) ⑵ 앵커를 금지하고 카테고리는 색·허브·접힘으로만 ⑶ 현행 격리 유지.
+- 상태: open. 기본 후보 ⑴.
+
+## OQ-038 — 읽기 상한의 패밀리별 재설계 (OQ-031 확장)
+
+- 발견: Phase 4 설계 판정(2026-09-04) / `apps/web/lib/map/workspace-map.ts:543-545`(NODE_LIMIT 2,000·EDGE_LIMIT 6,000·FEED 20), `apps/web/lib/mcp/supabase-store.ts:457-525`(loadWorkspace 상한 없음)
+- 내용: 통합 설계의 이 레포 추정은 엣지 ~4,000(contains ~890 포함)이고 전형 800파일 레포는 ~3,200이지만, 설계 4안의 전형 레포 추정치 7,570처럼 단일 EDGE_LIMIT 6,000을 넘는 경우가 있다. 설계 1은 5,000/20,000 일괄 상향을 제안했으나 이는 OQ-031 판정을 선점한다. 또한 MCP `loadWorkspace`는 상한·필터 없이 전량을 읽어 어떤 설계든 엣지가 5k로 늘면 모든 툴 호출 비용이 된다.
+- 임시 결정: 파일 레벨 NODE_LIMIT 2,000 유지. 허브는 별도 쿼리·별도 상한(directory ≤300·route ≤100·db_object ≤100·section ≤100). 엣지는 `edges.family`로 패밀리별 상한(structure 6,000·doc 6,000·hierarchy 6,000·database 3,000·route 1,000·statistical 3,000·semantic 3,000) 병렬 쿼리. MCP는 structure+evidence+semantic만 기본 로드, hierarchy/database/route는 툴 호출 시 부분 쿼리.
+- 필요한 결정: ⑴ 위 임시 결정을 정식화하고 파일 1,800+ 레포의 레벨 0(허브 + 병합 엣지) RPC 도입 시점을 정한다 ⑵ 단일 상한을 8,000 등으로 상향 ⑶ 컬럼형 `load_graph_view` RPC로 전환(패밀리별 쿼리 TTFB 측정 후).
+- 상태: open. 기본 후보 ⑴.
+
+## OQ-039 — 프로덕션 아티팩트에 본문이 없어 enrich(크레딧) 전에는 MCP·검색·팩이 내용을 서빙하지 못한다 (제품 결정)
+
+- 발견: Phase 4 기능 감사 반박·비평(2026-09-04) / `apps/web/lib/mcp/supabase-store.ts:479-481`(select에 content 없음), `:613-614`(`content: metadata.summary ?? ""`), `supabase/migrations/202608100002_evidence_graph_domain.sql:54-74`(artifacts 컬럼), `202608240001_enrich_pass.sql:338-352`, `packages/mcp/src/data-brain.ts:162`(발췌 = content.slice), `packages/core/src/context/context-pack.ts:118-120`(estimateTokens 최소 1), `docs/DEPLOYMENT_CHECKLIST.md:96-97`(프로덕션 access event 1건)
+- 내용: 하드룰 ③(원본 코드 비저장)의 직접 귀결로 `artifacts`에는 본문 컬럼이 없고, MCP 스토어는 enrich 잡이 쓴 `metadata.summary`(≤1,500자, inferred) 또는 빈 문자열을 content로 합성한다. 따라서 enrich를 돌리지 않은(=크레딧을 쓰지 않은) 워크스페이스에서 `get_node_content`·`get_artifact`·`search_index` 발췌·`request_context_pack` 본문·TODO.md 체크박스 읽기가 전부 비고, `/app/stats`의 "전체 덤프 대비 k% 감소"는 문서 개수 비율로 퇴화한다. WORK_SPEC §1.6 ③④가 말하는 "결정론·크레딧 0" 색인은 경로·제목·헤딩·심볼명까지이고 "내용"은 크레딧 뒤에 있다. 이는 토큰 미터 정직성·todo 읽기·위험 컨텍스트·첫인상(T2FV)·벤치 대표성(픽스처 본문 코퍼스로 측정한 v2)을 동시에 흔든다.
+- 임시 결정: 현행 유지. 문서·계획에서 "무료 사용자의 MCP는 enrich 전 내용이 없다"를 명시. graph-surface v3는 프로덕션 형태(요약 전용 스토어)로 그래프군을 구성한다.
+- 필요한 결정: ⑴ **결정론 발췌 서빙** — 문서는 헤딩·체크박스·요구사항 문장(이미 저장) 등 구조 요소를, 코드는 심볼명·span을 요약 없이 서빙(하드룰 ③ 무충돌: 본문이 아니라 구조 메타데이터) ⑵ **첫 enrich 1회 무료**(Pro 포함 크레딧 또는 무료 티어 1회) ⑶ 문서(마크다운)에 한해 본문 저장을 허용하는 ADR 개정 — 코드가 아니므로 하드룰 ③ 문구 재검토 ⑷ 현행 유지(빈 화면 수용).
+- 상태: open. 기본 후보 ⑴+⑵ 병행 — 사용자 결정 필요(과금·스펙 문구에 걸림).
+
+## OQ-040 — 가격 티어·게이트·결제 경로 (사용자 결정)
+
+- 발견: Phase 4 상업성 조사·비평(2026-09-04) / `spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md` §3·§4.6, WORK_SPEC §15(`:450` "MVP는 과금 코드 없이 원장만"), §16 결제 비목표, `supabase/migrations/202608100009_release_hardening.sql:2-5`(Free/Pro 차이 중 구현된 유일한 것 = 보존 기간), `apps/web/app/api/mcp/route.ts`(레이트 리밋 없음)
+- 내용: 시장은 그래프·MCP·위키를 무료로 기대하고(OSS 상품화), 좌석당 돈을 내는 것은 PR/머지 시점 판정($24–72)과 호스팅·자동 재인덱싱·팀 동기화($29–30)다. 컨텍스트 MCP 단독 호스티드는 솔로 $10–30(중앙값 ~$19). 개발자 대상 프리미엄 전환 중앙값 ~5%, AI 네이티브 GRR 40%($50 미만 23%). BYOK=0 크레딧은 드문 관대함(차별점이자 매출 상한). 제품에는 plan 컬럼·게이트·결제 경로·레포 수 제한·MCP 레이트 리밋이 없다.
+- 임시 결정: 없음(구현 착수 안 함). 계획은 "그래프 뷰·결정론 스캔·MCP 읽기는 무료, 판정·호스팅·동기화·히스토리·팀이 유료"를 전제로 작성.
+- 필요한 결정: ⑴ 티어 — Free(프라이빗 레포 1개·파일 수 캡·결정론 전부·BYOK 무제한·만료 없는 소량 판정 크레딧·수동 재스캔) / Pro $20(연납 $17; 레포 5개·푸시마다 자동 재스캔·히스토리 무제한·포함 크레딧·위험 상세·자동 재판정·내보내기) / Team flat $60–100(5석·공유 크레딧·공유 메모리·대시보드) ⑵ 크레딧 단위 — 토큰이 아니라 결과 단위(판정 1건=1크레딧, 심층 impact 3크레딧), 실행 전 예상 표시, 초과 시 "중단" 기본, 결정론 기능은 계속 동작하는 점진적 저하 ⑶ 온보딩 — 카드 없는 옵트인 프리미엄 + 14일 리버스 트라이얼, 한도 도달 시 인앱 업그레이드 ⑷ 게이트 구현 순서(plan 컬럼·레포 수·보존·크레딧 소진 동작·MCP 레이트 리밋)와 결제 제공자 — §16 비목표 재판정.
+- 상태: open. 사용자 결정 전까지 계획의 "유료 번들" 절은 정의만 담는다.
+
+## OQ-041 — 스펙 없는 레포의 요구사항 부트스트랩 — 드리프트(유료 차별화)가 타깃 사용자에게 없다
+
+- 발견: Phase 4 비평(2026-09-04) / `packages/core/src/assurance/rules.ts:411,438,570,634`(`classification === "spec"` 게이트), `packages/core/src/assurance/requirements.ts:48-56`(체크박스·수용 기준에서만 추출), `.omo/evidence/phase2c/wave-2-analyze-receipt.md:33`(파일럿 370파일 findings 0)
+- 내용: 6종 드리프트 룰은 spec 분류 문서 위에서만 발화하고 요구사항은 마크다운 체크박스·수용 기준에서만 추출된다. enrich는 요약·concept만 만들고 요구사항을 만들지 않으며 doc_page도 마찬가지다. 타깃(§1.3 코드 못 읽는 솔로 바이브 코더)의 전형 레포는 README·TODO·대화 기록뿐이라 findings 0·요구사항 0·커버리지 "미측정"이 기본 상태다 — 유료 차별화가 alrescha-app 같은 스펙 보유 레포 전용이 된다. 또한 룰의 오탐 구조(미체크 태스크마다 medium, 산문 스펙의 unproven-claim 대량 발화)는 한 번도 측정되지 않았다.
+- 임시 결정: 위험 지도는 구조 신호(untested-code·팬인·공변경)로 문서 없는 레포에서도 뜨게 한다(Wave A todo 1b·Wave D). 요구사항 부트스트랩은 착수하지 않는다.
+- 필요한 결정: ⑴ **요구사항 초안 잡**(inferred) — README·TODO·라우트·테스트 이름에서 후보 요구사항을 만들고 사용자가 확인한 것만 `requirements`에 승격(승격은 사용자 액션, 문서 PR은 advisory) ⑵ README·TODO 체크박스를 spec 룰의 대상으로 승격(`=== "spec"` 완화) — 오탐률 측정이 선행 ⑶ 드리프트를 "스펙 있는 레포 전용"으로 포지셔닝하고 카피를 바꾼다 ⑷ 현행 유지.
+- 상태: open. 기본 후보 ⑴ + 기존 6룰 정밀도 사전등록 측정(alrescha-app 자체 분석). 사용자 결정 필요(제품 포지셔닝).
+
+## OQ-042 — 라이브 화면이 레포 단위가 아니라 워크스페이스 평면이다 (WORK_SPEC §5.1 `/app/[repo]/…` 미구현)
+
+- 발견: Phase 4 비평(2026-09-04) / `apps/web/app/ui/shell-nav-data.ts:84-107`, `apps/web/lib/stats/pilot-report.ts:133-140`, `apps/web/lib/progress/progress-report.ts:192-197`, `apps/web/lib/inspection/inspection-report.ts:195-222`(최신 run sha를 전 레포 문서 신선도에 적용), `apps/web/lib/receipts/receipts-report.ts:141-147`, `supabase/migrations/202608100002_evidence_graph_domain.sql:294-304`(access_events에 repository_id 없음), `202608100010_progress_dashboard.sql:139-155`(progress_event todo repository_id NULL)
+- 내용: §5.1은 `/app/[repo]/…`를 규정하지만 라이브 내비와 모든 로더는 `.eq("workspace_id")`만 건다. 레포가 하나일 때는 문제가 없지만 Pro "무제한 레포"를 팔면 두 번째 레포를 붙이는 순간 진행·점검·통계·영수증 데이터가 섞인다. 네 감사가 각자 minor로 적었으나 합치면 blocker다.
+- 임시 결정: 현행 유지. v6 통합 마이그레이션에 `access_events.repository_id`·`progress_events.repository_id`를 추가한다(로더 변경은 별도).
+- 필요한 결정: ⑴ §5.1대로 라우트를 `/app/[repo]/…`로 전환(내비·로더 전면) ⑵ 라우트는 유지하고 상단 레포 선택기 + 모든 로더에 `repository_id` 필터 ⑶ 워크스페이스=레포 1개로 제품 정의를 바꾼다(§15 재판정).
+- 상태: open. 기본 후보 ⑵(Codex 프론트 트랙 후보). 사용자 결정 필요.
+
+## OQ-043 — 문서 노트화의 기본 포함 범위와 `.omo/evidence` 같은 로그 디렉터리
+
+- 발견: Phase 4 설계 판정(2026-09-04) / `spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md` §2.4, `packages/core/src/ingest/repository-scanner.ts:157-215`(GitHub 경로에 dot-dir 제외 없음), `packages/cli/src/local-source.ts:21-28`(CLI만 IGNORED_SEGMENTS)
+- 내용: "모든 md를 노트로" 하면 이 레포의 `.omo/evidence` 91개가 doc→file 참조 수백 개를 만들어 문서 성단이 화면을 다시 지배할 수 있다(진짜 인용이긴 하다). 또한 GitHub 스캔 경로에는 dot-dir 제외가 없고 CLI 로컬 소스에는 있어 `.omo` 같은 디렉터리에서 두 경로의 플랜이 달라진다(ADR-013 회귀 후보).
+- 임시 결정: 기본 ignore 목록(output/·coverage/·dist/·lockfile·node_modules)을 두 경로 공통 상수로 고정하고, `.alrescha.json`의 `ignore`·`layers.hidden`으로 레포별 조정. `.omo`류 로그 디렉터리는 기본 포함하되 `layers.hidden` 기본값 후보로 표기.
+- 필요한 결정: ⑴ 기본 ignore를 "빌드 산출물만"으로 최소화하고 로그 디렉터리는 사용자가 숨긴다 ⑵ 점 디렉터리(`.omo`·`.claude`·`.agents` 제외)를 기본 제외 ⑶ 문서 밀도 상한(문서 노드 ≤N)으로 자동 접기.
+- 상태: open. 기본 후보 ⑴ + 두 경로 ignore 규칙 동등성 테스트.
+
+## OQ-044 — `untested-code`의 발화 단위: 파일마다 finding인가, 레포 배너인가
+
+- 발견: Phase 4 Wave A todo 1 / `packages/core/src/assurance/rules.ts`(`untested-code` 룰), `spec/WORK_SPEC.md` §9(“missing-test — CI 미연결 레포는 일괄 배너로 안내, 개별 스팸 금지”), `spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md` §4.3 품질 바(“문서 없는 레포에서도 코드 파일 ≥100이면 위험 상위 10이 비어 있지 않음”)
+- 내용: 두 문서가 반대 방향을 가리킨다. §9는 증거가 통째로 없는 레포에 개별 finding을 만들지 말라 하고, R5 §4.3은 문서가 없는 레포에서도 위험 목록이 비지 않아야 한다고 요구한다. 테스트가 하나도 없는 레포에서 룰을 파일마다 발화시키면 "전부 미테스트"라는 한 문장이 수백 개 행이 된다.
+- 임시 결정: 파일마다 발화한다. R5의 품질 바가 요구하는 것이 정확히 그 레포의 비어 있지 않은 위험 목록이고, §9의 스팸 금지는 `missing-test`(요구사항 단위)에 대한 규정이기 때문이다. 대신 오탐을 경로 규칙으로 묶었다 — 테스트 파일 자체·설정·`.d.ts`·생성 파일·모듈 진입점(`index.*`/`__init__.py`)은 발화하지 않고, export가 하나도 없는 파일도 제외한다. 실측: 이 레포 코드 아티팩트 477개 중 103건(21.6%), drifted-demo 2건, layout-variants 6·5건.
+- 필요한 결정: ⑴ 현행 유지(파일마다) ⑵ 레포에 테스트 파일이 0이면 발화하지 않고 배너 하나로 대체 ⑶ 발화는 유지하되 표시 계층에서 집계(위험 지도 상위 N + "그 외 n건") — Wave D todo 21의 위험 지도 빌더에서 결정.
+- 상태: open. 기본값 ⑴로 진행. 정밀도는 미측정이므로 카피는 R5 §4.3대로 "위험 후보"에 머문다.
+
+## OQ-045 — 요구사항→코드 `implements` 파생이 심볼 이름 하나뿐이다 (실측 커버리지 6%)
+
+- 발견: Phase 4 Wave A todo 1 / `packages/core/src/assurance/rules.ts`(`requirementImplementationLinks`·`explicitImplementationSymbols`), `spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md` §2.5(“implements … 이 레포 ~120”)
+- 내용: 파생 규칙은 기존 `missing-implementation` 룰이 쓰던 것과 같다 — 요구사항 문장 안의 camelCase 토큰 중 **선언 파일이 유일한** 심볼. 이 레포 실측은 요구사항 127개 중 링크 8개(고유 대상 6개)로, R5 §2.5의 추정 ~120과 한 자릿수 차이다. 원인은 이 레포 스펙 문장이 심볼이 아니라 경로·클래스명·메서드명(최상위 export가 아님)을 인용하기 때문이다. 그 결과 `/app/progress`의 요구사항 커버리지는 "미측정"에서 벗어나지만 6%라는 낮은 수치로 읽힌다 — 구현률이 아니라 링크율인데 화면 라벨은 "요구사항 커버리지"다.
+- 임시 결정: 심볼 소유 방식만 채택했다. 경로 인용(요구사항 span 안의 코드 참조 토큰) 방식을 실측해 봤으나 이 레포에서 +4건에 그쳐 복잡도 대비 이득이 없었다. PascalCase(컴포넌트·클래스·타입)까지 넓히면 `missing-implementation`의 발화 조건도 함께 변하므로 이번 범위에서 제외했다.
+- 필요한 결정: ⑴ 파생을 넓힌다(PascalCase 심볼 + 요구사항 span 안의 경로 참조 + 메서드 심볼 저장) — `missing-implementation` 정밀도 영향 측정이 선행 ⑵ 지표 라벨을 "구현 링크율"로 정정해 낮은 수치가 오독되지 않게 한다 ⑶ 현행 유지하고 Wave D의 finding 상세에서 "링크 없음"을 개별 요구사항 단위로 노출한다.
+- 상태: open. 기본 후보 ⑵(카피 정정은 Wave D todo 19 범위) + R5 §4.2 품질 바(implements 정밀도 ≥0.80, 사람 라벨) 측정 후 ⑴ 재판정.
+
+## OQ-046 — `unknown` 노드와 `rationale` 노드의 도메인·색이 아직 없다
+
+- 발견: Phase 4 Wave A todo 1 / `apps/web/lib/dashboard/graph-model.ts`(`NODE_TYPE_CLASSIFICATION`), `apps/web/lib/graph/render-frame.ts`(`NODE_TOKEN_BY_TYPE`), `spec/BUILD_PLAN_PHASE4.md` Wave A todo 4(도메인 6종·`node-database` 등 신규 토큰)
+- 내용: `GraphNodeType`에 `rationale`·`unknown`을 추가했지만 `graphNodeArea`는 `BrainArea` 4종(frontend·backend·docs·tests)만 안다. 두 종류 모두 `code_metadata`로 area를 유도하므로 rationale은 자신이 붙은 코드 파일의 도메인을 따르고(의도한 수정), `unknown`은 경로로 유도돼 frontend/backend 중 하나로 들어간다 — "미분류"라고 부르면서 도메인은 하나 고르는 셈이다. 색도 기존 토큰을 빌려 쓴다(rationale=`node-code`, unknown=`border-muted`).
+- 임시 결정: 그대로 둔다. todo 4가 `unclassified→기타`를 도입하면서 같은 자리를 다시 만지고, 스프라이트·범례는 Wave B todo 12 소관이다. `unknown`은 로더 정렬 정합으로 0건이어야 하며 todo 3의 수용 기준이 그것을 단언한다.
+- 필요한 결정: todo 4에서 `unknown`을 `기타` 도메인으로 보내고 전용 토큰을 줄지, 아니면 `unknown` 자체를 렌더에서 숨기고 카운트로만 노출할지.
+- 상태: open. todo 3·4에서 함께 판정.
+
+## OQ-047 — `.alrescha.json`의 나머지 필드(`layout`·`layers.hidden`·`todoFiles`·`progressDocs`)를 누가 언제 읽는가
+
+- 발견: Phase 4 Wave A todo 2 / `packages/core/src/ingest/repository-config.ts`(이번에 신설, `ignore`만 해석), `spec/BUILD_PLAN_PHASE4.md` Wave A todo 2("`.alrescha.json ignore/layers.hidden`")와 todo 4("`.alrescha.json`(`layout`·`ignore`·`layers.hidden`·`todoFiles`·`progressDocs`)을 아티팩트로 읽어 커밋 sha와 함께 `repositories.layout_config` 저장")
+- 내용: 두 todo가 같은 파일을 나눠 갖는다. todo 2에서 `ignore`는 **스캔 결과를 바꾸므로** 지금 해석해야 했다(그러지 않으면 OQ-043의 "레포가 `.omo`를 빼는 방법"이 존재하지 않는다). 나머지 네 필드는 소비자가 아직 없다 — `layers.hidden`은 Wave B의 레이어 토글이, `layout`·`todoFiles`·`progressDocs`는 todo 4의 `repositories.layout_config`가 있어야 의미를 갖는다. 지금 저장하면 아무도 읽지 않는 설정이 DB에 남는다.
+- 임시 결정: `ignore`만 스캐너가 해석한다(트리에서 읽고 분류 전에 적용, 두 경로 동일). 나머지는 todo 4로 미룬다. 파싱 실패·미지원 필드는 조용히 빈 설정으로 취급한다 — 설정 파일 오타가 스캔을 죽이지 않는다.
+- 필요한 결정: ⑴ todo 4가 같은 모듈을 확장해 전체 설정을 파싱하고 `layout_config`에 커밋 sha와 함께 저장(기본 후보) ⑵ 설정 전체를 플랜에 실어 올리고 서버는 저장만(플랜 스키마 확대 — strict 스키마 동기 비용) ⑶ `ignore`도 서버 설정으로 옮긴다(ADR-013 동등성 위반 — 기각).
+- 상태: **resolved(Wave A todo 4, 2026-09-05)** — ⑴ 채택. `repository-config.ts`가 전체 어휘를 파싱하고, 파싱된 값이 플랜에 실려 `repositories.layout_config`에 커밋 sha와 함께 저장된다. `layout`은 즉시 소비되고(도메인 유도), `layersHidden`·`todoFiles`·`progressDocs`는 저장만 — 소비자는 각각 Wave B 레이어 토글과 todo 5의 todo 파서다.
+
+## OQ-048 — 문서 노트화 이후 `.omo` 문서가 최대 허브가 됐다 (실측)
+
+- 발견: Phase 4 Wave A todo 2 실측 / `.omo/evidence/phase4/graph-density-2026-09-05.md`
+- 내용: OQ-043의 임시 결정("`.omo`류 로그 디렉터리는 기본 포함")대로 스캔했더니 이 레포에서 doc→file 엣지 **657건 중 470건이 `.omo/evidence/**`에서 나왔다**(제외 시 187건). 수용 기준의 "doc→file ≥300"은 `.omo` 포함으로만 충족된다. 최대 차수 노드는 `spec/OPEN_QUESTIONS.md`(101)이고 상위 10위에 `.omo/evidence/naming-cleanup.md`(29)가 들어온다 — 증거 로그가 실제로 코드를 많이 인용하기 때문이며 링크 자체는 전부 진짜다(경로가 트리에 존재).
+- 임시 결정: 그대로 둔다. 링크가 거짓이 아니고, 빼는 수단(`.alrescha.json ignore`)이 이번 todo에서 동작하며, 화면에서 접는 수단(레이어 토글)은 Wave B에 있다.
+- 필요한 결정: ⑴ 현행 유지 + Wave B 레이어 토글 기본값에서 `.omo`류를 접기 ⑵ 이 레포에 `.alrescha.json`을 추가해 자기 그래프에서 제외(제품 기본값은 불변) ⑶ 기본 ignore에 점 디렉터리를 추가(OQ-043 선택지 ⑵ 재검토 — 두 경로 동등성은 이제 공통 상수가 보장하므로 순수 제품 판단).
+- 상태: open. 밀도 게이트(todo 8)가 실측치를 다시 잴 때 함께 판정.
+
+## OQ-049 — 통과 디렉터리 접기(파일 0·자식 1)를 어디서 하는가
+
+- 발견: Phase 4 Wave A todo 3 / `supabase/migrations/202609050002_directory_nodes.sql`(모든 조상 디렉터리를 노드로 만든다), `spec/BUILD_PLAN_PHASE4.md` Wave A todo 3("통과 디렉터리(파일 0·자식 1)는 로더가 접음")
+- 내용: 계획은 접기를 로더(표시 계층)에 맡긴다. 이번 todo는 **저장은 충실하게**(모든 조상 디렉터리 + `contains`) 두고 접기는 구현하지 않았다. 이유 셋: ⑴ 접으면 로더가 `contains` 엣지를 재배선해야 하는데(조부모가 손자를 입양) 그 결과는 Wave B의 `hierarchyAssignment`가 어차피 다시 계산한다 ⑵ MCP `get_neighbors`·그래프 툴은 저장된 트리를 그대로 읽으므로 표시용 접기와 저장 트리가 갈리면 에이전트와 화면이 다른 계층을 본다 ⑶ 이 레포 실측 142개 디렉터리 중 통과 디렉터리는 소수이고, 접지 않아도 노드 예산(300)에 여유가 있다.
+- 임시 결정: 저장은 충실, 접기는 미구현. `MAP_HIERARCHY_FOLD_THRESHOLD`(3,000)는 "클라이언트가 계층으로 접어야 한다"만 보고하고 접기 자체는 todo 12 소관이다.
+- 필요한 결정: ⑴ Wave B todo 12의 `hierarchyAssignment`가 통과 디렉터리 접기를 함께 처리(기본 후보) ⑵ 로더가 접고 MCP는 저장 트리를 읽는다(두 계층이 갈림 — 비추) ⑶ SQL이 아예 만들지 않는다(저장 트리가 실제 트리와 달라짐 — 비추).
+- 상태: open. 기본 후보 ⑴, todo 12에서 판정.
+
+## OQ-050 — db_object의 정체성이 스키마 한정자를 버린 이름 하나다
+
+- 발견: Phase 4 Wave A′ todo 7 / `packages/core/src/ingest/schema-links.ts`(`bareName`), `supabase/migrations/202609060001_database_objects.sql`(`db_objects_workspace_repository_name_unique`)
+- 내용: `public."todos"`·`todos`·`analytics.todos`가 모두 `todos` 한 노드로 접힌다. 이유는 실용적이다 — 마이그레이션은 같은 테이블을 어떤 줄에서는 한정자와 함께, 어떤 줄에서는 없이 쓰고, 코드 리터럴(`.from('todos')`)에는 한정자가 아예 없다. 한정자를 정체성에 넣으면 이 레포에서 FK·`queries` 대부분이 서로 다른 노드로 갈라진다. 대가는 멀티스키마 레포에서의 충돌이다: `public.events`와 `analytics.events`가 한 노드가 되고, 두 번째로 읽힌 마이그레이션이 `source_path`를 덮어쓴다.
+- 임시 결정: 한정자를 버린 소문자 이름이 정체성. 이 레포는 전부 `public`이라 지금은 무손실이다.
+- 필요한 결정: ⑴ `search_path`가 하나인 레포는 현행 유지, 스키마가 둘 이상 검출되면 그때 한정자를 붙인다(기본 후보 — 이름 규칙이 레포마다 달라지는 비용) ⑵ 항상 `schema.name`으로 저장하고 코드 리터럴은 `public`으로 가정해 매칭(가정이 틀리면 조용히 잘못된 엣지) ⑶ 현행 유지 + 충돌 시 finding 발행.
+- 상태: open. 멀티스키마 레포를 실제로 스캔할 때 판정.
+
+## OQ-051 — `queries` 엣지가 파일 단위라 호출 지점이 하나만 남는다
+
+- 발견: Phase 4 Wave A′ todo 7 실측 / `packages/core/src/ingest/schema-links.ts`(`resolveSchemaLinks`의 `path|name` 중복 제거)
+- 내용: 한 파일이 같은 테이블을 20번 읽어도 엣지는 하나고, 남는 span은 **첫 번째 줄**이다. 이 레포 실측 158개 `queries` 엣지가 40개 파일에서 나왔다 — 호출 지점 단위였다면 수천 개가 되고 database 밴드가 구조 밴드를 덮는다. 대신 "이 파일의 어느 함수가 `findings`를 건드리는가"에는 답하지 못한다. 같은 자리에 `.rpc('f')`도 있는데, 이것은 사실 함수 **호출**이면서 관계 이름은 `queries`다 — `calls`는 파일→심볼 관계라 재사용할 수 없었다.
+- 임시 결정: 파일 단위 1엣지, span은 첫 호출 지점. 밀도가 먼저다.
+- 필요한 결정: ⑴ 현행 유지 + `provenance`에 호출 횟수만 추가(기본 후보) ⑵ 심볼 엔진이 있는 언어에서 심볼→테이블로 올린다(파일 노드가 아닌 심볼 노드가 그래프에 없어 선행 작업 필요) ⑶ `.rpc()`를 별도 관계로 분리.
+- 상태: open. 밀도 게이트(todo 8)가 실측치를 다시 잴 때 함께 판정.
+
+## OQ-052 — `impact_of`의 기본 의미를 언제 directional로 바꾸는가
+
+- 발견: Codex 보완 설계 P0-C / [REMEDY §7.3](../docs/reports/REMEDY_DESIGN_2026-09-06.md), `packages/mcp/src/graph-tools.ts`(`impactOf`), `spec/BUILD_PLAN_PHASE4.md` todo 22-⑷
+- 내용: 현재 `impactOf`는 **무방향 depth-2 이웃**을 "영향"이라고 부른다. `A imports B`, `C imports B`일 때 A를 고치면 C가 영향에 들어온다 — C는 A를 모른다. 올바른 dependency impact는 `imports`/`calls`의 **역방향 도달**이고, doc `references`·`contains`·유사도는 전파 통로가 아니다. 다만 기존 응답(`transitiveNodeIds`)의 의미를 설명 없이 바꾸면 이미 그 값을 쓰는 클라이언트·벤치·계약 테스트가 조용히 다른 답을 받는다.
+- 임시 결정: `mode`(`related-neighborhood` 기본 · `dependency-impact` opt-in)로 **호환 이행**한다. 새 UI·하네스는 새 mode를 쓰고, 기존 결과에는 related-neighborhood임을 응답에 적는다.
+- 필요한 결정: ⑴ 계약 테스트와 실클라이언트(Claude Code·Codex·Cursor) 관측 뒤 todo 22에서 기본값을 `dependency-impact`로 전환(기본 후보) ⑵ 두 mode를 영구히 유지하고 기본은 그대로(호출자가 계속 잘못된 기본을 받는다) ⑶ 즉시 전환하고 `semanticsVersion`으로만 알린다(기존 계약 테스트가 깨진다).
+- 상태: open. todo 22에서 판정.
+
+## OQ-053 — 읽기 일관성(`dataRevision`)을 도입할지, 도입하면 어느 writer가 증분하는가
+
+- 발견: Codex 보완 설계 P0-B / [REMEDY §5.3~§5.4](../docs/reports/REMEDY_DESIGN_2026-09-06.md), `apps/web/lib/mcp/supabase-store.ts`(`loadWorkspace`), `apps/web/lib/map/workspace-map.ts`
+- 내용: 페이지를 나눠 읽으면 페이지 사이에 데이터가 바뀔 수 있다. 단일 SELECT의 snapshot 보장은 그 페이지까지고, PG 17 기본 Read Committed에서는 같은 트랜잭션의 연속 SELECT도 다른 시점을 본다 — 기존 조회를 VOLATILE PL/pgSQL 함수로 감싸는 것으로는 해결되지 않는다. 해결책은 revision fence(읽기 전후 같은 revision 확인) 또는 immutable generation인데, 둘 다 **writer 쪽 규율**을 요구한다: read-visible 변경과 revision UPDATE가 같은 트랜잭션이어야 하고, `access_events`·`last_used_at` 같은 읽기 부수 기록은 넣으면 안 된다(읽기가 자기 자신을 무효화한다). 커밋 SHA는 대용이 될 수 없다 — 같은 커밋에서 enrich·CI·todo 상태가 바뀐다.
+- 임시 결정(폐기): 도입하지 않고 불완전한 조회를 정직하게 보고만 한다.
+- 필요한 결정: ⑴ repo 공통 revision 하나 + workspace memory revision 하나로 시작(종류별 counter를 늘리지 않는다) ⑵ generation 기반 immutable snapshot ⑶ 계속 도입하지 않고 페이지 사이 변경은 재시작으로만 처리.
+- 상태: **resolved(보완 S6, 2026-09-06)** — ⑴ 채택. `repositories.data_revision`과 `workspaces.memory_revision` 둘뿐이고, 두 writer(`apply_repository_scan`은 커밋을 발행하는 바로 그 UPDATE에서, `apply_artifact_summaries`는 실제로 행이 바뀐 경우에만)가 **자기 트랜잭션 안에서** 증분한다. `access_events`·`last_used_at`는 증분하지 않는다 — 넣으면 읽기가 자기를 무효화한다. `read_edge_page(… expected_revision)`가 fence이고, 어긋나면 행 대신 `revisionChanged`와 현재 revision을 돌려준다. 워크스페이스 로드는 읽기 전후 revision을 비교해 `revision-fenced`인지 `unproven`인지 보고한다. ⑵는 미채택 — 과거 조회 수요가 없고, 없는 generation을 커밋 SHA로 꾸미지 않으려고 `graphGeneration`은 명시적 null이다. 재시도 루프는 미구현(정직한 보고까지만) — [evidence](../.omo/evidence/phase4/remedy-s6.md).
+
+## OQ-054 — `.alrescha.json`가 확장할 수 있는 것이 접두어인가 패턴인가
+
+- 발견: Phase 4 Wave A′ todo 8 / `packages/core/src/ingest/section-links.ts`(`DEFAULT_SECTION_TOKEN_PREFIXES`·`prefixesOf`), `packages/core/src/ingest/repository-config.ts`(`sectionTokens`), `spec/BUILD_PLAN_PHASE4.md` todo 8("`.alrescha.json`로 확장 가능")
+- 내용: 계획은 ID 토큰 집합을 레포 설정으로 넓힐 수 있다고만 말한다. 가장 표현력 있는 형태는 정규식이지만, `.alrescha.json`은 **스캔 대상 레포가 쓴 파일**이고 그 정규식은 트리의 모든 문서 위에서 돌아간다 — catastrophic backtracking 하나로 스캔이 멈춘다. 그래서 받는 것은 리터럴 접두어(`"RFC"`)뿐이고, 패턴은 `\bRFC-?\d{1,4}\b`로 이쪽이 조립한다. 대가는 `ISSUE_1234`나 `[JIRA-12]` 같은 다른 모양을 표현할 수 없다는 것이다.
+- 임시 결정: 리터럴 접두어만. `^[A-Z][A-Z0-9]{0,7}$`를 통과하지 못하는 값은 조용히 버린다(설정 오타가 스캔을 죽이지 않는다 — OQ-047의 규칙).
+- 필요한 결정: ⑴ 접두어 유지 + 필요하면 구분자(`_`·` `)만 옵션으로 추가(기본 후보) ⑵ 안전한 부분집합 DSL(문자 클래스·자릿수 범위만) ⑶ 타임아웃·길이 제한을 건 정규식 허용(재귀 백트래킹은 타임아웃으로 못 막는 경우가 있다 — 비추).
+- 상태: open. 다른 토큰 관례를 쓰는 실레포를 스캔할 때 판정.
+
+## OQ-055 — 증분 스캔이 소유 목록을 이번 플랜에서만 읽는다 (`queries` 엣지 누락)
+
+- 발견: Phase 4 Wave A′ todo 8 작업 중 todo 7 재검토 / `packages/core/src/ingest/schema-links.ts`(`resolveSchemaLinks`의 `owned` 필터)
+- 내용: `queries`는 "소유 테이블 목록에 있는 이름만"이고, 그 목록은 **이번 플랜의 `schemaObjects`**다. 증분 스캔에서 코드 파일만 바뀌면 마이그레이션은 다시 읽히지 않으므로 `schemaObjects`가 비고, `.from('findings')`는 필터에서 떨어진다 — 같은 커밋인데 full relink면 엣지가 있고 증분이면 없다(D2류 결함). todo 8의 section은 이 함정을 피해 설계했다: TS는 자기 홈만 걸러내고 소유 판정은 **SQL이 영속된 `sections`와 조인**해서 한다.
+- 임시 결정: todo 7 동작을 그대로 둔다. 완화책은 이미 있다 — todo 16이 `link_schema_version` 불일치에서 자동 full relink를 건다.
+- 필요한 결정: ⑴ `resolveSchemaLinks`의 `queries` 필터를 걷어내고 SQL 조인이 소유를 판정하게 한다(section과 같은 모양 — 플랜에 남의 테이블 이름이 실린다) ⑵ 증분 스캔이 schema 분류 파일을 항상 다시 읽는다(fetch 수·`scan-fetch-concurrency` 기대값 변경) ⑶ 현행 유지 + 밀도 게이트가 두 모드의 엣지 수 차이를 단언.
+- 상태: open. ⑴이 기본 후보. todo 16의 재스캔 작업에서 함께 판정.
+
+## OQ-056 — 밀도 임계값을 어디에 걸 것인가 (픽스처가 너무 작다)
+
+- 발견: Phase 4 Wave A′ todo 8 실측 / `tests/graph-density.test.ts`, `spec/BUILD_PLAN_PHASE4.md` 밀도 목표표
+- 내용: 계획은 "픽스처 2종에서 평균 차수 ≥3·고아 ≤10%"라고 적었지만, 실측하면 `drifted-demo`는 27노드/19엣지/차수 **1.41**·고아 12/17, `next-fastapi`는 34노드/47엣지/차수 **2.76**·고아 6/22이다. 15파일에 import 3개인 데모는 **작아서** 성긴 것이지 추출기가 망가져서가 아니다. 임계값을 픽스처가 통과하도록 낮추면 게이트가 아무것도 막지 못한다(테스트 약화 금지). 반면 같은 임계값의 출처인 이 레포는 **1,253노드/5,213엣지/차수 8.32/고아 4.2%/삼각형 2,533**으로 여유롭게 통과한다.
+- 임시 결정: 임계값(차수 ≥3·고아 ≤10%·삼각형 >0)은 **이 레포**에 건다. 픽스처는 ⑴ 실측값을 회귀 베이스라인으로 고정하고 ⑵ 내용상 있어야 할 엣지 패밀리 전수를 단언한다 — 34노드 평균이 못 잡는 추출기 고장을 이쪽이 잡는다.
+- 필요한 결정: ⑴ 현행 유지(기본 후보) ⑵ `next-fastapi`를 "전형 800파일" 규모에 가깝게 키운다(계획의 목표 열이 그 규모를 말한다 — 손으로 쓰면 비싸고, 생성하면 가짜다) ⑶ 실레포 스냅샷을 픽스처로 커밋(라이선스·크기·비밀 문제).
+- 상태: open. ⑵는 Wave C의 실레포 온보딩에서 실물 데이터가 생긴 뒤 재검토.
+
+## OQ-057 — 이웃 캐시는 계층·라우트·데이터베이스·section 엣지를 못 본다
+
+- 발견: Phase 4 Wave C todo 17 동등성 비교 / `supabase/migrations/202609060005_repository_revision.sql`(`apply_repository_scan`의 `index_entries.neighbor_ids` UPDATE 위치), `packages/mcp/src/local-workspace.ts`
+- 내용: `apply_repository_scan`은 이웃 캐시를 **문서 링크 직후**에 채운다. 디렉터리·라우트·테이블·section 노드는 그보다 **뒤**에 만들어지므로, 저장된 `neighbor_ids`에는 파일과 rationale만 들어간다. `search_index`가 히트마다 돌려주는 `neighborIds`는 그래서 그래프의 일부만 말하고, 같은 노드를 `get_neighbors`로 물으면 더 많이 나온다 — 같은 질문에 두 답이다.
+- 임시 결정: 현행 유지. 로컬 투영도 **똑같이** 앞의 세 writer만 세도록 맞췄다 — 여기서 더 채우면 개선처럼 보이지만 두 경로가 갈라진다(todo 17 동등성 테스트가 그 차이를 잡는다).
+- 필요한 결정: ⑴ 이웃 캐시 UPDATE를 함수 맨 끝으로 옮긴다(한 줄 이동이지만 `search_index` 응답 크기가 커진다 — todo 22 예산과 함께 판정) ⑵ 캐시를 없애고 읽는 시점에 역방향 조회 ⑶ 현행 유지 + `search_index` 문서에 "구조 이웃만"이라고 적는다.
+- 상태: open. ⑴이 기본 후보. todo 22의 읽기 예산 작업에서 함께 판정.
+
+## OQ-058 — stdio는 2025 핸드셰이크를 받아들이고 호스티드는 거절한다
+
+- 발견: Phase 4 Wave C todo 17 실측 / `packages/mcp/src/local-serve.ts`(`serveStdio`의 `legacy`), `packages/mcp/src/hosted.ts`(`createMcpHandler`의 `legacy: "reject"`)
+- 내용: 호스티드 엔드포인트는 2025년 개시를 지원 리비전 오류로 거절한다. stdio에서 같게 하면 **SDK의 기준 클라이언트조차 연결하지 못한다** — 측정했다: `StdioClientTransport` + `Client.connect` 기본값은 2025 `initialize`로 열고, HTTP에서 modern 개시를 만드는 헤더 봉투가 stdio에는 없어 형제 프로세스 probe가 필요하다. 그래서 `legacy: "serve"`다. 표면은 갈라지지 않는다(같은 팩토리가 두 시대를 서빙하고, 세션·샘플링·로깅 capability 자체가 없다).
+- 임시 결정: stdio는 `serve`, 호스티드는 `reject`. 차이를 숨기지 않고 여기에 적는다.
+- 필요한 결정: ⑴ 실클라이언트(Claude Code·Codex·Cursor)가 modern 개시를 보내기 시작하면 stdio도 `reject`로 올린다(기본 후보) ⑵ 지금 `reject`로 올리고 연결 불가를 감수한다(기각 후보 — 쓸 수 없는 기능이 된다) ⑶ 호스티드를 `serve`로 낮춘다(기각 — 하드룰 후퇴).
+- 상태: open. todo 22의 실클라이언트 호환 패스에서 `toolResult` 이중 직렬화와 함께 재측정.
+
+## OQ-059 — 툴 카탈로그 ≤1,500토큰·≤16개는 이 SDK에서 도달할 수 없다
+
+- 발견: Phase 4 Wave E todo 22 실측 / `packages/mcp/src/hosted.ts`, `packages/mcp/src/hosted.test.ts`(계약 테스트), `spec/BUILD_PLAN_PHASE4.md` todo 22 ⑴
+- 내용: 계획은 카탈로그를 **툴 ≤16개·`count_tokens` ≤1,500**으로 잡았다. 실측: 시작 23개 **9,995토큰** → `outputSchema` 전부 제거 **3,501**(65%가 그 필드였다 — 계획의 "62%" 추정이 맞았다) → 툴 3개 병합·설명 1줄화 **2,664** → `families` 필터 추가 **2,704**. 남은 비용의 대부분은 서버가 통제하지 않는 **SDK 봉투**다: 입력 스키마가 완전히 빈 툴(`get_graph_schema`)도 이름·`$schema` URL(`https://json-schema.org/draft/2020-12/schema`)·`annotations`로 259자 ≈ **65토큰**을 쓴다. 20개면 파라미터 하나 없이도 약 1,300토큰이고, 16개로 줄여도 약 1,040이라 모든 입력 스키마에 460토큰만 남는다 — 타입 있는 파라미터를 4–6개씩 가진 툴들에는 불가능하다.
+- 임시 결정: **측정값에 래칫**을 건다(현재 2,750 상한, 계약 테스트). 숫자는 내려갈 수만 있다. 계획의 1,500은 목표로 남기되 달성했다고 적지 않는다.
+- 필요한 결정: ⑴ 봉투를 줄인다 — `$schema`를 툴마다 반복하지 않는 SDK 옵션이나 `tools/list` 응답 압축이 있는지 확인(업스트림 질문, 기본 후보) ⑵ 16개까지 더 줄인다 — 남은 후보는 `get_findings`→`query_brain(types:['finding'])`, `repo_overview`→`repo_map(format)`, `memory_read`+`memory_write`→`memory(mode)`, `record_prompt` 미노출(단 ⑶의 훅 경로가 생긴 뒤 — 지금 빼면 WORK_SPEC §11에 호출자가 하나도 없다) ⑶ 상한을 실측 가능한 수로 고쳐 적는다(예: 툴당 ≤135토큰).
+- 상태: open. ⑴을 먼저 확인하고, 답이 "없다"면 ⑵와 ⑶을 함께 판정한다.
+
+## OQ-060 — 4자/토큰은 가정이고, 절감 미터는 그 가정 위에 선다
+
+- 발견: Phase 4 Wave E todo 23 / `supabase/migrations/202609060011_session_telemetry.sql`(`access_events.estimated_tokens` 생성 열), `packages/mcp/src/repo-map.ts#estimateTokens`, todo 24 절감 미터
+- 내용: 서빙한 응답의 길이는 **실측**이지만 토큰 수는 아니다. 4자/토큰은 이 레포가 처음부터 써 온 어림이고, 이제 열에 고정되어 있다(생성 열이라 writer가 다른 비율을 쓸 수 없다 — 가정이 하나라는 것 자체는 보장된다). 문제는 그 하나가 **맞는지**다: 한국어 산문, 경로 문자열, base32 ULID, JSON 구두점은 토크나이저마다 다르게 쪼개지고 모델마다 다르다. todo 24의 "레포별 절감"이 이 숫자를 곱해서 만들어지면, 측정처럼 보이는 추정이 된다 — RULE 4가 금지하는 바로 그 형태다.
+- 임시 결정: 열은 그대로 두고 **가정을 표면에 적는다**. `docs/PRIVACY.md`는 "고정 4자/토큰"이라고 명시했고, 저장하는 원본은 `response_chars`(사실)이므로 비율이 바뀌어도 과거 데이터를 다시 계산할 수 있다 — 이것이 길이를 저장하고 토큰을 파생시킨 이유다.
+- 필요한 결정: ⑴ 에이전트 자가보고(`report_session_usage`)와 서빙 길이를 **같은 창에서 회귀**시켜 이 레포의 실제 자/토큰을 구한다(기본 후보 — 옵트인 데이터가 쌓여야 가능) ⑵ 실제 토크나이저를 서버에 들인다(모델별 의존성·비용) ⑶ 토큰 표기를 버리고 문자 수만 말한다(정직하지만 비교 불가).
+- 상태: open. ⑴은 todo 24 착수 전에 표본이 필요하다. 그때까지 어떤 화면도 이 숫자를 "측정"이라고 부르지 않는다.
+
+## OQ-061 — 옵트인 툴은 옵트인하지 않은 워크스페이스의 예산도 쓴다
+
+- 발견: Phase 4 Wave E todo 23 실측 / `packages/mcp/src/hosted.ts`(`report_session_usage` 등록), `packages/mcp/src/hosted.test.ts`(카탈로그 래칫)
+- 내용: `report_session_usage`를 더하니 카탈로그가 20개 2,704토큰 → 21개 **2,890토큰**이 됐다(실측, 래칫이 잡았다). 이 툴은 워크스페이스가 파일럿 계측을 켠 경우에만 무언가를 저장하는데, **카탈로그 비용은 켜지 않은 워크스페이스도 매 세션 낸다.** 켜지 않은 사용자에게 186토큰은 순수한 손실이고, todo 22가 9,995→2,704까지 줄인 이유와 정면으로 부딪친다.
+- 임시 결정: 무조건 등록한다. `tools/list`는 토큰 단위 private 캐시라 워크스페이스별로 다른 카탈로그를 주는 것 자체는 가능하지만, **카탈로그가 상태에 따라 모양을 바꾸면 "이 서버에 무슨 툴이 있나"라는 질문에 답이 여러 개가 된다** — 없는 툴을 부른 에이전트는 스코프 거절과 구별되지 않는 오류를 받는다.
+- 필요한 결정: ⑴ 현행 유지 + 설명 한 줄에 "옵트인" 명시(기본 후보) ⑵ 옵트인한 워크스페이스에만 등록(`tools/list`마다 워크스페이스 읽기 1회 추가) ⑶ 훅 수신 경로(todo 22 ⑶)가 생기면 툴을 내리고 훅만 남긴다 — 툴 수 예산으로는 이쪽이 정답이지만 훅이 없는 클라이언트는 보고할 방법이 사라진다.
+- 상태: open. todo 22 ⑶의 훅 스니펫이 나온 뒤 ⑶을 재판정한다.
+
+## OQ-062 — Cursor `alwaysApply`는 프런트매터에 있고 스캔은 본문을 저장하지 않는다
+
+- 발견: Phase 4 Wave E todo 24 / `packages/core/src/inspection/instruction-cost.ts`, `packages/core/src/ingest/repository-scanner.ts`(`classifyArtifactPath`), WORK_SPEC §5.2-③ 표1
+- 내용: 상시 로드 비용 표의 로드 규칙 셋 중 둘(Claude Code `CLAUDE.md`·`.claude/rules`, Codex `AGENTS.md` 계층)은 **경로만으로** 판정된다. 세 번째 Cursor 규칙은 `.cursor/rules/*.mdc`의 `alwaysApply` 프런트매터에 달려 있는데, 스캔은 경로·분류·`size_bytes`만 저장하고 본문은 저장하지 않으므로(WORK_SPEC §3-3) 읽을 방법이 없다. `true`로 추측하면 상시 합계에 "아마도"가 들어가고 `false`로 추측하면 실제 비용이 숨는다.
+- 임시 결정: `unknown` 모드로 보고하고 **상시 합계에서 뺀다.** 표는 이유를 문장으로 같이 보여준다("frontmatter…the scan stores no file bodies to read it from"). 커버리지·감사 부재를 `unmeasured`로 보고하는 todo 21과 같은 규칙이다.
+- 필요한 결정: ⑴ 스캐너가 `.mdc` 프런트매터의 `alwaysApply`(그리고 `globs`)를 **메타데이터로** 뽑아 `artifacts.metadata`에 넣는다 — 불리언은 본문이 아니고 이미 저장하는 `headings`·`tags`와 같은 부류다(기본 후보, 스캐너 + 플랜 JSON + `apply_repository_scan` 변경) ⑵ 현행 유지 ⑶ `.cursor/rules` 전체를 표에서 뺀다(기각 — 비용은 실재한다).
+- 상태: open. ⑴은 `apply_repository_scan`을 건드리므로 Wave A로 되돌아가는 변경이다. 그전까지 Cursor 열은 "확인 불가"다.
+
+## OQ-063 — 상시 로드 비용은 바이트를 문자로 세고, 한글에서 3배 틀린다
+
+- 발견: Phase 4 Wave E todo 24 실측 / `packages/core/src/stats/token-estimate.ts`, `packages/core/src/inspection/instruction-cost.ts`
+- 내용: 표는 `size_bytes`밖에 못 쓰므로 `ceil(bytes / 4)`로 토큰을 추정한다. ASCII에서는 문자 수와 바이트 수가 같지만 **한글은 UTF-8에서 한 자가 3바이트**라, 한국어로 쓴 `AGENTS.md`는 문자 수 기준보다 약 3배 크게 읽힌다. 이 레포 실측이 바로 그 경우다: `AGENTS.md` 2,599바이트 → 650토큰으로 표시되지만 실제 문자 수는 그보다 훨씬 적다. OQ-060(4자/토큰 비율)과 별개의 오차이고, 둘이 곱해진다.
+- 임시 결정: 헤더에 **두 가정을 모두 적는다** — "4자/토큰 가정 · 파일 크기(바이트) 기준 … 한글은 UTF-8에서 한 자가 3바이트라 이 방식은 과대 추정합니다". 저장하는 값은 바이트(사실)이므로 나중에 문자 수가 생기면 다시 계산할 수 있다.
+- 필요한 결정: ⑴ 스캔이 `char_count`를 `size_bytes`와 함께 저장한다(본문이 아니라 수치 하나 — OQ-062 ⑴과 같은 변경에 묶을 수 있다, 기본 후보) ⑵ 바이트에서 UTF-8 다바이트 비율을 추정한다(추정 위의 추정 — 기각) ⑶ 현행 유지 + 가정 표기.
+- 상태: open. ⑴이 기본 후보. OQ-060·OQ-062와 함께 판정한다.
+
+## OQ-064 — 요구사항 커버리지가 1/99인 이유는 매처가 아니라 코퍼스다
+
+- 발견: Phase 4 실레포 스캔(2026-09-06) / `packages/core/src/assurance/rules.ts`(`requirementImplementationLinks`·`explicitImplementationSymbols`·`symbolOwners`), `.omo/evidence/phase4/live-scan.md`
+- 내용: `2klips/alrescha-app` 실스캔에서 요구사항 99개에 `implements` 엣지 **1개**가 나왔다. D6이 "writer가 없어 커버리지가 거짓 0%"라 했고 todo 1이 writer를 만들었으니 0은 아니게 됐지만, 실측하니 원인이 세 겹이다.
+  - **⑴ 소유자 맵은 멀쩡하다.** 고유 심볼 1,218개 중 1,206개가 소유 파일 확정(모호 12개, 1%). 모호성 가드는 병목이 아니다.
+  - **⑵ 매처가 어휘의 3분의 1만 본다.** 심볼 표기법은 camelCase 541 · PascalCase 899 · UPPER_SNAKE 262인데 `explicitImplementationSymbols`는 camelCase만 찾았다. 이번에 PascalCase(2혹 이상)·UPPER_SNAKE까지 넓혔다 — **다만 이 레포에서 순증은 0이다(1 → 1)**. 넓히자마자 오탐이 하나 나왔고(제목 "Theme toggle and persistence"가 export 타입 `Theme`에 붙었다) 2혹 규칙으로 막았다. 백틱은 신호로 못 쓴다: 마크다운 파싱이 인라인 코드를 평문으로 만들어, 99개 중 백틱이 남은 statement가 1개(그나마 짝이 안 맞는다)다.
+  - **⑶ 진짜 원인.** 99개 중 **60개가 한국어 산문**이고 camelCase 토큰이 하나라도 있는 건 11개뿐이다. 그리고 출처를 보면 `BUILD_PLAN.md` 29 · `PHASE2B` 15 · `PHASE3` 15 · `PHASE2C` 11 · `PHASE2A_UI` 10 · `PHASE2D_UI` 6 · `IMPLEMENTATION_GUIDE` 8 — **94개가 계획서·가이드에서 나왔고 정작 규범 스펙인 `WORK_SPEC.md`에서는 2개**다. `spec/` 아래 16개 파일이 전부 `classification='spec'`이라(연구 메모·리뷰·OPEN_QUESTIONS 포함) 추출기가 **작업 항목을 요구사항으로 캔다**. 남은 그 1개 엣지조차 "5. 실기 파일럿: install → push → 카드 → receipt (2026-08-31 완료 …)"라는 **체크박스 항목**이다 — 즉 의미 있는 커버리지는 1/99가 아니라 **0/99**다.
+  - `REQ-…` 코드가 붙은 statement는 **0개**라, `requirementIdsInTests`(테스트 파일에서 `REQ-…`를 찾는 경로)도 이 코퍼스에서는 영원히 안 켜진다.
+- 임시 결정: 매처는 넓힌 채로 둔다(어휘 3분의 2를 못 보는 건 코퍼스와 무관한 결함이고, 2혹 가드로 오탐을 막았다). **순증 0을 그대로 보고한다** — 이 레포에서 이득을 못 보였다는 사실이 측정이다. 분류 변경은 하지 않았다: Wave A의 `classifyArtifactPath`와 밀도 픽스처에 파급이 있어 단독 판단할 일이 아니다.
+- 필요한 결정: ⑴ `spec/` 안에서 **규범 문서와 계획 문서를 분리**한다 — `BUILD_PLAN*`·`RESEARCH_*`·`REVIEW_*`·`OPEN_QUESTIONS`를 `todo_progress`나 `doc`으로 내리고 요구사항 추출은 `WORK_SPEC`·`DECISIONS-ADR` 급에서만(기본 후보, 밀도 픽스처 재측정 필요) ⑵ 요구사항→코드 링크의 신호를 이름 매칭에서 바꾼다 — 이미 있는 재료로는 **출처 문서가 코드를 `references` 하는 요구사항이 34/99**(문서 4개가 코드로 13개 참조)이고, 문서 단위라 statement 단위보다 약하지만 0보다는 많다 ⑶ G3 enrich의 의미 매칭에 맡긴다(비용 발생, ADR-001상 여전히 `inferred`) ⑷ 커버리지 지표를 **"요구사항 문서가 아직 코드를 지목하지 않았다"** 로 다시 쓰고 퍼센트를 안 보여준다.
+- 상태: open. ⑴과 ⑷는 서로 독립이고 둘 다 사용자 결정(OQ-041과 같은 결)이다. 그 전까지 어떤 화면도 이 커버리지를 퍼센트로 그리지 않는다.

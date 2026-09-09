@@ -23,6 +23,7 @@ test("every widget carries its source label and the audit stays a collector", as
 
   for (const testId of [
     "inspection-progress",
+    "inspection-risk",
     "inspection-findings",
     "inspection-documents",
     "inspection-drift",
@@ -60,11 +61,52 @@ test("document summaries render only under the inferred badge", async ({
   );
 });
 
+/**
+ * The risk widget (Phase 4 Wave D todo 21). The screen could say how many
+ * findings were open; it could not answer the question somebody opens it
+ * with — what should I look at first.
+ */
+test("the risk map ranks files, states its reasons, and greys what nobody measured", async ({
+  page,
+}) => {
+  await page.goto("/inspection");
+  const risk = page.getByTestId("inspection-risk");
+  const entries = risk.locator(".inspection-risk-entry");
+
+  await expect(entries.first()).toBeVisible();
+  const scores = await entries.evaluateAll((nodes) =>
+    nodes.map((node) => Number(node.getAttribute("data-score"))),
+  );
+  expect([...scores].sort((a, b) => b - a)).toEqual(scores);
+
+  // Every entry names at least one reason. A rank with no reasons is an
+  // opinion with a decimal point.
+  for (let index = 0; index < scores.length; index += 1) {
+    await expect(
+      entries.nth(index).locator(".inspection-risk-factor"),
+    ).not.toHaveCount(0);
+  }
+  // Never a verdict — none of these signals is execution evidence (ADR-001).
+  await expect(risk.locator(".status-badge.inferred").first()).toBeVisible();
+  await expect(risk.locator(".status-badge.verified")).toHaveCount(0);
+  // Absence is grey, not zero: no coverage report has been read.
+  await expect(risk.locator(".inspection-unmeasured")).toContainText(
+    INSPECTION.risk.unmeasured.coverage,
+  );
+  await expect(risk).toContainText(
+    INSPECTION.risk.showing(scores.length, scores.length),
+  );
+});
+
 test("the empty state says 증거 부족 in every widget, fabricating nothing", async ({
   page,
 }) => {
   await page.goto("/inspection?state=empty");
-  await expect(page.locator(".inspection-insufficient")).toHaveCount(6);
+  await expect(page.locator(".inspection-insufficient")).toHaveCount(7);
+  // Nothing to rank reads as 증거 부족, never as an empty ranked list.
+  await expect(
+    page.getByTestId("inspection-risk").locator(".inspection-risk-entry"),
+  ).toHaveCount(0);
   await expect(page.locator(".inspection-main")).not.toContainText("0%");
   await page.screenshot({
     fullPage: true,

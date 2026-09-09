@@ -32,13 +32,18 @@ const markdownSpanSchema = z.strictObject({
 });
 
 const todoItemSchema = z.strictObject({
+  // Nesting the document wrote (Phase 4 Wave A todo 5). Defaulted so a CLI
+  // built before this wave still validates.
+  parentKey: z.string().min(1).max(400).nullable().default(null),
   source: z.strictObject({
     kind: z.literal("document"),
     path: z.string().min(1).max(1000),
     span: markdownSpanSchema,
   }),
   sourceKey: z.string().min(1).max(400),
-  status: z.enum(["open", "done"]),
+  // `[~]`/`[/]` and `[-]` are conventions people already write; the column
+  // has always allowed all four states.
+  status: z.enum(["open", "in-progress", "done", "blocked"]),
   title: z.string().min(1).max(240),
 });
 
@@ -59,14 +64,28 @@ const scannedArtifactSchema = z.strictObject({
     "agents",
     "claude",
     "code_metadata",
+    "config",
     "cursor_rule",
+    "doc",
+    "schema",
     "skill",
     "spec",
+    "style",
     "todo_progress",
   ]),
   digest: sha256Schema,
   exportedSymbols: z.array(exportedSymbolSchema).max(10_000),
-  kind: z.enum(["adr", "code_metadata", "instruction", "spec", "todo"]),
+  kind: z.enum([
+    "adr",
+    "code_metadata",
+    "config",
+    "doc",
+    "instruction",
+    "schema",
+    "spec",
+    "style",
+    "todo",
+  ]),
   path: z.string().min(1).max(1000),
   rationales: z.array(rationaleNoteSchema).max(10_000),
   sizeBytes: z.number().int().nonnegative(),
@@ -79,8 +98,15 @@ const scannedArtifactSchema = z.strictObject({
 });
 
 const codeLinkSchema = z.strictObject({
-  kind: z.enum(["calls", "imports"]),
-  method: z.enum(["import-binding", "module-resolution", "name-match"]),
+  kind: z.enum(["calls", "imports", "tests"]),
+  method: z.enum([
+    "alias-resolution",
+    "barrel-resolution",
+    "import-binding",
+    "module-resolution",
+    "name-match",
+    "test-import",
+  ]),
   sourcePath: z.string().min(1).max(1000),
   span: z.strictObject({
     endLine: z.number().int().positive(),
@@ -91,11 +117,149 @@ const codeLinkSchema = z.strictObject({
   tier: z.enum(["reference", "resolved"]),
 });
 
+/**
+ * Document `references` links (Phase 4 Wave A todo 2). Strict like the rest:
+ * the matched token never travels, so a payload carrying one is rejected
+ * rather than quietly stored (WORK_SPEC §3-3).
+ */
+const docLinkSchema = z.strictObject({
+  kind: z.literal("references"),
+  method: z.enum(["basename-owner", "doc-link", "path-exists"]),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  targetPath: z.string().min(1).max(1000),
+  tier: z.enum(["reference", "resolved"]),
+});
+
+/**
+ * The repository's own conventions (Phase 4 Wave A todo 4). Parsed values,
+ * bounded lists, and no file text: `.alrescha.json` is configuration the
+ * user wrote for this product, and what travels is what the parser made of
+ * it — not the document (WORK_SPEC §3-3).
+ */
+const configPatternSchema = z.string().min(1).max(200);
+const configListSchema = z.array(configPatternSchema).max(200);
+const layoutConfigSchema = z.strictObject({
+  ignore: configListSchema,
+  layersHidden: configListSchema,
+  layout: z.strictObject({
+    backend: configListSchema.optional(),
+    database: configListSchema.optional(),
+    frontend: configListSchema.optional(),
+    shared: configListSchema.optional(),
+  }),
+  progressDocs: configListSchema,
+  sectionTokens: configListSchema,
+  todoFiles: configListSchema,
+});
+
+/**
+ * A decorator route (Phase 4 Wave A′ todo 6): method, path and line, and
+ * nothing of the decorator's own text.
+ */
+const routeSchema = z.strictObject({
+  line: z.number().int().positive(),
+  method: z.enum([
+    "ANY",
+    "DELETE",
+    "GET",
+    "HEAD",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+  ]),
+  path: z.string().min(1).max(400),
+  sourcePath: z.string().min(1).max(1000),
+});
+
+/**
+ * Database objects and their edges (Phase 4 Wave A′ todo 7). Names, kinds
+ * and lines — never the DDL that declares them.
+ */
+const dbObjectSchema = z.strictObject({
+  kind: z.enum(["function", "table", "view"]),
+  name: z.string().min(1).max(200),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+});
+
+const schemaLinkSchema = z.strictObject({
+  kind: z.enum(["defines", "modifies", "queries", "references"]),
+  method: z.enum(["sql-structural", "table-literal"]),
+  sourceObject: z.string().min(1).max(200).nullable(),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  targetObject: z.string().min(1).max(200),
+  tier: z.enum(["reference", "resolved"]),
+});
+
+/**
+ * Sections and their citations (Phase 4 Wave A′ todo 8). The token, the
+ * heading line and the span — never the section's body.
+ */
+const sectionSchema = z.strictObject({
+  heading: z.string().min(1).max(200),
+  homeRank: z.number().int().nonnegative().max(199),
+  path: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  token: z.string().min(2).max(16),
+});
+
+const sectionLinkSchema = z.strictObject({
+  method: z.literal("id-token"),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  targetToken: z.string().min(2).max(16),
+  tier: z.literal("resolved"),
+  via: z.enum(["document", "rationale"]),
+});
+
 export const repositoryScanPlanSchema = z.strictObject({
   artifacts: z.array(scannedArtifactSchema).max(100_000),
   codeLinks: z.array(codeLinkSchema).max(200_000),
   commitSha: sha1Schema,
+  // Defaulted for the same reason `linkSchemaVersion` is: a CLI built before
+  // this wave uploads a plan with no document links at all.
+  docLinks: z.array(docLinkSchema).max(200_000).default([]),
+  // Defaulted like the fields around it: a CLI built before this wave
+  // uploads a plan that states no conventions at all.
+  layoutConfig: layoutConfigSchema.default({
+    ignore: [],
+    layersHidden: [],
+    layout: {},
+    progressDocs: [],
+    sectionTokens: [],
+    todoFiles: [],
+  }),
+  // Defaulted rather than required: a CLI built before Phase 4 uploads a
+  // plan that predates both fields, and its links are incremental by
+  // definition. Nothing about the payload's metadata-only contract changes.
+  linkSchemaVersion: z.number().int().positive().max(10_000).default(1),
+  linkScope: z.enum(["full", "incremental"]).default("incremental"),
   removedPaths: z.array(z.string().min(1).max(1000)).max(100_000),
+  // Defaulted like the fields beside it: a CLI built before this wave
+  // uploads a plan that declares no routes.
+  routes: z.array(routeSchema).max(20_000).default([]),
+  schemaLinks: z.array(schemaLinkSchema).max(100_000).default([]),
+  schemaObjects: z.array(dbObjectSchema).max(20_000).default([]),
+  sectionLinks: z.array(sectionLinkSchema).max(100_000).default([]),
+  sections: z.array(sectionSchema).max(20_000).default([]),
   skipped: z
     .array(
       z.strictObject({
@@ -127,6 +291,12 @@ export interface LocalIngestPrincipal {
 export interface LocalIngestPreviousState {
   readonly artifacts: readonly unknown[];
   readonly commitSha: string | null;
+  /**
+   * Resolver generation the stored edges were produced by. The CLI compares
+   * it with `LINK_SCHEMA_VERSION` and asks for a full relink when they differ,
+   * so an improved resolver reaches files that never change (R5 §2.2 D2).
+   */
+  readonly linkSchemaVersion?: number;
 }
 
 /** Injected persistence boundary — implemented with supabase in the web app. */

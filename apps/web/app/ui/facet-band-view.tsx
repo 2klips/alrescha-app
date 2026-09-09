@@ -30,9 +30,23 @@ interface FacetBandViewProps {
 const NODE_TYPE_CLASS = {
   code: "code",
   concept: "concept",
+  // A table paints in the database band's own colour, so the schema layer is
+  // legible as one thing rather than as scattered code (Wave A′ todo 7).
+  database: "database",
+  // Folders are chrome: muted, so they read as structure rather than as a
+  // sixth category (their own sprite arrives with Wave B todo 12).
+  directory: "directory",
   document: "doc",
+  // A rationale is a comment lifted out of a code file: it belongs with the
+  // code, not with the specs (R5 §2.2 D5). `unknown` gets an inert swatch —
+  // a node whose artifact row is missing should look unresolved, not typed.
+  rationale: "code",
   requirement: "req",
+  route: "route",
+  // A named decision is prose: it paints with the documents it lives among.
+  section: "doc",
   test: "test",
+  unknown: "unknown",
 } as const;
 
 export function FacetBandView({

@@ -14,6 +14,7 @@ import {
   MAX_CONCURRENCY,
   clampConcurrency,
   mapWithConcurrency,
+  isMarkdownArtifact,
   scanRepository,
   type PreviousScannedArtifact,
   type RepositorySource,
@@ -50,15 +51,43 @@ function fixtureTree(fileCount: number): RepositoryTree {
     { mode: "160000", path: "vendor/sub", sha: "b".repeat(40), type: "commit" },
     { mode: "120000", path: "docs/link.md", sha: "c".repeat(40), type: "blob" },
   );
+  // Manifests: config artifacts since Phase 4 Wave A todo 2, and read on
+  // every pass so that an incremental scan resolves the same aliases a full
+  // one would (Phase 4 Wave A todo 0).
+  entries.push(
+    {
+      mode: "100644",
+      path: "package.json",
+      sha: "e".repeat(40),
+      size: 120,
+      type: "blob",
+    },
+    {
+      mode: "100644",
+      path: "tsconfig.json",
+      sha: "f".repeat(40),
+      size: 120,
+      type: "blob",
+    },
+  );
   return { entries, treeSha: "d".repeat(40), truncated: false };
 }
 
+/** The manifest paths `fixtureTree` adds, in the order the scan reads them. */
+const MANIFEST_PATHS = ["package.json", "tsconfig.json"] as const;
+
+function isManifest(path: string): boolean {
+  return (MANIFEST_PATHS as readonly string[]).includes(path);
+}
+
 function bodyFor(path: string): Uint8Array {
-  const text = path.endsWith(".ts")
-    ? `export const value_${path.replace(/\W/g, "_")} = 1;\n// WHY: keeps the symbol table non-empty\n`
-    : path.endsWith(".py")
-      ? `def handler_${path.replace(/\W/g, "_")}():\n    return 1\n`
-      : `# ${path}\n\nBody for ${path}.\n`;
+  const text = isManifest(path)
+    ? `{ "name": "fixture-${path.replace(/\W/g, "_")}" }\n`
+    : path.endsWith(".ts")
+      ? `export const value_${path.replace(/\W/g, "_")} = 1;\n// WHY: keeps the symbol table non-empty\n`
+      : path.endsWith(".py")
+        ? `def handler_${path.replace(/\W/g, "_")}():\n    return 1\n`
+        : `# ${path}\n\nBody for ${path}.\n`;
   return new TextEncoder().encode(text);
 }
 
@@ -195,9 +224,76 @@ describe("scan content fetch concurrency (perf research MT-3)", () => {
       source: second,
     });
 
+    // One fetch per file, manifests included: a `package.json` is a config
+    // artifact as well as an alias source since Phase 4 Wave A todo 2, and
+    // one read serves both jobs.
     expect(first.fetches.length).toBe(plan.artifacts.length);
-    expect(second.fetches).toEqual([]);
+    expect(first.fetches.length).toBe(new Set(first.fetches).size);
+    const storedPaths = plan.artifacts.map(({ path }) => path);
+    for (const path of MANIFEST_PATHS) expect(storedPaths).toContain(path);
+    // Artifacts whose blob sha is unchanged are still never re-read…
+    expect(second.fetches.filter((path) => !isManifest(path))).toEqual([]);
+    // …while manifests deliberately are: the alias rules must be complete on
+    // every pass, or an incremental scan would resolve fewer specifiers than
+    // a full one on the very same commit.
+    expect([...second.fetches].sort()).toEqual([...MANIFEST_PATHS].sort());
     expect(again.unchangedPaths).toEqual(
+      [...plan.artifacts.map(({ path }) => path)].sort(),
+    );
+  });
+
+  it("re-reads every linkable file in full mode, emitting links but no artifacts", async () => {
+    const tree = fixtureTree(20);
+    const first = recordingSource(tree);
+    const plan = await scanRepository({ commitSha: COMMIT_SHA, source: first });
+    const previousArtifacts = plan.artifacts.map(
+      (artifact): PreviousScannedArtifact => ({
+        classification: artifact.classification,
+        digest: artifact.digest,
+        exportedSymbols: artifact.exportedSymbols,
+        kind: artifact.kind,
+        path: artifact.path,
+        sizeBytes: artifact.sizeBytes,
+        sourceBlobSha: artifact.sourceBlobSha,
+        sourceCommitSha: artifact.sourceCommitSha,
+      }),
+    );
+
+    const second = recordingSource(tree);
+    const relinked = await scanRepository({
+      commitSha: COMMIT_SHA,
+      mode: "full",
+      previousArtifacts,
+      // The commit has not moved: only the resolver has. The unchanged-commit
+      // short circuit must not swallow the relink (R5 §2.2 D2).
+      previousCommitSha: COMMIT_SHA,
+      source: second,
+    });
+
+    expect(relinked.linkScope).toBe("full");
+    expect(relinked.treeSha).not.toBeNull();
+    // Every code file was read again…
+    const codePaths = plan.artifacts
+      .filter(({ classification }) => classification === "code_metadata")
+      .map(({ path }) => path);
+    expect(codePaths.length).toBeGreaterThan(0);
+    for (const path of codePaths) expect(second.fetches).toContain(path);
+    // …and so was every document: documents carry `references` links since
+    // Phase 4 Wave A todo 2, so a relink that skipped them would leave a
+    // spec pointing at nothing until someone edited it (R5 §2.2 D2).
+    const docPaths = plan.artifacts
+      .filter(({ classification }) => isMarkdownArtifact(classification))
+      .map(({ path }) => path);
+    expect(docPaths.length).toBeGreaterThan(0);
+    for (const path of docPaths) expect(second.fetches).toContain(path);
+    // Nothing else was: a full relink re-reads what it derives links from,
+    // and the two manifests only because the alias table must stay complete.
+    expect([...second.fetches].sort()).toEqual(
+      [...codePaths, ...docPaths, ...MANIFEST_PATHS].sort(),
+    );
+    // …and re-reading produced no artifact rows, only unchanged paths.
+    expect(relinked.artifacts).toEqual([]);
+    expect(relinked.unchangedPaths).toEqual(
       [...plan.artifacts.map(({ path }) => path)].sort(),
     );
   });

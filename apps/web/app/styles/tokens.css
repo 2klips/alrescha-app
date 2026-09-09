@@ -74,6 +74,13 @@
   --node-code: var(--success-fg);
   --node-test: var(--attention-fg);
   --node-concept: var(--done-fg);
+  /* A folder is structure, not a category: muted, so it reads as chrome. */
+  --node-directory: var(--fg-muted);
+  /* Domain and hub colours (Wave A todo 4; route/table land with Wave A′). */
+  --node-database: var(--done-fg);
+  --node-other: var(--fg-muted);
+  --node-route: var(--attention-fg);
+  --node-table: var(--done-fg);
   --focus-out: var(--attention-fg);
   --focus-in: var(--accent-fg);
 

@@ -67,19 +67,21 @@ describe("progress dashboard domain", () => {
       commits: [],
       findings: [],
       progressEvents: [],
-      requirements: { covered: 0, total: 0 },
+      requirements: { covered: 0, links: 0, total: 0 },
       todos: [],
     });
 
     expect(dashboard.state).toBe("empty");
     expect(dashboard.metrics).toEqual({
       requirements: {
+        basis: "no-data",
         completed: 0,
         percent: null,
         sourceLabel: "Evidence graph requirement coverage",
         total: 0,
       },
       todos: {
+        basis: "no-data",
         completed: 0,
         percent: null,
         sourceLabel: "TODO/progress checkboxes + log_progress events",
@@ -119,7 +121,7 @@ describe("progress dashboard domain", () => {
           todoId: "todo-event",
         },
       ],
-      requirements: { covered: 3, total: 4 },
+      requirements: { covered: 3, links: 5, total: 4 },
       todos: [
         {
           id: "todo-doc",
@@ -147,6 +149,7 @@ describe("progress dashboard domain", () => {
 
     expect(dashboard.state).toBe("partial");
     expect(dashboard.metrics.requirements).toMatchObject({
+      basis: "measured",
       percent: 75,
       sourceLabel: expect.any(String),
     });
@@ -195,14 +198,14 @@ describe("progress dashboard domain", () => {
       commits: [],
       findings: [],
       progressEvents: [],
-      requirements: { covered: 4, total: 4 },
+      requirements: { covered: 4, links: 6, total: 4 },
       todos: [todo],
     });
     const blocked = buildProgressDashboard({
       commits: [],
       findings: [],
       progressEvents: [],
-      requirements: { covered: 4, total: 4 },
+      requirements: { covered: 4, links: 6, total: 4 },
       todos: [{ ...todo, status: "blocked" }],
     });
 
@@ -210,5 +213,89 @@ describe("progress dashboard domain", () => {
     expect(complete.metrics.requirements.percent).toBe(100);
     expect(complete.metrics.todos.percent).toBe(100);
     expect(blocked.state).toBe("partial");
+  });
+
+  /**
+   * Phase 4 Wave A todo 1 — the three bases of a coverage number.
+   *
+   * Production reported "requirement coverage 0%" over 99 active
+   * requirements because nothing wrote `implements` edges (R5 §2.2 D6).
+   * A percentage and an unmeasured state are different claims, so the
+   * metric now carries which one it is making.
+   */
+  describe("requirement coverage basis", () => {
+    function coverage(requirements: {
+      covered: number;
+      links: number;
+      total: number;
+    }) {
+      return buildProgressDashboard({
+        commits: [],
+        findings: [],
+        progressEvents: [],
+        requirements,
+        todos: [],
+      }).metrics.requirements;
+    }
+
+    it("reports no-data when no requirement has been extracted", () => {
+      expect(coverage({ covered: 0, links: 0, total: 0 })).toMatchObject({
+        basis: "no-data",
+        percent: null,
+        total: 0,
+      });
+    });
+
+    it("reports no-links, not 0%, when requirements exist and links do not", () => {
+      expect(coverage({ covered: 0, links: 0, total: 99 })).toMatchObject({
+        basis: "no-links",
+        completed: 0,
+        percent: null,
+        total: 99,
+      });
+    });
+
+    it("reports a measured 0% once links exist but cover none of these", () => {
+      // Links exist repository-wide, so the linker did run and this set
+      // genuinely has no coverage — that zero is a measurement.
+      expect(coverage({ covered: 0, links: 4, total: 99 })).toMatchObject({
+        basis: "measured",
+        percent: 0,
+      });
+    });
+
+    it("measures the percentage once requirements carry links", () => {
+      expect(coverage({ covered: 33, links: 40, total: 99 })).toMatchObject({
+        basis: "measured",
+        percent: 33,
+      });
+    });
+
+    it("keeps the todo metric measured independently of the link basis", () => {
+      const dashboard = buildProgressDashboard({
+        commits: [],
+        findings: [],
+        progressEvents: [],
+        requirements: { covered: 0, links: 0, total: 12 },
+        todos: [
+          {
+            id: "todo-1",
+            requirementId: null,
+            source: { eventId: "event-1", kind: "progress-event" as const },
+            status: "done" as const,
+            title: "Ship the basis split",
+            updatedAt: "2026-09-04T10:00:00.000Z",
+          },
+        ],
+      });
+
+      expect(dashboard.metrics.requirements.basis).toBe("no-links");
+      expect(dashboard.metrics.todos).toMatchObject({
+        basis: "measured",
+        percent: 100,
+      });
+      // Nothing here can be called complete while coverage is unmeasured.
+      expect(dashboard.state).toBe("partial");
+    });
   });
 });

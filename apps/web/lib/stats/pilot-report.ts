@@ -2,8 +2,10 @@ import {
   computePilotStats,
   type PilotPackMeasurement,
   type PilotReceiptSnapshot,
+  type PilotRepository,
   type PilotRunMeasurement,
   type PilotStatsReport,
+  type PilotUsageDay,
 } from "@alrescha/core/stats";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -26,11 +28,56 @@ interface RunRow {
   readonly started_at: string | null;
 }
 
+interface UsageDayRow {
+  readonly day: string;
+  readonly repository_id: string | null;
+  readonly reported_cache_creation_tokens: number | string | null;
+  readonly reported_cache_read_tokens: number | string | null;
+  readonly reported_input_tokens: number | string | null;
+  readonly reported_output_tokens: number | string | null;
+  readonly reported_reports: number | string | null;
+  readonly served_calls: number | string | null;
+  readonly served_estimated_tokens: number | string | null;
+  readonly served_measured_calls: number | string | null;
+  readonly served_response_chars: number | string | null;
+}
+
 export interface PilotStatsRows {
   readonly enabled: boolean;
   readonly packEvents: readonly PackEventRow[];
   readonly receipts: readonly ReceiptRow[];
+  readonly repositories?: readonly PilotRepository[];
+  readonly repositoryFilter?: string | null;
   readonly runs: readonly RunRow[];
+  readonly usage?: readonly UsageDayRow[];
+}
+
+/**
+ * PostgreSQL hands a bigint back as a string once it outgrows a JS number,
+ * and a sum over a busy day will. Parsed rather than coerced, so a value that
+ * is not a count reads as zero instead of letting NaN spread through a total.
+ */
+function bigintCount(value: number | string | null): number {
+  const parsed = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(parsed) && Number(parsed) > 0 ? Number(parsed) : 0;
+}
+
+function usageDay(row: UsageDayRow): PilotUsageDay {
+  return {
+    day: row.day,
+    repositoryId: row.repository_id,
+    reportedCacheCreationTokens: bigintCount(
+      row.reported_cache_creation_tokens,
+    ),
+    reportedCacheReadTokens: bigintCount(row.reported_cache_read_tokens),
+    reportedInputTokens: bigintCount(row.reported_input_tokens),
+    reportedOutputTokens: bigintCount(row.reported_output_tokens),
+    reportedReports: bigintCount(row.reported_reports),
+    servedCalls: bigintCount(row.served_calls),
+    servedEstimatedTokens: bigintCount(row.served_estimated_tokens),
+    servedMeasuredCalls: bigintCount(row.served_measured_calls),
+    servedResponseChars: bigintCount(row.served_response_chars),
+  };
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -106,6 +153,9 @@ export function buildPilotStatsReport(rows: PilotStatsRows): PilotStatsReport {
   return computePilotStats({
     enabled: rows.enabled,
     packRequestCount: rows.packEvents.length,
+    repositories: rows.repositories ?? [],
+    repositoryFilter: rows.repositoryFilter ?? null,
+    usage: (rows.usage ?? []).map(usageDay),
     packs: rows.packEvents.flatMap((row) => {
       const measurement = packMeasurement(row);
       return measurement ? [measurement] : [];
@@ -126,9 +176,16 @@ export interface WorkspacePilotReport {
   readonly workspaceId: string;
 }
 
+/**
+ * Phase 4 Wave E todo 24. The filter is applied in the queries, not after
+ * them: a total narrowed in the browser is a total that was still computed
+ * across every repository, and one of them would be the one the reader was
+ * trying to exclude.
+ */
 export async function loadWorkspacePilotReport(
   client: SupabaseClient,
   userId: string,
+  repositoryFilter: string | null = null,
 ): Promise<WorkspacePilotReport> {
   const workspaceResult = await client
     .from("workspaces")
@@ -159,30 +216,68 @@ export async function loadWorkspacePilotReport(
     };
   }
 
-  const [receiptResult, runResult, packResult] = await Promise.all([
-    client
-      .from("receipts")
-      .select("id,commit_sha,created_at,summary")
-      .eq("workspace_id", workspace.id)
-      .order("created_at", { ascending: true }),
-    client
-      .from("runs")
-      .select("id,started_at,completed_at")
-      .eq("workspace_id", workspace.id)
-      .eq("status", "succeeded")
-      .order("started_at", { ascending: true }),
-    client
-      .from("access_events")
-      .select("occurred_at,pack_selected_tokens,pack_baseline_tokens")
-      .eq("workspace_id", workspace.id)
-      .eq("tool", "request_context_pack")
-      .gte(
-        "occurred_at",
-        workspace.pilot_instrumentation_consented_at ?? "9999-12-31T00:00:00Z",
-      )
-      .order("occurred_at", { ascending: true }),
-  ]);
-  if (receiptResult.error || runResult.error || packResult.error) {
+  // `or("repository_id.eq.<id>")` would have read the same, but a filter
+  // written as a literal is a filter a repository id can inject into. This
+  // narrows through the parameterised builder, and only when asked.
+  const receiptQuery = client
+    .from("receipts")
+    .select("id,commit_sha,created_at,summary")
+    .eq("workspace_id", workspace.id);
+  const runQuery = client
+    .from("runs")
+    .select("id,started_at,completed_at")
+    .eq("workspace_id", workspace.id)
+    .eq("status", "succeeded");
+  const packQuery = client
+    .from("access_events")
+    .select("occurred_at,pack_selected_tokens,pack_baseline_tokens")
+    .eq("workspace_id", workspace.id)
+    .eq("tool", "request_context_pack")
+    .gte(
+      "occurred_at",
+      workspace.pilot_instrumentation_consented_at ?? "9999-12-31T00:00:00Z",
+    );
+  // The aggregate todo 23 built. Read rather than recomputed here: it is
+  // derived from the rows so retention prunes it, and a second summation in
+  // this file would be a second answer to the same question.
+  const usageQuery = client
+    .from("usage_daily")
+    .select(
+      "day,repository_id,served_calls,served_measured_calls,served_response_chars,served_estimated_tokens,reported_reports,reported_input_tokens,reported_output_tokens,reported_cache_read_tokens,reported_cache_creation_tokens",
+    )
+    .eq("workspace_id", workspace.id);
+
+  const [receiptResult, runResult, packResult, usageResult, repositoryResult] =
+    await Promise.all([
+      (repositoryFilter
+        ? receiptQuery.eq("repository_id", repositoryFilter)
+        : receiptQuery
+      ).order("created_at", { ascending: true }),
+      (repositoryFilter
+        ? runQuery.eq("repository_id", repositoryFilter)
+        : runQuery
+      ).order("started_at", { ascending: true }),
+      (repositoryFilter
+        ? packQuery.eq("repository_id", repositoryFilter)
+        : packQuery
+      ).order("occurred_at", { ascending: true }),
+      (repositoryFilter
+        ? usageQuery.eq("repository_id", repositoryFilter)
+        : usageQuery
+      ).order("day", { ascending: true }),
+      client
+        .from("repositories")
+        .select("id,full_name")
+        .eq("workspace_id", workspace.id)
+        .order("full_name", { ascending: true }),
+    ]);
+  if (
+    receiptResult.error ||
+    runResult.error ||
+    packResult.error ||
+    usageResult.error ||
+    repositoryResult.error
+  ) {
     throw new Error("Pilot stats are unavailable.");
   }
 
@@ -191,7 +286,12 @@ export async function loadWorkspacePilotReport(
       enabled: true,
       packEvents: (packResult.data ?? []) as PackEventRow[],
       receipts: (receiptResult.data ?? []) as ReceiptRow[],
+      repositories: (
+        (repositoryResult.data ?? []) as { full_name: string; id: string }[]
+      ).map(({ full_name, id }) => ({ fullName: full_name, id })),
+      repositoryFilter,
       runs: (runResult.data ?? []) as RunRow[],
+      usage: (usageResult.data ?? []) as UsageDayRow[],
     }),
     workspaceId: workspace.id,
   };

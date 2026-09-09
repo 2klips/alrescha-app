@@ -99,24 +99,6 @@ a {
   }
 }
 
-@keyframes evidence-flow {
-  to {
-    stroke-dashoffset: -24;
-  }
-}
-
-@keyframes neuron-pulse {
-  0% {
-    stroke-width: 1.4;
-  }
-  50% {
-    stroke-width: 4;
-  }
-  100% {
-    stroke-width: 1.4;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -1,0 +1,41 @@
+{
+  "date": "2026-09-06",
+  "scope": "In-memory PGlite with current main migrations + isolated candidate SQL/pure policy",
+  "productionChanged": false,
+  "assertions": "passed",
+  "observations": [
+    {
+      "name": "existing_writer_late_completion",
+      "sourceBlob": "2222222222222222222222222222222222222222",
+      "summaryBlob": "1111111111111111111111111111111111111111",
+      "servedText": "Late summary A",
+      "staleOverwroteFresh": true
+    },
+    {
+      "name": "candidate_digest_guard",
+      "lateApplied": 0,
+      "currentApplied": 1,
+      "finalText": "Current replacement B"
+    },
+    {
+      "name": "delivery_count",
+      "existingMissingCount": 1,
+      "candidateAppliedCount": 0
+    },
+    {
+      "name": "bounded_scalar_envelope",
+      "firstCount": 1000,
+      "firstHasMore": true,
+      "secondCount": 1,
+      "secondHasMore": false,
+      "total": 1001,
+      "limitation": "SQL semantics only. No PostgREST payload ceiling/RLS or concurrent mutation verified."
+    },
+    {
+      "name": "candidate_reverse_dependency_policy",
+      "changedA": [],
+      "changedB": ["A", "C"],
+      "limitation": "Demonstrates direction/family exclusion only; not whole-program behavioral impact."
+    }
+  ]
+}

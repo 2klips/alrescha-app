@@ -11,7 +11,11 @@ describe("deterministicUlid", () => {
 
   it("changes when any stable part of the seed changes", () => {
     const base = deterministicUlid("ws|repo|spec/auth.md|REQ-AUTH-001");
-    expect(deterministicUlid("ws|repo|spec/auth.md|REQ-AUTH-002")).not.toBe(base);
-    expect(deterministicUlid("ws|other|spec/auth.md|REQ-AUTH-001")).not.toBe(base);
+    expect(deterministicUlid("ws|repo|spec/auth.md|REQ-AUTH-002")).not.toBe(
+      base,
+    );
+    expect(deterministicUlid("ws|other|spec/auth.md|REQ-AUTH-001")).not.toBe(
+      base,
+    );
   });
 });

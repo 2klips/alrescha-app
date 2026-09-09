@@ -18,11 +18,23 @@ const FINDINGS: readonly InspectionFindingInput[] = [
     title: "성능 주장에 실행 증거가 없습니다",
   },
   {
+    // A real stale-doc finding names the *referenced* file in its title
+    // and the *document that drifted* in its span. Freshness reads the span
+    // (todo 21); before that it matched the title, which is about a
+    // different file, so drift-suspected never appeared in production.
+    detail: {
+      confidence: 0.98,
+      evidenceGrade: "inferred" as const,
+      evidenceLinks: [],
+      reason: "deterministic stale-doc rule",
+      spans: [{ endLine: 4, path: "docs/auth.md", startLine: 4 }],
+      suggestedAction: "Update or remove the stale path and symbol reference.",
+    },
     id: "f-stale",
     kind: "stale-doc",
     severity: "medium",
     status: "open",
-    title: "docs/auth.md가 구현과 어긋납니다",
+    title: "The documented src/auth.ts source reference does not exist.",
   },
   {
     id: "f-test",
@@ -195,5 +207,126 @@ describe("buildInspectionDashboard", () => {
     expect(
       build({ dependencyAuditJson: "raw text" }).dependencyAudit.state,
     ).toBe("insufficient-evidence");
+  });
+});
+
+/**
+ * The two widgets todo 21 fixed (Phase 4 Wave D).
+ *
+ * `drift-suspected` matched a finding's title against a document's path, and
+ * a stale-doc title names the file the document *references*, not the
+ * document itself — so the state existed and never appeared. And the loader
+ * drops a finding whose kind the contract does not list, which silently
+ * discarded every `untested-code` finding since the rule shipped.
+ */
+describe("buildInspectionDashboard — drift and the risk widget", () => {
+  const drifted = {
+    detail: {
+      confidence: 0.98,
+      evidenceGrade: "inferred" as const,
+      evidenceLinks: [],
+      reason: "deterministic stale-doc rule",
+      spans: [{ endLine: 4, path: "docs/auth.md", startLine: 4 }],
+      suggestedAction: "Update or remove the stale path and symbol reference.",
+    },
+    id: "f-stale",
+    kind: "stale-doc" as const,
+    severity: "medium" as const,
+    status: "open" as const,
+    title: "The documented src/auth.ts source reference does not exist.",
+  };
+
+  it("names the drifted document from the finding's span, not its title", () => {
+    const dashboard = build({
+      documents: [
+        { lastSeenCommitSha: HEAD, path: "docs/auth.md", summary: null },
+        { lastSeenCommitSha: HEAD, path: "src/auth.ts", summary: null },
+      ],
+      findings: [drifted],
+      headCommitSha: HEAD,
+    });
+    const byPath = Object.fromEntries(
+      dashboard.documents.entries.map((entry) => [entry.path, entry.freshness]),
+    );
+
+    // The document the rule fired on drifts; the file its title names does
+    // not — the title is about the reference that went missing.
+    expect(byPath["docs/auth.md"]).toBe("drift-suspected");
+    expect(byPath["src/auth.ts"]).toBe("current");
+  });
+
+  it("does not call a document drifted because a title mentions it", () => {
+    const dashboard = build({
+      documents: [
+        { lastSeenCommitSha: HEAD, path: "docs/auth.md", summary: null },
+      ],
+      findings: [{ ...drifted, detail: { ...drifted.detail, spans: [] } }],
+      headCommitSha: HEAD,
+    });
+
+    // Without a span there is no statement about which document drifted, and
+    // guessing from a string match is what made this state meaningless.
+    expect(dashboard.documents.entries[0]?.freshness).toBe("current");
+  });
+
+  it("keeps an untested-code finding instead of dropping it", () => {
+    const dashboard = build({
+      findings: [
+        {
+          id: "f-untested",
+          kind: "untested-code",
+          severity: "medium",
+          status: "open",
+          title: "recordAudit has no test",
+        },
+      ],
+    });
+
+    expect(dashboard.findings.entries.map(({ id }) => id)).toEqual([
+      "f-untested",
+    ]);
+  });
+
+  it("reports an absent risk map as insufficient evidence, not as safety", () => {
+    const dashboard = build({});
+
+    expect(dashboard.risk).toMatchObject({
+      entries: [],
+      state: "insufficient-evidence",
+      unmeasured: [],
+    });
+  });
+
+  it("carries the risk map the caller built, riskiest first", () => {
+    const dashboard = build({
+      riskMap: {
+        entries: [
+          {
+            factors: [
+              {
+                detail: "2 open findings anchored here",
+                kind: "open-finding",
+                weight: 2,
+              },
+            ],
+            grade: "inferred",
+            level: "moderate",
+            nodeId: "node:src/a.ts",
+            path: "src/a.ts",
+            score: 2,
+          },
+        ],
+        unmeasured: [
+          { reason: "no coverage report has been read", signal: "coverage" },
+        ],
+      },
+    });
+
+    expect(dashboard.risk.state).toBe("ok");
+    expect(dashboard.risk.entries[0]?.path).toBe("src/a.ts");
+    expect(dashboard.risk.unmeasured[0]?.signal).toBe("coverage");
+    // The source label names the signals, so a reader can tell what the
+    // ranking is made of without opening the builder.
+    expect(dashboard.risk.sourceLabel).toMatch(/fan-in/);
   });
 });

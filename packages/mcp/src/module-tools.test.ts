@@ -5,7 +5,44 @@ import {
   findModuleForNode,
   repositoryModules,
 } from "./module-tools";
-import type { McpRepositoryData, McpWorkspaceData } from "./store";
+import type {
+  McpEdgeData,
+  McpEdgeFamily,
+  McpEdgeRelation,
+  McpEdgeTier,
+  McpRepositoryData,
+  McpWorkspaceData,
+} from "./store";
+
+/**
+ * A stored edge as the decoder delivers it (Codex remedy P0-D): the relation
+ * plus the family, tier, confidence and provenance that used to be dropped
+ * between the database and the tool answer.
+ */
+function edge(input: {
+  readonly family?: McpEdgeFamily;
+  readonly id: string;
+  readonly reason?: string;
+  readonly relation: McpEdgeRelation;
+  readonly sourceNodeId: string;
+  readonly targetNodeId: string;
+  readonly tier?: McpEdgeTier;
+}): McpEdgeData {
+  return {
+    confidence: 1,
+    family: input.family ?? "evidence",
+    id: input.id,
+    provenance: {
+      method: null,
+      reason: input.reason ?? "fixture",
+      span: null,
+    },
+    relation: input.relation,
+    sourceNodeId: input.sourceNodeId,
+    targetNodeId: input.targetNodeId,
+    tier: input.tier ?? "resolved",
+  };
+}
 
 /**
  * Phase 3 Wave C todo 8 — lazy module summaries, the three states:
@@ -40,7 +77,12 @@ function repository(
     contextPacks: [],
     defaultBranch: "main",
     edges: [
-      { id: "e1", relation: "imports", sourceNodeId: "n1", targetNodeId: "n2" },
+      edge({
+        id: "e1",
+        relation: "imports",
+        sourceNodeId: "n1",
+        targetNodeId: "n2",
+      }),
     ],
     evidence: [],
     findings: [],

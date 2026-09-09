@@ -1,0 +1,5 @@
+{
+  "name": "@demo/root",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"]
+}

@@ -6,7 +6,11 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-import { deriveArtifactFacets, routeQuery } from "@alrescha/core";
+import {
+  FACET_DOMAINS,
+  FACET_UNITS,
+  deriveArtifactFacets,
+} from "@alrescha/core";
 
 import { buildRepoOverview, findModuleForNode } from "./module-tools";
 
@@ -21,7 +25,6 @@ import {
   collectNeighbors,
   getNodeContent,
   impactOf,
-  searchWorkspaceNodes,
   tracePath,
 } from "./graph-tools";
 import {
@@ -30,54 +33,87 @@ import {
   REPO_MAP_MIN_BUDGET,
   buildGraphSchema,
   buildRepoMap,
+  estimateTokens,
 } from "./repo-map";
 import {
   AGENT_ASSERTION_RELATIONS,
+  MCP_EDGE_FAMILIES,
+  MCP_EDGE_RELATIONS,
+  MCP_EDGE_TIERS,
+  MCP_DEFAULT_READ_BANDS,
+  MCP_NODE_TYPES,
+  MCP_READ_BANDS,
   MEMORY_BLOCK_NAMES,
+  MODEL_IDENTIFIER_PATTERN,
   createUlid,
+  type McpAccessEvent,
   type McpPackMeasurement,
+  type McpReadBand,
   type McpPrincipal,
   type McpStore,
 } from "./store";
 
 const SERVER_INFO = { name: "alrescha", version: "0.1.0" } as const;
+/**
+ * Memory entries one read will carry (todo 22 ⑴). Uncapped, a workspace that
+ * had been writing memory for a year answered with all of it, and the block
+ * that made a session expensive was the one meant to make it cheap.
+ */
+export const MEMORY_READ_DEFAULT_LIMIT = 25;
+export const MEMORY_READ_MAX_LIMIT = 200;
 const PRIVATE_TTL_MS = 60_000;
 const READ_ONLY_TOOL = { destructiveHint: false, readOnlyHint: true } as const;
 const WRITE_METADATA_TOOL = {
   destructiveHint: false,
   readOnlyHint: false,
 } as const;
-const NODE_TYPE_SCHEMA = z.enum([
-  "artifact",
-  "requirement",
-  "evidence",
-  "finding",
-  "receipt",
-  "context_pack",
-  "memory",
-]);
-const RELATION_SCHEMA = z.enum([
-  "requires",
-  "implements",
-  "tests",
-  "supports",
-  "contradicts",
-  "supersedes",
-  "references",
-  "imports",
-  "calls",
-]);
+/**
+ * The output vocabulary, read from the package rather than copied (Codex
+ * remedy P0-D). Both of these were hand-maintained duplicates and both had
+ * fallen behind: the node enum would have rejected a `db_object` or
+ * `section`, and the relation enum omitted the whole database family.
+ * `packages/mcp/src/hosted.test.ts` pins them against the source arrays so a
+ * new value fails a test instead of a request.
+ */
+export const NODE_TYPE_SCHEMA = z.enum(MCP_NODE_TYPES);
+export const RELATION_SCHEMA = z.enum(MCP_EDGE_RELATIONS);
+const EDGE_FAMILY_SCHEMA = z.enum(MCP_EDGE_FAMILIES);
+/**
+ * The map's own facet vocabularies (todo 21), read from the package rather
+ * than retyped — the same rule the node and relation enums follow, for the
+ * same reason: a hand-copied enum is a vocabulary that is wrong somewhere.
+ */
+const FACET_DOMAIN_SCHEMA = z.enum(FACET_DOMAINS);
+const FACET_UNIT_SCHEMA = z.enum(FACET_UNITS);
+const EDGE_TIER_SCHEMA = z.enum(MCP_EDGE_TIERS);
 
-function toolResult(payload: Record<string, unknown>) {
+/**
+ * A call's own size, handed back to the access event it belongs to.
+ *
+ * The event is emitted before the payload exists — it names the nodes the
+ * handler resolved — so the measurement arrives afterwards, synchronously,
+ * in the same tick. `emitAccessEvent` only dispatches the write in a
+ * microtask or in `after()`, so the number is always set by the time the row
+ * is written.
+ */
+type ResponseSizer = (responseChars: number) => void;
+
+function toolResult(payload: Record<string, unknown>, sized?: ResponseSizer) {
   // QW-10 proposed dropping the JSON-as-text duplicate, but the MCP spec's
   // backward-compat SHOULD (structured results also carry equivalent
   // unstructured content) is load-bearing for real agent clients that only
   // read text content — keep the duplicate until a real-client compat pass
   // proves otherwise.
-  return {
+  const result = {
     content: [{ text: JSON.stringify(payload), type: "text" as const }],
     structuredContent: payload,
   };
+  // The whole result, not the payload: the duplicate above is on the wire
+  // too, and a meter that hid it would report a saving nobody received
+  // (todo 23). When the compat pass retires the duplicate, this number is
+  // where it shows up.
+  sized?.(JSON.stringify(result).length);
+  return result;
 }
 
 export interface HostedMcpEndpoint {
@@ -122,27 +158,35 @@ function unauthorized(): Response {
   );
 }
 
-const GRAPH_NODE_SCHEMA = z.object({
-  id: z.string(),
-  path: z.string().nullable(),
-  repositoryId: z.string(),
-  type: NODE_TYPE_SCHEMA,
-});
-const GRAPH_EDGE_SCHEMA = z.object({
+/**
+ * The edge shape a tool answer carries. No longer an `outputSchema` —
+ * every one of those was removed in todo 22, where they were 65% of the
+ * catalogue's token cost — but still the one place the vocabulary is
+ * written down, and `hosted.test.ts` pins it against the source arrays.
+ *
+ * An edge, with the reason it exists. `null` where the writer stated
+ * nothing — a missing tier is reported as missing, never filled in.
+ */
+export const GRAPH_EDGE_SCHEMA = z.object({
+  confidence: z.number().nullable(),
   derived: z.boolean(),
+  family: EDGE_FAMILY_SCHEMA.nullable(),
+  id: z.string(),
+  provenance: z.object({
+    method: z.string().nullable(),
+    reason: z.string().nullable(),
+    span: z
+      .object({
+        endLine: z.number(),
+        path: z.string(),
+        startLine: z.number(),
+      })
+      .nullable(),
+  }),
   relation: RELATION_SCHEMA,
   sourceNodeId: z.string(),
   targetNodeId: z.string(),
-});
-
-const MEMORY_ENTRY_SCHEMA = z.object({
-  anchorNodeId: z.string().nullable(),
-  anchorPath: z.string().nullable(),
-  entryKey: z.string(),
-  id: z.string(),
-  name: z.enum(MEMORY_BLOCK_NAMES),
-  text: z.string(),
-  updatedAt: z.string(),
+  tier: EDGE_TIER_SCHEMA.nullable(),
 });
 
 /**
@@ -157,256 +201,177 @@ const MEMORY_ENTRY_SCHEMA = z.object({
 const ASSERT_LINK_TOOL = {
   annotations: WRITE_METADATA_TOOL,
   description:
-    "Assert a concept edge between two nodes (closed relation vocabulary). Bi-temporal: a conflicting assertion on the same pair is superseded, never deleted; an identical one is a noop.",
+    "Assert a concept edge between two nodes. A conflicting assertion supersedes; an identical one is a noop.",
   inputSchema: z.object({
     reason: z.string().trim().min(1).max(500),
     relation: z.enum(AGENT_ASSERTION_RELATIONS),
     source_node_id: z.string().trim().min(1),
     target_node_id: z.string().trim().min(1),
   }),
-  outputSchema: z.object({
-    assertion: z.object({
-      id: z.string().nullable(),
-      invalidatedId: z.string().nullable(),
-      outcome: z.enum(["added", "noop", "superseded", "unknown_node"]),
-    }),
-    workspaceId: z.string(),
-  }),
 };
 
 const EXPLAIN_MODULE_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "Explain the module (deterministic structure cluster) containing a node. Prose is lazy: 'ready' serves the cached inferred summary, 'pending'/'stale' enqueue one credit-lifecycle enrich job and return the member list now — ask again after the worker runs.",
+    "Explain the module containing a node. Cached prose when ready; the member list plus an enqueued job otherwise.",
   inputSchema: z.object({
     node_id: z.string().trim().min(1),
   }),
-  outputSchema: z.object({
-    memberPaths: z.array(z.string()),
-    moduleKey: z.string(),
-    name: z.string(),
-    refreshJobId: z.string().nullable(),
-    state: z.enum(["pending", "ready", "stale"]),
-    summary: z.string().nullable(),
-    summaryGrade: z.literal("inferred"),
-    workspaceId: z.string(),
-  }),
 };
 
+/**
+ * One reader for stored content (todo 22 ⑴).
+ *
+ * `get_node_content` read the same rows through a different door, so a caller
+ * holding an id had to know which of two tools to ask. One selector — `path`,
+ * `id`, or `ids` for a batch — and one answer shape.
+ */
 const GET_ARTIFACT_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description: "Read an artifact by path or id with its graph-neighbor summary",
+  description:
+    "Read stored content by path, id, or up to four ids. Summaries only — source bodies are never persisted.",
   inputSchema: z
     .object({
       id: z.string().trim().min(1).optional(),
+      ids: z.array(z.string().trim().min(1)).min(1).max(4).optional(),
+      max_chars: z.number().int().min(1).max(10_000).optional(),
       path: z.string().trim().min(1).optional(),
     })
     .refine(
-      ({ id, path }) => Boolean(id) !== Boolean(path),
-      "Provide exactly one of id or path",
+      ({ id, ids, path }) =>
+        [id, ids, path].filter((value) => value !== undefined).length === 1,
+      "Provide exactly one of path, id, or ids",
     ),
-  outputSchema: z.object({
-    artifact: z
-      .object({
-        content: z.string(),
-        id: z.string(),
-        kind: z.string(),
-        path: z.string(),
-        repositoryId: z.string(),
-        status: z.string(),
-        summary: z.string(),
-        title: z.string(),
-      })
-      .nullable(),
-    neighbors: z.array(
-      z.object({
-        direction: z.enum(["incoming", "outgoing"]),
-        id: z.string(),
-        label: z.string(),
-        path: z.string().optional(),
-        relation: RELATION_SCHEMA,
-        type: NODE_TYPE_SCHEMA,
-      }),
-    ),
-    workspaceId: z.string(),
-  }),
 };
 
 const GET_FINDINGS_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description: "Get findings with explicit status, severity, and provenance",
+  description:
+    "Findings with status, severity and provenance. Open only unless status says otherwise.",
   inputSchema: z.object({
     filter: z
       .object({
         kind: z.string().optional(),
         severity: z.string().optional(),
-        status: z.string().optional(),
+        status: z
+          .string()
+          .optional()
+          .describe("Defaults to 'open'; pass 'all' for every status."),
       })
       .optional(),
-  }),
-  outputSchema: z.object({
-    findings: z.array(
-      z.object({
-        confidence: z.number(),
-        evidenceGrade: z.enum(["inferred", "verified"]),
-        id: z.string(),
-        kind: z.string(),
-        provenance: z.unknown(),
-        repositoryId: z.string(),
-        severity: z.string(),
-        sourceNodeId: z.string().nullable(),
-        status: z.string(),
-        title: z.string(),
-      }),
-    ),
-    workspaceId: z.string(),
   }),
 };
 
 const GET_GRAPH_SCHEMA_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "Call first: this workspace's graph vocabulary — node kinds, edge relations and counts — so queries speak the stored graph instead of guessing one.",
+    "This workspace's node kinds, edge relations and families, with counts.",
   inputSchema: z.object({}),
-  outputSchema: z.object({
-    nodeCounts: z.record(z.string(), z.number().int().nonnegative()),
-    relationCounts: z.record(z.string(), z.number().int().nonnegative()),
-    repositories: z.array(
-      z.object({
-        artifactCount: z.number().int().nonnegative(),
-        fullName: z.string(),
-        id: z.string(),
-      }),
-    ),
-    text: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
 const GET_NEIGHBORS_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "ID-first neighborhood of a node (depth 1-2): node ids, types, paths, and connecting edges. No bodies — fetch content explicitly with get_node_content.",
+    "Neighbourhood of a node (depth 1-2): ids, types, paths and the connecting edges.",
   inputSchema: z.object({
     depth: z.union([z.literal(1), z.literal(2)]).optional(),
+    families: z.array(EDGE_FAMILY_SCHEMA).max(8).optional(),
     node_id: z.string().trim().min(1),
     relations: z.array(RELATION_SCHEMA).max(7).optional(),
-  }),
-  outputSchema: z.object({
-    edges: z.array(GRAPH_EDGE_SCHEMA),
-    found: z.boolean(),
-    nodes: z.array(GRAPH_NODE_SCHEMA),
-    workspaceId: z.string(),
-  }),
-};
-
-const GET_NODE_CONTENT_TOOL = {
-  annotations: READ_ONLY_TOOL,
-  description:
-    "The explicit second step after ID-first traversal: stored content for one node id, or up to four at once via node_ids — batch related nodes into one call instead of one round-trip each (artifacts return their stored summary — raw source bodies are never persisted).",
-  inputSchema: z.object({
-    node_id: z.string().trim().min(1).optional(),
-    node_ids: z
-      .array(z.string().trim().min(1))
-      .min(1)
-      .max(4)
-      .optional()
-      .describe("Batch form: up to 4 node ids fetched in one call"),
-  }),
-  outputSchema: z.object({
-    node: z
-      .object({
-        content: z.string(),
-        id: z.string(),
-        kind: z.string(),
-        path: z.string().nullable(),
-        repositoryId: z.string(),
-        type: NODE_TYPE_SCHEMA,
-      })
-      .nullable(),
-    nodes: z.array(
-      z.object({
-        content: z.string(),
-        id: z.string(),
-        kind: z.string(),
-        path: z.string().nullable(),
-        repositoryId: z.string(),
-        requestedId: z.string(),
-        type: NODE_TYPE_SCHEMA,
-      }),
-    ),
-    workspaceId: z.string(),
   }),
 };
 
 const IMPACT_OF_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "ID-first impact report for a node: direct dependents (edges into it), direct dependencies (edges out of it), and the depth-limited transitive closure.",
+    "Nodes a change to this one could reach, with the confidence and bound of the answer.",
   inputSchema: z.object({
     depth: z.union([z.literal(1), z.literal(2)]).optional(),
+    /**
+     * Opt-in, because the default answer is one existing callers already
+     * depend on. `related-neighborhood` is proximity; `dependency-impact` is
+     * what a change reaches (REMEDY §7.3, OQ-052).
+     */
+    mode: z.enum(["dependency-impact", "related-neighborhood"]).optional(),
     node_id: z.string().trim().min(1),
-  }),
-  outputSchema: z.object({
-    found: z.boolean(),
-    impact: z
-      .object({
-        dependencies: z.object({
-          edges: z.array(GRAPH_EDGE_SCHEMA),
-          nodeIds: z.array(z.string()),
-        }),
-        dependents: z.object({
-          edges: z.array(GRAPH_EDGE_SCHEMA),
-          nodeIds: z.array(z.string()),
-        }),
-        transitiveNodeIds: z.array(z.string()),
-      })
-      .nullable(),
-    workspaceId: z.string(),
   }),
 };
 
 const LOG_PROGRESS_TOOL = {
   annotations: WRITE_METADATA_TOOL,
   description:
-    "Record one compact structured progress update; never writes to the repository",
+    "Record one progress event. Lands on an existing todo by id or by title; says which it matched.",
   inputSchema: z.object({
+    commit_sha: z
+      .string()
+      .trim()
+      .regex(/^[0-9a-f]{40}$/)
+      .optional(),
     refs: z.array(z.string().trim().min(1).max(200)).max(10).optional(),
+    repository_id: z.string().trim().min(1).optional(),
     status: z.enum(["started", "progress", "done", "blocked"]),
     summary: z.string().trim().min(1).max(200),
     task: z.string().trim().min(1).max(120),
+    todo_id: z.string().trim().min(1).optional(),
   }),
-  outputSchema: z.object({
-    event: z.object({
-      id: z.string(),
-      refs: z.array(z.string()),
-      status: z.enum(["started", "progress", "done", "blocked"]),
-      summary: z.string(),
-      task: z.string(),
-      todoId: z.string(),
-    }),
-    workspaceId: z.string(),
+};
+
+/**
+ * Phase 4 Wave C todo 16. `readOnlyHint: false` because it changes something
+ * — a job appears in the queue — even though it costs nothing and writes no
+ * repository content. A tool that scheduled work while claiming to be
+ * read-only would be lying to every client that gates on the hint.
+ *
+ * The tool count goes up by one here and comes back down in todo 22's
+ * consolidation; the plan budgets that trade explicitly.
+ */
+/**
+ * The other half of the meter (todo 23).
+ *
+ * The server can measure what it served; only the client can see what the
+ * model charged for it, and after prompt caching those are different
+ * numbers. So this tool exists — opt-in, counters only — and it costs the
+ * catalogue budget todo 22 measured, which is the trade it is worth making
+ * once rather than guessing about forever.
+ */
+const REPORT_SESSION_USAGE_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description:
+    "Report this session's provider token counts. Opt-in, numbers only; answers with whether it was kept and why.",
+  inputSchema: z.object({
+    cache_creation_tokens: z.number().int().min(0).optional(),
+    cache_read_tokens: z.number().int().min(0).optional(),
+    input_tokens: z.number().int().min(0).optional(),
+    model: z.string().trim().regex(MODEL_IDENTIFIER_PATTERN).optional(),
+    output_tokens: z.number().int().min(0).optional(),
+    repository_id: z.string().trim().min(1).optional(),
+  }),
+};
+
+const REQUEST_RESCAN_TOOL = {
+  annotations: WRITE_METADATA_TOOL,
+  description: "Queue a free rescan of a repository. Returns the mode and why.",
+  inputSchema: z.object({
+    mode: z.enum(["full", "incremental"]).optional(),
+    repository_id: z.string().trim().min(1).optional(),
   }),
 };
 
 const MEMORY_READ_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "Read the workspace's bounded memory blocks (gotchas / conventions / decisions) — durable notes earlier agents distilled. Filter by block name or anchor node.",
+    "Read the workspace memory blocks. Newest first; says how many the cap left out.",
   inputSchema: z.object({
     anchor_node_id: z.string().trim().min(1).optional(),
+    limit: z.number().int().min(1).max(MEMORY_READ_MAX_LIMIT).optional(),
     name: z.enum(MEMORY_BLOCK_NAMES).optional(),
-  }),
-  outputSchema: z.object({
-    entries: z.array(MEMORY_ENTRY_SCHEMA),
-    workspaceId: z.string(),
   }),
 };
 
 const MEMORY_WRITE_TOOL = {
   annotations: WRITE_METADATA_TOOL,
   description:
-    "Write one bounded memory entry (gotchas / conventions / decisions), keyed for reconciliation: same key + same text is a noop, a new text supersedes the old (never deleted), `remove` invalidates. At most 12 active entries per block — over the cap the write is rejected: distill, don't accumulate.",
+    "Write one memory entry. Reconciled: add, update, noop or remove.",
   inputSchema: z.object({
     anchor_node_id: z.string().trim().min(1).optional(),
     entry_key: z
@@ -417,75 +382,44 @@ const MEMORY_WRITE_TOOL = {
     remove: z.boolean().optional(),
     text: z.string().trim().min(1).max(500).optional(),
   }),
-  outputSchema: z.object({
-    entry: z.object({
-      id: z.string().nullable(),
-      invalidatedId: z.string().nullable(),
-      outcome: z.enum([
-        "added",
-        "invalidated",
-        "noop",
-        "rejected_cap",
-        "unknown_node",
-        "updated",
-      ]),
-    }),
-    workspaceId: z.string(),
-  }),
 };
 
 const QUERY_BRAIN_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "Run a deterministic structured query over graph types, statuses, and relations",
+    "Structured query over node types, domains, units, families, statuses, relations, paths and risk.",
   inputSchema: z.object({
     filter: z.object({
+      domains: z.array(FACET_DOMAIN_SCHEMA).optional(),
+      families: z.array(EDGE_FAMILY_SCHEMA).optional(),
+      format: z.enum(["ids", "table"]).optional(),
+      hasSummary: z.boolean().optional(),
+      limit: z.number().int().min(1).max(500).optional(),
       path: z.string().trim().min(1).optional(),
+      pathGlob: z.string().trim().min(1).max(200).optional(),
       relations: z.array(RELATION_SCHEMA).optional(),
+      sortBy: z.enum(["risk"]).optional(),
       statuses: z.array(z.string().trim().min(1)).optional(),
       types: z.array(NODE_TYPE_SCHEMA).optional(),
+      units: z.array(FACET_UNIT_SCHEMA).optional(),
       withoutRelations: z.array(RELATION_SCHEMA).optional(),
     }),
-  }),
-  outputSchema: z.object({
-    count: z.number().int().nonnegative(),
-    nodes: z.array(
-      z.object({
-        id: z.string(),
-        label: z.string(),
-        path: z.string().optional(),
-        relations: z.array(RELATION_SCHEMA),
-        repositoryId: z.string(),
-        status: z.string(),
-        type: NODE_TYPE_SCHEMA,
-      }),
-    ),
-    workspaceId: z.string(),
   }),
 };
 
 const RECORD_NOTE_TOOL = {
   annotations: WRITE_METADATA_TOOL,
-  description:
-    "Record a private workspace note; never writes to the repository",
+  description: "Record one note, optionally anchored to a node.",
   inputSchema: z.object({
     target: z.string().trim().min(1).max(200).optional(),
     text: z.string().trim().min(1).max(2_000),
-  }),
-  outputSchema: z.object({
-    note: z.object({
-      id: z.string(),
-      target: z.string().nullable(),
-      text: z.string(),
-    }),
-    workspaceId: z.string(),
   }),
 };
 
 const RECORD_PROMPT_TOOL = {
   annotations: WRITE_METADATA_TOOL,
   description:
-    "Record one prompt for the authenticated member (ADR-011). Metadata by default; `raw_text` is stored only when the member's separate raw-sync switch is on, and the database rejects the write outright unless the workspace enabled capture AND the member consented.",
+    "Record one prompt for this member, subject to workspace consent.",
   inputSchema: z.object({
     raw_text: z.string().trim().min(1).max(20_000).optional(),
     rubric: z.record(z.string(), z.number().min(0).max(2)).optional(),
@@ -493,32 +427,22 @@ const RECORD_PROMPT_TOOL = {
     token_count: z.number().int().nonnegative().max(10_000_000),
     tool_name: z.string().trim().min(1).max(120),
   }),
-  outputSchema: z.object({
-    recordId: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
 const RECORD_RULED_OUT_TOOL = {
   annotations: WRITE_METADATA_TOOL,
-  description:
-    "Append one ruled-out attempt to the workspace log: a hypothesis that was tried and what happened. The log is append-only in the database, so a recorded dead end cannot later be edited or removed — that permanence is the point, since the next agent reads it to avoid repeating the attempt.",
+  description: "Append one ruled-out attempt to the inspection log.",
   inputSchema: z.object({
     hypothesis: z.string().trim().min(1).max(2000),
     outcome: z.string().trim().min(1).max(2000),
     refs: z.array(z.string().trim().min(1)).max(50).optional(),
     repository_id: z.string().trim().min(1).optional(),
   }),
-  outputSchema: z.object({
-    attemptId: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
 const REPO_MAP_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description:
-    "Token-budgeted orientation map: files ranked by personalized PageRank (seeded by focus terms), each line a path plus its exported symbols. Compact text, no bodies.",
+  description: "A token-budgeted minimal index of this repository.",
   inputSchema: z.object({
     focus: z
       .array(z.string().trim().min(1).max(400))
@@ -532,46 +456,17 @@ const REPO_MAP_TOOL = {
       .max(REPO_MAP_MAX_BUDGET)
       .optional(),
   }),
-  outputSchema: z.object({
-    focusMatched: z.array(z.string()),
-    omittedCount: z.number().int().nonnegative(),
-    text: z.string(),
-    tokenBudget: z.number().int().positive(),
-    tokenEstimate: z.number().int().nonnegative(),
-    workspaceId: z.string(),
-  }),
 };
 
 const REPO_OVERVIEW_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description:
-    "Architecture overview: deterministic module clusters with sizes, plus cached module prose where fresh. Zero model calls — the grep-can't-answer 'what is this repo' entry point.",
+  description: "Repository shape: modules, counts and where the evidence is.",
   inputSchema: z.object({}),
-  outputSchema: z.object({
-    repositories: z.array(
-      z.object({
-        artifactCount: z.number().int().nonnegative(),
-        fullName: z.string(),
-        modules: z.array(
-          z.object({
-            key: z.string(),
-            memberCount: z.number().int().positive(),
-            name: z.string(),
-            summary: z.string().nullable(),
-          }),
-        ),
-        repositoryId: z.string(),
-      }),
-    ),
-    text: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
 const REQUEST_CONTEXT_PACK_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description:
-    "Select a load-on-demand context pack for a task and token budget",
+  description: "Select stored documents for a task within a token budget.",
   inputSchema: z.object({
     target_agent: z
       .enum(["claude-code", "codex", "cursor", "generic"])
@@ -579,142 +474,39 @@ const REQUEST_CONTEXT_PACK_TOOL = {
     task_description: z.string().trim().min(1).max(1_000),
     token_budget: z.number().int().min(128).max(32_000).optional(),
   }),
-  outputSchema: z.object({
-    assumption: z.string(),
-    estimatedTokens: z.number().int().nonnegative(),
-    excluded: z.array(z.object({ path: z.string(), reason: z.string() })),
-    nodeIds: z.array(z.string()),
-    omitted: z.array(
-      z.object({
-        estimatedTokens: z.number().int().positive(),
-        path: z.string(),
-        rank: z.number().int().positive(),
-        reason: z.string(),
-        title: z.string(),
-      }),
-    ),
-    paths: z.array(z.string()),
-    readingOrder: z.array(
-      z.object({
-        estimatedTokens: z.number().int().positive(),
-        id: z.string(),
-        path: z.string(),
-        rank: z.number().int().positive(),
-        reason: z.string(),
-        title: z.string(),
-      }),
-    ),
-    targetAgent: z.enum(["claude-code", "codex", "cursor", "generic"]),
-    text: z.string(),
-    title: z.string(),
-    workspaceId: z.string(),
-  }),
 };
 
-const ROUTE_QUERY_TOOL = {
-  annotations: READ_ONLY_TOOL,
-  description:
-    "Deterministic query routing: simple lookups go to text search, multi-hop or relational questions go to the graph tools. The decision carries its matched signals and a fallback for when the chosen route returns nothing.",
-  inputSchema: z.object({
-    question: z.string().trim().min(1).max(1_000),
-  }),
-  outputSchema: z.object({
-    fallback: z.object({
-      reason: z.string(),
-      route: z.enum(["graph", "search"]),
-      tools: z.array(z.string()),
-    }),
-    matchedSignals: z.array(z.string()),
-    reason: z.string(),
-    recommendedTools: z.array(z.string()),
-    route: z.enum(["graph", "search"]),
-    workspaceId: z.string(),
-  }),
-};
-
+/**
+ * The one entry point (todo 22 ⑴).
+ *
+ * `search_nodes` was the same ranking with excerpts stripped, and two names
+ * for one query is a choice every caller had to make and nobody could make
+ * well. `include_excerpt: false` is that tool now.
+ */
 const SEARCH_INDEX_TOOL = {
   annotations: READ_ONLY_TOOL,
-  description: "Search the deterministic Alrescha data index",
-  inputSchema: z.object({
-    query: z.string().trim().min(1),
-    type_filter: NODE_TYPE_SCHEMA.optional(),
-  }),
-  outputSchema: z.object({
-    query: z.string(),
-    results: z.array(
-      z.object({
-        excerpt: z.string(),
-        id: z.string(),
-        neighborIds: z.array(z.string()),
-        nodeId: z.string(),
-        path: z.string(),
-        rank: z.enum([
-          "exact",
-          "title-heading",
-          "path-symbol",
-          "graph-neighbor",
-        ]),
-        repositoryId: z.string(),
-        // Tier score plus the fractional connectivity bonus (todo 5).
-        score: z.number(),
-        title: z.string(),
-        type: NODE_TYPE_SCHEMA,
-      }),
-    ),
-    workspaceId: z.string(),
-  }),
-};
-
-const SEARCH_NODES_TOOL = {
-  annotations: READ_ONLY_TOOL,
   description:
-    "ID-first node search — the same deterministic ranking as search_index with excerpts stripped: node ids, types, paths, and neighbor ids only. search_index remains the text entry point; this is the graph entry point.",
+    "Search the deterministic index. include_excerpt=false returns ids, types and paths only.",
   inputSchema: z.object({
-    query: z.string().trim().min(1),
-    type_filter: NODE_TYPE_SCHEMA.optional(),
-    // Phase 2D todo 5 — optional facet filter, derived from the stored
-    // path (deterministic, ADR-013-equivalent). Backward compatible.
     domain_filter: z
       .enum(["frontend", "backend", "shared", "unclassified"])
       .optional(),
-  }),
-  outputSchema: z.object({
-    query: z.string(),
-    results: z.array(
-      z.object({
-        neighborIds: z.array(z.string()),
-        nodeId: z.string(),
-        path: z.string(),
-        rank: z.string(),
-        repositoryId: z.string(),
-        score: z.number(),
-        type: NODE_TYPE_SCHEMA,
-      }),
-    ),
-    workspaceId: z.string(),
+    excerpt_chars: z.number().int().min(0).max(1_000).optional(),
+    include_excerpt: z.boolean().optional(),
+    limit: z.number().int().min(1).max(100).optional(),
+    query: z.string().trim().min(1),
+    type_filter: NODE_TYPE_SCHEMA.optional(),
   }),
 };
 
 const TRACE_PATH_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
-    "ID-first shortest evidence path between two nodes (max depth 6), with graphify-style explain lines per hop. Derived edges are marked with *.",
+    "Shortest evidence path between two nodes, one explain line per hop.",
   inputSchema: z.object({
     from_node_id: z.string().trim().min(1),
     max_depth: z.number().int().min(1).max(6).optional(),
     to_node_id: z.string().trim().min(1),
-  }),
-  outputSchema: z.object({
-    found: z.boolean(),
-    path: z
-      .object({
-        edges: z.array(GRAPH_EDGE_SCHEMA),
-        explain: z.array(z.string()),
-        hops: z.number(),
-        nodeIds: z.array(z.string()),
-      })
-      .nullable(),
-    workspaceId: z.string(),
   }),
 };
 
@@ -739,9 +531,9 @@ function createServer(
     tool: string,
     targetNodeIds: readonly string[],
     packTokens?: Pick<McpPackMeasurement, "baselineTokens" | "selectedTokens">,
-  ): void {
+  ): ResponseSizer {
     const occurredAt = new Date();
-    const event = {
+    const event: McpAccessEvent = {
       id: createUlid(occurredAt),
       occurredAt: occurredAt.toISOString(),
       targetNodeIds: [...new Set(targetNodeIds)],
@@ -768,6 +560,10 @@ function createServer(
     };
     if (scheduleAfterResponse) scheduleAfterResponse(dispatch);
     else queueMicrotask(() => void dispatch());
+    return (responseChars) => {
+      event.responseChars = responseChars;
+      event.estimatedTokens = estimateTokens("x".repeat(responseChars));
+    };
   }
 
   const server = new McpServer(SERVER_INFO, {
@@ -787,10 +583,33 @@ function createServer(
       });
     }
   };
-  const readWorkspace = async () => {
+  /**
+   * The workspace, in the bands this call needs (todo 22 ⑹).
+   *
+   * The default read stopped carrying `route` and `database` when the bands
+   * landed, and the 보완's rule is that nothing is dropped before its callers
+   * move — so every tool whose answer is *about* routes or database objects
+   * names them here. A tool that does not name a band is a tool whose answer
+   * never mentioned it.
+   */
+  const readWorkspace = async (bands?: readonly McpReadBand[]) => {
     requireScope("mcp:read");
-    return store.loadWorkspace(principal);
+    return store.loadWorkspace(principal, bands ? { bands } : {});
   };
+  /** Every band, for the answers that are a census rather than a lookup. */
+  const ALL_BANDS = [...MCP_READ_BANDS];
+  /**
+   * The bands a families filter implies. Two of the eight edge families are
+   * about nodes the default read no longer carries, so asking about one is
+   * how a caller asks for it.
+   */
+  const bandsFor = (
+    families: readonly string[] | undefined,
+  ): readonly McpReadBand[] => [
+    ...MCP_DEFAULT_READ_BANDS,
+    ...(families?.includes("database") ? (["database"] as const) : []),
+    ...(families?.includes("route") ? (["route"] as const) : []),
+  ];
   const registerJsonResource = (
     name: string,
     title: string,
@@ -808,21 +627,23 @@ function createServer(
       },
       async (uri) => {
         const result = await read();
-        emitAccessEvent(
+        const sized = emitAccessEvent(
           store,
           principal,
           `resource:${name}`,
           result.targetNodeIds,
         );
-        return {
-          contents: [
-            {
-              mimeType: "application/json",
-              text: JSON.stringify(result.payload),
-              uri: uri.href,
-            },
-          ],
-        };
+        // Resources are served bytes too. A meter that counted only tools
+        // would report a session as cheaper than it was.
+        const contents = [
+          {
+            mimeType: "application/json",
+            text: JSON.stringify(result.payload),
+            uri: uri.href,
+          },
+        ];
+        sized(JSON.stringify({ contents }).length);
+        return { contents };
       },
     );
   };
@@ -954,14 +775,17 @@ function createServer(
         sourceNodeId: source_node_id,
         targetNodeId: target_node_id,
       });
-      emitAccessEvent(store, principal, "assert_link", [
+      const sized = emitAccessEvent(store, principal, "assert_link", [
         source_node_id,
         target_node_id,
       ]);
-      return toolResult({
-        assertion,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          assertion,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -995,118 +819,178 @@ function createServer(
           explanation.cluster.members.includes(artifact.path),
         )
         .map(({ id }) => id);
-      emitAccessEvent(store, principal, "explain_module", memberIds);
-      return toolResult({
-        memberPaths: [...explanation.cluster.members],
-        moduleKey: explanation.cluster.key,
-        name: explanation.cluster.name,
-        refreshJobId,
-        state: explanation.state,
-        summary: explanation.summary?.summary ?? null,
-        summaryGrade: "inferred" as const,
-        workspaceId: principal.workspaceId,
-      });
+      const sized = emitAccessEvent(
+        store,
+        principal,
+        "explain_module",
+        memberIds,
+      );
+      return toolResult(
+        {
+          memberPaths: [...explanation.cluster.members],
+          moduleKey: explanation.cluster.key,
+          name: explanation.cluster.name,
+          refreshJobId,
+          state: explanation.state,
+          summary: explanation.summary?.summary ?? null,
+          summaryGrade: "inferred" as const,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
   server.registerTool("get_artifact", GET_ARTIFACT_TOOL, async (selector) => {
-    const workspace = await readWorkspace();
-    const result = getWorkspaceArtifact(workspace, selector);
-    emitAccessEvent(store, principal, "get_artifact", [
+    // The batch form is what `get_node_content` was: one result per input, in
+    // input order, misses included. A batch that dropped its misses came
+    // back shorter than it went out, and a caller cannot retry an id it was
+    // never handed back (Codex remedy 9.1).
+    if (selector.ids) {
+      const workspace = await readWorkspace();
+      const nodes = selector.ids.map((requestedId) => {
+        const node = getNodeContent(workspace, requestedId);
+        return node
+          ? {
+              ...node,
+              content: selector.max_chars
+                ? node.content.slice(0, selector.max_chars)
+                : node.content,
+              found: true as const,
+              requestedId,
+            }
+          : { found: false as const, requestedId };
+      });
+      const sized = emitAccessEvent(
+        store,
+        principal,
+        "get_artifact",
+        nodes.flatMap((entry) => (entry.found ? [entry.id] : [])),
+      );
+      return toolResult({ nodes, workspaceId: principal.workspaceId }, sized);
+    }
+    const [workspace, found] = await Promise.all([
+      readWorkspace(),
+      // Targeted: the artifact is looked up by id or path rather than
+      // filtered out of the budgeted workspace read, so a repository past
+      // that budget still answers for its own files (Codex remedy P0-B).
+      store.findArtifacts(principal, selector),
+    ]);
+    const result = getWorkspaceArtifact(workspace, selector, found);
+    // An id that is not an artifact — a requirement, an evidence row, a
+    // finding — is what `get_node_content` used to answer, and a caller
+    // holding an id should not have to know which kind it has before
+    // choosing a tool (todo 22 ⑴). `artifact: null` still says which
+    // reader answered.
+    const node =
+      !result.artifact && selector.id
+        ? (getNodeContent(workspace, selector.id) ?? null)
+        : null;
+    const sized = emitAccessEvent(store, principal, "get_artifact", [
       ...(result.artifact ? [result.artifact.id] : []),
+      ...(node ? [node.id] : []),
       ...result.neighbors.map(({ id }) => id),
     ]);
-    return toolResult({
-      ...result,
-      workspaceId: principal.workspaceId,
-    });
+    return toolResult(
+      {
+        ...result,
+        ...(node
+          ? {
+              node: selector.max_chars
+                ? {
+                    ...node,
+                    content: node.content.slice(0, selector.max_chars),
+                  }
+                : node,
+            }
+          : {}),
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
 
   server.registerTool("get_findings", GET_FINDINGS_TOOL, async ({ filter }) => {
     const workspace = await readWorkspace();
     const findings = getWorkspaceFindings(workspace, filter);
-    emitAccessEvent(
+    const sized = emitAccessEvent(
       store,
       principal,
       "get_findings",
       findings.map((finding) => finding.sourceNodeId ?? finding.id),
     );
-    return toolResult({
-      findings,
-      workspaceId: principal.workspaceId,
-    });
+    return toolResult(
+      {
+        findings,
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
 
   server.registerTool("get_graph_schema", GET_GRAPH_SCHEMA_TOOL, async () => {
-    const workspace = await readWorkspace();
+    // The card is a census of what exists, so it reads every band. A schema
+    // that under-counted because the default read is narrower would teach a
+    // caller the workspace has no routes.
+    const workspace = await readWorkspace(ALL_BANDS);
     const schema = buildGraphSchema(workspace);
-    emitAccessEvent(store, principal, "get_graph_schema", []);
-    return toolResult({
-      ...schema,
-      workspaceId: principal.workspaceId,
-    });
+    const sized = emitAccessEvent(store, principal, "get_graph_schema", []);
+    return toolResult(
+      {
+        ...schema,
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
 
   server.registerTool(
     "get_neighbors",
     GET_NEIGHBORS_TOOL,
-    async ({ depth, node_id, relations }) => {
-      const workspace = await readWorkspace();
+    async ({ depth, families, node_id, relations }) => {
+      // Naming a band is asking for it (todo 22 ⑹): a `families` filter for
+      // a band the default read does not carry would otherwise answer
+      // "none", which is what an ignored filter looks like.
+      const workspace = await readWorkspace(bandsFor(families));
       const result = collectNeighbors(
         workspace,
         node_id,
         depth ?? 1,
         relations,
+        families,
       );
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "get_neighbors",
         result ? result.nodes.map(({ id }) => id) : [],
       );
-      return toolResult({
-        edges: result?.edges ?? [],
-        found: result !== null,
-        nodes: result?.nodes ?? [],
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
-
-  server.registerTool(
-    "get_node_content",
-    GET_NODE_CONTENT_TOOL,
-    async ({ node_id, node_ids }) => {
-      if (!node_id && (!node_ids || node_ids.length === 0)) {
-        throw new Error("get_node_content requires node_id or node_ids");
-      }
-      const workspace = await readWorkspace();
-      const requested = node_ids ?? (node_id ? [node_id] : []);
-      const nodes = requested.flatMap((requestedId) => {
-        const found = getNodeContent(workspace, requestedId);
-        return found ? [{ ...found, requestedId }] : [];
-      });
-      // `node` keeps the original single-node contract; `nodes` is the batch.
-      const node = node_id
-        ? (getNodeContent(workspace, node_id) ?? null)
-        : null;
-      emitAccessEvent(
-        store,
-        principal,
-        "get_node_content",
-        nodes.map(({ id }) => id),
+      return toolResult(
+        {
+          edges: result?.edges ?? [],
+          found: result !== null,
+          nodes: result?.nodes ?? [],
+          omissions: result?.omissions ?? [],
+          workspaceId: principal.workspaceId,
+        },
+        sized,
       );
-      return toolResult({ node, nodes, workspaceId: principal.workspaceId });
     },
   );
 
   server.registerTool(
     "impact_of",
     IMPACT_OF_TOOL,
-    async ({ depth, node_id }) => {
-      const workspace = await readWorkspace();
-      const impact = impactOf(workspace, node_id, depth ?? 2);
-      emitAccessEvent(
+    async ({ depth, mode, node_id }) => {
+      // `affected.routes` and `affected.tables` are the answer, not a
+      // by-product, so the two partial bands are part of this read.
+      const workspace = await readWorkspace([
+        ...MCP_DEFAULT_READ_BANDS,
+        "database",
+        "route",
+      ]);
+      const impact = impactOf(workspace, node_id, depth ?? 2, mode);
+      const sized = emitAccessEvent(
         store,
         principal,
         "impact_of",
@@ -1116,44 +1000,80 @@ function createServer(
               ...impact.dependents.nodeIds,
               ...impact.dependencies.nodeIds,
               ...impact.transitiveNodeIds,
+              ...(impact.dependencyImpact?.candidates ?? []).map(
+                ({ nodeId }) => nodeId,
+              ),
             ]
           : [],
       );
-      return toolResult({
-        found: impact !== null,
-        impact,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          found: impact !== null,
+          impact,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
   server.registerTool("log_progress", LOG_PROGRESS_TOOL, async (input) => {
     requireScope("mcp:write");
-    const event = await store.appendProgress(principal, input);
-    return toolResult({
-      event: {
-        id: event.id,
-        refs: event.refs,
-        status: event.status,
-        summary: event.summary,
-        task: event.task,
-        todoId: event.todoId,
-      },
-      workspaceId: principal.workspaceId,
+    const event = await store.appendProgress(principal, {
+      ...(input.commit_sha === undefined
+        ? {}
+        : { commitSha: input.commit_sha }),
+      ...(input.refs === undefined ? {} : { refs: input.refs }),
+      ...(input.repository_id === undefined
+        ? {}
+        : { repositoryId: input.repository_id }),
+      status: input.status,
+      summary: input.summary,
+      task: input.task,
+      ...(input.todo_id === undefined ? {} : { todoId: input.todo_id }),
     });
+    // The nodes the entry names light up like any other touch (todo 19 ⑹).
+    // A write that changed the graph and left no trace in the access stream
+    // was invisible to the live map and to the telemetry that counts what a
+    // session did — only the reads were.
+    const sized = emitAccessEvent(store, principal, "log_progress", event.refs);
+    return toolResult(
+      {
+        event: {
+          commitSha: event.commitSha ?? null,
+          id: event.id,
+          // "created" and "matched by title" are different outcomes for a
+          // caller who thought they were updating something (todo 21).
+          matched: event.matched ?? "created",
+          refs: event.refs,
+          repositoryId: event.repositoryId ?? null,
+          status: event.status,
+          summary: event.summary,
+          task: event.task,
+          todoId: event.todoId,
+        },
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
 
   server.registerTool(
     "memory_read",
     MEMORY_READ_TOOL,
-    async ({ anchor_node_id, name }) => {
+    async ({ anchor_node_id, limit, name }) => {
       const workspace = await readWorkspace();
-      const entries = (workspace.memoryEntries ?? []).filter(
-        (entry) =>
-          (!name || entry.name === name) &&
-          (!anchor_node_id || entry.anchorNodeId === anchor_node_id),
-      );
-      emitAccessEvent(
+      const matched = [...(workspace.memoryEntries ?? [])]
+        .filter(
+          (entry) =>
+            (!name || entry.name === name) &&
+            (!anchor_node_id || entry.anchorNodeId === anchor_node_id),
+        )
+        // Newest first, so a cap keeps what a session is most likely to
+        // still be acting on rather than an arbitrary slice.
+        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+      const entries = matched.slice(0, limit ?? MEMORY_READ_DEFAULT_LIMIT);
+      const sized = emitAccessEvent(
         store,
         principal,
         "memory_read",
@@ -1161,10 +1081,16 @@ function createServer(
           entry.anchorNodeId ? [entry.anchorNodeId] : [],
         ),
       );
-      return toolResult({
-        entries,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          entries,
+          // An answer shorter than the store is only honest if it says so
+          // (todo 22 ⑴). Zero means the cap left nothing out.
+          truncated: matched.length - entries.length,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -1183,33 +1109,47 @@ function createServer(
         remove,
         text,
       });
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "memory_write",
         anchor_node_id ? [anchor_node_id] : [],
       );
-      return toolResult({
-        entry,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          entry,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
   server.registerTool("query_brain", QUERY_BRAIN_TOOL, async ({ filter }) => {
-    const workspace = await readWorkspace();
-    const nodes = queryWorkspaceBrain(workspace, filter);
-    emitAccessEvent(
+    // Same rule as `get_neighbors`: a `types` filter naming a partial band
+    // is how a caller asks for that band.
+    const workspace = await readWorkspace([
+      ...MCP_DEFAULT_READ_BANDS,
+      ...(filter?.types?.includes("db_object") ? (["database"] as const) : []),
+      ...(filter?.types?.includes("route") ? (["route"] as const) : []),
+    ]);
+    const { coverage, nodes, table } = queryWorkspaceBrain(workspace, filter);
+    const sized = emitAccessEvent(
       store,
       principal,
       "query_brain",
       nodes.map(({ id }) => id),
     );
-    return toolResult({
-      count: nodes.length,
-      nodes,
-      workspaceId: principal.workspaceId,
-    });
+    return toolResult(
+      {
+        count: nodes.length,
+        coverage,
+        nodes,
+        ...(table ? { table } : {}),
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
 
   server.registerTool(
@@ -1218,10 +1158,22 @@ function createServer(
     async ({ target, text }) => {
       requireScope("mcp:write");
       const note = await store.appendNote(principal, { target, text });
-      return toolResult({
-        note: { id: note.id, target: note.target, text: note.text },
-        workspaceId: principal.workspaceId,
-      });
+      // The node the note is about, when it names one (todo 19 ⑹). A note
+      // with no target touched nothing, and an event with no nodes is still
+      // the record that the session wrote here.
+      const sized = emitAccessEvent(
+        store,
+        principal,
+        "record_note",
+        note.target ? [note.target] : [],
+      );
+      return toolResult(
+        {
+          note: { id: note.id, target: note.target, text: note.text },
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -1277,38 +1229,75 @@ function createServer(
         ...(focus ? { focus } : {}),
         tokenBudget: token_budget ?? REPO_MAP_DEFAULT_BUDGET,
       });
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "repo_map",
         map.entries.map(({ nodeId }) => nodeId),
       );
-      return toolResult({
-        focusMatched: map.focusMatched,
-        omittedCount: map.omittedCount,
-        text: map.text,
-        tokenBudget: map.tokenBudget,
-        tokenEstimate: map.tokenEstimate,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          focusMatched: map.focusMatched,
+          omittedCount: map.omittedCount,
+          text: map.text,
+          tokenBudget: map.tokenBudget,
+          tokenEstimate: map.tokenEstimate,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
   server.registerTool("repo_overview", REPO_OVERVIEW_TOOL, async () => {
-    const workspace = await readWorkspace();
+    const workspace = await readWorkspace(ALL_BANDS);
     const overview = buildRepoOverview(workspace);
-    emitAccessEvent(store, principal, "repo_overview", []);
-    return toolResult({
-      repositories: overview.repositories.map((repository) => ({
-        artifactCount: repository.artifactCount,
-        fullName: repository.fullName,
-        modules: repository.modules.map((module) => ({ ...module })),
-        repositoryId: repository.repositoryId,
-      })),
-      text: overview.text,
-      workspaceId: principal.workspaceId,
-    });
+    const sized = emitAccessEvent(store, principal, "repo_overview", []);
+    return toolResult(
+      {
+        repositories: overview.repositories.map((repository) => ({
+          artifactCount: repository.artifactCount,
+          fullName: repository.fullName,
+          modules: repository.modules.map((module) => ({ ...module })),
+          repositoryId: repository.repositoryId,
+        })),
+        text: overview.text,
+        workspaceId: principal.workspaceId,
+      },
+      sized,
+    );
   });
+
+  server.registerTool(
+    "report_session_usage",
+    REPORT_SESSION_USAGE_TOOL,
+    async ({
+      cache_creation_tokens,
+      cache_read_tokens,
+      input_tokens,
+      model,
+      output_tokens,
+      repository_id,
+    }) => {
+      requireScope("mcp:write");
+      const result = await store.reportSessionUsage(principal, {
+        ...(cache_creation_tokens === undefined
+          ? {}
+          : { cacheCreationTokens: cache_creation_tokens }),
+        ...(cache_read_tokens === undefined
+          ? {}
+          : { cacheReadTokens: cache_read_tokens }),
+        ...(input_tokens === undefined ? {} : { inputTokens: input_tokens }),
+        ...(model === undefined ? {} : { model }),
+        ...(output_tokens === undefined ? {} : { outputTokens: output_tokens }),
+        ...(repository_id === undefined ? {} : { repositoryId: repository_id }),
+      });
+      // No access event: a meter that counted its own traffic would make a
+      // session look more expensive for having been measured, and the glow
+      // stream would light up nodes nobody read.
+      return toolResult({ ...result, workspaceId: principal.workspaceId });
+    },
+  );
 
   server.registerTool(
     "request_context_pack",
@@ -1326,7 +1315,7 @@ function createServer(
           (total, omitted) => total + omitted.estimatedTokens,
           0,
         );
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "request_context_pack",
@@ -1338,72 +1327,95 @@ function createServer(
             }
           : undefined,
       );
-      return toolResult({
-        ...contextPack,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          ...contextPack,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
-  server.registerTool("route_query", ROUTE_QUERY_TOOL, async ({ question }) => {
-    requireScope("mcp:read");
-    const decision = routeQuery(question);
-    // The access event records only the tool name and timestamp — the
-    // question text itself is never stored (WORK_SPEC §11).
-    emitAccessEvent(store, principal, "route_query", []);
-    return toolResult({
-      ...decision,
-      workspaceId: principal.workspaceId,
-    });
-  });
+  // Registered here so the advertised catalogue keeps the alphabetical order
+  // the contract test pins — the list is registration order, and a tool that
+  // landed in the middle of it would move every entry after it.
+  server.registerTool(
+    "request_rescan",
+    REQUEST_RESCAN_TOOL,
+    async ({ mode, repository_id }) => {
+      requireScope("mcp:write");
+      const result = await store.requestRescan(principal, {
+        ...(mode === undefined ? {} : { mode }),
+        ...(repository_id === undefined ? {} : { repositoryId: repository_id }),
+      });
+      const sized = emitAccessEvent(store, principal, "request_rescan", []);
+      return toolResult(
+        { ...result, workspaceId: principal.workspaceId },
+        sized,
+      );
+    },
+  );
 
   server.registerTool(
     "search_index",
     SEARCH_INDEX_TOOL,
-    async ({ query, type_filter }) => {
+    async ({
+      domain_filter,
+      excerpt_chars,
+      include_excerpt,
+      limit,
+      query,
+      type_filter,
+    }) => {
       const workspace = await readWorkspace();
-      const results = searchWorkspaceIndex(workspace, {
+      const ranked = searchWorkspaceIndex(workspace, {
         query,
         ...(type_filter ? { typeFilter: type_filter } : {}),
       });
-      emitAccessEvent(
-        store,
-        principal,
-        "search_index",
-        results.map(({ nodeId }) => nodeId),
-      );
-      return toolResult({
-        query,
-        results,
-        workspaceId: principal.workspaceId,
-      });
-    },
-  );
-
-  server.registerTool(
-    "search_nodes",
-    SEARCH_NODES_TOOL,
-    async ({ query, type_filter, domain_filter }) => {
-      const workspace = await readWorkspace();
-      const unfiltered = searchWorkspaceNodes(workspace, query, type_filter);
-      const results = domain_filter
-        ? unfiltered.filter(
+      const filtered = domain_filter
+        ? ranked.filter(
             (result) =>
               deriveArtifactFacets(result.path, "code_metadata").domain ===
               domain_filter,
           )
-        : unfiltered;
-      emitAccessEvent(
+        : ranked;
+      // `include_excerpt: false` is what `search_nodes` was — the same
+      // ranking with the prose *omitted*, not blanked. An empty string is
+      // still a key on the wire, and the point of the ID-first entry point
+      // is that a caller pays for ids and paths and nothing else (todo 22 ⑴).
+      const kept = filtered
+        .slice(0, limit ?? filtered.length)
+        .map(({ excerpt, excerptAbsence, title, ...rest }) =>
+          include_excerpt === false
+            ? rest
+            : {
+                ...rest,
+                excerpt:
+                  excerpt_chars === undefined
+                    ? excerpt
+                    : excerpt.slice(0, excerpt_chars),
+                ...(excerptAbsence ? { excerptAbsence } : {}),
+                title,
+              },
+        );
+      const sized = emitAccessEvent(
         store,
         principal,
-        "search_nodes",
-        results.map(({ nodeId }) => nodeId),
+        "search_index",
+        kept.map(({ nodeId }) => nodeId),
       );
-      return toolResult({
-        query,
-        results,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          query,
+          results: kept,
+          // What the cap left out, so a caller narrows the query rather than
+          // reading the page it got as the whole answer.
+          truncated: Math.max(0, filtered.length - kept.length),
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
@@ -1418,21 +1430,47 @@ function createServer(
         to_node_id,
         max_depth ?? 4,
       );
-      emitAccessEvent(
+      const sized = emitAccessEvent(
         store,
         principal,
         "trace_path",
         path ? [...path.nodeIds] : [],
       );
-      return toolResult({
-        found: path !== null,
-        path,
-        workspaceId: principal.workspaceId,
-      });
+      return toolResult(
+        {
+          found: path !== null,
+          path,
+          workspaceId: principal.workspaceId,
+        },
+        sized,
+      );
     },
   );
 
   return server;
+}
+
+/**
+ * The same tool surface, for a transport that authenticates once rather than
+ * per request (Wave C todo 17).
+ *
+ * `createHostedMcpEndpoint` derives the principal from a bearer token on
+ * every HTTP request. A stdio connection has no such header: the process was
+ * started by the person it serves, and the principal is decided before the
+ * first message. Exporting the factory rather than a second server keeps
+ * that the *only* difference — every tool, hint and schema below is shared,
+ * so a tool cannot exist on one transport and not the other.
+ */
+export function createMcpServerFor(options: {
+  cacheTtlMs?: number;
+  principal: McpPrincipal;
+  store: McpStore;
+}): McpServer {
+  return createServer(
+    options.store,
+    options.principal,
+    options.cacheTtlMs ?? PRIVATE_TTL_MS,
+  );
 }
 
 export function createHostedMcpEndpoint(options: {

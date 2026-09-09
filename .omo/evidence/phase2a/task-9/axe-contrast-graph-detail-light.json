@@ -1,0 +1,9 @@
+{
+  "incomplete": [],
+  "incompleteCount": 0,
+  "passes": 38,
+  "route": "/graph?node=req-auth",
+  "theme": "light",
+  "violationCount": 0,
+  "violations": []
+}

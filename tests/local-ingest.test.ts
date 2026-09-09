@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,8 +14,8 @@ import {
   buildWorkspaceCommitCards,
   type CommitCardRunRow,
 } from "../apps/web/lib/commits/commit-cards-report";
-import { GitHubRepositorySource } from "../apps/worker/src/github-repository-source";
 import { ALL_MIGRATIONS, createTestDatabase } from "./helpers/database";
+import { githubShapedPlan } from "./helpers/github-shaped-plan";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 const DRIFTED_DEMO = resolve(repoRoot, "fixtures/drifted-demo");
@@ -24,44 +24,6 @@ const USER_A = "41111111-1111-4111-8111-111111111111";
 const USER_B = "42222222-2222-4222-8222-222222222222";
 
 const BODY_SENTINEL = "RAW_BODY_SENTINEL_DB_51ac";
-
-/**
- * The GitHub transport, served from the same local files: the REAL
- * `GitHubRepositorySource` with a stubbed fetch that answers the tree and raw
- * content endpoints from disk. Everything after the transport — scanner,
- * apply — is shared code, so this is the honest two-path comparison.
- */
-async function githubShapedPlan(
-  rootDir: string,
-  commitSha: string,
-): Promise<RepositoryScanPlan> {
-  const { source: localSource } = await createLocalRepositorySource(rootDir);
-  const tree = await localSource.listTree(commitSha);
-  const fetchImplementation = (async (input: unknown) => {
-    const url = String(input);
-    if (url.includes("/git/trees/")) {
-      return Response.json({
-        sha: tree.treeSha,
-        tree: tree.entries.map((entry) => ({ ...entry })),
-        truncated: false,
-      });
-    }
-    const match = /\/contents\/([^?]+)\?/.exec(url);
-    if (!match?.[1]) {
-      return new Response("not found", { status: 404 });
-    }
-    const path = decodeURIComponent(match[1]);
-    const bytes = await readFile(join(rootDir, ...path.split("/")));
-    return new Response(new Uint8Array(bytes));
-  }) as typeof fetch;
-  const source = new GitHubRepositorySource(
-    "2klips",
-    "arr-app",
-    "installation-token",
-    fetchImplementation,
-  );
-  return scanRepository({ commitSha, source });
-}
 
 describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
   let database: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -114,29 +76,59 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
   }
 
   async function graphSnapshot(workspaceId: string, repositoryId: string) {
-    const [artifacts, nodes, todos] = await Promise.all([
-      database.query<{ path: string }>(
-        `select path, kind, classification, digest, source_blob_sha, size_bytes,
+    const [artifacts, nodes, todos, directories, containment] =
+      await Promise.all([
+        database.query<{ path: string }>(
+          `select path, kind, classification, digest, source_blob_sha, size_bytes,
                 exported_symbols, last_seen_commit_sha
          from public.artifacts
          where workspace_id = $1 and repository_id = $2
          order by path`,
-        [workspaceId, repositoryId],
-      ),
-      database.query<{ kind: string; label: string }>(
-        `select kind, label from public.graph_nodes
+          [workspaceId, repositoryId],
+        ),
+        database.query<{ kind: string; label: string }>(
+          `select kind, label from public.graph_nodes
          where workspace_id = $1 and repository_id = $2
          order by label`,
-        [workspaceId, repositoryId],
-      ),
-      database.query<{ status: string; title: string }>(
-        `select title, status, source_key, source_path from public.todos
+          [workspaceId, repositoryId],
+        ),
+        database.query<{ status: string; title: string }>(
+          `select title, status, source_key, source_path from public.todos
          where workspace_id = $1 and repository_id = $2
          order by source_key`,
-        [workspaceId, repositoryId],
-      ),
-    ]);
-    return { artifacts: artifacts.rows, nodes: nodes.rows, todos: todos.rows };
+          [workspaceId, repositoryId],
+        ),
+        // Derived by the scan SQL rather than carried in the plan, so the two
+        // paths agree only if the same paths produced the same tree (todo 3).
+        database.query<{ path: string; role: string | null }>(
+          `select path, role from public.directories
+         where workspace_id = $1 and repository_id = $2
+         order by path`,
+          [workspaceId, repositoryId],
+        ),
+        database.query<{ child: string; parent: string }>(
+          `select parent_directory.path as parent,
+                coalesce(child_directory.path, child_artifact.path) as child
+         from public.edges e
+         join public.directories parent_directory
+           on parent_directory.id = e.source_node_id
+         left join public.directories child_directory
+           on child_directory.id = e.target_node_id
+         left join public.artifacts child_artifact
+           on child_artifact.id = e.target_node_id
+         where e.workspace_id = $1 and e.repository_id = $2
+           and e.relation = 'contains'
+         order by parent, child`,
+          [workspaceId, repositoryId],
+        ),
+      ]);
+    return {
+      artifacts: artifacts.rows,
+      containment: containment.rows,
+      directories: directories.rows,
+      nodes: nodes.rows,
+      todos: todos.rows,
+    };
   }
 
   it("the CLI path and the GitHub path yield the same plan and the same graph", async () => {
@@ -148,6 +140,16 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
     // Same deterministic pipeline over both transports → identical plans.
     expect(localPlan).toEqual(githubPlan);
     expect(localPlan.artifacts.length).toBeGreaterThan(5);
+    // Equality has to be about something: since Phase 4 Wave A todo 2 the
+    // plan carries document links and non-code artifacts, and the ignore
+    // rules that decide both used to differ between the two paths (OQ-043).
+    expect(localPlan.docLinks.length).toBeGreaterThan(0);
+    expect(localPlan.docLinks).toEqual(githubPlan.docLinks);
+    expect(
+      localPlan.artifacts.some(
+        ({ classification }) => classification === "config",
+      ),
+    ).toBe(true);
 
     // Same apply function on both sides → identical graphs.
     const repositoryA = await ensureRepository(
@@ -164,6 +166,8 @@ describe("local ingest (Phase 2B todo 3, ADR-013)", () => {
     const graphA = await graphSnapshot(workspaceA, repositoryA);
     const graphB = await graphSnapshot(workspaceB, repositoryB);
     expect(graphA.artifacts.length).toBeGreaterThan(5);
+    expect(graphA.directories.length).toBeGreaterThan(0);
+    expect(graphA.containment.length).toBeGreaterThan(0);
     expect(graphA).toEqual(graphB);
   });
 

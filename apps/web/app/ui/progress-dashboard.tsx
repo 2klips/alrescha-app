@@ -1,5 +1,9 @@
 import { Icon } from "./ui-icon";
-import type { ProgressDashboard, ProgressTodo } from "@alrescha/core";
+import type {
+  ProgressDashboard,
+  ProgressMetric,
+  ProgressTodo,
+} from "@alrescha/core";
 import {
   Activity,
   AlertOctagon,
@@ -42,25 +46,27 @@ function sourceHref(todo: ProgressTodo): string {
     : `#${todo.source.eventId}`;
 }
 
-function Metric({
-  metric,
-  title,
-}: {
-  metric: ProgressDashboard["metrics"]["todos"];
-  title: string;
-}) {
+/**
+ * What the card says when there is no percentage: a metric whose link is
+ * missing says so, instead of borrowing the empty-state copy (R5 D6).
+ */
+function metricValue(metric: ProgressMetric): string {
+  if (metric.percent !== null) return `${metric.percent}%`;
+  return metric.basis === "no-links"
+    ? PROGRESS.metrics.noLinks
+    : PROGRESS.metrics.notMeasured;
+}
+
+function Metric({ metric, title }: { metric: ProgressMetric; title: string }) {
+  const value = metricValue(metric);
   return (
-    <article className="progress-metric">
+    <article className="progress-metric" data-basis={metric.basis}>
       <div>
         <span>{title}</span>
-        <strong>
-          {metric.percent === null
-            ? PROGRESS.metrics.notMeasured
-            : `${metric.percent}%`}
-        </strong>
+        <strong>{value}</strong>
       </div>
       <progress
-        aria-label={`${title}: ${metric.percent === null ? PROGRESS.metrics.notMeasured : `${metric.percent}%`}`}
+        aria-label={`${title}: ${value}`}
         max={metric.total || 1}
         value={metric.completed}
       />

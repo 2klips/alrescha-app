@@ -42,7 +42,11 @@ import {
   buildRenderFrame,
   type GraphPalette,
 } from "../apps/web/lib/graph/render-frame";
-import type { Position } from "../apps/web/lib/graph/simulation-protocol";
+import {
+  linkFamilyCode,
+  type LinkPair,
+  type Position,
+} from "../apps/web/lib/graph/simulation-protocol";
 
 /** 60fps. */
 const FRAME_BUDGET_MS = 16.7;
@@ -98,15 +102,15 @@ function report(label: string, budget: number, stats: Percentiles): void {
   );
 }
 
-function linkPairs(data: GraphData): [number, number][] {
+function linkPairs(data: GraphData): LinkPair[] {
   const indexById = new Map(data.nodes.map((node, index) => [node.id, index]));
-  const links: [number, number][] = [];
+  const links: LinkPair[] = [];
   for (const edge of data.edges) {
     const source = indexById.get(edge.source);
     const target = indexById.get(edge.target);
     if (source === undefined || target === undefined || source === target)
       continue;
-    links.push([source, target]);
+    links.push([source, target, linkFamilyCode(edge.family)]);
   }
   return links;
 }

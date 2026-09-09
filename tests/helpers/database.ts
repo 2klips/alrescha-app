@@ -23,6 +23,8 @@ const SUPABASE_TEST_BOOTSTRAP = `
   as $$
     select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid;
   $$;
+  grant usage on schema auth to anon, authenticated, service_role;
+  grant execute on function auth.uid() to anon, authenticated, service_role;
 `;
 
 export const AUTH_TENANCY_MIGRATION =
@@ -107,6 +109,44 @@ export const REQUIREMENT_JUDGMENT_ENQUEUE_MIGRATION =
   "supabase/migrations/202609020002_requirement_judgment_enqueue.sql";
 export const PRUNE_ACCESS_EVENTS_CRON_MIGRATION =
   "supabase/migrations/202609030001_prune_access_events_cron.sql";
+export const LINK_RECOVERY_MIGRATION =
+  "supabase/migrations/202609040001_link_recovery.sql";
+export const FINDING_CODE_ANCHOR_MIGRATION =
+  "supabase/migrations/202609040002_finding_code_anchor.sql";
+export const NOTES_AND_EDGE_FAMILIES_MIGRATION =
+  "supabase/migrations/202609050001_notes_and_edge_families.sql";
+export const DIRECTORY_NODES_MIGRATION =
+  "supabase/migrations/202609050002_directory_nodes.sql";
+export const REPOSITORY_LAYOUT_CONFIG_MIGRATION =
+  "supabase/migrations/202609050003_repository_layout_config.sql";
+export const TODO_IDENTITY_MIGRATION =
+  "supabase/migrations/202609050004_todo_identity_and_event_scope.sql";
+export const ROUTE_NODES_MIGRATION =
+  "supabase/migrations/202609050005_route_nodes.sql";
+export const DATABASE_OBJECTS_MIGRATION =
+  "supabase/migrations/202609060001_database_objects.sql";
+export const SECTION_NODES_MIGRATION =
+  "supabase/migrations/202609060002_section_nodes.sql";
+export const SUMMARY_CAS_MIGRATION =
+  "supabase/migrations/202609060003_artifact_summary_cas.sql";
+export const BOUNDED_GRAPH_READ_MIGRATION =
+  "supabase/migrations/202609060004_bounded_graph_read.sql";
+export const REPOSITORY_REVISION_MIGRATION =
+  "supabase/migrations/202609060005_repository_revision.sql";
+export const BACKFILL_AND_RESCAN_MIGRATION =
+  "supabase/migrations/202609060006_backfill_and_rescan.sql";
+export const LOCAL_REPOSITORY_RESCAN_MIGRATION =
+  "supabase/migrations/202609060007_local_repository_rescan.sql";
+export const SCREEN_VIEWS_MIGRATION =
+  "supabase/migrations/202609060008_screen_views.sql";
+export const FINDING_DISMISSAL_MIGRATION =
+  "supabase/migrations/202609060009_finding_dismissal.sql";
+export const DOC_PAGES_MIGRATION =
+  "supabase/migrations/202609060010_doc_pages.sql";
+export const SESSION_TELEMETRY_MIGRATION =
+  "supabase/migrations/202609060011_session_telemetry.sql";
+export const PROGRESS_ATTRIBUTION_MIGRATION =
+  "supabase/migrations/202609060012_progress_attribution.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -151,6 +191,25 @@ export const ALL_MIGRATIONS = [
   RETRY_AFTER_TERMINAL_FAILURE_MIGRATION,
   REQUIREMENT_JUDGMENT_ENQUEUE_MIGRATION,
   PRUNE_ACCESS_EVENTS_CRON_MIGRATION,
+  LINK_RECOVERY_MIGRATION,
+  FINDING_CODE_ANCHOR_MIGRATION,
+  NOTES_AND_EDGE_FAMILIES_MIGRATION,
+  DIRECTORY_NODES_MIGRATION,
+  REPOSITORY_LAYOUT_CONFIG_MIGRATION,
+  TODO_IDENTITY_MIGRATION,
+  ROUTE_NODES_MIGRATION,
+  DATABASE_OBJECTS_MIGRATION,
+  SECTION_NODES_MIGRATION,
+  SUMMARY_CAS_MIGRATION,
+  BOUNDED_GRAPH_READ_MIGRATION,
+  REPOSITORY_REVISION_MIGRATION,
+  BACKFILL_AND_RESCAN_MIGRATION,
+  LOCAL_REPOSITORY_RESCAN_MIGRATION,
+  SCREEN_VIEWS_MIGRATION,
+  FINDING_DISMISSAL_MIGRATION,
+  DOC_PAGES_MIGRATION,
+  SESSION_TELEMETRY_MIGRATION,
+  PROGRESS_ATTRIBUTION_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

@@ -7,7 +7,8 @@ import {
   createFixtureGraph,
 } from "../../lib/dashboard/graph-model";
 import { DASHBOARD } from "../../lib/strings";
-import { BrainMapStage, HIT_TARGET_LIMIT, hitTargets } from "./brain-map-stage";
+import { HIT_TARGET_LIMIT, hitTargets } from "../../lib/graph/hit-targets";
+import { BrainMapStage } from "./brain-map-stage";
 
 describe("brain map hit targets", () => {
   test("every node of a normal graph gets one", () => {
@@ -76,5 +77,31 @@ describe("brain map stage server rendering", () => {
     expect(html).toContain(
       DASHBOARD.nodeSummary(node.label, node.type, node.grade),
     );
+  });
+});
+
+/**
+ * Phase 4 Wave B todo 9 — the camera's two new surfaces, as the server
+ * renders them: a control that frames the graph, and the layout's own
+ * "stopped moving" made visible.
+ */
+describe("brain map camera surfaces", () => {
+  const model = buildDashboardViewModel("scanned");
+  const html = renderToStaticMarkup(
+    createElement(BrainMapStage, { data: model.graph }),
+  );
+
+  test("offers a fit-to-view control with a name, not just an icon", () => {
+    expect(html).toContain('data-testid="brain-map-fit"');
+    // The glyph is decorative; the accessible name is the sentence.
+    expect(html).toContain(DASHBOARD.fitToView);
+    expect(html).toContain('aria-hidden="true"');
+  });
+
+  test("says the layout has not settled before anything has simulated", () => {
+    // False, not absent: "not settled yet" is a state, and a test that waits
+    // for the attribute to appear would wait forever on a graph that never
+    // converges.
+    expect(html).toContain('data-settled="false"');
   });
 });

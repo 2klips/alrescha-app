@@ -9,11 +9,14 @@
  * force panel lives here because it owns the persisted settings that the
  * renderer consumes.
  *
- * A canvas has no accessibility tree and no click targets, so the stage also
- * renders a transparent **hit layer** — one button per node, parked over its
- * painted position by `BrainMap`. That single layer serves the pointer, the
- * keyboard, assistive technology and the e2e suite, which is why the node
- * affordance is DOM rather than canvas hit-testing.
+ * A canvas has no accessibility tree, so the stage also renders a transparent
+ * **hit layer** — one button per node, parked over its painted position by
+ * `BrainMap` — for the keyboard, assistive technology and the e2e suite.
+ *
+ * It is no longer the pointer's route (Phase 4 Wave B todo 10). It is capped,
+ * and a real repository exceeds the cap, so serving the pointer from here
+ * left most of a scanned graph painted and inert. The canvas hit-tests
+ * itself; this layer answers for the things a canvas cannot.
  */
 
 import dynamic from "next/dynamic";
@@ -29,6 +32,11 @@ import {
   type GraphPanelSettings,
 } from "../../lib/graph/graph-panel-settings";
 import type { LodLevel } from "../../lib/graph/lod";
+import {
+  hiddenNodeTypesFor,
+  type GraphLayer,
+} from "../../lib/graph/render-frame";
+import { hitTargets } from "../../lib/graph/hit-targets";
 import { DASHBOARD } from "../../lib/strings";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
 
@@ -36,13 +44,6 @@ const BrainMap = dynamic(
   () => import("./brain-map").then((module_) => module_.BrainMap),
   { ssr: false },
 );
-
-/**
- * Upper bound on DOM hit targets. Past this the graph is a constellation to
- * navigate by camera, not a list to tab through, and the highest-degree nodes
- * are the ones worth reaching; the renderer still paints every node.
- */
-export const HIT_TARGET_LIMIT = 600;
 
 export interface BrainMapStageProps {
   /** Nodes carrying the residual afterglow tint. */
@@ -70,25 +71,13 @@ export interface BrainMapStageProps {
   settings?: GraphPanelSettings;
   /** Set false when a surrounding HUD supplies its own controls. */
   showForcePanel?: boolean;
-}
-
-/** The nodes that get a DOM hit target: highest degree first, capped. */
-export function hitTargets(
-  data: GraphData,
-  limit = HIT_TARGET_LIMIT,
-): GraphNode[] {
-  if (data.nodes.length <= limit) return [...data.nodes];
-  const degrees = new Map<string, number>();
-  for (const edge of data.edges) {
-    degrees.set(edge.source, (degrees.get(edge.source) ?? 0) + 1);
-    degrees.set(edge.target, (degrees.get(edge.target) ?? 0) + 1);
-  }
-  return [...data.nodes]
-    .sort((left, right) => {
-      const delta = (degrees.get(right.id) ?? 0) - (degrees.get(left.id) ?? 0);
-      return delta === 0 ? left.id.localeCompare(right.id) : delta;
-    })
-    .slice(0, limit);
+  /**
+   * Which nodes the current filters leave visible, or absent for all (todo
+   * 13). `data` stays the whole graph so the layout survives a filter.
+   */
+  visibleNodeIds?: ReadonlySet<string> | undefined;
+  /** Layers the viewer switched off (todo 13). */
+  hiddenLayers?: ReadonlySet<GraphLayer> | undefined;
 }
 
 export function BrainMapStage({
@@ -105,7 +94,9 @@ export function BrainMapStage({
   seed,
   selectedNodeId,
   settings: externalSettings,
+  hiddenLayers,
   showForcePanel = true,
+  visibleNodeIds,
 }: BrainMapStageProps) {
   const [internalSettings, updateInternalSettings] = useGraphPanelSettings();
   const settings = externalSettings ?? internalSettings;
@@ -114,10 +105,33 @@ export function BrainMapStage({
     labels: 0,
     level: "near",
   });
+  // A counter, not a boolean: pressing the button a second time has to reach
+  // the camera, and "true" twice is one value.
+  const [fitRequest, setFitRequest] = useState(0);
+  const [settled, setSettled] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
   const forceConfig = useMemo(() => forceConfigOf(settings), [settings]);
   const hitLayerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const targets = useMemo(() => hitTargets(data), [data]);
+  // The accessibility layer follows visibility (todo 13): a keyboard user
+  // must not tab to a node the canvas is not drawing.
+  const reachable = useMemo(() => {
+    const hiddenTypes = hiddenNodeTypesFor(hiddenLayers);
+    if (!visibleNodeIds && hiddenTypes.size === 0) return data;
+    const nodes = data.nodes.filter(
+      (node) =>
+        (!visibleNodeIds || visibleNodeIds.has(node.id)) &&
+        !hiddenTypes.has(node.type),
+    );
+    const ids = new Set(nodes.map((node) => node.id));
+    return {
+      edges: data.edges.filter(
+        (edge) => ids.has(edge.source) && ids.has(edge.target),
+      ),
+      nodes,
+    };
+  }, [data, hiddenLayers, visibleNodeIds]);
+  const targets = useMemo(() => hitTargets(reachable), [reachable]);
 
   // OQ-006: roving tabindex. 600 buttons were 600 tab stops — unusable for a
   // keyboard or screen-reader user. The layer is now ONE stop: Tab enters on
@@ -157,15 +171,38 @@ export function BrainMapStage({
 
   return (
     <div
-      aria-label={DASHBOARD.canvasLabel(data.nodes.length)}
+      aria-label={DASHBOARD.canvasLabel(reachable.nodes.length)}
       className="brain-map-stage"
-      data-canvas-nodes={data.nodes.length}
+      // What is drawn. It keeps that meaning now that `data` is the whole
+      // graph rather than the filtered one — the count a reader sees on the
+      // screen is the count this reports.
+      data-canvas-nodes={reachable.nodes.length}
+      // …and what the layout holds, which a filter never changes. The two
+      // being different is the whole point of todo 13.
+      data-layout-nodes={data.nodes.length}
       data-focus-node={
         directionalFocus && selectedNodeId ? selectedNodeId : undefined
       }
       data-glow-active={glow ? glow.size : 0}
+      // What the canvas hit test currently has under the pointer. Empty is a
+      // state, not an absence: a test that waited for the attribute to appear
+      // could not tell "nothing hovered" from "hover is broken".
+      data-hovered={hovered ?? ""}
+      // How many nodes the DOM layer speaks for, so a browser test can state
+      // the relationship between the accessibility budget and what is painted
+      // rather than restating the cap.
+      data-hit-targets={targets.length}
+      // What the filters currently leave on screen. The layout still holds
+      // every node, which is the point: a filter is not a new graph.
+      data-hidden-layers={
+        hiddenLayers ? [...hiddenLayers].sort().join(" ") : ""
+      }
       data-lod={lod.level}
       data-lod-labels={lod.labels}
+      // "The layout has stopped moving" — the worker has always known it and
+      // until todo 9 nobody could see it. A browser test waits on this
+      // instead of sleeping and hoping.
+      data-settled={settled}
       data-testid="brain-map-stage"
       role="group"
     >
@@ -174,6 +211,7 @@ export function BrainMapStage({
           {...(afterglow ? { afterglow } : {})}
           data={data}
           {...(directionalFocus === undefined ? {} : { directionalFocus })}
+          fitRequest={fitRequest}
           {...(focusNodeId === undefined ? {} : { focusNodeId })}
           forceConfig={forceConfig}
           {...(glow ? { glow } : {})}
@@ -182,11 +220,41 @@ export function BrainMapStage({
             setLod({ labels, level: level as LodLevel });
             onLodReport?.(level as LodLevel, labels);
           }}
+          onNodeActivate={(nodeId) => {
+            const node = data.nodes.find((entry) => entry.id === nodeId);
+            if (node) onNodeActivate?.(node);
+          }}
+          onNodeSelect={(nodeId) => {
+            const node = data.nodes.find((entry) => entry.id === nodeId);
+            if (node) onNodeSelect?.(node);
+          }}
+          onHoverChange={setHovered}
+          onSettledChange={setSettled}
           {...(seed === undefined ? {} : { seed })}
           selectedNodeId={selectedNodeId ?? null}
           textFadeThreshold={settings.textFadeThreshold}
           viewport={viewportRef}
+          {...(visibleNodeIds ? { visibleNodeIds } : {})}
+          {...(hiddenLayers ? { hiddenLayers } : {})}
         />
+        <button
+          className="brain-map-fit"
+          data-testid="brain-map-fit"
+          onClick={() => setFitRequest((count) => count + 1)}
+          title={DASHBOARD.fitToView}
+          type="button"
+        >
+          <span className="sr-only">{DASHBOARD.fitToView}</span>
+          <svg aria-hidden="true" viewBox="0 0 16 16">
+            <path
+              d="M1.5 5.5v-4h4M14.5 5.5v-4h-4M1.5 10.5v4h4M14.5 10.5v4h-4"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeWidth="1.5"
+            />
+          </svg>
+        </button>
         {/* Positions below are the pre-simulation fixture layout; `BrainMap`
             takes over as soon as the renderer produces its first frame. */}
         <div

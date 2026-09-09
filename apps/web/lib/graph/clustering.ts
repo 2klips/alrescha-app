@@ -41,6 +41,8 @@ export function folderCommunity(node: GraphNode): string {
   return folder.length > 0 ? folder.join("/") : node.type;
 }
 
+export type HierarchyLevel = "far" | "mid";
+
 export interface CommunityOptions {
   /** Force the folder fallback (used to prove the fallback path works). */
   strategy?: "auto" | "folder";
@@ -82,6 +84,88 @@ export function communityAssignment(
   } catch {
     return byFolder();
   }
+}
+
+/** `a/b/c.ts` is under `a/b`; `a/bc` is not. */
+function under(path: string, directory: string): boolean {
+  return directory.length > 0 && path.startsWith(`${directory}/`);
+}
+
+/**
+ * Which directory a node belongs to, at a given zoom (Phase 4 Wave B todo 13).
+ *
+ * Louvain answers a question nobody asked. It finds communities in the *edge*
+ * structure, so its groups are named `c7` and their membership shifts when an
+ * import is added — a supernode that was "the auth module" last scan is a
+ * different set of files this one, with no way for a reader to tell. A
+ * repository already has a grouping everyone agrees on, and it is the
+ * directory tree.
+ *
+ * So Far groups by package (or, where a repository declares none, by the
+ * two-deep folder) and Mid groups by the folder a file is actually in. Both
+ * are stable across scans, both have names a person recognises, and the
+ * supernode can *be* the directory node rather than a synthetic stand-in.
+ *
+ * Louvain stays as the fallback for data with no hierarchy at all — every
+ * demo fixture is in that state, and grouping those by a path they do not
+ * have would collapse the whole graph to one dot.
+ */
+export function hierarchyAssignment(
+  data: GraphData,
+  level: HierarchyLevel,
+  options: CommunityOptions = {},
+): Map<string, string> {
+  const directories = data.nodes.filter((node) => node.type === "directory");
+  if (directories.length === 0) return communityAssignment(data, options);
+
+  // Longest path first, so a lookup finds the most specific folder first.
+  const byPath = [...directories].sort(
+    (left, right) => right.path.length - left.path.length,
+  );
+  const packages = byPath.filter((node) => node.role === "package");
+
+  const owner = (node: GraphNode): string | null => {
+    const path = node.path.split(":")[0] ?? "";
+    if (path.length === 0) return null;
+    if (level === "far") {
+      // A package is the landmark a reader navigates by. Where a repository
+      // declares none, two segments is the depth at which a folder name still
+      // means something: `apps/web`, not `apps` and not `apps/web/lib/graph`.
+      const owningPackage = packages.find((entry) => under(path, entry.path));
+      if (owningPackage) return owningPackage.id;
+      const prefix = path.split("/").slice(0, 2).join("/");
+      const folder = byPath.find((entry) => entry.path === prefix);
+      if (folder) return folder.id;
+      return prefix.length > 0 ? prefix : null;
+    }
+    const leaf = byPath.find((entry) => under(path, entry.path));
+    return leaf ? leaf.id : null;
+  };
+
+  const assignment = new Map<string, string>();
+  for (const node of data.nodes) {
+    // A directory is its own group, so a folder never vanishes into its
+    // parent and then reappears as one of that parent's members.
+    const community =
+      node.type === "directory"
+        ? node.id
+        : (owner(node) ?? folderCommunity(node));
+    assignment.set(node.id, community);
+  }
+  return assignment;
+}
+
+/**
+ * Directory nodes keyed by the community `hierarchyAssignment` gives them, so
+ * a supernode can carry the folder's own name and path instead of a
+ * synthesised label.
+ */
+export function hierarchyTemplates(data: GraphData): Map<string, GraphNode> {
+  return new Map(
+    data.nodes
+      .filter((node) => node.type === "directory")
+      .map((node) => [node.id, node]),
+  );
 }
 
 /** Supernodes only exist above the raw limit, and only at Far zoom. */
@@ -133,6 +217,12 @@ export interface CollapseInput {
   /** Communities the user clicked open — rendered raw. */
   expanded?: ReadonlySet<string>;
   positions: ReadonlyMap<string, Position>;
+  /**
+   * Community key → the node that *is* that community, when there is one
+   * (todo 13). With a hierarchy assignment this is the directory node, so a
+   * supernode carries the folder's own name and path.
+   */
+  templates?: ReadonlyMap<string, GraphNode>;
 }
 
 /**
@@ -174,6 +264,7 @@ function buildStructure(
   data: GraphData,
   assignment: ReadonlyMap<string, string>,
   expanded: ReadonlySet<string>,
+  templates: ReadonlyMap<string, GraphNode> | undefined,
 ): CollapseStructure {
   const members = new Map<string, GraphNode[]>();
   const kept: GraphNode[] = [];
@@ -192,19 +283,27 @@ function buildStructure(
 
   const groups = [...members.entries()]
     .sort((left, right) => (left[0] < right[0] ? -1 : 1))
-    .map(([community, group]) => ({
-      id: `${SUPERNODE_PREFIX}${community}`,
-      members: group,
-      template: {
-        clusterCount: group.length,
-        findingCount: group.reduce((sum, node) => sum + node.findingCount, 0),
-        grade: worstGrade(group),
+    .map(([community, group]) => {
+      // The folder itself, when the assignment is a hierarchy (todo 13). A
+      // supernode then carries a name a reader recognises and a path they can
+      // open, instead of `c7` and "412 indexed artifacts".
+      const folder = templates?.get(community);
+      return {
         id: `${SUPERNODE_PREFIX}${community}`,
-        label: community,
-        path: `${group.length} indexed artifacts`,
-        type: dominantType(group),
-      },
-    }));
+        members: group,
+        template: {
+          clusterCount: group.length,
+          findingCount: group.reduce((sum, node) => sum + node.findingCount, 0),
+          grade: worstGrade(group),
+          id: `${SUPERNODE_PREFIX}${community}`,
+          label: folder ? folder.label : community,
+          path: folder ? folder.path : `${group.length} indexed artifacts`,
+          // A folder stays a folder: it keeps its ring shape rather than
+          // taking the shape of whatever it happens to contain most of.
+          type: folder ? folder.type : dominantType(group),
+        },
+      };
+    });
 
   const representative = (nodeId: string): string => {
     const community = assignment.get(nodeId);
@@ -214,11 +313,14 @@ function buildStructure(
   };
 
   const merged = new Map<string, GraphEdge>();
+  /** How many real edges each merged one stands for, for its thickness. */
+  const counts = new Map<string, number>();
   for (const edge of data.edges) {
     const source = representative(edge.source);
     const target = representative(edge.target);
     if (source === target) continue;
     const key = source < target ? `${source}→${target}` : `${target}→${source}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
     const current = merged.get(key);
     if (
       !current ||
@@ -228,13 +330,23 @@ function buildStructure(
     }
   }
 
-  return { edges: [...merged.values()], groups, kept };
+  return {
+    edges: [...merged.entries()].map(([key, edge]) => ({
+      ...edge,
+      // One line between two folders can stand for one import or four
+      // hundred, and drawn identically it says the same thing about both.
+      mergedCount: counts.get(key) ?? 1,
+    })),
+    groups,
+    kept,
+  };
 }
 
 function collapseStructure(
   data: GraphData,
   assignment: ReadonlyMap<string, string>,
   expanded: ReadonlySet<string>,
+  templates: ReadonlyMap<string, GraphNode> | undefined,
 ): CollapseStructure {
   let byAssignment = structureCache.get(data);
   if (!byAssignment) {
@@ -248,10 +360,10 @@ function collapseStructure(
   }
   // Content key, not identity: the engine mutates one long-lived `expanded`
   // set rather than replacing it.
-  const key = [...expanded].sort().join(" ");
+  const key = [...expanded].sort().join("\u0000");
   const cached = byExpanded.get(key);
   if (cached) return cached;
-  const structure = buildStructure(data, assignment, expanded);
+  const structure = buildStructure(data, assignment, expanded, templates);
   if (byExpanded.size >= STRUCTURE_CACHE_LIMIT) {
     const oldest = byExpanded.keys().next();
     if (!oldest.done) byExpanded.delete(oldest.value);
@@ -273,7 +385,12 @@ function collapseStructure(
  */
 export function collapseGraph(input: CollapseInput): CollapsedGraph {
   const expanded = input.expanded ?? new Set<string>();
-  const structure = collapseStructure(input.data, input.assignment, expanded);
+  const structure = collapseStructure(
+    input.data,
+    input.assignment,
+    expanded,
+    input.templates,
+  );
 
   const positionOf = (node: GraphNode): Position =>
     input.positions.get(node.id) ?? { x: node.x, y: node.y };

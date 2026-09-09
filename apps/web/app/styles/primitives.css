@@ -30,9 +30,20 @@
   color: var(--fg-default);
 }
 
+/*
+ * A filled button is an emphasis surface, so it takes the emphasis token.
+ * It used to sit on `--accent-fg` while carrying `--fg-on-emphasis` text —
+ * a pairing of two tokens that were never meant to meet. In light they are
+ * the same colour and it went unnoticed; in dark, white on `#4493f8` is
+ * 3.09:1 against a 4.5:1 bar. `--accent-emphasis` is 4.63:1.
+ *
+ * It stayed hidden because `.button` is used on the two GitHub connect
+ * screens and nowhere else, and those were the screens excluded from the
+ * axe sweep for want of GitHub App credentials.
+ */
 .button {
-  background: var(--accent-fg);
-  border: 1px solid var(--accent-fg);
+  background: var(--accent-emphasis);
+  border: 1px solid var(--accent-emphasis);
   color: var(--fg-on-emphasis);
   cursor: pointer;
   display: inline-block;

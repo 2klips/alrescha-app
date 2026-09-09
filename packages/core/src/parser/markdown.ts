@@ -38,9 +38,19 @@ export interface ParsedHeading {
 export interface ParsedTask {
   checked: boolean;
   depth: number;
+  /**
+   * The character inside the brackets, as written. GFM knows `[ ]` and `[x]`;
+   * the conventions people actually use also include `[~]` and `[/]` for work
+   * in progress and `[-]` for something parked (Phase 4 Wave A todo 5). The
+   * markdown layer reports the marker and lets the todo layer decide what it
+   * means.
+   */
+  marker: TaskMarker;
   span: MarkdownSpan;
   text: string;
 }
+
+export type TaskMarker = " " | "-" | "/" | "x" | "~";
 
 export interface ParsedNormativeStatement {
   keyword: "MUST" | "SHOULD";
@@ -281,6 +291,14 @@ function wikiLinkSpan(
   return toSpanAtOffsets(path, index, startOffset, endOffset);
 }
 
+/**
+ * A list item whose checkbox GFM did not parse: `- [~] …`, `- [/] …`,
+ * `- [-] …`. Matched against the item's own first characters.
+ */
+const ALTERNATE_TASK_MARKER = /^[-*+]\s+\[([~/-])\]\s/;
+/** The same marker inside the item's rendered text, for stripping. */
+const ALTERNATE_TASK_TEXT = /^\[[~/-]\]\s*/;
+
 function listDepth(ancestors: readonly Node[]): number {
   return ancestors.filter(({ type }) => type === "list").length;
 }
@@ -474,15 +492,33 @@ export function parseMarkdownStructure({
   });
 
   visitParents(tree, "listItem", (node: ListItem, ancestors) => {
-    if (typeof node.checked !== "boolean") {
+    const span = toSpan(path, index, node);
+    if (typeof node.checked === "boolean") {
+      tasks.push({
+        checked: node.checked,
+        depth: listDepth(ancestors),
+        marker: node.checked ? "x" : " ",
+        span,
+        text: taskText(node),
+      });
       return;
     }
-
+    // GFM parsed no checkbox, so the brackets are literal text. A list item
+    // that opens with one of the other conventional markers is still a task;
+    // reading it from the source is the only way to see it, because the AST
+    // has already folded the marker into a paragraph.
+    const startOffset = requirePosition(node).start.offset;
+    if (startOffset === undefined) return;
+    const written = ALTERNATE_TASK_MARKER.exec(
+      source.slice(startOffset, startOffset + 16),
+    );
+    if (!written?.[1]) return;
     tasks.push({
-      checked: node.checked,
+      checked: false,
       depth: listDepth(ancestors),
-      span: toSpan(path, index, node),
-      text: taskText(node),
+      marker: written[1] as TaskMarker,
+      span,
+      text: taskText(node).replace(ALTERNATE_TASK_TEXT, ""),
     });
   });
 

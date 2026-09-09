@@ -11,22 +11,30 @@ import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 
-import type {
-  RepositorySource,
-  RepositoryTree,
-  RepositoryTreeEntry,
+import {
+  DEFAULT_IGNORED_PATHS,
+  DEFAULT_IGNORED_SEGMENTS,
+  type RepositorySource,
+  type RepositoryTree,
+  type RepositoryTreeEntry,
 } from "@alrescha/core";
 
-/** Build outputs and VCS internals that a git tree would not contain. */
-const IGNORED_SEGMENTS = new Set([
-  ".git",
-  ".next",
-  ".omo",
-  ".turbo",
-  "coverage",
-  "dist",
-  "node_modules",
-]);
+/**
+ * Build outputs, VCS internals and whole-tree copies, from the one list the
+ * scanner itself applies (Phase 4 Wave A todo 2, OQ-043).
+ *
+ * Skipping them here is an optimisation — the scanner drops them anyway —
+ * but it has to be the *same* list, or the two ingest paths disagree about
+ * what a repository contains. This module used to carry its own copy that
+ * also skipped `.omo`, a directory git tracks: the same commit ingested
+ * through GitHub kept evidence documents the CLI silently dropped (ADR-013).
+ *
+ * `.claude` itself stays in scope (`.claude/rules/*.md` are instruction
+ * artifacts); `.claude/worktrees` does not, because it holds complete copies
+ * of the repository — 2,921 nodes instead of 502 on this one.
+ */
+const IGNORED_SEGMENTS = new Set(DEFAULT_IGNORED_SEGMENTS);
+const IGNORED_PATHS = new Set(DEFAULT_IGNORED_PATHS);
 
 /**
  * Files larger than this get a synthetic (still deterministic) blob sha
@@ -69,6 +77,9 @@ export async function createLocalRepositorySource(
       }
       const absolute = join(directory, dirent.name);
       const path = prefix ? `${prefix}/${dirent.name}` : dirent.name;
+      if (IGNORED_PATHS.has(path)) {
+        continue;
+      }
       if (dirent.isSymbolicLink()) {
         // Present the symlink the way a git tree does (mode 120000) so the
         // scanner records the same `symlink` skip as the GitHub path.

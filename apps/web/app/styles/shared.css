@@ -271,3 +271,35 @@
     gap: var(--space-1);
   }
 }
+
+/*
+ * The camera's "frame everything" control (Phase 4 Wave B todo 9). It sits
+ * over the canvas rather than in the force panel: it moves the view, and the
+ * panel changes the layout — two different kinds of thing to press.
+ */
+.brain-map-fit {
+  align-items: center;
+  background: var(--bg-overlay);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-small);
+  bottom: 0.6rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  display: flex;
+  height: 1.9rem;
+  justify-content: center;
+  left: 0.6rem;
+  position: absolute;
+  width: 1.9rem;
+  z-index: 2;
+}
+
+.brain-map-fit:hover,
+.brain-map-fit:focus-visible {
+  color: var(--fg-default);
+}
+
+.brain-map-fit svg {
+  height: 1rem;
+  width: 1rem;
+}

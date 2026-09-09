@@ -29,6 +29,7 @@ import { createAnalysisJobHandler } from "./analysis-job";
 import { createCoachingJobHandler } from "./coaching-job";
 import { runDrainLoop } from "./drain-loop";
 import { createEnrichJobHandler } from "./enrich-job";
+import { GitHubCiEvidenceSource } from "./github-ci-evidence-source";
 import { GitHubRepositorySource } from "./github-repository-source";
 import { createJudgmentJobHandler } from "./judgment-job";
 import { PostgresAnalysisStore } from "./postgres-analysis-store";
@@ -148,7 +149,16 @@ function createSourceFactory(sql: postgres.Sql) {
       limit 1
     `;
     const row = rows[0];
-    if (!row) throw new Error(`repository ${repositoryId} is not connected`);
+    // A repository with no installation was ingested locally, and its bodies
+    // are on someone's machine. `enqueue_repository_rescan` refuses to queue
+    // one (todo 17); this is the message for a job that predates that guard,
+    // and it names where the work actually happens instead of describing the
+    // plumbing that failed.
+    if (!row) {
+      throw new Error(
+        `repository ${repositoryId} has no GitHub installation: it was ingested locally, so the server cannot read its files — use \`alrescha push\` or \`alrescha serve --local\``,
+      );
+    }
 
     const [owner, repository] = row.full_name.split("/");
     if (!owner || !repository) {
@@ -167,12 +177,47 @@ function createSourceFactory(sql: postgres.Sql) {
     });
     return {
       expiresAt: token.expiresAt,
-      source: new GitHubRepositorySource(owner, repository, token.token),
+      // One token, two readers. The CI evidence source calls a different set
+      // of endpoints with the same installation token, and minting a second
+      // one per job would double the calls for no separation (todo 18).
+      source: {
+        ci: new GitHubCiEvidenceSource(owner, repository, token.token),
+        contents: new GitHubRepositorySource(owner, repository, token.token),
+      },
     };
   });
 }
 
 type SourceFactory = ReturnType<typeof createSourceFactory>;
+
+/** The file-body reader, for the jobs that need one. */
+const contentsFor = async (
+  sourceFor: SourceFactory,
+  workspaceId: string,
+  repositoryId: string,
+): Promise<GitHubRepositorySource> =>
+  (await sourceFor(workspaceId, repositoryId)).contents;
+
+/**
+ * CI evidence for one commit, or nothing (Wave C todo 18).
+ *
+ * Every failure here is a repository fact rather than a defect: no
+ * installation (a local-ingest repository — todo 17), no Actions, a throttled
+ * API. The analysis proceeds without execution evidence, which shows up as an
+ * absent `verified` grade rather than as a failed job.
+ */
+function createCiEvidenceCollector(sourceFor: SourceFactory) {
+  return async ({
+    analyzedCommitSha,
+    repositoryId,
+    workspaceId,
+  }: {
+    analyzedCommitSha: string;
+    repositoryId: string;
+    workspaceId: string;
+  }) =>
+    (await sourceFor(workspaceId, repositoryId)).ci.collect(analyzedCommitSha);
+}
 
 function createScanHandler(
   sql: postgres.Sql,
@@ -181,20 +226,27 @@ function createScanHandler(
   const store = new RepositoryScanStore(sql);
 
   return async (job) => {
-    const commitSha = (job.payload as { commitSha?: string }).commitSha;
+    const payload = job.payload as { commitSha?: string; mode?: string };
+    const commitSha = payload.commitSha;
     if (!commitSha) throw new Error("scan job payload has no commitSha");
+    // A backfill and a "scan again" both ask for a full relink; a push does
+    // not. `runRepositoryScan` still upgrades an incremental request whose
+    // stored links are from an older resolver, so this is what the caller
+    // asked for, not the last word (todo 16).
+    const mode = payload.mode === "full" ? "full" : undefined;
 
     const fetchConcurrency = scanFetchConcurrency();
     const result = await runRepositoryScan({
       commitSha,
       ...(fetchConcurrency === undefined ? {} : { fetchConcurrency }),
+      ...(mode === undefined ? {} : { mode }),
       repositoryId: job.repositoryId,
-      source: await sourceFor(job.workspaceId, job.repositoryId),
+      source: await contentsFor(sourceFor, job.workspaceId, job.repositoryId),
       store,
       workspaceId: job.workspaceId,
     });
     console.log(
-      `  scan @${commitSha.slice(0, 7)} → ${result.touchedRows} rows`,
+      `  scan @${commitSha.slice(0, 7)} ${result.linkScope} → ${result.touchedRows} rows`,
     );
   };
 }
@@ -216,13 +268,16 @@ async function main(): Promise<void> {
 
   const handlers: JobHandlers = {
     analyze: createAnalysisJobHandler({
+      // Actions artifacts and check runs for the analysed commit — the only
+      // input that can raise a node to `verified` (todo 18, ADR-001).
+      collectCiEvidence: createCiEvidenceCollector(sourceFor),
       // Transient: the body is decoded, handed to the rules, and dropped.
       // Only a 404 reads as "file vanished" — any other failure (dead token,
       // throttling) fails the job into the retry path instead of letting the
       // findings reconciler mistake an outage for deletions (MT-1).
       readSource: async ({ commitSha, path, repositoryId, workspaceId }) =>
         readTransientSource(
-          await sourceFor(workspaceId, repositoryId),
+          await contentsFor(sourceFor, workspaceId, repositoryId),
           path,
           commitSha,
         ),
@@ -233,7 +288,7 @@ async function main(): Promise<void> {
       // Transient, like analysis: fetched, clipped, summarized, dropped.
       readSource: async ({ commitSha, path, repositoryId, workspaceId }) =>
         readTransientSource(
-          await sourceFor(workspaceId, repositoryId),
+          await contentsFor(sourceFor, workspaceId, repositoryId),
           path,
           commitSha,
         ),

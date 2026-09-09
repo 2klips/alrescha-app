@@ -8,8 +8,10 @@
  */
 
 import {
+  LINK_SCHEMA_VERSION,
   localIngestPayloadSchema,
   scanRepository,
+  type LinkScope,
   type PreviousScannedArtifact,
 } from "@alrescha/core";
 
@@ -20,6 +22,7 @@ export type PushOutcome =
       readonly status: "uploaded";
       readonly artifactCount: number;
       readonly commitSha: string;
+      readonly linkScope: LinkScope;
       readonly removedCount: number;
       readonly skippedCount: number;
       readonly touchedRows: number;
@@ -38,6 +41,8 @@ export type PushOutcome =
 export interface PushOptions {
   readonly baseUrl: string;
   readonly fetchImplementation?: typeof fetch;
+  /** Re-parse every code file, not only the changed ones (`--full`). */
+  readonly full?: boolean;
   readonly repositoryFullName: string;
   readonly rootDir: string;
   readonly token: string;
@@ -47,6 +52,7 @@ interface PreviousStateResponse {
   readonly previous: {
     readonly artifacts: readonly PreviousScannedArtifact[];
     readonly commitSha: string | null;
+    readonly linkSchemaVersion?: number;
   };
 }
 
@@ -81,8 +87,21 @@ export async function pushLocalProject(
   const { previous } = (await previousResponse.json()) as PreviousStateResponse;
 
   const snapshot = await createLocalRepositorySource(options.rootDir);
+  /**
+   * The server's stored edges carry the resolver generation that built them.
+   * When this CLI resolves more than that generation could, an incremental
+   * pass would leave every unchanged file's links as they were, so the whole
+   * tree is re-parsed instead — reading bodies transiently, uploading none
+   * (R5 §2.2 D2, ADR-013).
+   */
+  const mode: LinkScope =
+    options.full === true ||
+    (previous.linkSchemaVersion ?? 1) < LINK_SCHEMA_VERSION
+      ? "full"
+      : "incremental";
   const plan = await scanRepository({
     commitSha: snapshot.commitSha,
+    mode,
     previousArtifacts: previous.artifacts,
     previousCommitSha: previous.commitSha,
     source: snapshot.source,
@@ -136,6 +155,7 @@ export async function pushLocalProject(
   return {
     artifactCount: plan.artifacts.length,
     commitSha: plan.commitSha,
+    linkScope: plan.linkScope,
     removedCount: plan.removedPaths.length,
     skippedCount: plan.skipped.length,
     status: "uploaded",

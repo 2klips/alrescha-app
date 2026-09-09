@@ -70,6 +70,15 @@ interface WrittenCookie {
   readonly value: string;
 }
 
+/**
+ * Service-role client for seeding. Exported so a spec can put rows in front
+ * of a screen without going through a UI that cannot create them (Phase 4
+ * Wave E todo 24 — the stats cards need measured calls to have a headline).
+ */
+export function serviceRoleClient() {
+  return adminClient();
+}
+
 function adminClient() {
   return createClient(
     required("NEXT_PUBLIC_SUPABASE_URL"),

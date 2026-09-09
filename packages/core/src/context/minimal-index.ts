@@ -1,3 +1,5 @@
+import { renderAgentInstructionBlock } from "./agent-instructions";
+
 export const ALRESCHA_INDEX_BEGIN =
   "<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->";
 export const ALRESCHA_INDEX_END = "<!-- ALRESCHA:END -->";
@@ -49,6 +51,11 @@ export function renderManagedIndex(input: RenderManagedIndexInput): string {
     `- MCP endpoint: ${mcpEndpoint} (token: see project settings)`,
     `- Findings & receipts: ${dashboardUrl}`,
     ...PROGRESS_LOGGING_INSTRUCTION.split("\n"),
+    // The flow, from the same array the schema card and the tool
+    // descriptions read (todo 22 ⑵). A repository that installs this index
+    // and a session that calls `get_graph_schema` are told the same thing,
+    // because there is only one thing to tell.
+    renderAgentInstructionBlock(),
     ALRESCHA_INDEX_END,
   ].join("\n");
 }

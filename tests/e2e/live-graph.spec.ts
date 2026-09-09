@@ -107,17 +107,40 @@ test("enters a depth-two graph by node double-click and inspects grounded edges"
 test("renders nonblank local graph pixels at desktop and mobile sizes", async ({
   page,
 }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/graph?node=req-auth");
-  const desktopGraph = page.locator(".local-graph-canvas");
-  await expect(desktopGraph.getByTestId("evidence-graph-canvas")).toBeVisible();
-  const desktopPixels = await desktopGraph.screenshot();
-  expect(desktopPixels.byteLength).toBeGreaterThan(20_000);
+  // The evidence detail draws through the one Pixi stage now (Phase 4 Wave B
+  // todo 14). A byte count is a coarse "not blank" proxy, so each size also
+  // waits for the layout to settle and states what the canvas is holding —
+  // a blank frame captured before the first tick would have passed the old
+  // assertion on background alone.
+  const sizes = [
+    { height: 900, minBytes: 20_000, width: 1440 },
+    { height: 844, minBytes: 8_000, width: 390 },
+  ] as const;
 
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.reload();
-  const mobileGraph = page.locator(".local-graph-canvas");
-  await expect(mobileGraph.getByTestId("evidence-graph-canvas")).toBeVisible();
-  const mobilePixels = await mobileGraph.screenshot();
-  expect(mobilePixels.byteLength).toBeGreaterThan(8_000);
+  for (const { height, minBytes, width } of sizes) {
+    await page.setViewportSize({ height, width });
+    await page.goto("/graph?node=req-auth");
+
+    const wrap = page.locator(".local-graph-canvas");
+    const stage = wrap.getByTestId("brain-map-stage");
+    await expect(stage).toBeVisible();
+    await expect(stage).toHaveAttribute("data-settled", "true", {
+      timeout: 15_000,
+    });
+    // The whole depth-two neighbourhood is painted, and the hit layer speaks
+    // for every one of those nodes.
+    await expect(stage).toHaveAttribute("data-canvas-nodes", "4");
+    await expect(stage).toHaveAttribute("data-hit-targets", "4");
+
+    const canvas = wrap.locator("canvas");
+    await expect(canvas).toBeVisible();
+    const box = await canvas.boundingBox();
+    expect(box?.width ?? 0, `canvas width at ${width}`).toBeGreaterThan(0);
+    expect(box?.height ?? 0, `canvas height at ${width}`).toBeGreaterThan(0);
+
+    const pixels = await wrap.screenshot();
+    expect(pixels.byteLength, `painted bytes at ${width}`).toBeGreaterThan(
+      minBytes,
+    );
+  }
 });

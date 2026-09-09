@@ -1,15 +1,32 @@
 import {
+  buildArtifactCard,
   composeContextPack,
+  deriveArtifactFacets,
   personalizedPageRank,
+  summaryAbsence,
+  type ArtifactCard,
+  type ArtifactClassification,
   type ContextDocument,
   type ContextDocumentKind,
   type ContextTargetAgent,
+  type ArtifactCardRelation,
+  type FacetDomain,
+  type FacetUnit,
   type PageRankEdge,
+  type SummaryAbsence,
 } from "@alrescha/core";
+
+import { estimateTokens } from "./repo-map";
+import { workspaceRiskEntries } from "./workspace-risk";
+
+/** Code cards one pack will carry, whatever the budget allows beyond it. */
+const MAX_CONTEXT_CODE_CARDS = 20;
 
 import type {
   McpArtifactData,
+  McpArtifactMatch,
   McpFindingData,
+  McpEdgeFamily,
   McpEdgeRelation,
   McpIndexEntryData,
   McpNodeType,
@@ -21,6 +38,13 @@ export type SearchRank =
 
 export interface SearchIndexResult {
   excerpt: string;
+  /**
+   * Why the excerpt is empty, when it is (Wave D todo 19 보완 R-02). Prose
+   * written for an older blob never reaches a reader, so a file whose only
+   * description is stale looks identical to one nobody has ever described —
+   * unless the result says which. Absent when there is an excerpt.
+   */
+  excerptAbsence?: SummaryAbsence;
   id: string;
   neighborIds: string[];
   nodeId: string;
@@ -48,10 +72,50 @@ export interface BrainNode {
 }
 
 export interface BrainQueryFilter {
+  /**
+   * Which area of the repository a node sits in (todo 21). Derived from the
+   * path and classification the same way the map derives it — one
+   * `deriveArtifactFacets`, so a chip on the graph and a filter here cannot
+   * disagree about what `backend` means.
+   *
+   * Only nodes with a path can carry a domain; a requirement or a finding
+   * inherits the domain of the file it is anchored to, and a node with no
+   * path at all is filtered out rather than assigned `unclassified`.
+   */
+  domains?: FacetDomain[] | undefined;
+  /**
+   * Edge families a node touches (todo 21 / todo 22 ⑸). A band with no edges
+   * answers with none rather than with everything — the same rule
+   * `get_neighbors` follows, for the same reason.
+   */
+  families?: McpEdgeFamily[] | undefined;
+  /** `table` renders the same nodes for a reader; `ids` is the default. */
+  format?: "ids" | "table" | undefined;
+  /**
+   * Rows to keep after sorting (todo 21). The answer says how many the cap
+   * left out, because a list that is shorter than the truth is only honest
+   * if it admits it.
+   */
+  limit?: number | undefined;
+  /**
+   * Files that do or do not carry a description the freshness rule accepts
+   * as current (todo 21). Stale prose reads as *no* summary here, because
+   * that is what every reader is served.
+   */
+  hasSummary?: boolean | undefined;
   path?: string | undefined;
+  /** `src/**\/*.ts` — segment-wise, with `*` and `**`. No regex (OQ-054). */
+  pathGlob?: string | undefined;
   relations?: McpEdgeRelation[] | undefined;
+  /**
+   * `risk` ranks by the same builder `/app/inspection` uses, over what this
+   * read carries. The signals it could not see are named in `coverage`.
+   */
+  sortBy?: "risk" | undefined;
   statuses?: string[] | undefined;
   types?: McpNodeType[] | undefined;
+  /** `code` · `doc` · `file` · `test` — the coarse role of the file. */
+  units?: FacetUnit[] | undefined;
   withoutRelations?: McpEdgeRelation[] | undefined;
 }
 
@@ -64,7 +128,27 @@ export interface ArtifactNeighbor {
   type: McpNodeType;
 }
 
+/** Repositories that answer to the same path, when more than one does. */
+export interface AmbiguousArtifactTarget {
+  candidates: {
+    artifactId: string;
+    repositoryFullName: string;
+    repositoryId: string;
+  }[];
+  path: string;
+}
+
 export interface ArtifactWithNeighbors {
+  /**
+   * The same card the map inspector builds, from the same facts (Codex
+   * remedy §6.1, step S5). Null when no artifact matched.
+   */
+  card: ArtifactCard | null;
+  /**
+   * Set when a path matched in more than one repository. The caller picks;
+   * this layer does not pick for them and call it an answer.
+   */
+  ambiguous?: AmbiguousArtifactTarget;
   artifact: (McpArtifactData & { repositoryId: string }) | null;
   neighbors: ArtifactNeighbor[];
 }
@@ -79,8 +163,30 @@ export interface WorkspaceFinding extends McpFindingData {
   repositoryId: string;
 }
 
+/**
+ * A file the pack carries as a **card**, not as a document (Codex remedy
+ * §9.1, step S5).
+ *
+ * `documentKinds` has no `code_metadata`, and casting a file into it would
+ * have presented the deterministic facts about a file as if they were a
+ * document somebody wrote. Code travels in its own lane, so a reader can tell
+ * "this is what the scan knows about this file" from "this is what the spec
+ * says".
+ */
+export interface ContextCodeCard {
+  readonly card: ArtifactCard;
+  readonly estimatedTokens: number;
+  readonly id: string;
+  readonly path: string;
+}
+
 export interface SelectedContextPack {
   assumption: string;
+  /**
+   * Cards for the code the selected documents point at. Counted against the
+   * same budget as the prose, because a caller pays for the whole payload.
+   */
+  codeCards: ContextCodeCard[];
   estimatedTokens: number;
   excluded: Array<{ path: string; reason: string }>;
   nodeIds: string[];
@@ -152,22 +258,47 @@ function directRank(
   return null;
 }
 
+interface Excerpt {
+  readonly absence?: SummaryAbsence;
+  readonly text: string;
+}
+
 function excerptFor(
   workspace: McpWorkspaceData,
   nodeId: string,
   fallback: string,
-): string {
+): Excerpt {
   for (const repository of workspace.repositories) {
     const artifact = repository.artifacts.find(({ id }) => id === nodeId);
-    if (artifact) return artifact.content.slice(0, 280);
+    if (artifact) {
+      const text = artifact.content.slice(0, 280);
+      // The same rule and the same sentence `get_node_content` gives: an
+      // empty excerpt with no explanation reads as "this file has nothing to
+      // say", which is a different fact from every state that produces one.
+      if (text.length > 0) return { text };
+      const absence = summaryAbsence(
+        artifact.summaryState ?? { state: "missing" },
+      );
+      return { ...(absence ? { absence } : {}), text };
+    }
     const requirement = repository.requirements.find(({ id }) => id === nodeId);
-    if (requirement) return requirement.statement.slice(0, 280);
+    if (requirement) return { text: requirement.statement.slice(0, 280) };
     const evidence = repository.evidence.find(({ id }) => id === nodeId);
-    if (evidence) return `${evidence.kind}: ${evidence.verdict}`;
+    if (evidence) return { text: `${evidence.kind}: ${evidence.verdict}` };
     const finding = repository.findings.find(({ id }) => id === nodeId);
-    if (finding) return finding.title;
+    if (finding) return { text: finding.title };
   }
-  return fallback.slice(0, 280);
+  return { text: fallback.slice(0, 280) };
+}
+
+/** Spread an excerpt into a result: the absence key exists only when set. */
+function excerptResult(
+  excerpt: Excerpt,
+): Pick<SearchIndexResult, "excerpt" | "excerptAbsence"> {
+  return {
+    excerpt: excerpt.text,
+    ...(excerpt.absence ? { excerptAbsence: excerpt.absence } : {}),
+  };
 }
 
 function scoreFor(rank: SearchRank): number {
@@ -287,7 +418,9 @@ export function searchWorkspaceIndex(
         return [];
       return [
         {
-          excerpt: excerptFor(workspace, entry.nodeId, entry.searchKey),
+          ...excerptResult(
+            excerptFor(workspace, entry.nodeId, entry.searchKey),
+          ),
           id: entry.id,
           neighborIds: [...entry.neighborIds],
           nodeId: entry.nodeId,
@@ -388,15 +521,220 @@ function repositoryNodes(workspace: McpWorkspaceData): BrainNode[] {
   });
 }
 
+/**
+ * Todos as brain nodes (todo 21).
+ *
+ * They hang off the workspace rather than a repository — a checkbox can name
+ * no repository at all — so they are added once here instead of inside the
+ * per-repository walk. A todo that *does* name one carries it, so
+ * `repositoryId` on the answer is the truth rather than a placeholder.
+ */
+function todoNodes(workspace: McpWorkspaceData): BrainNode[] {
+  return (workspace.todos ?? []).map((todo) => ({
+    id: todo.id,
+    label: todo.title,
+    // The document the checkbox lives in, when the scan recorded one — so a
+    // path filter and a path glob reach todos the same way they reach files.
+    ...(todo.sourcePath ? { path: todo.sourcePath } : {}),
+    relations: [] as McpEdgeRelation[],
+    repositoryId: todo.repositoryId ?? "",
+    status: todo.status,
+    type: "todo" as const,
+  }));
+}
+
+/**
+ * What a query could and could not answer (Codex remedy P0-B / R-01).
+ *
+ * A negative question — "which files have no test" — is only as good as the
+ * edge read behind it. If that read stopped at its row budget, every node
+ * beyond it looks unconnected, and answering "none" is a confident statement
+ * about rows nobody looked at. The filter still runs; the coverage says what
+ * the answer is worth.
+ */
+export interface BrainQueryCoverage {
+  readonly result: "complete" | "partial";
+  /** Filters this read cannot answer as an absence, and why. */
+  readonly unanswered: readonly {
+    readonly filter: string;
+    readonly reason: string;
+  }[];
+}
+
+export interface BrainQueryResult {
+  readonly coverage: BrainQueryCoverage;
+  /**
+   * Rows a `limit` dropped after sorting (todo 21). Zero when the answer is
+   * the whole match — a list shorter than the truth is only honest if it
+   * says by how much.
+   */
+  readonly droppedByLimit: number;
+  readonly nodes: BrainNode[];
+  /**
+   * A fixed-width rendering of the same nodes (todo 21), present only when
+   * the caller asked for `format: "table"`. Six columns and fifty rows,
+   * because a table is for reading and an unbounded one is a payload.
+   */
+  readonly table?: {
+    readonly columns: readonly string[];
+    readonly rows: readonly (readonly string[])[];
+    /** Rows the cap left out. Zero when the table is the whole answer. */
+    readonly truncated: number;
+  };
+}
+
+/** A table is for reading; past this it is a payload pretending to be one. */
+export const BRAIN_TABLE_ROWS = 50;
+export const BRAIN_TABLE_COLUMNS = [
+  "type",
+  "path",
+  "label",
+  "status",
+  "relations",
+  "risk",
+] as const;
+
+/** Reads that decide whether a relation filter can be trusted. */
+const RELATION_TABLES = new Set(["edges", "graph_nodes"]);
+
+function queryCoverage(
+  workspace: McpWorkspaceData,
+  filter: BrainQueryFilter,
+): BrainQueryCoverage {
+  const truncated = (workspace.coverage?.truncated ?? []).filter((entry) =>
+    RELATION_TABLES.has(entry.table),
+  );
+  if (truncated.length === 0) {
+    return { result: "complete", unanswered: [] };
+  }
+  const reason = `the ${truncated
+    .map(({ table }) => table)
+    .sort()
+    .join(
+      " and ",
+    )} read stopped at its row budget, so a node with no listed relation may simply be past it`;
+  const unanswered = (
+    [
+      ["withoutRelations", filter.withoutRelations],
+      ["relations", filter.relations],
+    ] as const
+  )
+    .filter(([, value]) => value && value.length > 0)
+    .map(([name]) => ({ filter: name, reason }));
+  return {
+    result: unanswered.length === 0 ? "complete" : "partial",
+    unanswered,
+  };
+}
+
+/**
+ * A path glob, as a matcher (todo 21).
+ *
+ * Literal segments, `*` inside one, `**` across many — the shape people
+ * already write for file paths, and nothing that can backtrack
+ * catastrophically over a repository's worth of paths (OQ-054's rule, and
+ * the reason this is not a regex the caller supplies).
+ */
+function globMatcher(glob: string): (path: string) => boolean {
+  const pattern = glob
+    .split("/")
+    .map((segment) =>
+      segment === "**"
+        ? "(?:.*)"
+        : segment.replace(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", "[^/]*"),
+    )
+    .join("/")
+    .replaceAll("(?:.*)/", "(?:.*/)?");
+  const expression = new RegExp(`^${pattern}$`);
+  return (path) => expression.test(path);
+}
+
 export function queryWorkspaceBrain(
   workspace: McpWorkspaceData,
   filter: BrainQueryFilter,
-): BrainNode[] {
+): BrainQueryResult {
   const normalizedPath = filter.path
     ? normalizeSearchText(filter.path)
     : undefined;
-  return repositoryNodes(workspace)
+  const matchesGlob = filter.pathGlob ? globMatcher(filter.pathGlob) : null;
+  const summaryByNodeId = new Map(
+    workspace.repositories.flatMap((repository) =>
+      repository.artifacts.map(
+        (artifact) =>
+          [
+            artifact.id,
+            (artifact.summaryState?.state ?? "missing") === "current",
+          ] as const,
+      ),
+    ),
+  );
+  const risk =
+    filter.sortBy === "risk" ? workspaceRiskEntries(workspace) : null;
+  /**
+   * Domain and unit per node, from the same deriver the map uses (todo 21) —
+   * one definition of `backend`, so a chip on the graph and a filter here
+   * cannot mean different things.
+   *
+   * Keyed by node id, not by path: a requirement and the document stating it
+   * share a path and are different nodes. Anchored nodes inherit the facets
+   * of the file they hang off.
+   */
+  const facets = new Map<string, { domain: FacetDomain; unit: FacetUnit }>();
+  const familiesByNode = new Map<string, Set<McpEdgeFamily>>();
+  for (const repository of workspace.repositories) {
+    for (const artifact of repository.artifacts) {
+      const { domain, unit } = deriveArtifactFacets(
+        artifact.path,
+        artifact.kind as ArtifactClassification,
+      );
+      facets.set(artifact.id, { domain, unit });
+    }
+    for (const requirement of repository.requirements) {
+      const owner = facets.get(requirement.sourceArtifactId);
+      if (owner) facets.set(requirement.id, owner);
+    }
+    for (const evidence of repository.evidence) {
+      const owner = facets.get(evidence.sourceArtifactId);
+      if (owner) facets.set(evidence.id, owner);
+    }
+    for (const edge of repository.edges) {
+      if (!edge.family) continue;
+      for (const end of [edge.sourceNodeId, edge.targetNodeId]) {
+        const held = familiesByNode.get(end);
+        if (held) held.add(edge.family);
+        else familiesByNode.set(end, new Set([edge.family]));
+      }
+    }
+  }
+  const nodes = [...repositoryNodes(workspace), ...todoNodes(workspace)]
+    .filter(
+      (node) =>
+        filter.hasSummary === undefined ||
+        (summaryByNodeId.get(node.id) ?? false) === filter.hasSummary,
+    )
+    .filter((node) => !matchesGlob || matchesGlob(node.path ?? ""))
     .filter((node) => !filter.types || filter.types.includes(node.type))
+    .filter(
+      (node) =>
+        !filter.domains ||
+        // A node with no facet has no path to derive one from. Excluded
+        // rather than bucketed as `unclassified`, which is a real answer
+        // some files give and would be wrong to invent for a node that has
+        // no path at all.
+        filter.domains.includes(facets.get(node.id)?.domain as FacetDomain),
+    )
+    .filter(
+      (node) =>
+        !filter.units ||
+        filter.units.includes(facets.get(node.id)?.unit as FacetUnit),
+    )
+    .filter(
+      (node) =>
+        !filter.families ||
+        filter.families.some((family) =>
+          familiesByNode.get(node.id)?.has(family),
+        ),
+    )
     .filter((node) => !filter.statuses || filter.statuses.includes(node.status))
     .filter(
       (node) =>
@@ -415,38 +753,127 @@ export function queryWorkspaceBrain(
         !normalizedPath ||
         normalizeSearchText(node.path ?? "").includes(normalizedPath),
     )
-    .sort(
-      (left, right) =>
-        left.type.localeCompare(right.type) ||
-        (left.path ?? "").localeCompare(right.path ?? "") ||
-        left.id.localeCompare(right.id),
+    .sort((left, right) =>
+      risk
+        ? (risk.get(right.id)?.score ?? 0) - (risk.get(left.id)?.score ?? 0) ||
+          left.id.localeCompare(right.id)
+        : left.type.localeCompare(right.type) ||
+          (left.path ?? "").localeCompare(right.path ?? "") ||
+          left.id.localeCompare(right.id),
     );
+
+  const capped =
+    filter.limit === undefined ? nodes : nodes.slice(0, filter.limit);
+  const coverage = queryCoverage(workspace, filter);
+  const unanswered = [
+    ...coverage.unanswered,
+    // The screen's map counts co-change; a workspace read does not carry it.
+    // Saying so is what keeps the two rankings comparable instead of
+    // quietly different.
+    ...(risk
+      ? [
+          {
+            filter: "sortBy",
+            reason:
+              "co-change history is not part of a workspace read, so this ranking omits the coupling factor the inspection screen includes",
+          },
+        ]
+      : []),
+  ];
+
+  return {
+    coverage: {
+      result: unanswered.length === 0 ? "complete" : "partial",
+      unanswered,
+    },
+    // What the caller asked for, and — when a cap dropped rows — how many.
+    // A list shorter than the truth is only honest if it says so.
+    droppedByLimit: nodes.length - capped.length,
+    nodes: capped,
+    ...(filter.format === "table"
+      ? {
+          table: {
+            columns: [...BRAIN_TABLE_COLUMNS],
+            rows: capped.slice(0, BRAIN_TABLE_ROWS).map((node) => [
+              node.type,
+              node.path ?? "",
+              // One line per cell: a table with a wrapped label is not a
+              // table, and the full label is in `nodes` either way.
+              node.label.replace(/\s+/g, " ").slice(0, 80),
+              node.status,
+              node.relations.join(","),
+              risk ? String(risk.get(node.id)?.score ?? 0) : "",
+            ]),
+            truncated: Math.max(0, capped.length - BRAIN_TABLE_ROWS),
+          },
+        }
+      : {}),
+  };
 }
 
+/**
+ * The artifact a selector names, plus its neighbours from the workspace read.
+ *
+ * `matches` comes from a **targeted** store read, so the artifact is found
+ * whether or not it fell inside the workspace load's row budget (Codex remedy
+ * P0-B). The neighbours still come from that budgeted read, which is why the
+ * caller is told when it was truncated rather than left to read an empty
+ * neighbour list as "this file is connected to nothing".
+ */
 export function getWorkspaceArtifact(
   workspace: McpWorkspaceData,
   selector: { id?: string | undefined; path?: string | undefined },
+  found?: readonly McpArtifactMatch[],
 ): ArtifactWithNeighbors {
-  const matches = workspace.repositories.flatMap((repository) =>
-    repository.artifacts
-      .filter((artifact) =>
-        selector.id
-          ? artifact.id === selector.id
-          : artifact.path === selector.path,
-      )
-      .map((artifact) => ({ artifact, repository })),
-  );
-  matches.sort((left, right) =>
-    left.repository.id.localeCompare(right.repository.id),
-  );
+  const matches: McpArtifactMatch[] = [
+    ...(found ??
+      workspace.repositories.flatMap((repository) =>
+        repository.artifacts
+          .filter((artifact) =>
+            selector.id
+              ? artifact.id === selector.id
+              : artifact.path === selector.path,
+          )
+          .map((artifact) => ({
+            artifact,
+            repositoryFullName: repository.fullName,
+            repositoryId: repository.id,
+          })),
+      )),
+  ].sort((left, right) => left.repositoryId.localeCompare(right.repositoryId));
+  /**
+   * Two repositories can hold the same path — `src/index.ts` is not a name
+   * one project owns. Picking the lexicographically first repository
+   * answered a different question than the one asked, and said nothing about
+   * having chosen (Codex remedy §9.1). An id selector cannot be ambiguous:
+   * ids are unique.
+   */
+  if (!selector.id && matches.length > 1) {
+    return {
+      ambiguous: {
+        candidates: matches.map((match) => ({
+          artifactId: match.artifact.id,
+          repositoryFullName: match.repositoryFullName,
+          repositoryId: match.repositoryId,
+        })),
+        path: selector.path ?? "",
+      },
+      artifact: null,
+      card: null,
+      neighbors: [],
+    };
+  }
   const match = matches[0];
-  if (!match) return { artifact: null, neighbors: [] };
+  if (!match) return { artifact: null, card: null, neighbors: [] };
+  const repository = workspace.repositories.find(
+    ({ id }) => id === match.repositoryId,
+  );
 
   const nodes = new Map(
     repositoryNodes(workspace).map((node) => [node.id, node]),
   );
   const neighbors: ArtifactNeighbor[] = [];
-  for (const edge of match.repository.edges) {
+  for (const edge of repository?.edges ?? []) {
     if (edge.targetNodeId === match.artifact.id) {
       const node = nodes.get(edge.sourceNodeId);
       if (node) {
@@ -476,7 +903,20 @@ export function getWorkspaceArtifact(
   }
 
   return {
-    artifact: { ...match.artifact, repositoryId: match.repository.id },
+    artifact: { ...match.artifact, repositoryId: match.repositoryId },
+    // Stored facts, not prose: a repository that has never paid for enrich
+    // still gets path, kind, domain, unit, exported names and relations, and
+    // `missing` says what is absent.
+    card: buildArtifactCard({
+      classification: match.artifact.kind as ArtifactClassification,
+      exportedSymbols: match.artifact.symbols,
+      path: match.artifact.path,
+      relations: neighbors.map(({ direction, relation }) => ({
+        direction,
+        relation,
+      })),
+      summary: match.artifact.summaryState ?? { state: "missing" },
+    }),
     neighbors: neighbors.sort(
       (left, right) =>
         left.relation.localeCompare(right.relation) ||
@@ -486,10 +926,33 @@ export function getWorkspaceArtifact(
   };
 }
 
+/**
+ * Severity order, worst first. Alphabetical ordering put `low` above
+ * `medium` and `critical` below both, so the one thing a caller reads this
+ * list for — what to look at first — was the one thing it did not say.
+ */
+const SEVERITY_RANK: Readonly<Record<string, number>> = {
+  critical: 0,
+  high: 1,
+  medium: 2,
+  low: 3,
+};
+
+function severityRank(severity: string): number {
+  return SEVERITY_RANK[severity] ?? Object.keys(SEVERITY_RANK).length;
+}
+
+/** Ask for every status explicitly; the default is the open ones. */
+export const ALL_FINDING_STATUSES = "all";
+
 export function getWorkspaceFindings(
   workspace: McpWorkspaceData,
   filter: FindingQueryFilter = {},
 ): WorkspaceFinding[] {
+  // Resolved findings are history: an agent asking what is wrong with the
+  // repository was handed them alongside the open ones, unlabelled by
+  // recency, until this default landed (R5 §4.3).
+  const status = filter.status ?? "open";
   return workspace.repositories
     .flatMap((repository) =>
       repository.findings.map((finding) => ({
@@ -501,10 +964,12 @@ export function getWorkspaceFindings(
     .filter(
       (finding) => !filter.severity || finding.severity === filter.severity,
     )
-    .filter((finding) => !filter.status || finding.status === filter.status)
+    .filter(
+      (finding) => status === ALL_FINDING_STATUSES || finding.status === status,
+    )
     .sort(
       (left, right) =>
-        left.severity.localeCompare(right.severity) ||
+        severityRank(left.severity) - severityRank(right.severity) ||
         left.title.localeCompare(right.title) ||
         left.id.localeCompare(right.id),
     );
@@ -596,6 +1061,53 @@ export function selectWorkspaceContextPack(
     }
   }
 
+  /**
+   * Code the pack's documents actually point at, as cards. Bounded by what
+   * is left of the budget after the prose, and by a hard count — a pack that
+   * carried every file it touched would be a repository dump.
+   */
+  const codeCards: ContextCodeCard[] = [];
+  let cardTokens = 0;
+  for (const repository of workspace.repositories) {
+    const neighbours = new Map<string, ArtifactCardRelation[]>();
+    for (const edge of repository.edges) {
+      const outgoing = neighbours.get(edge.sourceNodeId) ?? [];
+      outgoing.push({ direction: "outgoing", relation: edge.relation });
+      neighbours.set(edge.sourceNodeId, outgoing);
+      const incoming = neighbours.get(edge.targetNodeId) ?? [];
+      incoming.push({ direction: "incoming", relation: edge.relation });
+      neighbours.set(edge.targetNodeId, incoming);
+    }
+    for (const artifact of repository.artifacts) {
+      if (documentKinds.has(artifact.kind as ContextDocumentKind)) continue;
+      if (!selectedNodeIds.has(artifact.id)) continue;
+      if (codeCards.length >= MAX_CONTEXT_CODE_CARDS) break;
+      const card = buildArtifactCard({
+        classification: artifact.kind as ArtifactClassification,
+        exportedSymbols: artifact.symbols,
+        path: artifact.path,
+        relations: neighbours.get(artifact.id) ?? [],
+        summary: artifact.summaryState ?? { state: "missing" },
+      });
+      // The estimate is of the serialized card, not of its prose: the
+      // omissions and the relation counts are payload too (REMEDY §9.1).
+      const estimatedTokens = estimateTokens(JSON.stringify(card));
+      if (
+        pack.estimatedTokens + cardTokens + estimatedTokens >
+        input.tokenBudget
+      ) {
+        break;
+      }
+      cardTokens += estimatedTokens;
+      codeCards.push({
+        card,
+        estimatedTokens,
+        id: artifact.id,
+        path: artifact.path,
+      });
+    }
+  }
+
   const omitted = pack.omitted.map(
     ({ estimatedTokens, path, rank, reason, title }) => ({
       estimatedTokens,
@@ -608,7 +1120,9 @@ export function selectWorkspaceContextPack(
 
   return {
     assumption: pack.assumption,
-    estimatedTokens: pack.estimatedTokens,
+    codeCards,
+    // What the caller pays for is the whole payload, prose and cards alike.
+    estimatedTokens: pack.estimatedTokens + cardTokens,
     excluded: omitted.map(({ path, reason }) => ({ path, reason })),
     nodeIds: [...selectedNodeIds],
     omitted,

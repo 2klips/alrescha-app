@@ -1,15 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { deriveBrainArea } from "@alrescha/core/artifact-facets";
+import {
+  deriveArtifactUnit,
+  deriveBrainArea,
+  type BrainArea,
+  type LayoutConventions,
+} from "@alrescha/core/artifact-facets";
 import type { ArtifactClassification } from "@alrescha/core";
 
 import {
-  clusterGraph,
-  forceDirectedLayout,
+  DISPLAY_RELATIONS,
   type EdgeConfidenceTier,
   type EvidenceGrade,
   type GraphData,
   type GraphEdge,
+  type GraphEdgeFamily,
   type GraphEdgeProvenance,
   type GraphNode,
   type GraphNodeType,
@@ -40,6 +45,8 @@ export interface MapGraphNodeRow {
 
 export interface MapArtifactRow {
   readonly classification: string;
+  /** Symbol names the scan stored — the `component` unit reads these. */
+  readonly exported_symbols?: readonly { readonly name: string }[] | null;
   readonly id: string;
   readonly path: string;
 }
@@ -67,6 +74,8 @@ export interface MapEvidenceRow {
 
 export interface MapEdgeRow {
   readonly confidence: number | string;
+  /** Absent only on rows written before the column existed (todo 2). */
+  readonly family?: string | null;
   readonly id: string;
   readonly provenance: unknown;
   readonly relation: string;
@@ -74,15 +83,46 @@ export interface MapEdgeRow {
   readonly target_node_id: string;
 }
 
+export interface MapDirectoryRow {
+  readonly id: string;
+  readonly path: string;
+  readonly role: string | null;
+}
+
+export interface MapRouteRow {
+  readonly id: string;
+  readonly methods: readonly string[] | null;
+  readonly url: string;
+}
+
+export interface MapDbObjectRow {
+  readonly id: string;
+  readonly kind: string;
+  readonly name: string;
+  readonly source_line: number;
+  readonly source_path: string;
+}
+
+export interface MapSectionRow {
+  readonly heading: string;
+  readonly id: string;
+  readonly source_path: string;
+  readonly token: string;
+}
+
 export interface MapFindingRow {
   readonly source_node_id: string | null;
   readonly status: string;
+  /** Code node the finding is about, when a rule could name one (todo 1). */
+  readonly target_node_id?: string | null;
 }
 
 export interface MapRepositoryRow {
   readonly full_name: string;
   readonly id: string;
   readonly last_scanned_commit_sha: string | null;
+  /** Parsed `.alrescha.json` for the commit that stated it (todo 4). */
+  readonly layout_config?: unknown;
 }
 
 export interface MapAccessEventRow {
@@ -126,12 +166,16 @@ export interface WorkspaceMapRows {
   readonly assertions: readonly MapAssertionRow[];
   readonly coChanges: readonly MapCoChangeRow[];
   readonly concepts: readonly MapConceptRow[];
+  readonly dbObjects: readonly MapDbObjectRow[];
+  readonly directories: readonly MapDirectoryRow[];
   readonly edges: readonly MapEdgeRow[];
+  readonly routes: readonly MapRouteRow[];
   readonly findings: readonly MapFindingRow[];
   readonly graphNodes: readonly MapGraphNodeRow[];
   readonly rationales: readonly MapRationaleRow[];
   readonly repositories: readonly MapRepositoryRow[];
   readonly requirements: readonly MapRequirementRow[];
+  readonly sections: readonly MapSectionRow[];
   readonly evidence: readonly MapEvidenceRow[];
   readonly tokens: readonly MapTokenRow[];
 }
@@ -155,11 +199,14 @@ export interface WorkspaceMapModel {
 }
 
 /**
- * Above this the map clusters by type·grade. Aligned with the stage's
- * `HIT_TARGET_LIMIT` — up to here every node keeps a DOM hit target, so the
- * pilot-scale graph (370 nodes) renders as individual nodes, not clusters.
+ * Above this the client folds the graph by hierarchy assignment rather than
+ * drawing every node (Wave B todo 12 owns the folding itself).
+ *
+ * It replaces the old 600-node cluster threshold, which collapsed the whole
+ * graph into fifteen `type:grade` super-nodes joined in an arbitrary chain —
+ * the more a repository grew, the less its map said (R5 §2.2 D4).
  */
-export const MAP_CLUSTER_THRESHOLD = 600;
+export const MAP_HIERARCHY_FOLD_THRESHOLD = 3_000;
 
 /** A pair must co-change this often before it earns a coupling edge. */
 export const CO_CHANGE_MIN_COUNT = 3;
@@ -174,7 +221,29 @@ const CLASSIFICATIONS: readonly ArtifactClassification[] = [
   "agents",
   "claude",
   "code_metadata",
+  "config",
   "cursor_rule",
+  "doc",
+  "schema",
+  "skill",
+  "spec",
+  "style",
+  "todo_progress",
+];
+
+/**
+ * Classifications that are prose. The rest of the text files the scan now
+ * stores — schemas, stylesheets, config — are source, and typing them as
+ * documents would put a migration in the docs band beside the specs, which
+ * is the shape R5 §2.2 D5 measured. Their own node kinds arrive with the hub
+ * families (Wave A′) and the `unit` tag (todo 4).
+ */
+const PROSE_CLASSIFICATIONS: readonly ArtifactClassification[] = [
+  "adr",
+  "agents",
+  "claude",
+  "cursor_rule",
+  "doc",
   "skill",
   "spec",
   "todo_progress",
@@ -184,10 +253,46 @@ function isClassification(value: string): value is ArtifactClassification {
   return (CLASSIFICATIONS as readonly string[]).includes(value);
 }
 
+/**
+ * The repository's declared layout, if it stated one. Read defensively: the
+ * column is free-form jsonb and a repository scanned by an older build has
+ * an empty object there.
+ */
+function layoutConventionsOf(
+  repositories: readonly MapRepositoryRow[],
+): LayoutConventions | undefined {
+  const stored = repositories[0]?.layout_config;
+  if (typeof stored !== "object" || stored === null || Array.isArray(stored)) {
+    return undefined;
+  }
+  const layout = (stored as Record<string, unknown>)["layout"];
+  if (typeof layout !== "object" || layout === null || Array.isArray(layout)) {
+    return undefined;
+  }
+  const source = layout as Record<string, unknown>;
+  const conventions: Record<string, string[]> = {};
+  for (const domain of ["backend", "database", "frontend", "shared"]) {
+    const prefixes = source[domain];
+    if (!Array.isArray(prefixes)) continue;
+    const strings = prefixes.filter(
+      (entry): entry is string => typeof entry === "string" && entry.length > 0,
+    );
+    if (strings.length > 0) conventions[domain] = strings;
+  }
+  return Object.keys(conventions).length > 0 ? conventions : undefined;
+}
+
 function artifactNodeType(artifact: MapArtifactRow): GraphNodeType {
-  if (!isClassification(artifact.classification)) return "document";
-  if (artifact.classification !== "code_metadata") return "document";
-  return deriveBrainArea(artifact.path, artifact.classification) === "tests"
+  // A classification this build does not know is not a document either.
+  if (!isClassification(artifact.classification)) return "unknown";
+  if (
+    (PROSE_CLASSIFICATIONS as readonly string[]).includes(
+      artifact.classification,
+    )
+  ) {
+    return "document";
+  }
+  return deriveBrainArea(artifact.path, "code_metadata") === "tests"
     ? "test"
     : "code";
 }
@@ -261,27 +366,25 @@ function edgeConfidenceTier(
   return parsed.sourcePath.length > 0 ? "resolved" : "inferred";
 }
 
+const EDGE_FAMILIES: readonly GraphEdgeFamily[] = [
+  "database",
+  "doc",
+  "evidence",
+  "hierarchy",
+  "route",
+  "semantic",
+  "statistical",
+  "structure",
+];
+
+function isEdgeFamily(value: unknown): value is GraphEdgeFamily {
+  return (EDGE_FAMILIES as readonly unknown[]).includes(value);
+}
+
 function isDisplayRelation(
   value: string,
 ): value is GraphEdgeProvenance["relation"] {
-  return [
-    "calls",
-    "configures",
-    "contradicts",
-    "declares",
-    "depends_on",
-    "implements",
-    "imports",
-    "part_of",
-    "produces",
-    "references",
-    "requires",
-    "supersedes",
-    "supports",
-    "tests",
-    "uses",
-    "validates",
-  ].includes(value);
+  return (DISPLAY_RELATIONS as readonly string[]).includes(value);
 }
 
 function requirementPath(
@@ -318,11 +421,15 @@ export function buildWorkspaceMapModel(
   for (const finding of rows.findings) {
     if (finding.status !== "open") continue;
     openFindings += 1;
-    if (finding.source_node_id) {
-      openFindingCounts.set(
-        finding.source_node_id,
-        (openFindingCounts.get(finding.source_node_id) ?? 0) + 1,
-      );
+    // Both anchors count (Phase 4 Wave A todo 1): the document the finding
+    // was raised from, and the code node it is about. A finding whose two
+    // anchors are the same node still counts once for that node.
+    for (const nodeId of new Set(
+      [finding.source_node_id, finding.target_node_id].filter(
+        (value): value is string => typeof value === "string" && value !== "",
+      ),
+    )) {
+      openFindingCounts.set(nodeId, (openFindingCounts.get(nodeId) ?? 0) + 1);
     }
   }
 
@@ -351,6 +458,51 @@ export function buildWorkspaceMapModel(
     return "inferred";
   }
 
+  const directoryById = new Map(rows.directories.map((row) => [row.id, row]));
+  const routeById = new Map(rows.routes.map((row) => [row.id, row]));
+  const dbObjectById = new Map(rows.dbObjects.map((row) => [row.id, row]));
+  const sectionById = new Map(rows.sections.map((row) => [row.id, row]));
+  /**
+   * A route's anchor path: the file it is served by. Every non-file node
+   * carries one so `graphNodeArea` can put it in the band of the code it
+   * belongs to (Wave A todo 4) — for a URL that is its handler.
+   */
+  const handlerPathByRoute = new Map<string, string>();
+  for (const edge of rows.edges) {
+    if (edge.relation !== "handles") continue;
+    const path = artifactPaths.get(edge.target_node_id);
+    const known = handlerPathByRoute.get(edge.source_node_id);
+    // Prefer the shortest handler path: the page, not the root layout.
+    if (path && (!known || path.length > known.length)) {
+      handlerPathByRoute.set(edge.source_node_id, path);
+    }
+  }
+  const layout = layoutConventionsOf(rows.repositories);
+
+  /**
+   * The node's colour axis. A directory's path is read as a prefix so a
+   * folder sits with what it holds, and a node with no artifact row behind
+   * it (requirement, concept, evidence) is derived from whatever path
+   * anchors it — that anchor is why every non-file node carries one.
+   */
+  function nodeDomain(input: {
+    classification: string | undefined;
+    path: string;
+    type: GraphNodeType;
+  }): BrainArea {
+    const classification =
+      input.classification && isClassification(input.classification)
+        ? input.classification
+        : input.type === "document" || input.type === "requirement"
+          ? "spec"
+          : "code_metadata";
+    const path =
+      input.type === "directory" && input.path.length > 0
+        ? `${input.path}/`
+        : input.path;
+    return deriveBrainArea(path, classification, layout);
+  }
+
   const nodes: GraphNode[] = [];
   for (const row of rows.graphNodes) {
     // Findings surface as counts on their source node, not as nodes.
@@ -359,6 +511,8 @@ export function buildWorkspaceMapModel(
     let type: GraphNodeType;
     let label = row.label;
     let path: string;
+    /** `package` for a workspace root; the Far label ranking is the only reader. */
+    let role: string | null = null;
     if (row.kind === "requirement") {
       const requirement = requirementById.get(row.id);
       type = "requirement";
@@ -366,11 +520,46 @@ export function buildWorkspaceMapModel(
       path = requirement ? requirementPath(requirement, artifactPaths) : "";
     } else if (row.kind === "rationale") {
       const rationale = rationaleById.get(row.id);
-      type = "document";
+      type = "rationale";
       label = truncate(row.label, 96);
       path = rationale
         ? `${rationale.source_path}:${rationale.source_line}`
         : "";
+    } else if (row.kind === "directory") {
+      // Derived by the scan SQL from the artifact paths (todo 3). The path
+      // is the anchor `graphNodeArea` derives the domain from, so a folder
+      // sits in the same band as the files it holds.
+      const directory = directoryById.get(row.id);
+      type = "directory";
+      path = directory?.path ?? row.label;
+      label = truncate(basename(path), 96);
+      // A workspace root is a landmark, not just another folder: the Far
+      // label ranking puts a package name ahead of a busier file, because at
+      // that zoom a label answers "where am I" rather than "what is this".
+      if (directory?.role === "package") role = "package";
+    } else if (row.kind === "route") {
+      // A URL is a hub: its handlers hang off it (Wave A′ todo 6). The
+      // anchor path is one of them, so the route sits in their band.
+      const route = routeById.get(row.id);
+      type = "route";
+      label = truncate(route?.url ?? row.label, 96);
+      path = handlerPathByRoute.get(row.id) ?? "";
+    } else if (row.kind === "section") {
+      // An ID-token heading — a decision, an open question, a gate — is the
+      // hub everything that cites it hangs off (Wave A′ todo 8). Its anchor
+      // is the document that declares it, so it sits in the docs band.
+      const section = sectionById.get(row.id);
+      type = "section";
+      label = truncate(section?.heading ?? row.label, 96);
+      path = section?.source_path ?? "";
+    } else if (row.kind === "db_object") {
+      // A table is a hub the repository already had (Wave A′ todo 7). Its
+      // anchor is the migration that declares it, so it lands in the
+      // database band with the schema rather than floating loose.
+      const object = dbObjectById.get(row.id);
+      type = "database";
+      label = truncate(object?.name ?? row.label, 96);
+      path = object?.source_path ?? "";
     } else if (row.kind === "concept") {
       // AI-synthesized concept layer (Wave C todo 7) — always inferred;
       // the path anchors facets to the first member file.
@@ -386,18 +575,42 @@ export function buildWorkspaceMapModel(
         : "";
     } else {
       const artifact = artifactById.get(row.id);
-      type = artifact ? artifactNodeType(artifact) : "document";
+      // `unknown`, not `document`: when the artifact row is missing the node
+      // has no classification to read, and calling it a document inflated
+      // the docs band with code (R5 §2.2 D5). The loader's matched ordering
+      // is what keeps this branch empty; naming it is what makes a
+      // regression visible instead of silent.
+      type = artifact ? artifactNodeType(artifact) : "unknown";
       path = artifact?.path ?? row.label;
       label = truncate(basename(path), 96);
     }
 
+    const artifact = artifactById.get(row.id);
     nodes.push({
+      // Derived once, here, with the repository's own conventions — the
+      // renderer and the overview then read the same answer instead of each
+      // re-deriving one from the path (R5 §2.6, todo 4).
+      domain: nodeDomain({
+        classification: artifact?.classification,
+        path,
+        type,
+      }),
       findingCount: openFindingCounts.get(row.id) ?? 0,
       grade: gradeOf(row.id),
       id: row.id,
       label,
       path,
+      ...(role ? { role } : {}),
       type,
+      ...(artifact && isClassification(artifact.classification)
+        ? {
+            unit: deriveArtifactUnit({
+              classification: artifact.classification,
+              exportedSymbols: artifact.exported_symbols ?? [],
+              path: artifact.path,
+            }),
+          }
+        : {}),
       x: 0,
       y: 0,
     });
@@ -409,6 +622,7 @@ export function buildWorkspaceMapModel(
     if (!nodeIds.has(row.source_node_id) || !nodeIds.has(row.target_node_id))
       continue;
     const broken = row.relation === "contradicts";
+    const family = isEdgeFamily(row.family) ? row.family : undefined;
     const grade: EvidenceGrade = broken
       ? "broken"
       : executionEvidenceIds.has(row.source_node_id)
@@ -417,8 +631,13 @@ export function buildWorkspaceMapModel(
     const provenance = parseEdgeProvenance(row.provenance);
     edges.push({
       broken,
+      ...(family ? { family } : {}),
       grade,
       id: row.id,
+      // Containment is a force-field input, not a relationship to draw: 885
+      // folder lines over this repository would bury the imports they exist
+      // to make legible (OQ-037).
+      ...(family === "hierarchy" ? { layoutOnly: true } : {}),
       provenance: {
         confidence: Number(row.confidence),
         endLine: provenance.endLine,
@@ -497,10 +716,12 @@ export function buildWorkspaceMapModel(
     });
   }
 
-  const isClustered = nodes.length > MAP_CLUSTER_THRESHOLD;
-  const graph = isClustered
-    ? clusterGraph({ edges, nodes }, MAP_CLUSTER_THRESHOLD)
-    : forceDirectedLayout({ edges, nodes });
+  // No server-side layout (MT-6). The renderer simulates in a Web Worker and
+  // discards whatever coordinates arrive, so computing an O(n²) layout here
+  // bought nothing but time-to-first-byte — 48 iterations over 730 nodes is
+  // ~12.8M distance calculations per request.
+  const isClustered = nodes.length > MAP_HIERARCHY_FOLD_THRESHOLD;
+  const graph: GraphData = { edges, nodes };
 
   const labelsById = new Map(nodes.map((node) => [node.id, node.path]));
   const feed: GraphAccessEvent[] = rows.accessEvents.map((event) => ({
@@ -544,6 +765,52 @@ const NODE_LIMIT = 2_000;
 const EDGE_LIMIT = 6_000;
 const FEED_LIMIT = 20;
 
+/**
+ * Hubs are read on their own budget (R5 §2.7, OQ-038).
+ *
+ * A directory node is worth more per byte than a file node — it is what makes
+ * a package read as a cluster — so it must not compete with files for the
+ * 2,000-node budget. Route, db_object and section hubs arrive in Wave A′ and
+ * get their own lines then.
+ */
+export const DIRECTORY_LIMIT = 300;
+
+/** Routes are hubs too, on their own budget (R5 §2.7). */
+export const ROUTE_LIMIT = 100;
+
+/**
+ * Tables and functions, likewise. This repository declares 43 tables and 59
+ * functions, and a schema-heavy project has more; 400 leaves headroom without
+ * letting the schema outweigh the code it belongs to.
+ */
+export const DB_OBJECT_LIMIT = 400;
+
+/**
+ * Decision records, open questions and gates. This repository declares 86 of
+ * them and cites 79; 300 leaves room for a repository that documents more
+ * without letting the prose layer outweigh the code.
+ */
+export const SECTION_LIMIT = 300;
+
+/**
+ * Per-family read budgets (R5 §2.5). One shared 6,000-edge cap let whichever
+ * family happened to sort first fill it: on this repository the containment
+ * layer alone is ~890 edges and the structure layer ~1,700, so a single cap
+ * silently decided which half of the graph a user saw. Wave A′ todo 6 gave
+ * `route` its writer and todo 7 gave `database` one; both inherited the
+ * budgets stated here rather than inventing them.
+ */
+export const EDGE_FAMILY_LIMITS: Readonly<Record<GraphEdgeFamily, number>> = {
+  database: 3_000,
+  doc: 6_000,
+  evidence: 6_000,
+  hierarchy: 6_000,
+  route: 1_000,
+  semantic: 3_000,
+  statistical: 3_000,
+  structure: 6_000,
+};
+
 export async function loadWorkspaceMap(
   client: SupabaseClient,
   userId: string,
@@ -559,13 +826,32 @@ export async function loadWorkspaceMap(
   }
   const workspaceId = String(workspaceResult.data.id);
 
+  // One query per edge family, in parallel: the budgets are per family and a
+  // single query cannot express eight of them (R5 §2.5, OQ-038).
+  const familyQueries = Object.entries(EDGE_FAMILY_LIMITS).map(
+    ([family, limit]) =>
+      client
+        .from("edges")
+        .select(
+          "id,source_node_id,target_node_id,relation,family,confidence,provenance",
+        )
+        .eq("workspace_id", workspaceId)
+        .eq("family", family)
+        .limit(limit),
+  );
+
   const [
     accessEvents,
     artifacts,
     assertions,
     coChanges,
     concepts,
-    edges,
+    directories,
+    routeRows,
+    dbObjectRows,
+    sectionRows,
+    familyEdges,
+    legacyEdges,
     findings,
     graphNodes,
     rationales,
@@ -582,8 +868,16 @@ export async function loadWorkspaceMap(
       .limit(FEED_LIMIT),
     client
       .from("artifacts")
-      .select("id,classification,path")
+      .select("id,classification,path,exported_symbols")
       .eq("workspace_id", workspaceId)
+      // Same key as the `graph_nodes` query below, and for the same reason:
+      // both are capped at NODE_LIMIT, so an unordered artifacts page could
+      // return a different 2,000 rows than the nodes page and leave matched
+      // code nodes with no classification (R4 §3.7). A scan writes a node
+      // and its artifact in one transaction, so the two keys agree row for
+      // row; `id` breaks the tie those shared timestamps create.
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .limit(NODE_LIMIT),
     client
       .from("agent_assertions")
@@ -604,13 +898,45 @@ export async function loadWorkspaceMap(
       .eq("workspace_id", workspaceId)
       .limit(NODE_LIMIT),
     client
-      .from("edges")
-      .select("id,source_node_id,target_node_id,relation,confidence,provenance")
+      .from("directories")
+      .select("id,path,role")
       .eq("workspace_id", workspaceId)
+      .order("path", { ascending: true })
+      .limit(DIRECTORY_LIMIT),
+    client
+      .from("routes")
+      .select("id,url,methods")
+      .eq("workspace_id", workspaceId)
+      .order("url", { ascending: true })
+      .limit(ROUTE_LIMIT),
+    client
+      .from("db_objects")
+      .select("id,name,kind,source_path,source_line")
+      .eq("workspace_id", workspaceId)
+      .order("name", { ascending: true })
+      .limit(DB_OBJECT_LIMIT),
+    client
+      .from("sections")
+      .select("id,token,heading,source_path")
+      .eq("workspace_id", workspaceId)
+      .order("token", { ascending: true })
+      .limit(SECTION_LIMIT),
+    Promise.all(familyQueries),
+    // Rows written before the column existed carry no family. The migration
+    // backfilled every one of them, so this is an empty set on a migrated
+    // database — and a visible one, rather than a silent omission, if it is
+    // ever not.
+    client
+      .from("edges")
+      .select(
+        "id,source_node_id,target_node_id,relation,family,confidence,provenance",
+      )
+      .eq("workspace_id", workspaceId)
+      .is("family", null)
       .limit(EDGE_LIMIT),
     client
       .from("findings")
-      .select("source_node_id,status")
+      .select("source_node_id,target_node_id,status")
       .eq("workspace_id", workspaceId)
       .eq("status", "open"),
     client
@@ -618,6 +944,7 @@ export async function loadWorkspaceMap(
       .select("id,kind,label")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .limit(NODE_LIMIT),
     client
       .from("rationales")
@@ -626,7 +953,7 @@ export async function loadWorkspaceMap(
       .limit(NODE_LIMIT),
     client
       .from("repositories")
-      .select("id,full_name,last_scanned_commit_sha")
+      .select("id,full_name,last_scanned_commit_sha,layout_config")
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false }),
     client
@@ -651,7 +978,12 @@ export async function loadWorkspaceMap(
     assertions,
     coChanges,
     concepts,
-    edges,
+    directories,
+    routeRows,
+    dbObjectRows,
+    sectionRows,
+    ...familyEdges,
+    legacyEdges,
     findings,
     graphNodes,
     rationales,
@@ -665,19 +997,28 @@ export async function loadWorkspaceMap(
     }
   }
 
+  const edgeRows = [
+    ...familyEdges.flatMap((result) => (result.data ?? []) as MapEdgeRow[]),
+    ...((legacyEdges.data ?? []) as MapEdgeRow[]),
+  ];
+
   return buildWorkspaceMapModel(workspaceId, {
     accessEvents: (accessEvents.data ?? []) as MapAccessEventRow[],
     artifacts: (artifacts.data ?? []) as MapArtifactRow[],
     assertions: (assertions.data ?? []) as MapAssertionRow[],
     coChanges: (coChanges.data ?? []) as MapCoChangeRow[],
     concepts: (concepts.data ?? []) as MapConceptRow[],
-    edges: (edges.data ?? []) as MapEdgeRow[],
+    dbObjects: (dbObjectRows.data ?? []) as MapDbObjectRow[],
+    directories: (directories.data ?? []) as MapDirectoryRow[],
+    edges: edgeRows,
+    routes: (routeRows.data ?? []) as MapRouteRow[],
     evidence: (evidence.data ?? []) as MapEvidenceRow[],
     findings: (findings.data ?? []) as MapFindingRow[],
     graphNodes: (graphNodes.data ?? []) as MapGraphNodeRow[],
     rationales: (rationales.data ?? []) as MapRationaleRow[],
     repositories: (repositories.data ?? []) as MapRepositoryRow[],
     requirements: (requirements.data ?? []) as MapRequirementRow[],
+    sections: (sectionRows.data ?? []) as MapSectionRow[],
     tokens: (tokens.data ?? []) as MapTokenRow[],
   });
 }

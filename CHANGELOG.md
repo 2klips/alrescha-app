@@ -10,6 +10,71 @@ phase.
 
 ## [Unreleased]
 
+### Phase 4 — 연구·계획 수립 (2026-09-03 → v2 2026-09-04)
+
+Research: `spec/RESEARCH_GRAPH_SECONDBRAIN_2026-09-03.md` (R4) and
+`spec/RESEARCH_GALAXY_MONETIZATION_2026-09-04.md` (R5). Plan:
+`spec/BUILD_PLAN_PHASE4.md` v2 (7 waves, 28 todos, none started). New open
+questions OQ-029 … OQ-043. No product code changed in this entry.
+
+#### v2 additions (2026-09-04) — galaxy density and the paid bundle
+
+- **Design panel** (four independent designs, three judges, one synthesis):
+  the winning skeleton is "every text file is a note, every deterministic
+  relation is a link (14 edge families), hubs are derived by SQL from paths",
+  with the hierarchy design's discipline grafted on (unit tags, deterministic
+  collapse, PageRank restricted to structure families, opt-in domain anchors).
+  Five defects were confirmed in code that block any density work until
+  fixed: non-relative import specifiers are dropped, unchanged files are
+  never re-linked, force links are duplicated with constant strength, the
+  600-node cluster fallback and DOM hit cap, and the docs-heavy
+  classification mapping. Target density for this repository is estimated at
+  ~1,260 nodes / ~4,000 edges / average degree ~6.3 at zero credits — an
+  estimate until `measure-graph-density.ts` records it.
+- **Market research** (five topics, each adversarially fact-checked against
+  primary sources): graphs, MCP servers and repo wikis are expected to be
+  free; seats are paid for merge-time judgement ($24–72) and hosting /
+  auto-reindexing / team sync ($29–30); "token savings" headlines do not
+  survive independent measurement. The one paid-worthy axis Alrescha has is
+  risk / drift judgement.
+- **Feature audits** (token savings, progress, risk, todo — each refuted and
+  then critiqued): none justifies a paid plan today. Confirmed facts include
+  requirement coverage rendering a false 0%, production artifacts carrying no
+  body so MCP serves empty content before enrich, every finding capped at
+  medium/low, findings anchored only to document nodes, todo identity by
+  byte offset with a 240-character CHECK that rolls back whole scans, a
+  foreign-key wedge, no live glow bridge in the browser, and no payment path
+  or repository-scoped screens.
+- Measured this session: the 22 MCP tool definitions total 30,130 characters,
+  62% of which is the optional `outputSchema`.
+
+#### Findings that drive the plan
+
+- The live map reads as "documents linked to documents" because of the data
+  layer, not the renderer: concept, requirement and rationale nodes are all
+  mapped to the `docs` area (`graph-model.ts` `NODE_TYPE_CLASSIFICATION`),
+  requirement nodes are persisted without any edge, no writer produces
+  document→code edges, and the facet conventions only know this repository's
+  `apps/web` / `apps` / `packages` layout — everything else collapses into
+  `backend`. Symbols are not graph nodes; `README.md` and `docs/**/*.md` are
+  not artifacts at all.
+- The graph view shares Obsidian's stack (Pixi v8 + d3-force in a Worker) but
+  lacks hover neighbourhood focus, node drag with reheat, cursor-anchored zoom
+  (the current anchor is the world origin), screen-space labels, fit-to-view
+  and viewport culling; every filter keystroke restarts the simulation and
+  hit-testing stops at 600 DOM buttons.
+- Connecting an already-finished repository never scans it: `scan`/`analyze`
+  jobs are enqueued only from the push webhook. `alrescha push` fills the graph
+  but can never be analyzed or enriched. No human-readable documentation
+  surface exists; the stored prose summaries are not shown anywhere in the web
+  UI.
+- External landscape (2026-09-03): Graphify 114.2k★ (37 grammars, SQL schema
+  nodes, PR impact, PreToolUse hooks), GitNexus (44 node types incl. Folder /
+  Route / Process / Community, WASM tree-sitter in the browser), Serena 25.2k★,
+  DeepWiki-open 17.9k★ (two-pass codemap with mandatory citations), Dataview
+  9.3k★ (queryable metadata layer). Adopted patterns and rejected ones are
+  tabulated in the research report §6.
+
 ### Phase 2C — 실물 기동: 실데이터 배선 · 실기 연동 · 동결 실험 · 배포 (2026-08-31)
 
 Plan: `spec/BUILD_PLAN_PHASE2C.md` (11 todos, all delivered — the last

@@ -39,8 +39,44 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
   let workspace: string;
   const repository = fixedUlid("B");
   const artifact = fixedUlid("A");
+  const code = fixedUlid("C");
   const REQ_1 = `0${"A".repeat(25)}`;
   const REQ_2 = `0${"B".repeat(25)}`;
+
+  function implementsEdge(requirementId: string, targetNodeId = code) {
+    return {
+      confidence: 0.6,
+      provenance: {
+        method: "symbol-owner" as const,
+        reason:
+          "requirement statement names the exported symbol isSessionExpired",
+        sourceArtifactId: artifact,
+        span: { endLine: 3, path: "spec/auth.md", startLine: 3 },
+        symbol: "isSessionExpired",
+        tier: "reference" as const,
+      },
+      requirementId,
+      targetNodeId,
+    };
+  }
+
+  async function implementsRows() {
+    const result = await database.query<{
+      confidence: string;
+      grade: string | null;
+      provenance: Record<string, unknown>;
+      source_node_id: string;
+      target_node_id: string;
+    }>(
+      `select source_node_id, target_node_id, confidence, provenance,
+              provenance ->> 'tier' as grade
+       from public.edges
+       where workspace_id = $1 and relation = 'implements'
+       order by source_node_id, target_node_id`,
+      [workspace],
+    );
+    return result.rows;
+  }
 
   beforeEach(async () => {
     database = await createTestDatabase([...ALL_MIGRATIONS]);
@@ -72,6 +108,18 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
        values ($1, $2, $3, 'spec', 'spec', 'spec/auth.md', $4, $5)`,
       [artifact, workspace, repository, "c".repeat(64), "3".repeat(40)],
     );
+    // The code file the requirement names, as the same scan stored it.
+    await database.query(
+      `insert into public.graph_nodes (id, workspace_id, repository_id, kind, label)
+       values ($1, $2, $3, 'artifact', 'src/session.ts')`,
+      [code, workspace, repository],
+    );
+    await database.query(
+      `insert into public.artifacts
+        (id, workspace_id, repository_id, kind, classification, path, digest, source_commit_sha)
+       values ($1, $2, $3, 'code_metadata', 'code_metadata', 'src/session.ts', $4, $5)`,
+      [code, workspace, repository, "d".repeat(64), "3".repeat(40)],
+    );
   });
 
   afterEach(async () => {
@@ -97,6 +145,7 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
 
   it("upserts node and row together, then converges on re-analysis", async () => {
     const first = await store.reconcileRequirements({
+      implementsEdges: [],
       repositoryId: repository,
       requirements: [
         requirement(REQ_1, "세션은 만료되어야 한다"),
@@ -106,12 +155,23 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
     });
     expect(first).toEqual({ active: 2, superseded: 0 });
     expect(await rows()).toEqual([
-      { id: REQ_1, kind: "requirement", statement: "세션은 만료되어야 한다", status: "active" },
-      { id: REQ_2, kind: "requirement", statement: "토큰은 회전되어야 한다", status: "active" },
+      {
+        id: REQ_1,
+        kind: "requirement",
+        statement: "세션은 만료되어야 한다",
+        status: "active",
+      },
+      {
+        id: REQ_2,
+        kind: "requirement",
+        statement: "토큰은 회전되어야 한다",
+        status: "active",
+      },
     ]);
 
     // Same documents again: same ids, nothing duplicated, nothing superseded.
     const again = await store.reconcileRequirements({
+      implementsEdges: [],
       repositoryId: repository,
       requirements: [
         requirement(REQ_1, "세션은 만료되어야 한다"),
@@ -134,6 +194,7 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
 
   it("supersedes a requirement the documents no longer state, and revives it if it returns", async () => {
     await store.reconcileRequirements({
+      implementsEdges: [],
       repositoryId: repository,
       requirements: [
         requirement(REQ_1, "세션은 만료되어야 한다"),
@@ -142,6 +203,7 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
       workspaceId: workspace,
     });
     const dropped = await store.reconcileRequirements({
+      implementsEdges: [],
       repositoryId: repository,
       requirements: [requirement(REQ_1, "세션은 만료되어야 한다")],
       workspaceId: workspace,
@@ -153,6 +215,7 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
     ]);
 
     const revived = await store.reconcileRequirements({
+      implementsEdges: [],
       repositoryId: repository,
       requirements: [
         requirement(REQ_1, "세션은 만료되어야 한다"),
@@ -161,11 +224,14 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
       workspaceId: workspace,
     });
     expect(revived).toEqual({ active: 2, superseded: 0 });
-    expect((await rows()).every(({ status }) => status === "active")).toBe(true);
+    expect((await rows()).every(({ status }) => status === "active")).toBe(
+      true,
+    );
   });
 
   it("sweeps the requirement node left behind when its source artifact is removed", async () => {
     await store.reconcileRequirements({
+      implementsEdges: [],
       repositoryId: repository,
       requirements: [
         requirement(REQ_1, "세션은 만료되어야 한다"),
@@ -190,6 +256,7 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
     expect((await orphans()).rows.map(({ id }) => id)).toEqual([REQ_1, REQ_2]);
 
     const swept = await store.reconcileRequirements({
+      implementsEdges: [],
       repositoryId: repository,
       requirements: [],
       workspaceId: workspace,
@@ -201,6 +268,7 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
   it("refuses a requirement whose source artifact is not in the repository", async () => {
     await expect(
       store.reconcileRequirements({
+        implementsEdges: [],
         repositoryId: repository,
         requirements: [
           requirement(REQ_1, "출처 없는 요구사항", {
@@ -211,5 +279,124 @@ describe("requirement persistence (OQ-023 ⑴)", () => {
       }),
     ).rejects.toThrow(/foreign key|violates/);
     expect(await rows()).toEqual([]);
+  });
+
+  /**
+   * Phase 4 Wave A todo 1 — the `implements` writer.
+   *
+   * Requirement nodes had no edges at all, so requirement coverage was not a
+   * low number but an unmeasurable one (R5 §2.2 D6). These edges are
+   * `reference` tier at 0.6: a requirement naming an exported symbol is
+   * evidence of intent, never of execution (WORK_SPEC §3-1).
+   */
+  describe("implements edges", () => {
+    it("writes the edge with its requirement, capped at reference tier", async () => {
+      await store.reconcileRequirements({
+        implementsEdges: [implementsEdge(REQ_1)],
+        repositoryId: repository,
+        requirements: [requirement(REQ_1, "세션은 만료되어야 한다")],
+        workspaceId: workspace,
+      });
+
+      const edges = await implementsRows();
+      expect(edges).toHaveLength(1);
+      expect(edges[0]).toMatchObject({
+        grade: "reference",
+        source_node_id: REQ_1,
+        target_node_id: code,
+      });
+      expect(Number(edges[0]?.confidence)).toBeLessThanOrEqual(0.6);
+      // Provenance is not optional on any edge (WORK_SPEC §3-2).
+      expect(edges[0]?.provenance).toMatchObject({
+        method: "symbol-owner",
+        reason: expect.stringMatching(/\S/),
+        sourceArtifactId: artifact,
+        span: { path: "spec/auth.md", startLine: 3 },
+      });
+      // Nothing on this path may produce execution evidence.
+      const graded = await database.query<{ count: string }>(
+        `select count(*) as count from public.evidence where workspace_id = $1`,
+        [workspace],
+      );
+      expect(Number(graded.rows[0]?.count)).toBe(0);
+    });
+
+    it("converges on re-analysis instead of duplicating", async () => {
+      for (const pass of [1, 2]) {
+        await store.reconcileRequirements({
+          implementsEdges: [implementsEdge(REQ_1)],
+          repositoryId: repository,
+          requirements: [
+            requirement(REQ_1, `세션은 만료되어야 한다 (pass ${pass})`),
+          ],
+          workspaceId: workspace,
+        });
+      }
+
+      expect(await implementsRows()).toHaveLength(1);
+    });
+
+    it("drops a link the analysis no longer derives", async () => {
+      await store.reconcileRequirements({
+        implementsEdges: [implementsEdge(REQ_1), implementsEdge(REQ_2)],
+        repositoryId: repository,
+        requirements: [
+          requirement(REQ_1, "세션은 만료되어야 한다"),
+          requirement(REQ_2, "토큰은 회전되어야 한다"),
+        ],
+        workspaceId: workspace,
+      });
+      expect(await implementsRows()).toHaveLength(2);
+
+      // The second requirement stopped naming the symbol: its edge goes,
+      // or it would keep counting toward coverage forever.
+      await store.reconcileRequirements({
+        implementsEdges: [implementsEdge(REQ_1)],
+        repositoryId: repository,
+        requirements: [
+          requirement(REQ_1, "세션은 만료되어야 한다"),
+          requirement(REQ_2, "토큰은 회전되어야 한다"),
+        ],
+        workspaceId: workspace,
+      });
+
+      expect(
+        (await implementsRows()).map(({ source_node_id }) => source_node_id),
+      ).toEqual([REQ_1]);
+    });
+
+    it("leaves implements edges that do not come from a requirement", async () => {
+      // The concept layer writes `implements` from concept nodes; this
+      // reconciliation owns only the requirement-sourced ones.
+      const concept = fixedUlid("D");
+      await database.query(
+        `insert into public.graph_nodes (id, workspace_id, repository_id, kind, label)
+         values ($1, $2, $3, 'concept', 'Session expiry')`,
+        [concept, workspace, repository],
+      );
+      await database.query(
+        `insert into public.edges
+          (workspace_id, repository_id, source_node_id, target_node_id, relation, provenance, confidence)
+         values ($1, $2, $3, $4, 'implements', $5::jsonb, 0.5)`,
+        [
+          workspace,
+          repository,
+          concept,
+          code,
+          JSON.stringify({ reason: "concept graph", tier: "inferred" }),
+        ],
+      );
+
+      await store.reconcileRequirements({
+        implementsEdges: [],
+        repositoryId: repository,
+        requirements: [requirement(REQ_1, "세션은 만료되어야 한다")],
+        workspaceId: workspace,
+      });
+
+      expect(
+        (await implementsRows()).map(({ source_node_id }) => source_node_id),
+      ).toEqual([concept]);
+    });
   });
 });

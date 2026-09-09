@@ -17,11 +17,23 @@ import { useEffect, useRef, type RefObject } from "react";
 
 import type { GraphData } from "../../lib/dashboard/graph-model";
 import {
+  approachCamera,
+  cameraEquals,
+  panBy,
+  screenToWorld,
+  worldToScreen,
+  zoomAt,
+} from "../../lib/graph/camera";
+import {
   createGraphEngine,
   wrapWorker,
   type GraphEngine,
 } from "../../lib/graph/engine";
-import type { RenderFrame } from "../../lib/graph/render-frame";
+import type {
+  Camera,
+  GraphLayer,
+  RenderFrame,
+} from "../../lib/graph/render-frame";
 import type { ForceConfig } from "../../lib/graph/simulation-protocol";
 import { readDesignToken, readRendererPalette } from "../../lib/theme/tokens";
 
@@ -31,6 +43,13 @@ export interface BrainMapProps {
   data: GraphData;
   /** Directional focus mode: selection tints edges by direction (todo 2). */
   directionalFocus?: boolean;
+  /**
+   * Increment to ask the camera to frame the whole graph. A number rather
+   * than a callback because the request travels *into* this component: the
+   * button lives in the surrounding markup and the camera lives here, and a
+   * changing token says "again" where a boolean could not.
+   */
+  fitRequest?: number;
   /** Camera target — the activity feed's "fly to this node" gesture. */
   focusNodeId?: string | null;
   forceConfig?: Partial<ForceConfig>;
@@ -43,6 +62,21 @@ export interface BrainMapProps {
    */
   hitLayer?: RefObject<HTMLDivElement | null>;
   onLodChange?: (lod: string, labelCount: number) => void;
+  /** Fires when the canvas hit test changes what is under the pointer. */
+  onHoverChange?: (nodeId: string | null) => void;
+  /** Double-click on a node the canvas hit test found. */
+  onNodeActivate?: (nodeId: string) => void;
+  /** Click on a node the canvas hit test found. */
+  onNodeSelect?: (nodeId: string) => void;
+  /** Fires on every change of "the layout has stopped moving". */
+  onSettledChange?: (settled: boolean) => void;
+  /**
+   * Which nodes to draw, or absent for all of them (todo 13). Filtering goes
+   * through here rather than through `data`, so it never restarts the layout.
+   */
+  visibleNodeIds?: ReadonlySet<string> | undefined;
+  /** Layers the viewer switched off (todo 13). */
+  hiddenLayers?: ReadonlySet<GraphLayer> | undefined;
   seed?: number;
   selectedNodeId?: string | null;
   textFadeThreshold?: number;
@@ -50,8 +84,16 @@ export interface BrainMapProps {
   viewport: RefObject<HTMLDivElement | null>;
 }
 
-const MIN_SCALE = 0.15;
-const MAX_SCALE = 4;
+/**
+ * One wheel notch. Multiplicative, so a notch out undoes a notch in exactly.
+ */
+const ZOOM_STEP = 1.15;
+
+/**
+ * Screen margin left around the graph when the camera frames it. Enough that
+ * the outermost nodes are not clipped by their own radius or their label.
+ */
+const FIT_PADDING = 64;
 
 /**
  * Hit targets are pointer/keyboard affordances, not pixels — syncing them at
@@ -67,17 +109,39 @@ export function BrainMap({
   afterglow,
   data,
   directionalFocus,
+  fitRequest,
   focusNodeId,
   forceConfig,
   glow,
   hitLayer,
+  onHoverChange,
   onLodChange,
+  onNodeActivate,
+  onNodeSelect,
+  onSettledChange,
   seed,
   selectedNodeId,
   textFadeThreshold,
+  hiddenLayers,
   viewport: viewportRef,
+  visibleNodeIds,
 }: BrainMapProps) {
   const engineRef = useRef<GraphEngine | null>(null);
+  /**
+   * Where the camera is heading, or null when it is not heading anywhere.
+   *
+   * This component owns the camera while the map is mounted: a gesture moves
+   * the target and the animation loop eases the engine toward it. The loop
+   * stops writing the moment it arrives, so `engine.setCamera` from anywhere
+   * else still takes effect — it is adopted rather than fought.
+   */
+  const cameraTargetRef = useRef<Camera | null>(null);
+  /**
+   * Whether a person has moved the camera. The first automatic fit is a
+   * courtesy for someone who has not touched anything yet; doing it to
+   * someone who has just panned somewhere would be the map taking the wheel.
+   */
+  const cameraTouchedRef = useRef(false);
   const latest = useRef({
     data,
     directionalFocus,
@@ -103,6 +167,14 @@ export function BrainMap({
    */
   const onLodChangeRef = useRef(onLodChange);
   onLodChangeRef.current = onLodChange;
+  const onSettledChangeRef = useRef(onSettledChange);
+  onSettledChangeRef.current = onSettledChange;
+  const onNodeSelectRef = useRef(onNodeSelect);
+  onNodeSelectRef.current = onNodeSelect;
+  const onNodeActivateRef = useRef(onNodeActivate);
+  onNodeActivateRef.current = onNodeActivate;
+  const onHoverChangeRef = useRef(onHoverChange);
+  onHoverChangeRef.current = onHoverChange;
 
   useEffect(() => {
     const host = viewportRef.current;
@@ -154,8 +226,9 @@ export function BrainMap({
         const size = Math.round(
           Math.max(MIN_HIT_SIZE, node.radius * 2 * scale),
         );
-        target.style.left = `${Math.round(viewport.width / 2 + camera.x + node.x * scale)}px`;
-        target.style.top = `${Math.round(viewport.height / 2 + camera.y + node.y * scale)}px`;
+        const screen = worldToScreen(camera, viewport, node);
+        target.style.left = `${Math.round(screen.x)}px`;
+        target.style.top = `${Math.round(screen.y)}px`;
         target.style.width = `${size}px`;
         target.style.height = `${size}px`;
       }
@@ -197,9 +270,35 @@ export function BrainMap({
       created.setDirectionalFocus(latest.current.directionalFocus ?? false);
       let reportedLod = "";
       let reportedLabels = -1;
+      let reportedSettled: boolean | null = null;
       let syncedAt = 0;
+      let steppedAt = performance.now();
       let lastFrame: RenderFrame | null = null;
       const paint = () => {
+        const elapsed = performance.now() - steppedAt;
+        steppedAt += elapsed;
+
+        // The layout stopping is a fact worth acting on exactly once: frame
+        // the graph for someone who has not moved the camera themselves.
+        // Without this the first thing a new workspace shows is whatever
+        // fraction of its nodes happened to land inside the viewport.
+        const isSettled = created.settled();
+        if (isSettled !== reportedSettled) {
+          if (isSettled && !cameraTouchedRef.current) {
+            cameraTargetRef.current = created.cameraForFit(FIT_PADDING);
+          }
+          reportedSettled = isSettled;
+          onSettledChangeRef.current?.(isSettled);
+        }
+
+        const target = cameraTargetRef.current;
+        if (target) {
+          const current = created.camera();
+          const next = approachCamera(current, target, elapsed);
+          if (cameraEquals(next, target)) cameraTargetRef.current = null;
+          if (!cameraEquals(next, current)) created.setCamera(next);
+        }
+
         // Built once per tick and handed to both the backend and the hit-layer
         // sync below — each used to call back into the engine for its own
         // frame, tripling the frame-plan cost (degree map, radii sort,
@@ -260,42 +359,192 @@ export function BrainMap({
     });
     resizeObserver.observe(host);
 
+    /**
+     * Zoom about the pointer, not the origin. The wheel used to scale the
+     * camera and leave `x`/`y` where they were, which pulls the graph toward
+     * the centre of the screen: you aimed at a node, zoomed, and watched it
+     * leave. The glide target is the base when one exists, so a fast flick of
+     * three notches compounds into one movement instead of three that fight.
+     */
     const onWheel = (event: WheelEvent) => {
       event.preventDefault();
-      const current = engine?.camera();
-      if (!current) return;
-      engine?.setCamera({
-        ...current,
-        scale: Math.min(
-          MAX_SCALE,
-          Math.max(MIN_SCALE, current.scale * (event.deltaY > 0 ? 0.9 : 1.1)),
-        ),
-      });
+      const base = cameraTargetRef.current ?? engine?.camera();
+      if (!base) return;
+      const bounds = host.getBoundingClientRect();
+      cameraTouchedRef.current = true;
+      cameraTargetRef.current = zoomAt(
+        base,
+        viewport,
+        { x: event.clientX - bounds.left, y: event.clientY - bounds.top },
+        event.deltaY > 0 ? 1 / ZOOM_STEP : ZOOM_STEP,
+      );
     };
     let dragging = false;
-    // Panning starts on the canvas only: a press that lands on a hit target is
-    // the user reaching for a node, not for the background.
-    const onPointerDown = (event: PointerEvent) => {
-      dragging = event.target === canvas;
-    };
-    const onPointerUp = () => {
-      dragging = false;
-    };
-    const onPointerMove = (event: PointerEvent) => {
-      if (!dragging) return;
+    /** The node a press picked up, or null when the press was on background. */
+    let draggingNode: string | null = null;
+    /** Whether that press has moved far enough to be a drag rather than a click. */
+    let dragMoved = false;
+    const worldAt = (event: PointerEvent | MouseEvent) => {
+      const bounds = host.getBoundingClientRect();
       const current = engine?.camera();
-      if (!current) return;
-      engine?.setCamera({
-        ...current,
-        x: current.x + event.movementX,
-        y: current.y + event.movementY,
+      if (!current) return null;
+      return screenToWorld(current, viewport, {
+        x: event.clientX - bounds.left,
+        y: event.clientY - bounds.top,
       });
+    };
+    /**
+     * A press on a node picks that node up; a press on background pans the
+     * camera (todo 11). Both are the same gesture to a hand, and which one it
+     * is has to be decided at press time, from what is under the pointer.
+     */
+    /**
+     * A drag captures the pointer — on the first *movement*, not on the press.
+     *
+     * Capture is needed because a gesture otherwise stops the moment the
+     * pointer leaves the map: the events stop bubbling here and the node
+     * freezes mid-drag while the hand keeps going. Dragging a node toward the
+     * edge is exactly when someone overshoots.
+     *
+     * Waiting for movement matters just as much. Capturing on `pointerdown`
+     * redirects the following `click` to this element, so the accessibility
+     * layer's own button never sees it — a plain click stopped selecting and
+     * a double-click stopped opening the node, because both had quietly
+     * become drags of zero distance.
+     */
+    let captured = false;
+    const capture = (event: PointerEvent) => {
+      if (captured) return;
+      captured = true;
+      try {
+        host.setPointerCapture(event.pointerId);
+      } catch {
+        // Some pointer types refuse capture; the drag still works inside the
+        // viewport, which is where it started.
+      }
+    };
+    const onPointerDown = (event: PointerEvent) => {
+      dragMoved = false;
+      // A press that lands on an accessibility target is a press on the node
+      // that target stands for. The layer sits over the canvas, so without
+      // this the top 200 nodes would be the only ones that could not be
+      // dragged — the exact inconsistency todo 10 removed for clicking.
+      const target = event.target as HTMLElement | null;
+      const labelled = target?.closest?.<HTMLElement>("[data-node-id]");
+      if (labelled?.dataset.nodeId) {
+        draggingNode = labelled.dataset.nodeId;
+        dragging = false;
+        return;
+      }
+      if (event.target !== canvas) return;
+      const bounds = host.getBoundingClientRect();
+      const hit =
+        engine?.nodeAt(
+          event.clientX - bounds.left,
+          event.clientY - bounds.top,
+        ) ?? null;
+      if (hit) {
+        draggingNode = hit;
+        dragging = false;
+        return;
+      }
+      dragging = true;
+    };
+    const onPointerUp = (event: PointerEvent) => {
+      if (draggingNode) engine?.releaseNode(draggingNode);
+      draggingNode = null;
+      dragging = false;
+      if (captured && host.hasPointerCapture?.(event.pointerId)) {
+        host.releasePointerCapture(event.pointerId);
+      }
+      captured = false;
+    };
+    /**
+     * A drag is direct, not glided. Easing a wheel step reads as movement;
+     * easing a drag reads as lag, because the pointer is already showing the
+     * viewer where the map should be. Cancelling the target is what stops an
+     * in-flight glide from dragging the view out from under the hand.
+     */
+    const onPointerMove = (event: PointerEvent) => {
+      if (draggingNode) {
+        const world = worldAt(event);
+        if (!world) return;
+        dragMoved = true;
+        capture(event);
+        engine?.pinNode(draggingNode, world.x, world.y);
+        return;
+      }
+      if (dragging) {
+        capture(event);
+        const current = engine?.camera();
+        if (!current) return;
+        cameraTouchedRef.current = true;
+        cameraTargetRef.current = null;
+        engine?.setCamera(panBy(current, event.movementX, event.movementY));
+        return;
+      }
+      // Hover, from the canvas rather than the DOM layer (todo 10). The DOM
+      // layer is capped and a real scan exceeds the cap, so a pointer that
+      // could only find buttons could not reach most of the graph.
+      const bounds = host.getBoundingClientRect();
+      const hit =
+        engine?.nodeAt(
+          event.clientX - bounds.left,
+          event.clientY - bounds.top,
+        ) ?? null;
+      setHover(hit);
+    };
+    const onPointerLeave = () => setHover(null);
+    const setHover = (hit: string | null) => {
+      if (engine?.hoveredNode() === hit) return;
+      engine?.setHoveredNode(hit);
+      host.style.cursor = hit ? "pointer" : "";
+      onHoverChangeRef.current?.(hit);
+    };
+    /**
+     * Selection from the canvas. A press that landed on a DOM hit target is
+     * already handled by that button, so this only answers for the canvas —
+     * which is every node past the accessibility layer's cap, and the whole
+     * graph once a repository is larger than a demo fixture.
+     */
+    const nodeUnder = (event: MouseEvent): string | null => {
+      if (event.target !== canvas) return null;
+      const bounds = host.getBoundingClientRect();
+      return (
+        engine?.nodeAt(
+          event.clientX - bounds.left,
+          event.clientY - bounds.top,
+        ) ?? null
+      );
+    };
+    /**
+     * Capture phase, so a drag that ended on an accessibility target can stop
+     * the click before that button's own handler sees it. A drag is not a
+     * click: without this, every node you moved was also selected the moment
+     * you let go.
+     */
+    const onClick = (event: MouseEvent) => {
+      if (dragMoved) {
+        dragMoved = false;
+        event.stopPropagation();
+        event.preventDefault();
+        return;
+      }
+      const hit = nodeUnder(event);
+      if (hit) onNodeSelectRef.current?.(hit);
+    };
+    const onDoubleClick = (event: MouseEvent) => {
+      const hit = nodeUnder(event);
+      if (hit) onNodeActivateRef.current?.(hit);
     };
     // Listeners live on the host, not the canvas: the hit layer sits on top of
     // the canvas, and zoom must keep working while the pointer is over a node.
     host.addEventListener("wheel", onWheel, { passive: false });
     host.addEventListener("pointerdown", onPointerDown);
     host.addEventListener("pointermove", onPointerMove);
+    host.addEventListener("pointerleave", onPointerLeave);
+    host.addEventListener("click", onClick, { capture: true });
+    host.addEventListener("dblclick", onDoubleClick);
     window.addEventListener("pointerup", onPointerUp);
 
     return () => {
@@ -305,6 +554,9 @@ export function BrainMap({
       host.removeEventListener("wheel", onWheel);
       host.removeEventListener("pointerdown", onPointerDown);
       host.removeEventListener("pointermove", onPointerMove);
+      host.removeEventListener("pointerleave", onPointerLeave);
+      host.removeEventListener("click", onClick, { capture: true });
+      host.removeEventListener("dblclick", onDoubleClick);
       window.removeEventListener("pointerup", onPointerUp);
       themeObserver.disconnect();
       resizeObserver.disconnect();
@@ -337,15 +589,44 @@ export function BrainMap({
   }, [directionalFocus]);
 
   // Camera moves are not layout moves: focusing re-aims the view and leaves the
-  // simulation running exactly as it was.
+  // simulation running exactly as it was. It glides rather than cutting —
+  // arriving somewhere is what tells a viewer the map moved rather than
+  // changed, which matters when the gesture came from a list on the far side
+  // of the screen.
   useEffect(() => {
-    if (focusNodeId) engineRef.current?.focusNode(focusNodeId);
+    if (!focusNodeId) return;
+    const next = engineRef.current?.cameraForNode(focusNodeId);
+    if (next) {
+      cameraTouchedRef.current = true;
+      cameraTargetRef.current = next;
+    }
   }, [focusNodeId]);
+
+  // Framing the graph is always deliberate, so it never checks whether the
+  // camera was touched — that guard belongs to the automatic first fit.
+  useEffect(() => {
+    if (fitRequest === undefined) return;
+    const next = engineRef.current?.cameraForFit(FIT_PADDING);
+    if (next) {
+      cameraTouchedRef.current = true;
+      cameraTargetRef.current = next;
+    }
+  }, [fitRequest]);
 
   // Glow is an in-place attribute write: no `setData`, no reheat, no relayout.
   useEffect(() => {
     engineRef.current?.setGlow(glow ?? new Map(), afterglow ?? new Set());
   }, [afterglow, glow]);
+
+  // …and so is visibility. A filter changes what is drawn, never where
+  // anything sits (todo 13).
+  useEffect(() => {
+    engineRef.current?.setVisibility(visibleNodeIds ?? null);
+  }, [visibleNodeIds]);
+
+  useEffect(() => {
+    engineRef.current?.setHiddenLayers(hiddenLayers ?? null);
+  }, [hiddenLayers]);
 
   // The canvas is owned by the effect above, not by React's reconciler.
   return null;

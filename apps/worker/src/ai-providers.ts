@@ -73,6 +73,33 @@ function openAiOutputText(payload: unknown): string {
   throw new Error("OpenAI judgment response did not contain output text.");
 }
 
+/**
+ * The provider's own explanation, kept.
+ *
+ * Ten call sites threw "… failed with status 400" and dropped the response
+ * body, which is the only place the reason lives. The first live enrich run
+ * hit exactly that: a 400 with no way to tell an oversized batch from a
+ * rejected tool schema without editing the code and paying for the call
+ * again. Bounded to 500 characters so an error stays an error, and read
+ * defensively — a provider that fails mid-body must not turn a 400 into a
+ * stack trace about `text()`.
+ *
+ * Provider error bodies carry a type and a message, not an echo of the
+ * prompt, so nothing a caller sent travels back out through here.
+ */
+async function providerFailure(
+  label: string,
+  response: Response,
+): Promise<Error> {
+  const detail = await response
+    .text()
+    .then((body) => body.trim().replace(/\s+/g, " ").slice(0, 500))
+    .catch(() => "");
+  return new Error(
+    `${label} failed with status ${response.status}.${detail ? ` ${detail}` : ""}`,
+  );
+}
+
 function parseJson(text: string, provider: string): unknown {
   try {
     return JSON.parse(text) as unknown;
@@ -127,9 +154,7 @@ export class OpenAiJudgmentProvider implements JudgmentProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `OpenAI judgment request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("OpenAI judgment request", response);
     }
     return parseJson(openAiOutputText(await response.json()), "OpenAI");
   }
@@ -179,9 +204,7 @@ export class AnthropicJudgmentProvider implements JudgmentProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `Anthropic judgment request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("Anthropic judgment request", response);
     }
     return anthropicToolInput(await response.json(), "record_judgment");
   }
@@ -306,9 +329,7 @@ export class OpenAiEnrichProvider implements EnrichProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `OpenAI enrich request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("OpenAI enrich request", response);
     }
     return parseJson(openAiOutputText(await response.json()), "OpenAI");
   }
@@ -341,9 +362,7 @@ export class OpenAiEnrichProvider implements EnrichProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `OpenAI concept request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("OpenAI concept request", response);
     }
     return parseJson(openAiOutputText(await response.json()), "OpenAI");
   }
@@ -377,9 +396,7 @@ export class OpenAiEnrichProvider implements EnrichProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `OpenAI module request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("OpenAI module request", response);
     }
     return parseJson(openAiOutputText(await response.json()), "OpenAI");
   }
@@ -431,9 +448,7 @@ export class AnthropicEnrichProvider implements EnrichProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `Anthropic enrich request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("Anthropic enrich request", response);
     }
     return anthropicToolInput(await response.json(), "record_summary");
   }
@@ -465,9 +480,7 @@ export class AnthropicEnrichProvider implements EnrichProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `Anthropic concept request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("Anthropic concept request", response);
     }
     return anthropicToolInput(await response.json(), "record_concepts");
   }
@@ -499,9 +512,7 @@ export class AnthropicEnrichProvider implements EnrichProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `Anthropic module request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("Anthropic module request", response);
     }
     return anthropicToolInput(await response.json(), "record_summary");
   }
@@ -663,9 +674,7 @@ export class OpenAiCoachingProvider implements CoachingProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `OpenAI coaching request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("OpenAI coaching request", response);
     }
     return parseJson(openAiOutputText(await response.json()), "OpenAI");
   }
@@ -715,9 +724,7 @@ export class AnthropicCoachingProvider implements CoachingProvider {
       method: "POST",
     });
     if (!response.ok) {
-      throw new Error(
-        `Anthropic coaching request failed with status ${response.status}.`,
-      );
+      throw await providerFailure("Anthropic coaching request", response);
     }
     return anthropicToolInput(await response.json(), "record_coaching");
   }
