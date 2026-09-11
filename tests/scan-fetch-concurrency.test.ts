@@ -367,16 +367,33 @@ describe("mapWithConcurrency", () => {
   });
 
   it("settles every task before throwing the earliest error", async () => {
+    const items = [0, 1, 2, 3];
+    const gate = new Map(items.map((item) => [item, deferred()]));
     let settled = 0;
-    await expect(
-      mapWithConcurrency([0, 1, 2, 3], 4, async (item) => {
-        await new Promise((resolve) => setTimeout(resolve, (3 - item) * 5));
-        settled += 1;
-        if (item === 1 || item === 3) throw new Error(`fail ${item}`);
-        return item;
-      }),
-    ).rejects.toThrow("fail 1");
+    let surfaced = false;
 
+    const pending = mapWithConcurrency(items, 4, async (item) => {
+      await gate.get(item)!.promise;
+      settled += 1;
+      if (item === 1 || item === 3) throw new Error(`fail ${item}`);
+      return item;
+    });
+    const markSurfaced = () => {
+      surfaced = true;
+    };
+    void pending.then(markSurfaced, markSurfaced);
+
+    // Let items 3, 2 and 1 go while item 0 is held back. Once everything the
+    // releases queued has run (a macrotask boundary, not a delay), both
+    // failures are known but a task is still in flight, so nothing may have
+    // surfaced yet: a rejection here would leave a request running behind it.
+    for (const item of [3, 2, 1]) gate.get(item)!.resolve();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(settled).toBe(3);
+    expect(surfaced).toBe(false);
+
+    gate.get(0)!.resolve();
+    await expect(pending).rejects.toThrow("fail 1");
     expect(settled).toBe(4);
   });
 
