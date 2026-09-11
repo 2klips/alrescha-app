@@ -267,6 +267,39 @@ describe("directory nodes", () => {
     expect((await directories()).length).toBe(6);
   });
 
+  it("stays cheap on a tree past the size where the join used to degrade", async () => {
+    // Regression for the density gate's hang (202609110015). The containment
+    // stage joined `graph_nodes` twice for existence checks the FKs already
+    // make, and on never-analysed tables the planner could re-run the
+    // parent-path branch — a `regexp_replace` per artifact — once per node
+    // pair. This repository's own scan crossed that cliff at 933 files: 932
+    // took seven seconds in the stage, 933 never returned. 1,600 files in
+    // 180 folders is past it by a margin, so a return to the old shape hangs
+    // here rather than in the gate that scans the repository.
+    //
+    // A PGlite statement is one WASM call, so a hang is not a timeout
+    // failure but a stuck worker; the assertions below are what a *fast*
+    // regression would break, and the timeout documents the intent.
+    const paths: string[] = [];
+    for (let pkg = 0; pkg < 20; pkg += 1) {
+      for (let mod = 0; mod < 8; mod += 1) {
+        for (let file = 0; file < 10; file += 1) {
+          paths.push(`pkg${pkg}/mod${mod}/file${file}.ts`);
+        }
+      }
+    }
+    await apply({ artifacts: paths.map(planArtifact) });
+
+    // 20 packages + 160 modules; the 20 roots have no parent to be contained
+    // by, so every module and every file is exactly one edge.
+    expect((await directories()).length).toBe(180);
+    const edges = await containment();
+    expect(edges.length).toBe(160 + 1_600);
+    expect(new Set(edges).size).toBe(edges.length);
+    expect(edges).toContain("pkg0 -> pkg0/mod0");
+    expect(edges).toContain("pkg19/mod7 -> pkg19/mod7/file9.ts");
+  }, 30_000);
+
   describe("layout config", () => {
     async function repositoryRow(): Promise<{
       layout_config: Record<string, unknown>;
