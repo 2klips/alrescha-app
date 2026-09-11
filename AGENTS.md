@@ -41,3 +41,8 @@ Conflict priority: `spec/DECISIONS-ADR.md` = WORK_SPEC > BUILD_PLAN > IMPLEMENTA
 - Blocked on external credentials? Mock it, mark it, move on; request prerequisites by phase (see GUIDE §2).
 - Spec ambiguity? Record in `spec/OPEN_QUESTIONS.md`, proceed with a sensible default. Do not edit other `spec/` files.
 - End every session with lint/typecheck/test green and a report (done / deferred / open questions / next scope).
+
+## 사용자 요청: Claude → Codex 배포 인수인계 (2026-09-12)
+
+Codex는 배포 작업 전에 [인수인계 문서](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-12.md)를 읽는다.
+PR #4의 `202609110015_containment_join_shape.sql` 프로덕션 적용과 `arr-worker` 재배포 판단이 넘어가 있다. 적용·배포 후 그 문서의 상태 줄을 갱신한다.
