@@ -8,7 +8,8 @@ with no button while `2klips/alrescha-app`'s fresh pair had just succeeded,
 and nothing could retry that first backfill. **Boundary:** production was
 neither read nor changed; no failed row, timestamp, threshold or applied
 migration was touched. **Branch:** `claude/home-current-repository` on
-`main@5cb4379`. **Scope:** `supabase/migrations/202609120004_first_scan_retry.sql`
+`main@5cb4379`, commit `d984614`; **PR:**
+<https://github.com/2klips/alrescha-app/pull/10>. **Scope:** `supabase/migrations/202609120004_first_scan_retry.sql`
 (new), `apps/web/lib/shell/current-repository.ts` (new, + test),
 `apps/web/lib/home/journey.ts` (+ test), `apps/web/lib/shell/context.ts`,
 `apps/web/lib/map/workspace-map.ts`,
