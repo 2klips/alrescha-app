@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   DEFAULT_OPS_HEALTH_THRESHOLDS,
   OPS_HEALTH_SNAPSHOT_QUERY,
+  PERMANENT_FAILURE_WINDOW_DAYS,
   type OpsHealthRow,
   type OpsHealthSnapshot,
   evaluateOpsHealth,
@@ -81,6 +82,12 @@ describe("operations health evaluation", () => {
     ).toBe("warn");
     expect(
       levelOf(
+        { ...HEALTHY, permanentlyFailedJobs: permanentFailureWarn },
+        "permanent-failures",
+      ),
+    ).toBe("ok");
+    expect(
+      levelOf(
         { ...HEALTHY, newestDeliveryAgeHours: deliverySilenceWarnHours + 1 },
         "webhook-delivery-freshness",
       ),
@@ -91,6 +98,19 @@ describe("operations health evaluation", () => {
         "webhook-delivery-freshness",
       ),
     ).toBe("warn");
+  });
+
+  it("tells the operator which window the permanent-failure count covers", () => {
+    const check = evaluateOpsHealth(HEALTHY).checks.find(
+      ({ name }) => name === "permanent-failures",
+    );
+
+    expect(check?.detail).toContain(
+      `in the last ${PERMANENT_FAILURE_WINDOW_DAYS} days`,
+    );
+    expect(check?.detail).toContain(
+      `warn above ${DEFAULT_OPS_HEALTH_THRESHOLDS.permanentFailureWarn}`,
+    );
   });
 
   it("escalates the overall status to the worst check", () => {
@@ -227,5 +247,46 @@ describe("operations health snapshot query", () => {
     );
 
     expect((await snapshot()).reservationsUnresolved).toBe(0);
+  });
+
+  it("forgets a permanent failure once it leaves the window and keeps a recent one", async () => {
+    // `analyze` so the audit trigger and the scan counter stay out of it.
+    // `make_interval` is strict, so a null age leaves `completed_at` null.
+    const failPermanently = (key: string, completedDaysAgo: number | null) =>
+      database.query(
+        `insert into public.jobs
+          (workspace_id, repository_id, run_id, kind, idempotency_key,
+           status, attempt_count, max_attempts, completed_at)
+         values ($1, $2, $3, 'analyze', $4, 'failed', 3, 3,
+           now() - make_interval(days => $5::int))`,
+        [workspace, REPOSITORY_ID, RUN_ID, key, completedDaysAgo],
+      );
+
+    await failPermanently(
+      "ops-health-failed-aged-out",
+      PERMANENT_FAILURE_WINDOW_DAYS + 1,
+    );
+    await failPermanently(
+      "ops-health-failed-recent",
+      PERMANENT_FAILURE_WINDOW_DAYS - 1,
+    );
+    // Never produced by a queue function; if it appears, it must stay visible.
+    await failPermanently("ops-health-failed-unstamped", null);
+
+    const current = await snapshot();
+
+    expect(current.permanentlyFailedJobs).toBe(2);
+    expect(levelOf(current, "permanent-failures")).toBe("ok");
+    // Failed rows are neither queued nor scans, so nothing else moved.
+    expect(current.queueDepth).toBe(1);
+    expect(current.scanJobs).toBe(1);
+
+    // Withdrawing a failure by hand still clears it at once.
+    await database.query(
+      `update public.jobs set status = 'cancelled', cancelled_at = now()
+       where idempotency_key = 'ops-health-failed-recent'`,
+    );
+
+    expect((await snapshot()).permanentlyFailedJobs).toBe(1);
   });
 });

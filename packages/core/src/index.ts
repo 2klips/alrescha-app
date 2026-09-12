@@ -157,6 +157,7 @@ export {
   clampConcurrency,
   mapWithConcurrency,
 } from "./ingest/concurrency";
+export { NULL_GIT_SHA, isScannableCommitSha } from "./ingest/commit-sha";
 export type {
   ArtifactClassification,
   ExportedSymbolMetadata,

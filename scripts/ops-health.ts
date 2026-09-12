@@ -23,7 +23,10 @@ export interface OpsHealthSnapshot {
   readonly auditedScanRequests: number;
   /** Age in hours of the newest accepted webhook delivery, null if none. */
   readonly newestDeliveryAgeHours: number | null;
-  /** Jobs that failed and exhausted their attempts. */
+  /**
+   * Jobs that failed and exhausted their attempts within the last
+   * `PERMANENT_FAILURE_WINDOW_DAYS` days (by `completed_at`).
+   */
   readonly permanentlyFailedJobs: number;
   /** Jobs queued or running. */
   readonly queueDepth: number;
@@ -64,13 +67,31 @@ export interface OpsHealthRow {
   readonly stale_leases: number | string;
 }
 
+/**
+ * How far back `permanent-failures` looks. A permanent failure stops counting
+ * once its `completed_at` — stamped by every terminal path: `finish_job` with
+ * attempts exhausted, `reject_job`, `reap_stale_jobs` — is older than this,
+ * so the check recovers on its own after a root cause is fixed: no row has to
+ * be withdrawn by hand, and the threshold does not move. Seven days is an
+ * assumption, not a measurement. The runbook runs the probe once a day, so a
+ * burst stays visible across a week of readings (a missed day or a weekend
+ * does not lose it), and it matches the GitHub App's seven-day delivery
+ * retention, the log-side record an investigation of a failed scan needs.
+ *
+ * Not a threshold: the snapshot is one fixed statement, and a window it was
+ * not read with would make the report line lie about what it counted.
+ */
+export const PERMANENT_FAILURE_WINDOW_DAYS = 7;
+
 export const DEFAULT_OPS_HEALTH_THRESHOLDS: OpsHealthThresholds = {
   // A push that produced no delivery for a day means the webhook path broke;
   // production has been receiving several a day since 2026-08-27.
   deliverySilenceWarnHours: 24,
-  // Production carries exactly one permanent failure (a truncated provider
-  // response, refunded). More than a handful means a provider or a job kind is
-  // failing systematically rather than occasionally.
+  // Production carried exactly one permanent failure in 2026-09-03's window (a
+  // truncated provider response, refunded). More than a handful inside
+  // `PERMANENT_FAILURE_WINDOW_DAYS` means a provider or a job kind is failing
+  // systematically rather than occasionally; six ref-deletion scans in four
+  // days (2026-09-09 → 12) is what the warning is for.
   permanentFailureWarn: 5,
   // The drain loop empties the queue in seconds; a standing backlog means the
   // worker is down or wedged.
@@ -80,7 +101,8 @@ export const DEFAULT_OPS_HEALTH_THRESHOLDS: OpsHealthThresholds = {
 /**
  * One statement so the whole snapshot is a single consistent read. Kept as a
  * plain string rather than a tagged template so the tests can run it against
- * the real migrated schema and catch a renamed column.
+ * the real migrated schema and catch a renamed column; the only value spliced
+ * in is the module's own window constant, never input.
  */
 export const OPS_HEALTH_SNAPSHOT_QUERY = `
   select
@@ -105,7 +127,15 @@ export const OPS_HEALTH_SNAPSHOT_QUERY = `
     ) as newest_delivery_age_hours,
     (
       select count(*)::int from public.jobs
-      where status = 'failed' and attempt_count >= max_attempts
+      where status = 'failed'
+        and attempt_count >= max_attempts
+        and (
+          -- No queue function leaves a failed job unstamped; one that is
+          -- stays counted rather than silently ageing out.
+          completed_at is null
+          or completed_at
+            >= now() - make_interval(days => ${PERMANENT_FAILURE_WINDOW_DAYS})
+        )
     ) as permanently_failed_jobs,
     (
       select count(*)::int from public.jobs
@@ -208,7 +238,7 @@ export function evaluateOpsHealth(
       value: snapshot.queueDepth,
     },
     {
-      detail: `${snapshot.permanentlyFailedJobs} job(s) failed permanently (warn above ${thresholds.permanentFailureWarn}).`,
+      detail: `${snapshot.permanentlyFailedJobs} job(s) failed permanently in the last ${PERMANENT_FAILURE_WINDOW_DAYS} days (warn above ${thresholds.permanentFailureWarn}; older failures no longer count).`,
       level:
         snapshot.permanentlyFailedJobs > thresholds.permanentFailureWarn
           ? "warn"

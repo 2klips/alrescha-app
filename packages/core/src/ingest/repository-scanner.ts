@@ -17,6 +17,7 @@ import {
   type CodeLink,
   type ParsedFileLinks,
 } from "./code-links";
+import { NULL_GIT_SHA, isScannableCommitSha } from "./commit-sha";
 import { clampConcurrency, mapWithConcurrency } from "./concurrency";
 import { resolveDocLinks, type DocLink } from "./doc-links";
 import { parsePythonRoutes, type RouteDeclaration } from "./route-links";
@@ -849,9 +850,14 @@ export async function scanRepository(input: {
   readonly previousCommitSha?: string | null;
   readonly source: RepositorySource;
 }): Promise<RepositoryScanPlan> {
-  if (!/^[0-9a-f]{40}$/.test(input.commitSha)) {
+  if (!isScannableCommitSha(input.commitSha)) {
+    // The null id passes the format check and names no commit; saying so
+    // here replaces an opaque 404 on the tree lookup, and keeps a job that
+    // carries it from ever touching the repository host.
     throw new Error(
-      "Repository scan commit SHA must be 40 lowercase hexadecimal characters.",
+      input.commitSha === NULL_GIT_SHA
+        ? "Repository scan commit SHA is the null sha (a deleted ref): there is no tree to scan."
+        : "Repository scan commit SHA must be 40 lowercase hexadecimal characters.",
     );
   }
 
