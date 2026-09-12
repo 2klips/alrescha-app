@@ -1,6 +1,6 @@
 # The enrich job reads its pending files from the archive too
 
-**Date:** 2026-09-13 · **Trigger:** OQ-067 ⑴, chosen by the user after PR
+**Date:** 2026-09-13 · **PR:** <https://github.com/2klips/alrescha-app/pull/14>, commit `ed9115b` · **Trigger:** OQ-067 ⑴, chosen by the user after PR
 #12's rollout: the scan and the analysis read their bodies from one archive
 per pass since `c38dc08` (`.omo/evidence/phase4/scan-archive-fetch-2026-09-12.md`);
 the enrich job still read one `contents` body per pending file. **Boundary:**

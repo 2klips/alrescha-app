@@ -51,4 +51,4 @@ lint clean, typecheck clean, 워커 스위트 17 files / 136 passed, Prettier cl
 
 ## PR
 
-- (머지 전 채움)
+- <https://github.com/2klips/alrescha-app/pull/14> — 커밋 1건: `ed9115b`(구현·테스트·문서). 머지 후 `fly deploy`가 필요하다.
