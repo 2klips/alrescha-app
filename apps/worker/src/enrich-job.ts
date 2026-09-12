@@ -147,6 +147,49 @@ export type EnrichSourceReader = (input: {
   readonly workspaceId: string;
 }) => Promise<string | null>;
 
+/**
+ * Told, before the first read, how many pending files the job is about to
+ * read and at which commit most of them were last seen (OQ-067 ⑴), so the
+ * worker can fetch that commit's archive once instead of one request per
+ * file; the release it returns drops the bodies when the reads are done.
+ * Files last seen at another commit are read per file, as every file was.
+ */
+export type EnrichSourcePreparer = (input: {
+  readonly commitSha: string;
+  readonly reads: number;
+  readonly repositoryId: string;
+  readonly workspaceId: string;
+}) => Promise<() => void>;
+
+export interface EnrichJobInput {
+  readonly prepareSources?: EnrichSourcePreparer | undefined;
+  readonly readSource: EnrichSourceReader;
+  readonly store: EnrichJobStore;
+}
+
+/**
+ * The commit most of the pending files were last seen at, and how many. A
+ * first enrich after a scan has every file at one commit; after incremental
+ * pushes the changed files sit at newer commits, and the largest group is
+ * the one worth an archive.
+ */
+export function dominantCommit(
+  pending: readonly EnrichPendingFile[],
+): { commitSha: string; reads: number } | null {
+  const counts = new Map<string, number>();
+  for (const file of pending) {
+    counts.set(
+      file.lastSeenCommitSha,
+      (counts.get(file.lastSeenCommitSha) ?? 0) + 1,
+    );
+  }
+  let best: { commitSha: string; reads: number } | null = null;
+  for (const [commitSha, reads] of counts) {
+    if (best === null || reads > best.reads) best = { commitSha, reads };
+  }
+  return best;
+}
+
 function providerName(value: unknown): "anthropic" | "openai" {
   if (value === "anthropic" || value === "openai") return value;
   throw new Error("Enrich job requires a supported provider.");
@@ -157,10 +200,7 @@ function billingMode(value: unknown): "byok" | "credits" {
   throw new Error("Enrich job requires a billing mode.");
 }
 
-export function createEnrichJobHandler(input: {
-  readonly readSource: EnrichSourceReader;
-  readonly store: EnrichJobStore;
-}): JobHandler {
+export function createEnrichJobHandler(input: EnrichJobInput): JobHandler {
   return async (job, context) => {
     const provider = providerName(job.payload["provider"]);
     const mode = billingMode(job.payload["billingMode"]);
@@ -272,10 +312,7 @@ export function createEnrichJobHandler(input: {
  */
 async function summarizeModule(run: {
   readonly context: Parameters<JobHandler>[1];
-  readonly input: {
-    readonly readSource: EnrichSourceReader;
-    readonly store: EnrichJobStore;
-  };
+  readonly input: EnrichJobInput;
   readonly job: Parameters<JobHandler>[0];
   readonly memberPaths: readonly string[];
   readonly model: () => Promise<EnrichProvider>;
@@ -327,10 +364,7 @@ async function summarizeModule(run: {
 
 async function summarizePendingFiles(run: {
   readonly context: Parameters<JobHandler>[1];
-  readonly input: {
-    readonly readSource: EnrichSourceReader;
-    readonly store: EnrichJobStore;
-  };
+  readonly input: EnrichJobInput;
   readonly job: Parameters<JobHandler>[0];
   readonly model: () => Promise<EnrichProvider>;
   readonly pending: readonly EnrichPendingFile[];
@@ -368,76 +402,94 @@ async function summarizePendingFiles(run: {
     );
     persisted = items.length;
   };
-  for (const file of pending) {
-    const source = await input.readSource({
-      commitSha: file.lastSeenCommitSha,
-      path: file.path,
-      repositoryId: job.repositoryId,
-      workspaceId: job.workspaceId,
-    });
-    if (source === null) {
-      // Gone between scan and enrich — a smaller repository, not a failure.
-      items.push({
-        kind: "skip",
+
+  // The bodies as one archive when the worker judges them worth one request
+  // (OQ-067 ⑴): announced before the first read, released after the last —
+  // landed or not, so a retry starts clean.
+  const dominant = dominantCommit(pending);
+  const releaseSources =
+    input.prepareSources && dominant
+      ? await input.prepareSources({
+          commitSha: dominant.commitSha,
+          reads: dominant.reads,
+          repositoryId: job.repositoryId,
+          workspaceId: job.workspaceId,
+        })
+      : () => {};
+  try {
+    for (const file of pending) {
+      const source = await input.readSource({
+        commitSha: file.lastSeenCommitSha,
         path: file.path,
-        reason: "source-missing",
-        summaryBlobSha: file.sourceBlobSha,
+        repositoryId: job.repositoryId,
+        workspaceId: job.workspaceId,
       });
-      continue;
-    }
-    const { clipped, truncated } = clipSummaryInput(source);
-    let raw: unknown;
-    try {
-      raw = await model.summarize({
-        path: file.path,
-        source: clipped,
-        truncated,
-      });
-    } catch (error) {
-      // The failure gate (Graft precedent): one provider failure skips one
-      // file and the run keeps going. The cache key stays untouched, so the
-      // next enqueue picks the file up again.
-      items.push({
-        kind: "skip",
-        path: file.path,
-        reason: error instanceof Error ? error.message : "provider-failure",
-        summaryBlobSha: file.sourceBlobSha,
-      });
+      if (source === null) {
+        // Gone between scan and enrich — a smaller repository, not a failure.
+        items.push({
+          kind: "skip",
+          path: file.path,
+          reason: "source-missing",
+          summaryBlobSha: file.sourceBlobSha,
+        });
+        continue;
+      }
+      const { clipped, truncated } = clipSummaryInput(source);
+      let raw: unknown;
+      try {
+        raw = await model.summarize({
+          path: file.path,
+          source: clipped,
+          truncated,
+        });
+      } catch (error) {
+        // The failure gate (Graft precedent): one provider failure skips one
+        // file and the run keeps going. The cache key stays untouched, so the
+        // next enqueue picks the file up again.
+        items.push({
+          kind: "skip",
+          path: file.path,
+          reason: error instanceof Error ? error.message : "provider-failure",
+          summaryBlobSha: file.sourceBlobSha,
+        });
+        await context.heartbeat();
+        continue;
+      }
+      // A schema-invalid output is discarded and gated per file — never
+      // persisted, cache key untouched, so the next run re-attempts it. The
+      // pilot showed why this cannot reject the whole job: one verbatim-happy
+      // file early in path order would block every file after it, forever.
+      // The no-charge rule keeps its teeth below: a run that delivers
+      // *nothing* because of invalid outputs rejects and refunds.
+      try {
+        const summary = validateProseSummary({
+          path: file.path,
+          raw,
+          source: clipped,
+        });
+        items.push({
+          kind: "summary",
+          model: model.model,
+          path: file.path,
+          provider: model.name,
+          summary,
+          summaryBlobSha: file.sourceBlobSha,
+        });
+      } catch (error) {
+        if (!(error instanceof EnrichValidationError)) throw error;
+        schemaInvalidCount += 1;
+        items.push({
+          kind: "skip",
+          path: file.path,
+          reason: `schema-invalid: ${error.message}`,
+          summaryBlobSha: file.sourceBlobSha,
+        });
+      }
+      await flush(false);
       await context.heartbeat();
-      continue;
     }
-    // A schema-invalid output is discarded and gated per file — never
-    // persisted, cache key untouched, so the next run re-attempts it. The
-    // pilot showed why this cannot reject the whole job: one verbatim-happy
-    // file early in path order would block every file after it, forever.
-    // The no-charge rule keeps its teeth below: a run that delivers
-    // *nothing* because of invalid outputs rejects and refunds.
-    try {
-      const summary = validateProseSummary({
-        path: file.path,
-        raw,
-        source: clipped,
-      });
-      items.push({
-        kind: "summary",
-        model: model.model,
-        path: file.path,
-        provider: model.name,
-        summary,
-        summaryBlobSha: file.sourceBlobSha,
-      });
-    } catch (error) {
-      if (!(error instanceof EnrichValidationError)) throw error;
-      schemaInvalidCount += 1;
-      items.push({
-        kind: "skip",
-        path: file.path,
-        reason: `schema-invalid: ${error.message}`,
-        summaryBlobSha: file.sourceBlobSha,
-      });
-    }
-    await flush(false);
-    await context.heartbeat();
+  } finally {
+    releaseSources();
   }
 
   await flush(true);
@@ -460,10 +512,7 @@ async function summarizePendingFiles(run: {
  */
 async function synthesizeConceptLayer(run: {
   readonly context: Parameters<JobHandler>[1];
-  readonly input: {
-    readonly readSource: EnrichSourceReader;
-    readonly store: EnrichJobStore;
-  };
+  readonly input: EnrichJobInput;
   readonly job: Parameters<JobHandler>[0];
   readonly model: () => Promise<EnrichProvider>;
 }): Promise<boolean> {

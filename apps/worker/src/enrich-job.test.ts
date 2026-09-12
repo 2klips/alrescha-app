@@ -513,3 +513,109 @@ describe("enrich concept batch gate (pilot round 5)", () => {
     expect(enrichStore.saveConceptGraph).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * The pending bodies as one archive (OQ-067 ⑴, 2026-09-13). Before its first
+ * read the job says how many files it is about to read and at which commit
+ * — the one most of them were last seen at — so the worker can fetch that
+ * commit's archive once; files last seen elsewhere are read per file, and
+ * the archive is released when the reads are done, landed or not.
+ */
+describe("enrich job and prepared sources", () => {
+  const at = (path: string, commit: string): EnrichPendingFile => ({
+    lastSeenCommitSha: commit,
+    path,
+    sourceBlobSha: `blob-${path}`,
+    summaryBlobSha: null,
+  });
+  const HEAD = "b".repeat(40);
+  const OLDER = "c".repeat(40);
+
+  it("announces the dominant commit and its read count before the first read, and releases after the last", async () => {
+    const events: string[] = [];
+    const enrichStore = store(provider(), [
+      at("src/a.ts", HEAD),
+      at("src/b.ts", OLDER),
+      at("src/c.ts", HEAD),
+      at("src/d.ts", HEAD),
+    ]);
+
+    await createEnrichJobHandler({
+      prepareSources: async (input) => {
+        events.push(`prepare ${input.reads} @${input.commitSha.slice(0, 7)}`);
+        expect(input).toMatchObject({
+          repositoryId: "repo-1",
+          workspaceId: "workspace-1",
+        });
+        return () => {
+          events.push("release");
+        };
+      },
+      readSource: async ({ commitSha, path }) => {
+        events.push(`read ${path} @${commitSha.slice(0, 7)}`);
+        return "export const x = 1;\n";
+      },
+      store: enrichStore,
+    })(job() as never, context);
+
+    expect(events).toEqual([
+      "prepare 3 @bbbbbbb",
+      "read src/a.ts @bbbbbbb",
+      "read src/b.ts @ccccccc",
+      "read src/c.ts @bbbbbbb",
+      "read src/d.ts @bbbbbbb",
+      "release",
+    ]);
+  });
+
+  it("releases the sources when a read fails, so the retry starts clean", async () => {
+    let released = false;
+    const enrichStore = store(provider());
+
+    await expect(
+      createEnrichJobHandler({
+        prepareSources: async () => () => {
+          released = true;
+        },
+        readSource: async () => {
+          throw new Error("GitHub repository request failed: 403 forbidden");
+        },
+        store: enrichStore,
+      })(job() as never, context),
+    ).rejects.toThrow("403 forbidden");
+
+    expect(released).toBe(true);
+    expect(enrichStore.saveResults).not.toHaveBeenCalled();
+  });
+
+  it("asks for nothing when nothing is pending, and nothing for a module job that reads no source", async () => {
+    const prepareSources = vi.fn(async () => () => {});
+
+    await createEnrichJobHandler({
+      prepareSources,
+      readSource,
+      store: store(provider(), []),
+    })(job() as never, context);
+    await createEnrichJobHandler({
+      prepareSources,
+      readSource,
+      store: store(
+        provider(),
+        [],
+        [{ blobSha: "blob-1", path: "src/login.ts", summary: PROSE }],
+      ),
+    })(
+      job({
+        payload: {
+          billingMode: "credits",
+          memberPaths: ["src/login.ts"],
+          moduleKey: "src",
+          provider: "anthropic",
+        },
+      }) as never,
+      context,
+    );
+
+    expect(prepareSources).not.toHaveBeenCalled();
+  });
+});

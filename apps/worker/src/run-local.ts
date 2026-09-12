@@ -250,6 +250,39 @@ const contentsFor = async (
   (await sourceFor(workspaceId, repositoryId)).contents;
 
 /**
+ * The bodies a job is about to read, as one archive when there are enough
+ * of them to be worth one request (PR #9 follow-up): the job says how many
+ * and at which commit before its first read, the source fetches the commit's
+ * archive, and the release the job holds drops it when the reads are done.
+ * Below the threshold the reads stay per file. One log line names the job,
+ * the commit, the read count and how the archive went — or why it did not.
+ */
+function archiveSources(
+  sourceFor: SourceFactory,
+  kind: "analyze" | "enrich",
+): (input: {
+  commitSha: string;
+  reads: number;
+  repositoryId: string;
+  workspaceId: string;
+}) => Promise<() => void> {
+  return async ({ commitSha, reads, repositoryId, workspaceId }) => {
+    if (reads < ARCHIVE_WORTHWHILE_READS) return () => {};
+    const archive = await (
+      await contentsFor(sourceFor, workspaceId, repositoryId)
+    ).prefetchArchive(commitSha);
+    console.log(
+      `  ${kind} @${commitSha.slice(0, 7)} ${reads} bodies${describeArchive(
+        archive.archived
+          ? { archived: true, bytes: archive.bytes, files: archive.files }
+          : { archived: false, reason: archive.reason },
+      )}`,
+    );
+    return archive.release;
+  };
+}
+
+/**
  * CI evidence for one commit, or nothing (Wave C todo 18).
  *
  * Every failure here is a repository fact rather than a defect: no
@@ -325,25 +358,7 @@ async function main(): Promise<void> {
       // The documents and tests the rules read, as one archive when there
       // are enough of them to be worth one request (PR #9 follow-up); the
       // bodies are dropped again when the reads are done.
-      prepareSources: async ({
-        commitSha,
-        reads,
-        repositoryId,
-        workspaceId,
-      }) => {
-        if (reads < ARCHIVE_WORTHWHILE_READS) return () => {};
-        const archive = await (
-          await contentsFor(sourceFor, workspaceId, repositoryId)
-        ).prefetchArchive(commitSha);
-        console.log(
-          `  analyze @${commitSha.slice(0, 7)} ${reads} bodies${describeArchive(
-            archive.archived
-              ? { archived: true, bytes: archive.bytes, files: archive.files }
-              : { archived: false, reason: archive.reason },
-          )}`,
-        );
-        return archive.release;
-      },
+      prepareSources: archiveSources(sourceFor, "analyze"),
       // Transient: the body is decoded, handed to the rules, and dropped.
       // Only a 404 reads as "file vanished" — any other failure (dead token,
       // throttling) fails the job into the retry path instead of letting the
@@ -358,6 +373,10 @@ async function main(): Promise<void> {
     }),
     coach: createCoachingJobHandler(new PostgresCoachingJobStore(sql, aiKeys)),
     enrich: createEnrichJobHandler({
+      // The pending files, as one archive at the commit most of them were
+      // last seen at, when there are enough of them (OQ-067 ⑴); files last
+      // seen at another commit are read per file, as every file was.
+      prepareSources: archiveSources(sourceFor, "enrich"),
       // Transient, like analysis: fetched, clipped, summarized, dropped.
       readSource: async ({ commitSha, path, repositoryId, workspaceId }) =>
         readTransientSource(
