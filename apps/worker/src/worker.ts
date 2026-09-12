@@ -26,6 +26,25 @@ const CREDIT_UNAVAILABLE =
  */
 export const HEARTBEAT_INTERVAL_MS = 10_000;
 
+/**
+ * The failure as `last_error` will carry it. `fetch` reports every network
+ * failure as the two words "fetch failed" and keeps the reason in `cause`
+ * (a DNS miss, a reset, a certificate); a job that failed three times on
+ * that alone told nobody anything (2026-09-12, todo 16 live run). The cause
+ * is appended when there is one, and only its code or message — never a
+ * request body or a header.
+ */
+export function describeFailure(error: unknown): string {
+  if (!(error instanceof Error)) return "job failed";
+  const cause = (error as { cause?: unknown }).cause;
+  if (cause instanceof Error) {
+    const code = (cause as { code?: unknown }).code;
+    const detail = typeof code === "string" ? code : cause.message;
+    return detail ? `${error.message} (cause: ${detail})` : error.message;
+  }
+  return error.message;
+}
+
 export async function runWorkerOnce(input: {
   readonly handlers: JobHandlers;
   /** Sink for failure reasons; the outcome alone never says why a job retried. */
@@ -62,7 +81,7 @@ export async function runWorkerOnce(input: {
     const outcome = await input.queue.finish(job.id, input.workerId, true);
     return outcome === "succeeded" ? "succeeded" : "failed";
   } catch (error) {
-    const message = error instanceof Error ? error.message : "job failed";
+    const message = describeFailure(error);
     input.log?.(
       `  ${input.workerId} ${job.kind} ${job.id} attempt ${job.attemptCount} failed: ${message}`,
     );

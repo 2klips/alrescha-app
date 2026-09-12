@@ -177,6 +177,53 @@ export async function lookupPublicGitHubRepository(
   return { githubRepositoryId: body.id };
 }
 
+/** What the default branch points at, or why that could not be read. */
+export type DefaultBranchHead = { sha: string } | { error: string };
+
+/**
+ * The head commit of a branch, read with the installation token the connect
+ * flow already mints (Phase 4 Wave C todo 16).
+ *
+ * This is the one GitHub call that turns "connected" into "scanning": the
+ * backfill is keyed by the head sha, and until something read it every
+ * connect answered `scheduled: false` with "the repository's head commit is
+ * unknown". It returns rather than throws — a connect must not fail over a
+ * scan that can be requested again from the home screen.
+ */
+export async function fetchDefaultBranchHead(
+  input: { branch: string; fullName: string; token: string },
+  fetchImplementation: typeof fetch = fetch,
+): Promise<DefaultBranchHead> {
+  const url = `https://api.github.com/repos/${input.fullName}/branches/${encodeURIComponent(input.branch)}`;
+  let response: Response;
+  try {
+    response = await fetchImplementation(url, {
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${input.token}`,
+        "x-github-api-version": GITHUB_API_VERSION,
+      },
+    });
+  } catch (error) {
+    return {
+      error: `GitHub branch request failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    };
+  }
+  if (!response.ok) {
+    // 404 is what an empty repository answers for its default branch — a
+    // repository with no commit has no head, and nothing to scan at.
+    return { error: `GitHub branch request failed: ${response.status}` };
+  }
+  const body = (await response.json()) as { commit?: { sha?: unknown } };
+  const sha = body.commit?.sha;
+  if (typeof sha !== "string" || !/^[0-9a-f]{40}$/.test(sha)) {
+    return { error: "GitHub branch response is malformed." };
+  }
+  return { sha };
+}
+
 /**
  * Finds an installation already allowed to read a repository. A 404 means
  * this GitHub App is not installed for the repository.

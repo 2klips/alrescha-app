@@ -232,6 +232,133 @@
   border-color: var(--accent-fg);
 }
 
+/* The same affordance as a button (the "다시 스캔" form submit). */
+button.home-step-cta {
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+button.home-step-cta:disabled {
+  border-style: dashed;
+  color: var(--fg-muted);
+  cursor: default;
+}
+
+/* First-run progress (Phase 4 Wave C todo 16): two stages, read from the
+   queue. States are carried on data attributes so the browser tests read
+   the same fact the user does. */
+.home-scan {
+  border-top: 1px solid var(--border-muted);
+  display: grid;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  padding-top: 0.9rem;
+}
+
+.home-scan-stages {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.home-scan-stages > li {
+  border-left: 2px solid var(--border-default);
+  display: grid;
+  gap: 0.15rem;
+  padding-left: 0.75rem;
+}
+
+.home-scan-stages > li[data-stage-state="running"],
+.home-scan-stages > li[data-stage-state="queued"] {
+  border-left-color: var(--accent-fg);
+}
+
+.home-scan-stages > li[data-stage-state="ready"] {
+  border-left-color: var(--success-fg);
+}
+
+.home-scan-stages > li[data-stage-state="failed"] {
+  border-left-color: var(--danger-fg);
+}
+
+.home-scan-stage-name {
+  align-items: center;
+  color: var(--fg-default);
+  display: inline-flex;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  gap: 0.45rem;
+}
+
+.home-scan-stage-state {
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-control);
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 400;
+  padding: 0.1rem 0.45rem;
+}
+
+.home-scan-stage-state[data-stage-state="ready"] {
+  border-color: var(--success-fg);
+  color: var(--success-fg);
+}
+
+.home-scan-stage-state[data-stage-state="running"],
+.home-scan-stage-state[data-stage-state="queued"] {
+  border-color: var(--accent-fg);
+  color: var(--accent-fg);
+}
+
+.home-scan-stage-state[data-stage-state="failed"] {
+  border-color: var(--danger-fg);
+  color: var(--danger-fg);
+}
+
+.home-journey small.home-scan-error {
+  color: var(--danger-fg);
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.home-scan-commit {
+  align-items: center;
+  color: var(--fg-muted);
+  display: inline-flex;
+  font-size: var(--text-xs);
+  gap: 0.4rem;
+}
+
+.home-scan-commit code {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.home-rescan {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.home-rescan form {
+  margin: 0;
+}
+
+.home-rescan .home-step-cta {
+  margin-top: 0;
+}
+
+.home-journey p.home-rescan-outcome {
+  color: var(--fg-default);
+  font-size: var(--text-sm);
+  margin-top: 0;
+}
+
 @media (max-width: 640px) {
   .home-graph-card {
     align-items: flex-start;

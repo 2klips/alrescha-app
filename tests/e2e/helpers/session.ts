@@ -56,6 +56,15 @@ function required(name: string): string {
   return value;
 }
 
+/**
+ * A variable from the same file, or null — for a spec that gates itself on
+ * what the machine has (the GitHub App credentials, say) rather than failing.
+ */
+export function optionalEnv(name: string): string | null {
+  loadEnvironment();
+  return process.env[name] || null;
+}
+
 export interface SignedInUser {
   /** Bearer token for API calls made outside the browser (`alrescha push`). */
   readonly accessToken: string;
@@ -131,14 +140,10 @@ export async function deleteWorkspaceUser(userId: string): Promise<void> {
 }
 
 /**
- * Sign the user in through `@supabase/ssr` and hand the resulting cookies to
- * the browser context. The cookie jar starts empty and is filled by the library
- * during `signInWithPassword`, which is exactly what the browser would hold.
+ * An `@supabase/ssr` client whose cookie jar is a plain array, so whatever
+ * the library writes during a sign-in can be handed to the browser verbatim.
  */
-export async function signIn(
-  context: BrowserContext,
-  user: { email: string; userId: string; workspaceId: string },
-): Promise<SignedInUser> {
+function cookieClient() {
   const written: WrittenCookie[] = [];
   const client = createServerClient(
     required("NEXT_PUBLIC_SUPABASE_URL"),
@@ -158,22 +163,18 @@ export async function signIn(
       },
     },
   );
+  return { client, written };
+}
 
-  const session = await client.auth.signInWithPassword({
-    email: user.email,
-    password: PASSWORD,
-  });
-  if (session.error || !session.data.session) {
-    throw new Error(
-      `Password grant failed: ${session.error?.message ?? "no session"}`,
-    );
-  }
+async function installCookies(
+  context: BrowserContext,
+  written: readonly WrittenCookie[],
+): Promise<void> {
   if (written.length === 0) {
     throw new Error(
       "@supabase/ssr wrote no cookies for the signed-in session.",
     );
   }
-
   const host = new URL(
     process.env.PLAYWRIGHT_BASE_URL ?? "http://127.0.0.1:3000",
   ).hostname;
@@ -188,11 +189,92 @@ export async function signIn(
       value,
     })),
   );
+}
+
+/**
+ * Sign the user in through `@supabase/ssr` and hand the resulting cookies to
+ * the browser context. The cookie jar starts empty and is filled by the library
+ * during `signInWithPassword`, which is exactly what the browser would hold.
+ */
+export async function signIn(
+  context: BrowserContext,
+  user: { email: string; userId: string; workspaceId: string },
+): Promise<SignedInUser> {
+  const { client, written } = cookieClient();
+
+  const session = await client.auth.signInWithPassword({
+    email: user.email,
+    password: PASSWORD,
+  });
+  if (session.error || !session.data.session) {
+    throw new Error(
+      `Password grant failed: ${session.error?.message ?? "no session"}`,
+    );
+  }
+  await installCookies(context, written);
 
   return {
     accessToken: session.data.session.access_token,
     email: user.email,
     userId: user.userId,
     workspaceId: user.workspaceId,
+  };
+}
+
+/**
+ * Sign in as a user this harness did not create, without touching their
+ * credentials (Phase 4 Wave C todo 16).
+ *
+ * The live connect test has to act inside the workspace that holds the
+ * GitHub App installation — `github_installations.github_installation_id`
+ * is unique, so no fresh workspace can hold the same one — and that
+ * workspace's owner is not a harness user with the harness password. A
+ * magic link minted through the admin API and verified here yields a
+ * session for that user with nothing about the user changed: no password
+ * reset, no row edited. The cookies reach the browser the same way as above.
+ */
+export async function signInExistingUser(
+  context: BrowserContext,
+  email: string,
+): Promise<SignedInUser> {
+  const admin = adminClient();
+  const link = await admin.auth.admin.generateLink({
+    email,
+    type: "magiclink",
+  });
+  const tokenHash = link.data.properties?.hashed_token;
+  if (link.error || !link.data.user || !tokenHash) {
+    throw new Error(
+      `Could not mint a magic link for ${email}: ${link.error?.message ?? "no token"}`,
+    );
+  }
+  const userId = link.data.user.id;
+
+  const { client, written } = cookieClient();
+  const session = await client.auth.verifyOtp({
+    token_hash: tokenHash,
+    type: "magiclink",
+  });
+  if (session.error || !session.data.session) {
+    throw new Error(
+      `Magic link verification failed: ${session.error?.message ?? "no session"}`,
+    );
+  }
+  await installCookies(context, written);
+
+  const workspace = await admin
+    .from("workspaces")
+    .select("id")
+    .eq("owner_user_id", userId)
+    .single();
+  if (workspace.error || !workspace.data) {
+    throw new Error(`${email} owns no personal workspace.`);
+  }
+
+  return {
+    accessToken: session.data.session.access_token,
+    email,
+    userId,
+    workspaceId: String(workspace.data.id),
   };
 }

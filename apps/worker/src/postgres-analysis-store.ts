@@ -33,6 +33,18 @@ interface ArtifactRow {
 export class PostgresAnalysisStore implements AnalysisJobStore {
   constructor(private readonly sql: postgres.Sql) {}
 
+  async publishAnalyzedCommit(input: {
+    commitSha: string;
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<void> {
+    await this.sql`
+      select public.publish_repository_change(
+        ${input.workspaceId}, ${input.repositoryId}, ${input.commitSha}
+      )
+    `;
+  }
+
   async repositoryFullName(input: {
     repositoryId: string;
     workspaceId: string;

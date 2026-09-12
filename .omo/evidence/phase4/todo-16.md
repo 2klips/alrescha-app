@@ -123,3 +123,165 @@ and the structure-ready / analysis-pending / prose-stale trio after a rescan.
 - **`run_id` is a `manual` run per request.** A backfill and each rescan mode
   open their own run, keyed like the job. Whether these should instead attach
   to one long-lived onboarding run is a product question nobody has asked yet.
+
+---
+
+# 2026-09-12 — the other half: the connect reads the head, the screen shows the run, and it was measured live
+
+**Scope:** `apps/web/lib/github/{api,backfill-scan,connect-repository}.ts`
+(+ `backfill-scan.test.ts`), `apps/web/app/api/github/repositories/{,url/}route.ts`,
+`supabase/migrations/202609120002_backfill_analyze_pair.sql` (new),
+`apps/web/lib/home/journey.ts` (+ test), `apps/web/app/app/(shell)/{page,home-screen,actions}.tsx`,
+`apps/web/app/app/(shell)/map/map-screen.tsx`, `apps/web/lib/strings/{home,map,terms}.ts`,
+`apps/web/app/styles/screens/home.css`, `apps/worker/src/{run-local,worker,analysis-job,postgres-analysis-store}.ts`,
+`tests/e2e/{onboarding-progress,connect-backfill-live}.spec.ts` (new),
+`tests/e2e/helpers/session.ts`, `tests/e2e/global-setup.ts`, `.env.example`.
+
+## The head is read, so the backfill fires
+
+`connectSelectedRepository` mints a repository-scoped installation token to
+verify access and used to drop it. It now keeps the token for one more call
+— `GET /repos/{full}/branches/{default}` — and hands the sha to the queue.
+Two GitHub round trips, no token stored, and a connect that could not read
+the branch (an empty repository answers 404) still succeeds: the result says
+`scheduled: false` with the read's reason, the redirect says `backfill=unscheduled`,
+and the home explains that a push starts the scan. `tests/backfill-and-rescan`
+(the queue) and `apps/web/lib/github/backfill-scan.test.ts` (the read, the
+two ways it declines, the scheduling) pin it; the live run below is the
+proof that it fires: the redirect landed on `backfill=scheduled` and the
+pair was in the queue at the branch's live head.
+
+## The pair, not the scan
+
+A push queues `scan` **and** `analyze`; the backfill queued only the scan,
+so a finished repository connected today got a graph and then waited for a
+push before any requirement, finding, CI evidence or receipt existed — the
+2026-09-06 live scan had to queue the analysis by hand. `202609120002`
+makes both manual entry points (backfill, rescan) queue the same pair on the
+same run, keyed `…:analyze`, both at zero credits (the ledger test still
+holds them to it). The return values are unchanged. The queue orders the
+tie; an analyze claimed before its scan fails fast and retries on the
+backoff — the exact pattern the live run exhibited (below), and the drain
+loop serves one workspace sequentially, so the retry is the common case.
+
+Found on the way: **the analysis never published**. `publish_repository_change`
+(remedy S6) takes the analysed commit and the scan called it; the analyze
+job did not, so `last_analyzed_commit_sha` stayed null on every repository
+ever analysed and the basis read `analysis: pending` forever. The analyze
+handler now publishes after the receipt (asserted in order in
+`analysis-job.test.ts`), which is what lets the progress below ever say
+"완료" for the second stage — and what makes the MCP basis truthful.
+
+## The run, on the screen (보완 R-02)
+
+`buildScanProgress` reads two stages from the newest job of each kind and
+the repository row: **structure** (`idle · queued · running · ready · failed`)
+and **analysis** (the same, plus `local` for a pushed repository the hosted
+worker never analyses — todo 17). They are independent on purpose: the map
+opens on the first (`/app/map` now says "scanning" rather than "connect" when
+a repository is connected and has no nodes yet), the Findings follow with
+the second. A failed job shows the queue's `last_error` verbatim (WORK_SPEC
+§4.5). "다시 스캔" is a form on the home that calls
+`enqueue_repository_rescan` — the same function the MCP tool calls — rate
+limited, audited as `scan_requested`, with the outcome carried on the
+redirect: `scheduled` (and whether it became a full relink), `never-scanned`,
+`local`, `rate-limited`, `error`.
+
+`tests/e2e/onboarding-progress.spec.ts` (2 tests, harness email session,
+no GitHub) walks every state: an unscheduled connect, the pair queued, the
+map's scanning state, a permanent scan failure with its reason on screen,
+structure ready while analysis is still queued, the button queuing a new
+free pair and saying so; and the local-push path to `/app/map` nodes > 0
+with `analysis: local`. `journey.test.ts` gained 8 cases for the builder.
+
+## The live run — measured
+
+`tests/e2e/connect-backfill-live.spec.ts` drives the product path against
+the real GitHub App and this repository's own worker, and gates itself
+(credentials, network, App installed on the pilot, pilot readable) rather
+than failing. It ran here, green, on 2026-09-12:
+
+- **Pilot:** `2klips/alrescha-app` at `1eb4de7` (main after PR #7),
+  installation `154681535`, connected through the real picker form; the
+  redirect said `backfill=scheduled` — the head read worked on the first
+  live attempt.
+- **Workspace reused.** `github_installations.github_installation_id` is
+  unique and this database already held the installation in the 2026-09-06
+  pilot workspace, whose owner is not a harness user. The spec signs in as
+  that owner through an admin magic link (nothing about the user changed —
+  `signInExistingUser`) and connects there. The head was already backfilled
+  by a first run of the same spec (killed mid-way, see below), so the
+  measured pass was the **full relink at the same head** through the same
+  queue function the button calls — `t2fv-live.json` says `measured:
+  "rescan-full"`. The scan re-reads every blob either way.
+- **Measured** (`todo-16/t2fv-live.json`, wall clock from the queue call,
+  worker spawned by the spec with `WORKER_WORKSPACE_IDS`, `WORKER_CONCURRENCY=1`):
+
+  | from the request to… | seconds | minutes |
+  | --- | --- | --- |
+  | structure ready at the head | 151.0 | 2.5 |
+  | `/app/map` painted at the head (1,000 file nodes, settled) | 157.5 | 2.6 |
+  | worker idle (analysis current at the head) | 157.6 | 2.6 |
+
+  Per job, from the queue's own timestamps (claimed → completed): the full
+  scan **35.6 s** (attempt 2) and **41.2 s** (the backfill's attempt 2, run
+  from a shell); the analysis **83.9 s** and **65.9 s**. The wall clock is
+  longer than scan + analysis because the scan's **first attempt failed**
+  with `fetch failed (cause: UND_ERR_SOCKET)` inside the spawned worker, the
+  analyze job (already queued, artifacts present from the earlier scan) ran
+  during the backoff, and the scan then succeeded on its retry — the queue's
+  retry did what it is for. Without the failed attempt the same pair is
+  ~2 minutes; **either way T2FV is under the plan's 5-minute bar**, on this
+  machine, for a 1,170-blob repository. Production (Fly, 2026-09-12) measured
+  the same full scan at 55.5 s; it has not measured connect-to-map.
+
+  The plan's "T2FV(연결→의미 있는 첫 화면)" as *the user* would live it also
+  includes the worker's poll interval (2 s idle sleep) and, in production,
+  the analysis only if one counts findings as the first useful screen. The
+  map opens on structure; that is the number in the second row.
+- **After:** the pilot repository row reads structure ready and analysis
+  current at `1eb4de7` (`data_revision` 25), 1,403 nodes / 5,845 edges for
+  the repository, 127 active requirements, 200 open findings, 0 evidence
+  rows (no Actions — todo 18's gate). Screenshots: `todo-16/live-home-queued.png`,
+  `live-home-structure-ready.png`, `live-home-analysis.png`, `live-map.png`.
+- **Side effects on the local pilot workspace, stated:** a stale `enrich`
+  job queued on 2026-09-06 was drained by the first (killed) run's worker
+  with the provider keys replaced (`e2e-disabled`), failed three times on
+  `fetch failed` and ended `failed: worker lease expired`; no credit was
+  spent (the ledger settles a failed reservation as a refund). The spec
+  replaces the keys precisely so nothing but scan and analyze can do work.
+
+## Also changed, and why
+
+- `run-local.ts` takes `WORKER_WORKSPACE_IDS` (comma-separated) to drain
+  only those workspaces — a browser test on a shared local database, or an
+  operator replaying one tenant. Unset drains all, as before.
+- `worker.ts` appends the `cause` of a failure to `last_error` when there
+  is one. `fetch` says "fetch failed" for every network failure and hides
+  the reason in `cause`; the first live run's scan failed three times on
+  those two words. `UND_ERR_SOCKET` is what the second run recorded.
+- `tests/e2e/global-setup.ts` warms `/app/map`.
+
+## Verification
+
+`pnpm lint`, `pnpm typecheck` (root and every workspace), `pnpm test`,
+`node --import tsx scripts/verify-scope-boundaries.ts` (PASS, 12 boundaries,
+359 files), `npx playwright test` on `onboarding-progress`, `connect-backfill-live`,
+`app-home`, `workspace-map`, `map-verified`, `local-ingest-card`, and the
+`app-workspace`/`app-map` theme and axe sweeps — numbers in the session
+report.
+
+## Not verified here
+
+- **A first connect into a fresh workspace, live.** The measured pass was a
+  full relink at an already-backfilled head (above). The connect itself —
+  token, head read, pair queued — was exercised live twice (both spec runs
+  landed on `backfill=scheduled`), and the fresh-workspace path is what the
+  spec takes on a clean database; that path has not run on this machine.
+- **The socket error's origin.** The scan's first attempt failed only when
+  the worker was spawned from the Playwright process; a worker started from
+  a shell, minutes earlier, succeeded on its first attempt. The cause is
+  now recorded; what closes the socket is not known.
+- **The worker source factory per kind** stays with todo 20's `docskeleton`
+  (the first kind that reads only stored rows), as the two earlier notes
+  decided.

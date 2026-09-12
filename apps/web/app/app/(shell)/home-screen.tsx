@@ -6,23 +6,38 @@ import {
   KeyRound,
   Link2,
   Network,
+  RefreshCw,
   ScanSearch,
 } from "lucide-react";
 import Link from "next/link";
 
 import type {
   JourneyStepState,
+  ScanProgressModel,
+  ScanStageState,
   WorkspaceJourneyModel,
 } from "../../../lib/home/journey";
 import { HOME } from "../../../lib/strings/home";
 import { ProductPageHeader } from "../../ui/page-layout";
+import { requestRepositoryRescan, type RescanOutcome } from "./actions";
 
 /**
  * `/app` workspace home (Phase 3 Wave E todo 13) — the onboarding spine as
  * one graph-centric thread: 레포 연결 → 지식그래프 생성 → 첫 그래프 뷰 +
  * MCP 토큰 발급. Every state is derived from stored rows (no demo fixture);
  * the demo dashboard stays on the public `/map`.
+ *
+ * The graph step carries the first run's progress (Phase 4 Wave C todo 16):
+ * the structure stage and the analysis stage, read from the queue, and the
+ * "다시 스캔" button that queues the same pair again.
  */
+
+/** What the last redirect had to say — shown once, never derived from. */
+export interface HomeNotices {
+  readonly backfill: "unscheduled" | null;
+  readonly rescan: RescanOutcome | null;
+  readonly rescanMode: "full" | null;
+}
 
 function StepBadge({
   index,
@@ -46,10 +61,132 @@ function StepState({ state }: { state: JourneyStepState }) {
   );
 }
 
+function Stage({
+  error,
+  name,
+  state,
+}: {
+  error: string | null;
+  name: "analysis" | "structure";
+  state: ScanStageState;
+}) {
+  return (
+    <li data-stage={name} data-stage-state={state}>
+      <span className="home-scan-stage-name">
+        {HOME.scan.stages[name]}
+        <span className="home-scan-stage-state" data-stage-state={state}>
+          {HOME.scan.states[state]}
+        </span>
+      </span>
+      <small>{HOME.scan.stageHints[name]}</small>
+      {state === "failed" && error ? (
+        // The queue's own words, verbatim (WORK_SPEC §4.5): a retried scan
+        // that still fails shows why, not a spinner.
+        <small className="home-scan-error" role="alert">
+          {HOME.scan.failedPrefix} · {error}
+        </small>
+      ) : null}
+      {state === "local" ? <small>{HOME.scan.localHint}</small> : null}
+    </li>
+  );
+}
+
+function rescanOutcomeCopy(notices: HomeNotices): string | null {
+  switch (notices.rescan) {
+    case "scheduled":
+      return notices.rescanMode === "full"
+        ? HOME.scan.rescan.outcomes.scheduledFull
+        : HOME.scan.rescan.outcomes.scheduled;
+    case "never-scanned":
+      return HOME.scan.rescan.outcomes.neverScanned;
+    case "local":
+      return HOME.scan.rescan.outcomes.local;
+    case "rate-limited":
+      return HOME.scan.rescan.outcomes.rateLimited;
+    case "error":
+      return HOME.scan.rescan.outcomes.error;
+    default:
+      return null;
+  }
+}
+
+function ScanProgress({
+  notices,
+  scan,
+}: {
+  notices: HomeNotices;
+  scan: ScanProgressModel;
+}) {
+  const outcome = rescanOutcomeCopy(notices);
+  return (
+    <div className="home-scan" data-testid="scan-progress">
+      <ol
+        aria-label={HOME.scan.aria}
+        className="home-scan-stages"
+        data-analysis={scan.analysis}
+        data-structure={scan.structure}
+      >
+        <Stage
+          error={scan.structureError}
+          name="structure"
+          state={scan.structure}
+        />
+        <Stage
+          error={scan.analysisError}
+          name="analysis"
+          state={scan.analysis}
+        />
+      </ol>
+      {scan.commitSha ? (
+        <span className="home-scan-commit">
+          <GitCommitHorizontal size={13} aria-hidden />
+          {HOME.scan.commit} · <code>{scan.commitSha.slice(0, 7)}</code>
+        </span>
+      ) : null}
+      <div className="home-rescan" data-rescan={scan.rescan}>
+        {scan.rescan === "available" && scan.repositoryId ? (
+          <form action={requestRepositoryRescan}>
+            <input
+              name="repositoryId"
+              type="hidden"
+              value={scan.repositoryId}
+            />
+            <button className="home-step-cta" type="submit">
+              <RefreshCw size={13} aria-hidden />
+              {HOME.scan.rescan.cta}
+            </button>
+          </form>
+        ) : scan.rescan === "busy" ? (
+          <button className="home-step-cta" disabled type="button">
+            <RefreshCw size={13} aria-hidden />
+            {HOME.scan.rescan.busy}
+          </button>
+        ) : scan.rescan === "never-scanned" ? (
+          <small>{HOME.scan.rescan.neverScanned}</small>
+        ) : scan.rescan === "local" ? (
+          <small>{HOME.scan.rescan.local}</small>
+        ) : null}
+        {outcome ? (
+          <p
+            className="home-rescan-outcome"
+            data-outcome={notices.rescan ?? ""}
+            data-testid="rescan-outcome"
+            role="status"
+          >
+            {outcome}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 export function WorkspaceHomeScreen({
   model,
+  notices = { backfill: null, rescan: null, rescanMode: null },
 }: {
   model: WorkspaceJourneyModel;
+  notices?: HomeNotices;
 }) {
   const graphReady = model.steps.graph === "done";
 
@@ -156,7 +293,15 @@ export function WorkspaceHomeScreen({
                 </>
               ) : model.steps.graph === "active" ? (
                 <>
-                  <p>{HOME.journey.graph.scanning}</p>
+                  {notices.backfill === "unscheduled" ||
+                  (model.scan.structure === "idle" &&
+                    model.scan.rescan === "never-scanned") ? (
+                    <p data-testid="backfill-unscheduled" role="status">
+                      {HOME.journey.graph.notScheduled}
+                    </p>
+                  ) : (
+                    <p>{HOME.journey.graph.scanning}</p>
+                  )}
                   <small>{HOME.journey.graph.scanningHint}</small>
                   <Link className="home-step-cta" href="/app/commits">
                     {HOME.journey.graph.progressCta}
@@ -166,6 +311,9 @@ export function WorkspaceHomeScreen({
               ) : (
                 <p>{HOME.journey.graph.body}</p>
               )}
+              {model.steps.connect === "done" ? (
+                <ScanProgress notices={notices} scan={model.scan} />
+              ) : null}
             </div>
           </li>
 

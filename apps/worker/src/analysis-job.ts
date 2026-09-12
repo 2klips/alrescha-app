@@ -186,6 +186,17 @@ export interface AnalysisJobStore {
     repositoryId: string;
     workspaceId: string;
   }): Promise<EvidenceDelta>;
+  /**
+   * Record the commit this analysis covered and bump the repository's data
+   * revision (`publish_repository_change`, remedy S6). Until this call
+   * existed the scan published and the analysis never did, so every reader
+   * of the basis saw `analysis: pending` forever (Wave C todo 16).
+   */
+  publishAnalyzedCommit(input: {
+    commitSha: string;
+    repositoryId: string;
+    workspaceId: string;
+  }): Promise<void>;
 }
 
 export interface EvidenceDelta {
@@ -598,5 +609,8 @@ export function createAnalysisJobHandler(
       statement,
       workspaceId,
     });
+    // Last, so a reader that sees `analysis: current` at this commit can
+    // rely on every row above being there.
+    await store.publishAnalyzedCommit({ commitSha, repositoryId, workspaceId });
   };
 }

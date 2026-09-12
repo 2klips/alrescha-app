@@ -105,12 +105,19 @@ describe("backfill and rescan", () => {
       idempotency_key: string;
       kind: string;
       payload: { commitSha?: string; mode?: string; reason?: string };
+      run_id: string;
     }>(
-      `select kind, idempotency_key, credit_cost, payload from public.jobs
+      `select kind, idempotency_key, credit_cost, payload, run_id
+       from public.jobs
        where workspace_id = $1 order by idempotency_key`,
       [workspaceId],
     );
     return rows.rows;
+  }
+
+  /** The scan half of each pair — what the mode and the key are about. */
+  async function scanJobs() {
+    return (await jobs()).filter(({ kind }) => kind === "scan");
   }
 
   /** Mark the repository as scanned at `sha`, the way a scan would. */
@@ -127,7 +134,16 @@ describe("backfill and rescan", () => {
     const jobId = await backfill(HEAD);
     expect(jobId).toBeTruthy();
 
-    expect(await jobs()).toEqual([
+    expect(
+      (await scanJobs()).map(
+        ({ credit_cost, idempotency_key, kind, payload }) => ({
+          credit_cost,
+          idempotency_key,
+          kind,
+          payload,
+        }),
+      ),
+    ).toEqual([
       {
         // Free, and the queue enforces it: `enqueue_job` refuses a non-zero
         // cost for a deterministic kind.
@@ -140,14 +156,43 @@ describe("backfill and rescan", () => {
     ]);
   });
 
-  it("schedules one job however many times the button is pressed", async () => {
+  /**
+   * A push queues `scan` and `analyze` together, and it is the analyze job
+   * that writes requirements, findings, CI evidence and the receipt. A
+   * backfill that queued only the scan left a finished repository with a
+   * graph and nothing else until a push that may never come (WORK_SPEC
+   * §4.1-4 names the whole pipeline as the onboarding progress).
+   */
+  it("queues the analysis with the scan, on the same run, both free", async () => {
+    const scanJobId = await backfill(HEAD);
+    const queued = await jobs();
+
+    expect(queued.map(({ kind }) => kind)).toEqual(["scan", "analyze"]);
+    const [scan, analyze] = queued;
+    expect(analyze).toMatchObject({
+      credit_cost: 0,
+      idempotency_key: `backfill:${repositoryId}:${HEAD}:analyze`,
+      // No mode: the analysis reads what the scan stored, in full or not.
+      payload: { commitSha: HEAD, reason: "backfill" },
+      run_id: scan?.run_id,
+    });
+    expect(analyze?.payload.mode).toBeUndefined();
+    // The return value is still the scan job — the contract todo 16 shipped.
+    const returned = await database.query<{ kind: string }>(
+      "select kind from public.jobs where id = $1",
+      [scanJobId],
+    );
+    expect(returned.rows[0]?.kind).toBe("scan");
+  });
+
+  it("schedules one pair however many times the button is pressed", async () => {
     const first = await backfill(HEAD);
     const second = await backfill(HEAD);
     const third = await backfill(HEAD);
 
     expect(second).toBe(first);
     expect(third).toBe(first);
-    expect(await jobs()).toHaveLength(1);
+    expect(await jobs()).toHaveLength(2);
   });
 
   it("refuses a head that is not a commit sha", async () => {
@@ -236,11 +281,23 @@ describe("backfill and rescan", () => {
       reason: "requested",
       scheduled: true,
     });
-    expect((await jobs())[0]).toMatchObject({
+    const queued = await jobs();
+    expect(queued[0]).toMatchObject({
       credit_cost: 0,
       idempotency_key: `rescan:${repositoryId}:${HEAD}:incremental`,
+      kind: "scan",
       payload: { commitSha: HEAD, mode: "incremental", reason: "rescan" },
     });
+    // A relink changes what the rules see, so the analysis follows the scan
+    // on the same run — the same pair a push queues.
+    expect(queued[1]).toMatchObject({
+      credit_cost: 0,
+      idempotency_key: `rescan:${repositoryId}:${HEAD}:incremental:analyze`,
+      kind: "analyze",
+      payload: { commitSha: HEAD, reason: "rescan" },
+      run_id: queued[0]?.run_id,
+    });
+    expect(queued).toHaveLength(2);
   });
 
   /**
@@ -253,14 +310,14 @@ describe("backfill and rescan", () => {
     const full = await rescan("full");
 
     expect(full.jobId).not.toBe(incremental.jobId);
-    expect((await jobs()).map(({ payload }) => payload.mode).sort()).toEqual([
-      "full",
-      "incremental",
-    ]);
+    expect(
+      (await scanJobs()).map(({ payload }) => payload.mode).sort(),
+    ).toEqual(["full", "incremental"]);
 
-    // The same request twice is still one job.
+    // The same request twice is still one pair.
     expect((await rescan("full")).jobId).toBe(full.jobId);
-    expect(await jobs()).toHaveLength(2);
+    expect(await scanJobs()).toHaveLength(2);
+    expect(await jobs()).toHaveLength(4);
   });
 
   /**
@@ -274,7 +331,7 @@ describe("backfill and rescan", () => {
 
     expect(result.mode).toBe("full");
     expect(result.reason).toMatch(/resolver generation/);
-    expect((await jobs())[0]?.payload.mode).toBe("full");
+    expect((await scanJobs())[0]?.payload.mode).toBe("full");
   });
 
   it("refuses a mode it does not know", async () => {
@@ -294,10 +351,15 @@ describe("backfill and rescan", () => {
     await markScanned(HEAD);
     await rescan("full");
 
-    // Same repository, same commit, two different reasons to scan it.
-    expect((await jobs()).map(({ payload }) => payload.reason)).toEqual([
-      "backfill",
-      "rescan",
+    // Same repository, same commit, two different reasons to scan it — and
+    // each reason brings its own analysis.
+    expect(
+      (await jobs()).map(({ kind, payload }) => [payload.reason, kind]),
+    ).toEqual([
+      ["backfill", "scan"],
+      ["backfill", "analyze"],
+      ["rescan", "scan"],
+      ["rescan", "analyze"],
     ]);
   });
 

@@ -68,8 +68,14 @@ export async function POST(request: Request) {
     );
   }
 
+  // The home reads the progress from rows; the redirect only says whether
+  // the first scan was queued at all (Phase 4 Wave C todo 16).
+  const backfill = connection.backfill.scheduled ? "scheduled" : "unscheduled";
   return NextResponse.redirect(
-    new URL("/app?github=pending", addressedOrigin(request)),
+    new URL(
+      `/app?github=pending&backfill=${backfill}`,
+      addressedOrigin(request),
+    ),
     303,
   );
 }

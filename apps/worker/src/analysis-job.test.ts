@@ -84,6 +84,8 @@ interface Recorded {
   digest: string | null;
   findings: readonly PersistedFinding[];
   implementsEdges: readonly PersistedImplementsEdge[];
+  /** What `publishAnalyzedCommit` received, and whether the receipt preceded it. */
+  published: { afterReceipt: boolean; commitSha: string } | null;
   read: string[];
   requirements: readonly PersistedRequirement[];
   statement: InTotoStatement | null;
@@ -102,6 +104,7 @@ function fakeStore(
     digest: null,
     findings: [],
     implementsEdges: [],
+    published: null,
     read: [],
     requirements: [],
     statement: null,
@@ -112,6 +115,13 @@ function fakeStore(
     loadArtifacts: async () => ARTIFACTS,
     loadTestedPaths: async () => options.testedPaths ?? [],
     latestReceiptDigest: async () => null,
+    publishAnalyzedCommit: async ({ commitSha }) => {
+      // Ordered after the receipt: what the basis promises.
+      recorded.published = {
+        afterReceipt: recorded.digest !== null,
+        commitSha,
+      };
+    },
     recordReceipt: async ({ delta, digest, statement }) => {
       recorded.delta = delta;
       recorded.digest = digest;
@@ -263,6 +273,14 @@ describe("analyze job", () => {
     await expect(
       verifyInTotoStatement(statement, recorded.digest!),
     ).resolves.toMatchObject({ state: "verified" });
+    // The analysis publishes the commit it covered, after the receipt — so
+    // `analysis: current` on the basis means every row above exists
+    // (remedy S6 left the analyze side of the publish unwritten; Wave C
+    // todo 16 needs it for the progress to ever read "done").
+    expect(recorded.published).toEqual({
+      afterReceipt: true,
+      commitSha: COMMIT,
+    });
   });
 
   it("detects a tampered statement against the stored digest", async () => {

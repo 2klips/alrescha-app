@@ -25,6 +25,7 @@ const ROUTES = [
   "/app/harness",
   "/app/inspection",
   "/app/library",
+  "/app/map",
   "/app/progress",
   "/app/receipts",
   "/app/settings/ai",
