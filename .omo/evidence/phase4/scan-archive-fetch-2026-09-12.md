@@ -168,9 +168,16 @@ restart) is the rollback switch short of redeploying the previous image.
    requests); let it be.
 2. `fly deploy`. Expect v19 with a new image; `fly status` shows the
    machine on it; no HTTP port, as ever.
-3. On the home of the pilot workspace click `다시 스캔` for
-   `2klips/alrescha-app` once — a full rescan pair at the current head, 0
-   credits. In `fly logs -a arr-worker` expect, filtered to these lines:
+3. **Corrected after the rollout (Codex, 2026-09-13 KST):** the home's
+   `다시 스캔` sends no `mode`, and `enqueue_repository_rescan` then picks
+   *incremental* when the stored resolver generation is current — so one
+   click exercises the analysis archive (`analyze @sha N bodies (archive:
+   …)`) but not the full-scan archive. A full pass in production comes from
+   an existing full-backfill path: re-selecting the repository once in the
+   picker (`mode=full`, 0 credits). Codex verified both paths separately
+   (`pr12-production-rollout-2026-09-12.md`); the home button is not to be
+   changed to full on the strength of this correction (OQ-068). For the
+   full pass, in `fly logs -a arr-worker` expect, filtered to these lines:
 
    ```text
    scan @<sha> full (archive: ~1,2xx files, ~21,6xx KiB) → N rows
