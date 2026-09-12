@@ -1,0 +1,8 @@
+{
+  "passes": 42,
+  "route": "/app",
+  "state": "scan-failed",
+  "theme": "dark",
+  "violationCount": 0,
+  "violations": []
+}

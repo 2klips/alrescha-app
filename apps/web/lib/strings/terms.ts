@@ -73,6 +73,9 @@ export const CONVENTIONAL_ENGLISH_TERMS = [
   "token",
   "tokens",
   "log_progress",
+  // CLI commands are addresses, shown verbatim (Phase 4 Wave C todo 16–17).
+  "alrescha serve --local",
+  "alrescha push",
   "search_index",
   "get_artifact",
   "request_context_pack",

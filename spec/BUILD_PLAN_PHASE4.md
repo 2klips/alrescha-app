@@ -239,11 +239,12 @@ arr-app 레포에서 Phase 4(v2)를 이어간다.
 
 ## Wave C — 기존(완성된) 레포 온보딩 _(G2 열림)_
 
-- [ ] **16. 연결 시 백필 스캔 · "다시 스캔" · MCP `request_rescan(mode)` · `run-local.ts` 지연 생성** _(D11, v1 todo 11 확장, OQ-029)_
+- [x] **16. 연결 시 백필 스캔 · "다시 스캔" · MCP `request_rescan(mode)` · `run-local.ts` 지연 생성** _(D11, v1 todo 11 확장, OQ-029)_ — **완료 2026-09-12**(소스 팩토리 종류별 분리는 todo 20 `docskeleton`으로 이관 — 호출자가 그때 생긴다), 증빙 [`.omo/evidence/phase4/todo-16.md`](../.omo/evidence/phase4/todo-16.md)
       v1 todo 11 그대로(`enqueue_backfill_scan`, 멱등 키 `backfill:<repoId>:<headSha>`, 온보딩 진행 표시, 버튼, `request_rescan` — `readOnlyHint:false`) + `link_schema_version` 불일치 시 자동으로 `mode:'full'`, `request_rescan(repository_id?, mode?)` 인자, 워커 소스 팩토리를 잡 종류별 지연 생성(DB만 읽는 결정론 잡이 CLI 레포에서도 돌게 — ADR-013). 툴 수 순증 0 목표(todo 22의 통합으로 상쇄).
       수용 기준: v1 기준 + 재링크 잡이 0크레딧임을 원장 테스트로, e2e "레포 연결 → 진행 표시 → `/app/map` 노드 >0"(테스트 이메일 세션), T2FV(연결→의미 있는 첫 화면) 분 단위를 evidence에 기록.
       보완(R-02, 2026-09-06): 백필·재스캔이 산문을 무효화하는 지점을 명시한다 — 새 blob이 들어오면 그 파일의 요약은 즉시 `stale`이고, 구조가 준비되면(structure-ready) 분석이 아직이어도(analysis-pending) 화면을 연다. 두 상태는 별개다.
       **진행(2026-09-06, 미완):** 결정론 절반 완료 — [evidence](../.omo/evidence/phase4/todo-16.md). `enqueue_backfill_scan`·`enqueue_repository_rescan`(head/mode 멱등, 0크레딧 원장 테스트, `link_schema_version` 미달 시 full 승격+사유), MCP `request_rescan`(`readOnlyHint:false`, 툴 23개로 +1 — todo 22에서 상쇄), 스캔 잡이 payload의 `mode`를 읽음, 보완 3상태 단언. **체크박스는 열어 둔다:** G2 미개통이라 실기 연결 0회, 커넥트가 아직 head sha를 읽지 않아 실제로는 `scheduled:false`, 온보딩 진행 표시·버튼·e2e·T2FV 미착수. 워커 소스 팩토리 분리는 소스 없는 잡이 실제로 생기는 todo 17로 미룬다.
+      **완료(2026-09-12):** 커넥트가 발급한 설치 token으로 기본 브랜치 head를 읽어 백필이 실제로 예약된다(실기 2회 모두 `backfill=scheduled`). 백필·재스캔이 push와 같은 **scan+analyze 쌍**을 한 run에 큐잉하고(`202609120002`, 0크레딧 원장 테스트 유지), analyze 잡이 `publish_repository_change`로 분석 commit을 발행한다(S6가 남긴 미구현 — 그전까지 basis의 `analysis`는 영원히 `pending`이었다). 홈의 그래프 단계에 구조/분석 2단계 진행(큐 행에서 유도, 실패 사유 원문, R-02 두 상태 분리)과 "다시 스캔"(같은 큐 함수, 감사 `scan_requested`), 맵 빈 상태의 "스캔 진행 중" 변형. e2e: `onboarding-progress.spec.ts`(픽스처·테스트 이메일 세션, 모든 상태) + `connect-backfill-live.spec.ts`(실 GitHub App·실 워커, 게이트 자동 skip) 실기 green. **T2FV 실측**: 요청→구조 준비 2.5분·→맵 표시 2.6분·→분석 완료 2.6분(파일럿 1,170 blob, 전량 재링크; 첫 스캔 시도의 소켓 오류 재시도 포함 — 잡 단위로는 스캔 36–41 s·분석 66–84 s). 워커 `WORKER_WORKSPACE_IDS` 필터와 `last_error`의 cause 병기는 이 실측에서 나왔다.
       Commit: `feat(onboarding): backfill scan on connect with a full relink mode and an on-demand rescan tool`
 
 - [ ] **17. 로컬 서빙 모드 `alrescha serve --local` + 로컬 레포 분석 경로 판정** _(v1 todo 12 그대로, OQ-030)_

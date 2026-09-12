@@ -5,11 +5,19 @@ import {
   selectGitHubRepository,
 } from "@alrescha/core";
 
-import { createGitHubAppJwt } from "./api";
+import {
+  createGitHubAppJwt,
+  fetchDefaultBranchHead,
+  type DefaultBranchHead,
+} from "./api";
 import { githubAppEnvironment } from "./env";
 import { saveSelectedRepository } from "./onboarding-store";
 import { createAdminClient } from "../supabase/admin";
-import { scheduleBackfillScan, type BackfillScanResult } from "./backfill-scan";
+import {
+  resolveConnectHead,
+  scheduleBackfillAtHead,
+  type BackfillScanResult,
+} from "./backfill-scan";
 
 export type ConnectSelectedRepositoryResult =
   | {
@@ -30,17 +38,26 @@ export type ConnectSelectedRepositoryResult =
  * Verifies live access with a repository-scoped installation token and
  * persists the selection. Shared by the picker form route and the URL
  * onboarding route so both paths enforce identical checks.
+ *
+ * The same token then reads the default branch's head, which is what the
+ * backfill is keyed by: connect is two GitHub round trips (mint, read head)
+ * and the scan is queued before the response leaves.
  */
 export async function connectSelectedRepository(input: {
   actorUserId: string;
   githubRepositoryId: number;
   /**
-   * The default branch's head, when the caller knows it. Injected rather
-   * than fetched here so the connect path stays one GitHub round trip and
-   * the scheduling decision is testable without a live installation.
+   * The default branch's head, when the caller already knows it. Injected so
+   * a replay or a test can skip the GitHub read; the routes leave it unset.
    */
   headCommitSha?: string | null;
   installationId: string;
+  /** Test seam for the branch read; production uses the GitHub API. */
+  readDefaultBranchHead?: (input: {
+    branch: string;
+    fullName: string;
+    token: string;
+  }) => Promise<DefaultBranchHead>;
   workspaceId: string;
 }): Promise<ConnectSelectedRepositoryResult> {
   const admin = createAdminClient();
@@ -77,6 +94,9 @@ export async function connectSelectedRepository(input: {
     installationData.permission_mode === "read_with_pr_proposals"
       ? { ...GITHUB_READ_ONLY_PERMISSIONS, ...GITHUB_PR_PROPOSAL_PERMISSION }
       : GITHUB_READ_ONLY_PERMISSIONS;
+  // Kept for the head read below and dropped with this call; it is never
+  // stored (the connect screen's promise).
+  let installationToken: string | null = null;
   const selection = await selectGitHubRepository({
     installationId: input.installationId,
     repository: {
@@ -87,19 +107,29 @@ export async function connectSelectedRepository(input: {
     saveSelection: (candidate) =>
       saveSelectedRepository({ ...candidate, actorUserId: input.actorUserId }),
     verifyCurrentAccess: async (repositoryId) => {
-      await requestInstallationToken({
+      const token = await requestInstallationToken({
         appJwt: createGitHubAppJwt(environment.appId, environment.privateKey),
         installationId: installationData.github_installation_id,
         permissions,
         repositoryIds: [repositoryId],
       });
+      installationToken = token.token;
     },
     workspaceId: input.workspaceId,
   });
 
-  const backfill = await scheduleBackfillScan({
+  const head = await resolveConnectHead({
+    defaultBranch: repository.data.default_branch,
+    fullName: repository.data.full_name,
+    providedHead: input.headCommitSha,
+    readHead:
+      input.readDefaultBranchHead ??
+      ((request) => fetchDefaultBranchHead(request)),
+    token: installationToken,
+  });
+  const backfill = await scheduleBackfillAtHead({
     client: admin,
-    headCommitSha: input.headCommitSha ?? null,
+    head,
     repositoryId: selection.repositoryId,
     workspaceId: input.workspaceId,
   });

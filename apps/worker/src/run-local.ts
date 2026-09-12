@@ -69,6 +69,26 @@ function workerConcurrency(): number {
 }
 
 /**
+ * Drain only these workspaces (`WORKER_WORKSPACE_IDS`, comma-separated).
+ *
+ * Unset — the normal case, hosted and local — drains every workspace. Set,
+ * the process leaves every other tenant's queue alone: what a browser test
+ * needs when it drives one workspace's backfill on a shared local database
+ * (Phase 4 Wave C todo 16), and what an operator needs to replay one tenant
+ * without touching the rest. It changes which queues are read, never how a
+ * job runs.
+ */
+function workspaceFilter(): readonly string[] | null {
+  const raw = process.env.WORKER_WORKSPACE_IDS;
+  if (!raw) return null;
+  const ids = raw
+    .split(",")
+    .map((id) => id.trim())
+    .filter((id) => id.length > 0);
+  return ids.length > 0 ? ids : null;
+}
+
+/**
  * How many blob bodies one scan fetches at a time (perf research MT-3). The
  * scan plan is identical at every setting, so this is purely a throughput and
  * politeness dial against the repository host. Unset uses the scanner default;
@@ -299,13 +319,22 @@ async function main(): Promise<void> {
     scan: createScanHandler(sql, sourceFor),
   };
 
+  const onlyWorkspaces = workspaceFilter();
+
   let lastWorkspaceCount: number | undefined;
   for (;;) {
     // Workspaces can be created after the hosted worker starts, so refresh the
     // list on every idle polling cycle instead of freezing the startup view.
-    const workspaces = await sql<{ id: string }[]>`
-      select id from public.workspaces order by created_at
-    `;
+    const workspaces =
+      onlyWorkspaces === null
+        ? await sql<{ id: string }[]>`
+            select id from public.workspaces order by created_at
+          `
+        : await sql<{ id: string }[]>`
+            select id from public.workspaces
+            where id = any(${onlyWorkspaces})
+            order by created_at
+          `;
     if (workspaces.length !== lastWorkspaceCount) {
       console.log(
         `worker ${baseWorkerId} draining ${workspaces.length} workspace(s) across ${concurrency} loop(s)${once ? " (once)" : ""}`,

@@ -1,6 +1,8 @@
 import { isScannableCommitSha } from "@alrescha/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { DefaultBranchHead } from "./api";
+
 /**
  * The first scan of a repository that is already finished (Phase 4 Wave C
  * todo 16, D11, OQ-029).
@@ -11,9 +13,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * and commit something.
  *
  * Scheduling is idempotent on `(repository, head)`, so a double-clicked
- * button, a retried form post and a re-render all resolve to the same job.
- * It costs nothing: a scan is deterministic and `enqueue_job` refuses a
- * non-zero credit cost for it.
+ * button, a retried form post and a re-render all resolve to the same pair of
+ * jobs (scan, then analyze — what a push queues). It costs nothing: both are
+ * deterministic and `enqueue_job` refuses a non-zero credit cost for them.
  *
  * Failure here does **not** fail the connect. A repository that is connected
  * but not yet scanned is a state the product already handles (the basis
@@ -25,6 +27,58 @@ export interface BackfillScanResult {
   jobId: string | null;
   reason: string;
   scheduled: boolean;
+}
+
+/**
+ * Which head the backfill scans at. A caller that already knows it (a test,
+ * a replay) hands it in; otherwise the branch is read with the installation
+ * token the connect minted a moment ago — one more GitHub call on a token
+ * that is scoped to this repository and is about to be dropped.
+ */
+export async function resolveConnectHead(input: {
+  readonly defaultBranch: string;
+  readonly fullName: string;
+  readonly providedHead: string | null | undefined;
+  readonly readHead: (input: {
+    branch: string;
+    fullName: string;
+    token: string;
+  }) => Promise<DefaultBranchHead>;
+  readonly token: string | null;
+}): Promise<DefaultBranchHead> {
+  if (typeof input.providedHead === "string") {
+    return { sha: input.providedHead };
+  }
+  if (input.token === null) {
+    return { error: "no installation token was minted for the repository" };
+  }
+  return input.readHead({
+    branch: input.defaultBranch,
+    fullName: input.fullName,
+    token: input.token,
+  });
+}
+
+/** Schedules the backfill when the head is known; says why when it is not. */
+export async function scheduleBackfillAtHead(input: {
+  readonly client: SupabaseClient;
+  readonly head: DefaultBranchHead;
+  readonly repositoryId: string;
+  readonly workspaceId: string;
+}): Promise<BackfillScanResult> {
+  if ("error" in input.head) {
+    return {
+      jobId: null,
+      reason: `the repository's head commit could not be read: ${input.head.error}`,
+      scheduled: false,
+    };
+  }
+  return scheduleBackfillScan({
+    client: input.client,
+    headCommitSha: input.head.sha,
+    repositoryId: input.repositoryId,
+    workspaceId: input.workspaceId,
+  });
 }
 
 export async function scheduleBackfillScan(input: {

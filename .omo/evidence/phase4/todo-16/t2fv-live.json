@@ -1,0 +1,24 @@
+{
+  "analysisAtHead": true,
+  "analysisJob": {
+    "status": "succeeded",
+    "last_error": null
+  },
+  "analysisStage": "ready",
+  "head": "1eb4de74514fe5e8c9c0ac0241edf395f8dce6da",
+  "mapNodeCount": 1000,
+  "measured": "rescan-full",
+  "measuredAt": "2026-09-12T11:31:50.571Z",
+  "pilot": "2klips/alrescha-app",
+  "startToMapVisibleSeconds": 157.5,
+  "startToStructureReadySeconds": 151,
+  "startToWorkerIdleSeconds": 157.6,
+  "structureStage": "ready",
+  "workerExitCode": 0,
+  "workerSummary": [
+    "worker local-30992 draining 1 workspace(s) across 1 loop(s) (once)",
+    "  scan @1eb4de7 full → 1 rows",
+    "worker idle — exiting"
+  ],
+  "workspaceReused": true
+}

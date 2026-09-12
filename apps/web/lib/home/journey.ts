@@ -7,23 +7,70 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * 생성 → 첫 그래프 뷰 + MCP 토큰 발급. The builder is a pure function over
  * counted rows so the step logic is unit-testable offline; the loader is the
  * thin RLS wrapper, the same split as the map and commits loaders.
+ *
+ * Phase 4 Wave C todo 16 adds the first run's progress to the graph step:
+ * the two stages a connect queues (structure, then analysis), read from the
+ * queue and the repository row rather than guessed from a spinner. The two
+ * are independent states on purpose (보완 R-02): the structure being ready
+ * is what opens the map, whether or not the analysis has caught up.
  */
 
 export type JourneyStepState = "done" | "active" | "pending";
+
+/**
+ * One stage of the first run, as the queue and the repository row report it.
+ * `local` is the analysis of a locally pushed repository, which the hosted
+ * worker never runs (todo 17): it happens on the machine that has the files.
+ */
+export type ScanStageState =
+  "idle" | "queued" | "running" | "ready" | "failed" | "local";
+
+/** Whether the "다시 스캔" button has anything to do right now. */
+export type RescanAvailability =
+  "available" | "busy" | "local" | "never-scanned" | "none";
+
+export interface WorkspaceJourneyJobRow {
+  readonly created_at: string;
+  readonly kind: string;
+  readonly last_error: string | null;
+  readonly payload: { commitSha?: string } | null;
+  readonly status: string;
+}
+
+export interface WorkspaceJourneyRepositoryRow {
+  readonly full_name: string;
+  readonly id: string;
+  /** Null for a locally pushed repository (ADR-015). */
+  readonly installation_id: string | null;
+  readonly last_analyzed_commit_sha: string | null;
+  readonly last_scanned_commit_sha: string | null;
+}
 
 export interface WorkspaceJourneyRows {
   /** Newest-first installation revocation markers (empty when none). */
   readonly installations: readonly { revoked_at: string | null }[];
   /** Connected repositories, newest first. */
-  readonly repositories: readonly {
-    full_name: string;
-    last_scanned_commit_sha: string | null;
-  }[];
+  readonly repositories: readonly WorkspaceJourneyRepositoryRow[];
+  /** The newest repository's jobs, newest first. */
+  readonly jobs: readonly WorkspaceJourneyJobRow[];
   readonly nodeCount: number;
   readonly edgeCount: number;
   readonly agentAssertionCount: number;
   /** All tokens ever issued; active = not revoked. */
   readonly tokens: readonly { revoked_at: string | null }[];
+}
+
+export interface ScanProgressModel {
+  readonly analysis: ScanStageState;
+  /** The queue's own words for the newest failed analysis, verbatim. */
+  readonly analysisError: string | null;
+  /** The commit the newest scan is about, else the last one scanned. */
+  readonly commitSha: string | null;
+  readonly repositoryId: string | null;
+  readonly rescan: RescanAvailability;
+  readonly structure: ScanStageState;
+  /** The queue's own words for the newest failed scan, verbatim. */
+  readonly structureError: string | null;
 }
 
 export interface WorkspaceJourneyModel {
@@ -37,10 +84,87 @@ export interface WorkspaceJourneyModel {
   readonly edgeCount: number;
   readonly agentAssertionCount: number;
   readonly activeTokenCount: number;
+  readonly scan: ScanProgressModel;
   readonly steps: {
     readonly connect: JourneyStepState;
     readonly graph: JourneyStepState;
     readonly agent: JourneyStepState;
+  };
+}
+
+/**
+ * The newest job of a kind decides the stage while it is in flight or has
+ * failed; once it is out of the way the repository row says whether the
+ * stage's output exists. A job that never existed (a repository connected
+ * before backfills, a local push) falls through to the row as well.
+ */
+function stageOf(
+  job: WorkspaceJourneyJobRow | undefined,
+  outputExists: boolean,
+): ScanStageState {
+  switch (job?.status) {
+    case "queued":
+      return "queued";
+    case "running":
+      return "running";
+    case "failed":
+      return "failed";
+    default:
+      return outputExists ? "ready" : "idle";
+  }
+}
+
+export function buildScanProgress(
+  repository: WorkspaceJourneyRepositoryRow | null,
+  jobs: readonly WorkspaceJourneyJobRow[],
+): ScanProgressModel {
+  if (repository === null) {
+    return {
+      analysis: "idle",
+      analysisError: null,
+      commitSha: null,
+      repositoryId: null,
+      rescan: "none",
+      structure: "idle",
+      structureError: null,
+    };
+  }
+  const isLocal = repository.installation_id === null;
+  const scanJob = jobs.find(({ kind }) => kind === "scan");
+  const analyzeJob = jobs.find(({ kind }) => kind === "analyze");
+
+  const structure = stageOf(
+    scanJob,
+    repository.last_scanned_commit_sha !== null,
+  );
+  const analysis = isLocal
+    ? "local"
+    : stageOf(
+        analyzeJob,
+        repository.last_scanned_commit_sha !== null &&
+          repository.last_analyzed_commit_sha ===
+            repository.last_scanned_commit_sha,
+      );
+
+  const rescan: RescanAvailability = isLocal
+    ? "local"
+    : structure === "queued" || structure === "running"
+      ? "busy"
+      : repository.last_scanned_commit_sha === null
+        ? "never-scanned"
+        : "available";
+
+  return {
+    analysis,
+    analysisError:
+      analysis === "failed" ? (analyzeJob?.last_error ?? null) : null,
+    commitSha:
+      scanJob?.payload?.commitSha ?? repository.last_scanned_commit_sha,
+    repositoryId: repository.id,
+    rescan,
+    structure,
+    structureError:
+      structure === "failed" ? (scanJob?.last_error ?? null) : null,
   };
 }
 
@@ -77,6 +201,7 @@ export function buildWorkspaceJourney(
     lastScannedCommitSha: repository?.last_scanned_commit_sha ?? null,
     nodeCount: rows.nodeCount,
     repoFullName: repository?.full_name ?? null,
+    scan: buildScanProgress(repository, rows.jobs),
     steps: { agent, connect, graph },
     workspaceId,
     workspaceName,
@@ -108,7 +233,9 @@ export async function loadWorkspaceJourney(
         .limit(1),
       client
         .from("repositories")
-        .select("full_name,last_scanned_commit_sha")
+        .select(
+          "id,full_name,installation_id,last_scanned_commit_sha,last_analyzed_commit_sha",
+        )
         .eq("workspace_id", workspaceId)
         .order("created_at", { ascending: false }),
       client
@@ -143,6 +270,24 @@ export async function loadWorkspaceJourney(
     }
   }
 
+  const repositoryRows = (repositories.data ??
+    []) as WorkspaceJourneyRepositoryRow[];
+  const newest = repositoryRows[0];
+  // The first run's jobs, newest first. Twenty covers a backfill, a rescan
+  // or two and their analyses; the stage reads only the newest of each kind.
+  const jobs = newest
+    ? await client
+        .from("jobs")
+        .select("kind,status,last_error,created_at,payload")
+        .eq("workspace_id", workspaceId)
+        .eq("repository_id", newest.id)
+        .order("created_at", { ascending: false })
+        .limit(20)
+    : { data: [], error: null };
+  if (jobs.error) {
+    throw new Error(jobs.error.message);
+  }
+
   return buildWorkspaceJourney(
     workspaceId,
     String(workspaceResult.data.name ?? ""),
@@ -152,11 +297,9 @@ export async function loadWorkspaceJourney(
       installations: (installations.data ?? []) as {
         revoked_at: string | null;
       }[],
+      jobs: (jobs.data ?? []) as WorkspaceJourneyJobRow[],
       nodeCount: nodes.count ?? 0,
-      repositories: (repositories.data ?? []) as {
-        full_name: string;
-        last_scanned_commit_sha: string | null;
-      }[],
+      repositories: repositoryRows,
       tokens: (tokens.data ?? []) as { revoked_at: string | null }[],
     },
   );

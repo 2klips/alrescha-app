@@ -30,6 +30,15 @@ export const WORKSPACE_MAP = {
     title: "이 워크스페이스에는 아직 Graph가 없습니다",
     body: "GitHub 레포를 연결하면 commit마다 스캔이 문서·심볼·근거 노트를 이 화면에 그립니다. 원본 코드는 저장되지 않습니다 — Graph는 메타데이터만 담습니다.",
     connect: "GitHub 레포 연결",
+    /**
+     * A repository is connected and its first scan has not landed yet
+     * (Phase 4 Wave C todo 16): the screen opens the moment the structure
+     * is ready, so the honest state here is "coming", not "connect".
+     */
+    scanningTitle: (repo: string) => `${repo}의 첫 스캔이 진행 중입니다`,
+    scanningBody:
+      "구조가 준비되면 이 화면이 Graph를 그립니다. 분석은 그 뒤를 따르며, 진행 상황은 워크스페이스 홈에서 볼 수 있습니다.",
+    progress: "진행 상황 보기",
   },
 
   /** 방향 포커스 범례 — 선택한 노드 기준 엣지 색의 의미. */

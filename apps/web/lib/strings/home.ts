@@ -28,8 +28,17 @@ export const HOME = {
     graph: {
       title: "지식그래프 생성",
       body: "푸시마다 구조 엣지(import·호출·공변경)가 자동으로 쌓입니다.",
-      scanning: "첫 스캔을 기다리는 중 — 레포에 푸시하면 그래프가 생성됩니다.",
-      scanningHint: "진행 상황은 commit 분석에서 확인할 수 있습니다.",
+      scanning:
+        "첫 스캔이 예약되었습니다 — 구조가 준비되면 그래프가 열리고, 분석은 그 뒤를 따릅니다.",
+      scanningHint:
+        "아래 단계가 진행 상황입니다. commit 분석에서도 볼 수 있습니다.",
+      /**
+       * The connect stored the repository but could not read its default
+       * branch, so nothing was queued (Phase 4 Wave C todo 16). A push
+       * starts the scan; so does the button once a scan has landed.
+       */
+      notScheduled:
+        "첫 스캔을 예약하지 못했습니다 — 기본 브랜치의 최신 commit을 읽지 못했습니다. 레포에 push하면 스캔이 시작됩니다.",
       /** `노드 <n>개 · 연결 <m>개` */
       done: (nodes: number, edges: number) =>
         `노드 ${nodes}개 · 연결 ${edges}개`,
@@ -43,6 +52,53 @@ export const HOME = {
       done: (tokens: number) => `활성 토큰 ${tokens}개`,
       cta: "MCP 토큰 발급",
       manageCta: "토큰 관리",
+    },
+  },
+
+  /**
+   * The first run's two stages (Phase 4 Wave C todo 16, 보완 R-02). Structure
+   * and analysis are separate states: the map opens on the first, the
+   * Findings follow with the second.
+   */
+  scan: {
+    aria: "첫 스캔 진행",
+    stages: {
+      structure: "구조 스캔",
+      analysis: "분석",
+    },
+    stageHints: {
+      structure: "파일·심볼·링크를 읽어 Graph를 만듭니다.",
+      analysis: "요구사항·Findings·CI 증거를 판정합니다.",
+    },
+    states: {
+      idle: "대기",
+      queued: "대기열",
+      running: "진행 중",
+      ready: "완료",
+      failed: "실패",
+      local: "이 머신에서 실행",
+    },
+    localHint:
+      "로컬로 push한 레포의 분석은 alrescha serve --local 로 이 머신에서 엽니다. 서버는 파일을 읽을 수 없습니다.",
+    failedPrefix: "실패 사유",
+    commit: "commit",
+    rescan: {
+      cta: "다시 스캔",
+      busy: "스캔 진행 중",
+      neverScanned: "첫 스캔이 끝나면 다시 스캔할 수 있습니다.",
+      local: "로컬 레포는 alrescha push 로 다시 스캔합니다.",
+      outcomes: {
+        scheduled:
+          "다시 스캔을 예약했습니다 — 구조가 갱신되면 분석이 이어집니다.",
+        scheduledFull:
+          "전체 다시 링크를 예약했습니다 — 저장된 링크가 이전 세대라 모든 파일을 다시 읽습니다.",
+        neverScanned:
+          "아직 첫 스캔이 없어 다시 스캔할 기준이 없습니다. 레포에 push하면 시작됩니다.",
+        local:
+          "이 레포는 로컬에서 push되어 서버가 파일을 읽을 수 없습니다. alrescha push 로 다시 스캔하세요.",
+        rateLimited: "요청이 너무 잦습니다. 잠시 후 다시 시도하세요.",
+        error: "다시 스캔을 예약하지 못했습니다. 잠시 후 다시 시도하세요.",
+      },
     },
   },
 

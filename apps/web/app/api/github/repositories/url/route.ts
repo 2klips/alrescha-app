@@ -70,6 +70,10 @@ export async function POST(request: Request) {
   }
 
   const admin = createAdminClient();
+  // Whether the first scan was queued, carried to the home (todo 16). The
+  // decision function returns only the repository id, so this is captured
+  // beside it.
+  let backfillScheduled = false;
   const outcome = await decideUrlConnect(
     { repositoryUrl, workspaceId },
     {
@@ -81,6 +85,7 @@ export async function POST(request: Request) {
           workspaceId,
         });
         if (!connection.ok) throw new Error(connection.error);
+        backfillScheduled = connection.backfill.scheduled;
         return connection.repositoryId;
       },
       findAvailableRepository: async (workspace, fullName) => {
@@ -122,7 +127,13 @@ export async function POST(request: Request) {
 
   switch (outcome.kind) {
     case "connected":
-      return NextResponse.redirect(new URL("/app?github=pending", origin), 303);
+      return NextResponse.redirect(
+        new URL(
+          `/app?github=pending&backfill=${backfillScheduled ? "scheduled" : "unscheduled"}`,
+          origin,
+        ),
+        303,
+      );
     case "invalid_url":
       return backToConnect(origin, {
         url_reason: outcome.reason,

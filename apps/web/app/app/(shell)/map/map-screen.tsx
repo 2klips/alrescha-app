@@ -94,22 +94,42 @@ function CountChip({ label, value }: { label: string; value: number }) {
   );
 }
 
-function EmptyMap() {
+/**
+ * No nodes yet. Two honest reasons (Phase 4 Wave C todo 16): nothing is
+ * connected, or something is and its first scan has not landed — the
+ * screen opens the moment the structure is ready, so the second state points
+ * at the progress rather than at connect.
+ */
+function EmptyMap({ repoFullName }: { repoFullName: string | null }) {
+  const scanning = repoFullName !== null;
   return (
     <div
       className="graph-state empty-state"
+      data-map-empty={scanning ? "scanning" : "connect"}
       data-testid="workspace-map-empty"
       role="status"
     >
       <span className="pre-scan-orbit">
         <CircleDotDashed size={28} />
       </span>
-      <strong>{WORKSPACE_MAP.empty.title}</strong>
-      <span>{WORKSPACE_MAP.empty.body}</span>
+      <strong>
+        {scanning
+          ? WORKSPACE_MAP.empty.scanningTitle(repoFullName)
+          : WORKSPACE_MAP.empty.title}
+      </strong>
+      <span>
+        {scanning ? WORKSPACE_MAP.empty.scanningBody : WORKSPACE_MAP.empty.body}
+      </span>
       <div className="revoked-actions">
-        <Link className="btn btn-secondary btn-sm" href="/app/connect/github">
-          <Link2 size={14} /> {WORKSPACE_MAP.empty.connect}
-        </Link>
+        {scanning ? (
+          <Link className="btn btn-secondary btn-sm" href="/app">
+            <CircleDotDashed size={14} /> {WORKSPACE_MAP.empty.progress}
+          </Link>
+        ) : (
+          <Link className="btn btn-secondary btn-sm" href="/app/connect/github">
+            <Link2 size={14} /> {WORKSPACE_MAP.empty.connect}
+          </Link>
+        )}
       </div>
     </div>
   );
@@ -127,6 +147,8 @@ interface GraphStageSurfaceProps {
   onNodeSelect: (node: GraphNode) => void;
   onSettingsChange: (patch: Partial<PanelSettings>) => void;
   realtime: RealtimeGraphState;
+  /** The connected repository, for the empty state's "scanning" reading. */
+  repoFullName: string | null;
   selectedNodeId: string | null;
   settings: PanelSettings;
   visibleGraph: GraphData;
@@ -148,6 +170,7 @@ function GraphStageSurface({
   onNodeSelect,
   onSettingsChange,
   realtime,
+  repoFullName,
   selectedNodeId,
   settings,
   visibleGraph,
@@ -166,7 +189,7 @@ function GraphStageSurface({
     <div className="arr-graph-stage">
       <div className="graph-grid" />
       {isEmpty ? (
-        <EmptyMap />
+        <EmptyMap repoFullName={repoFullName} />
       ) : groupByArea ? (
         <FacetBandView
           data={visibleGraph}
@@ -644,6 +667,7 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
             onNodeSelect={setSelectedNode}
             onSettingsChange={updatePanelSettings}
             realtime={realtime}
+            repoFullName={model.repoFullName}
             selectedNodeId={selectedNode?.id ?? null}
             settings={panelSettings}
             visibleGraph={visibleGraph}
