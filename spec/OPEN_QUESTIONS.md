@@ -575,3 +575,11 @@
 - 임시 결정: 전체 스캔과 읽기 수 ≥32인 analyze는 `GET /repos/{o}/{r}/zipball/{sha}` 한 번(예산 1회 + codeload 다운로드는 미과금)으로 본문을 받아 메모리에서 답하고 패스가 끝나면 버린다(WORK_SPEC §3-3의 일시 읽기 약속 그대로). 증분 스캔은 파일당 읽기 유지. 캡(압축 64 MiB·엔트리 1 MiB — 압축 상태로만 들고 있다가 읽을 때 한 파일씩 전개)을 넘거나 아카이브가 없으면 파일당 읽기로 돌아가고 이유를 로그에 남긴다. 아카이브 요청 자체가 rate limit이면 잡을 연기한다(PR #9 경로). `SCAN_ARCHIVE_FETCH=off`로 끌 수 있다.
 - 필요한 결정: ⑴ enrich 잡(BYOK·크레딧, 파일당 읽기)에도 같은 아카이브를 적용한다 ⑵ analyze 임계값 32와 캡을 실측(대형 레포)으로 재조정한다 ⑶ 증분 스캔도 변경 파일 수가 임계값을 넘으면 아카이브를 쓴다.
 - 상태: open. ⑴은 enrich가 실사용될 때, ⑵⑶은 두 번째 파일럿 레포의 실측 뒤 판정.
+
+## OQ-068 — 홈의 `다시 스캔`은 resolver가 최신이면 증분이고, 사용자가 전체 재스캔을 요청할 표면이 없다
+
+- 발견: PR #12 프로덕션 롤아웃(2026-09-13 KST) / `apps/web/app/app/(shell)/home-screen.tsx`(폼에 `mode` 없음), `apps/web/app/app/(shell)/actions.ts`(`requested_mode: null`), `202609120004_first_scan_retry.sql`(큐가 모드를 정한다: 리졸버 세대가 뒤처졌을 때만 full), `.omo/evidence/phase4/pr12-production-rollout-2026-09-12.md`
+- 내용: 홈 버튼 1회는 `rescan=scheduled&mode=incremental`로 돌아온다. 이는 todo 16의 설계대로다(변경 없는 파일을 다시 읽지 않는다). 그래서 PR #12의 원래 인계가 말한 "홈 버튼으로 전체 아카이브 검증"은 틀렸고, Codex는 picker 재선택(backfill, `mode=full`)으로 전체 경로를 검증했다. MCP `request_rescan`은 `mode`를 받을 수 있으나 웹에는 전체 재스캔을 고를 곳이 없다.
+- 임시 결정: 현행 유지. 문서만 정정했다(인계·근거 문서). 홈 버튼을 무조건 full로 바꾸지 않는다 — 매 클릭이 전체 아카이브 다운로드가 되면 요청은 싸도 워커 시간은 그렇지 않다.
+- 필요한 결정: ⑴ 홈에 "전체 다시 스캔"을 별도 조작(예: 폼의 `mode=full` 옵션)으로 노출한다 ⑵ 운영 절차로 picker 재선택을 전체 재스캔 경로로 정한다(현재 사실상 그렇다) ⑶ 리졸버 세대와 무관하게 마지막 전체 스캔 뒤 N일이 지나면 큐가 full을 고른다.
+- 상태: open. 기본 후보 ⑵. 사용자 결정 필요.
