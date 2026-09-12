@@ -17,11 +17,17 @@ export interface ClaimedJob {
 
 export interface WorkerQueue {
   claim(workspaceId: string, workerId: string): Promise<ClaimedJob | null>;
+  /**
+   * `retryDelaySeconds`, when given with a failure, is the earliest the
+   * retry should be claimed — the queue takes the later of it and its own
+   * backoff (`finish_job`, 202609120003).
+   */
   finish(
     jobId: string,
     workerId: string,
     succeeded: boolean,
     error?: string,
+    retryDelaySeconds?: number,
   ): Promise<string>;
   heartbeat(jobId: string, workerId: string): Promise<boolean>;
   reject(jobId: string, workerId: string, error: string): Promise<string>;
@@ -38,6 +44,16 @@ interface ClaimedJobRow {
   repository_id: string;
   run_id: string;
   workspace_id: string;
+}
+
+/** PostgreSQL `undefined_function` (42883), from postgres.js or PGlite. */
+function isUndefinedFunction(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const { code, message } = error as { code?: unknown; message?: unknown };
+  return (
+    code === "42883" ||
+    (typeof message === "string" && /function .* does not exist/i.test(message))
+  );
 }
 
 export class PostgresWorkerQueue implements WorkerQueue {
@@ -73,7 +89,24 @@ export class PostgresWorkerQueue implements WorkerQueue {
     workerId: string,
     succeeded: boolean,
     error?: string,
+    retryDelaySeconds?: number,
   ): Promise<string> {
+    if (retryDelaySeconds !== undefined) {
+      try {
+        const rows = await this.sql<{ outcome: string }[]>`
+          select public.finish_job(
+            ${jobId}, ${workerId}, ${succeeded}, ${error ?? null}, ${retryDelaySeconds}
+          ) as outcome
+        `;
+        return rows[0]?.outcome ?? "ignored";
+      } catch (failure) {
+        // A worker released ahead of migration 202609120003 finds only the
+        // four-argument function. The job must still finish — on the
+        // queue's fixed backoff, as before — rather than hold its lease
+        // until the reaper takes it.
+        if (!isUndefinedFunction(failure)) throw failure;
+      }
+    }
     const rows = await this.sql<{ outcome: string }[]>`
       select public.finish_job(${jobId}, ${workerId}, ${succeeded}, ${error ?? null}) as outcome
     `;
