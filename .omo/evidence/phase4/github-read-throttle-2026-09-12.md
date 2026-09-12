@@ -6,7 +6,8 @@ backfill's scan and analyze both ended on repeated GitHub 403s, three
 attempts each, while one fresh request to the same path answered 200.
 **Boundary:** production was neither read nor changed; every statement below
 comes from the code, its tests and the rollout record. **Branch:**
-`claude/github-read-throttle` on `main@35c88d4`. **Scope:**
+`claude/github-read-throttle` on `main@35c88d4`, commit `8ac512e`; **PR:**
+<https://github.com/2klips/alrescha-app/pull/9>. **Scope:**
 `apps/worker/src/{github-repository-source,worker,queue}.ts` (+ tests),
 `supabase/migrations/202609120003_finish_job_retry_delay.sql` (new),
 `tests/{finish-job-retry-delay,github-read-throttle}.test.ts` (new),
