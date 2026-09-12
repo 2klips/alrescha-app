@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: 전체 스캔·analyze의 GitHub 읽기를 아카이브 한 번으로 (PR #11 후속)
 
 작성: 2026-09-12 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **대기 — 워커 재배포(`fly deploy`)만 남아 있다. 마이그레이션·웹 변경 없음.** 이 줄은 Codex가 갱신한다.
+상태: **Codex 롤아웃 완료(2026-09-12 UTC / 09-13 KST) — merge `c38dc08`, Fly v19. 홈 재스캔은 실제로 incremental이라, picker 재선택의 전체 backfill로 보완 검증했다. scan·analyze 모두 archive 사용·시도 1 succeeded·0크레딧, SHA 일치. 예산 4966→4963, 패스 후 메모리 감소, 큐 0·신규 실패 0·기존 14건 WARN. PR #11 실제 push 검증도 완료. 마이그레이션 없음.** [프로덕션 기록](../../.omo/evidence/phase4/pr12-production-rollout-2026-09-12.md).
 브랜치: `claude/scan-archive-fetch` (`main@0283dc0` 기준) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/scan-archive-fetch-2026-09-12.md`](../../.omo/evidence/phase4/scan-archive-fetch-2026-09-12.md) — 예산 계산, 변경, red/green, 라이브 측정, 게이트, 검증 절차가 전부 거기 있다. 이 문서는 그 요약이다.
 
@@ -40,7 +40,7 @@
 
 1. merge commit으로 머지. 머지 push는 v18에서 증분 pair(파일당, 요청 몇 개)를 큐잉한다 — 그대로 둔다.
 2. `fly deploy` → v19·새 이미지 확인. HTTP 포트 없음이 정상.
-3. 파일럿 홈에서 `2klips/alrescha-app`의 `다시 스캔` 1회(전체 rescan pair, 0크레딧). `fly logs -a arr-worker`에서 `scan @<sha> full (archive: ~1,2xx files, ~21,6xx KiB) → N rows`와 `analyze @<sha> ~29x bodies (archive: …)`, 두 잡 모두 attempt 1에 succeeded, 저장소 SHA 두 칼럼 = head. `(archive fallback: …)`가 보이면 파일당으로 착지한 것이니 이유를 기록한다.
+3. **Codex 프로덕션 검증 정정:** 현재 홈의 `다시 스캔`은 resolver가 최신이면 incremental pair다(폼에 `mode=full` 없음). 홈 버튼 1회는 그 동작으로 검증하고, **전체** 아카이브 검증은 같은 저장소를 정상 picker에서 재선택하여 생기는 full backfill 경로로 한다(0크레딧). 이번 실행은 두 경로를 구분해 완료했다. `fly logs -a arr-worker`에서 full backfill의 `scan @<sha> full (archive: …)`와 `analyze @<sha> … bodies (archive: …)`, 두 잡 attempt 1 succeeded, 저장소 SHA 두 칼럼 = head를 확인한다. `(archive fallback: …)`는 이유를 기록한다. 문서 정정을 위해 홈 버튼을 강제로 full로 바꾸거나 DB를 수동 수정하지 않는다.
 4. 창 안에 `403 primary-rate-limit` 줄이 없어야 한다. 가능하면 pair 전후 `GET /rate_limit`(installation 토큰)의 `remaining` 차이를 기록한다 — 몇 단위여야 한다.
 5. `pnpm ops:health`: 기존 14건 WARN 유지, 큐 0, 새 실패 0. 머신 메모리가 패스 뒤에 내려오는지 `fly status`/metrics로 한 번 본다(아카이브는 패스당 압축 21.5 MiB).
 
