@@ -2,12 +2,13 @@ import type {
   GitHubWebhookStore,
   PersistedGitHubWebhookEvent,
 } from "@alrescha/core";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "../supabase/admin";
 
-export function createGitHubWebhookStore(): GitHubWebhookStore {
-  const admin = createAdminClient();
-
+export function createGitHubWebhookStore(
+  admin: SupabaseClient = createAdminClient(),
+): GitHubWebhookStore {
   return {
     async insertEvent(event: PersistedGitHubWebhookEvent) {
       const { data, error } = await admin.rpc("ingest_github_webhook_event", {
@@ -45,11 +46,12 @@ export function createGitHubWebhookStore(): GitHubWebhookStore {
       return "inserted";
     },
 
-    async resolveRepository({
-      installationId,
-      repositoryFullName,
-      repositoryGitHubId,
-    }) {
+    // A delivery names the repository by id and by its *current* name. The
+    // id is the identity — it survives a rename — so the row is matched on
+    // it, within the installation the delivery came from. Matching the name
+    // too made every push to a renamed repository `repository_not_selected`
+    // until the row was renamed by hand (PR #10 follow-up).
+    async resolveRepository({ installationId, repositoryGitHubId }) {
       const installation = await admin
         .from("github_installations")
         .select("id, revoked_at, workspace_id")
@@ -70,7 +72,6 @@ export function createGitHubWebhookStore(): GitHubWebhookStore {
         .eq("workspace_id", installation.data.workspace_id)
         .eq("installation_id", installation.data.id)
         .eq("github_repository_id", repositoryGitHubId)
-        .eq("full_name", repositoryFullName)
         .maybeSingle();
 
       if (repository.error || !repository.data) {

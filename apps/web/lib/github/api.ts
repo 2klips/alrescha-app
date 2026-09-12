@@ -225,6 +225,65 @@ export async function fetchDefaultBranchHead(
 }
 
 /**
+ * GitHub's current record of a repository, read by its stable id, or why it
+ * could not be read.
+ */
+export type RepositoryRecord =
+  { repository: GitHubRepositoryChoice } | { error: string };
+
+/**
+ * The repository as GitHub names it *now*, read by the numeric id the
+ * installation token was just scoped to (PR #10 follow-up).
+ *
+ * The picker lists `github_available_repositories`, an inventory written
+ * once when the App was installed and never refreshed — so a repository
+ * renamed on GitHub kept its old label there, and selecting it copied that
+ * label into `repositories.full_name` over the canonical one. The id is the
+ * identity (a rename keeps it; GitHub's own redirect for a renamed
+ * repository lands on `/repositories/{id}`), so the read goes by id and the
+ * answer is refused unless it names that same id. Returns rather than
+ * throws: a connect must not fail over a name it can still keep, and the
+ * caller says which of the two it stored.
+ */
+export async function fetchRepositoryById(
+  input: { githubRepositoryId: number; token: string },
+  fetchImplementation: typeof fetch = fetch,
+): Promise<RepositoryRecord> {
+  let response: Response;
+  try {
+    response = await fetchImplementation(
+      `https://api.github.com/repositories/${input.githubRepositoryId}`,
+      {
+        headers: {
+          accept: "application/vnd.github+json",
+          authorization: `Bearer ${input.token}`,
+          "x-github-api-version": GITHUB_API_VERSION,
+        },
+      },
+    );
+  } catch (error) {
+    return {
+      error: `GitHub repository request failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    };
+  }
+  if (!response.ok) {
+    return { error: `GitHub repository request failed: ${response.status}` };
+  }
+  let repository: GitHubRepositoryChoice;
+  try {
+    repository = repositoryChoice(await response.json());
+  } catch {
+    return { error: "GitHub repository response is malformed." };
+  }
+  if (repository.githubRepositoryId !== input.githubRepositoryId) {
+    return { error: "GitHub repository response names another repository." };
+  }
+  return { repository };
+}
+
+/**
  * Finds an installation already allowed to read a repository. A 404 means
  * this GitHub App is not installed for the repository.
  */

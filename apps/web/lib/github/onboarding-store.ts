@@ -2,6 +2,7 @@ import type {
   GitHubOnboardingStore,
   GitHubRepositoryChoice,
 } from "@alrescha/core";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createAdminClient } from "../supabase/admin";
 import { recordSecurityAuditEvent } from "../security/audit";
@@ -99,42 +100,161 @@ export function createGitHubOnboardingStore(): GitHubOnboardingStore {
   };
 }
 
+/**
+ * Where a selection's name and default branch came from: GitHub's current
+ * record, read by id a moment ago, or the inventory the picker listed. The
+ * inventory is written once, when the App is installed, and can be stale
+ * (PR #10 follow-up: a repository renamed on GitHub kept its old label there,
+ * and selecting it wrote that label over the canonical name), so it is
+ * stored only where no row exists yet.
+ */
+export type RepositoryMetadataSource = "github" | "inventory";
+
+export interface SelectedRepository {
+  /**
+   * Whether an existing row kept its own name and branch because the
+   * selection could not vouch for new ones.
+   */
+  kept: boolean;
+  repositoryId: string;
+  /** What the row holds now. */
+  stored: GitHubRepositoryChoice;
+}
+
+const SELECTION_CONFLICT = "workspace_id,github_repository_id";
+
+/**
+ * Persists a selection, keyed by the workspace and the GitHub repository id
+ * — the identity a rename keeps — so a repeated selection updates the one
+ * row instead of creating another.
+ *
+ * With GitHub's record in hand the row takes its name and branch. Without
+ * it, an existing row keeps what it has (only `selected_at` and the
+ * installation move) and a first connect stores the inventory's values,
+ * which are all there is. A `23505` on the confirmed write is
+ * `repositories_workspace_full_name_unique` — the current name is already
+ * another row's in this workspace — and the row keeps its own name rather
+ * than failing the connect.
+ */
 export async function saveSelectedRepository(input: {
-  actorUserId?: string;
+  actorUserId?: string | undefined;
+  /** Extra fields for the `repository_selected` audit row. */
+  auditMetadata?: Readonly<Record<string, string | number | boolean>>;
+  client?: SupabaseClient | undefined;
   installationId: string;
+  recordAudit?: typeof recordSecurityAuditEvent | undefined;
   repository: GitHubRepositoryChoice;
+  source: RepositoryMetadataSource;
   workspaceId: string;
-}): Promise<{ repositoryId: string }> {
-  const admin = createAdminClient();
-  const saved = await admin
-    .from("repositories")
-    .upsert(
-      {
-        default_branch: input.repository.defaultBranch,
-        full_name: input.repository.fullName,
-        github_repository_id: input.repository.githubRepositoryId,
-        installation_id: input.installationId,
-        selected_at: new Date().toISOString(),
-        workspace_id: input.workspaceId,
-      },
-      { onConflict: "workspace_id,github_repository_id" },
-    )
-    .select("id")
-    .single();
-  if (saved.error || !saved.data) {
-    throw new Error(
-      `Failed to select GitHub repository: ${saved.error?.code ?? "unknown"}`,
-    );
+}): Promise<SelectedRepository> {
+  const admin = input.client ?? createAdminClient();
+  const selectedAt = new Date().toISOString();
+  const row = {
+    default_branch: input.repository.defaultBranch,
+    full_name: input.repository.fullName,
+    github_repository_id: input.repository.githubRepositoryId,
+    installation_id: input.installationId,
+    selected_at: selectedAt,
+    workspace_id: input.workspaceId,
+  };
+
+  let repositoryId: string | null = null;
+  let kept = false;
+  let stored = input.repository;
+
+  if (input.source === "github") {
+    const written = await admin
+      .from("repositories")
+      .upsert(row, { onConflict: SELECTION_CONFLICT })
+      .select("id")
+      .single();
+    if (written.error && written.error.code !== "23505") {
+      throw new Error(
+        `Failed to select GitHub repository: ${written.error.code}`,
+      );
+    }
+    if (written.data) repositoryId = String(written.data.id);
   }
+
+  if (repositoryId === null) {
+    const existing = await admin
+      .from("repositories")
+      .update({
+        installation_id: input.installationId,
+        selected_at: selectedAt,
+      })
+      .eq("workspace_id", input.workspaceId)
+      .eq("github_repository_id", input.repository.githubRepositoryId)
+      .select("id, default_branch, full_name")
+      .maybeSingle();
+    if (existing.error) {
+      throw new Error(
+        `Failed to select GitHub repository: ${existing.error.code}`,
+      );
+    }
+    if (existing.data) {
+      repositoryId = String(existing.data.id);
+      kept = true;
+      stored = {
+        defaultBranch: String(existing.data.default_branch),
+        fullName: String(existing.data.full_name),
+        githubRepositoryId: input.repository.githubRepositoryId,
+      };
+    }
+  }
+
+  if (repositoryId === null) {
+    const inserted = await admin
+      .from("repositories")
+      .upsert(row, { onConflict: SELECTION_CONFLICT })
+      .select("id")
+      .single();
+    if (inserted.error || !inserted.data) {
+      throw new Error(
+        `Failed to select GitHub repository: ${inserted.error?.code ?? "unknown"}`,
+      );
+    }
+    repositoryId = String(inserted.data.id);
+  }
+
   if (input.actorUserId) {
-    await recordSecurityAuditEvent({
+    await (input.recordAudit ?? recordSecurityAuditEvent)({
       action: "repository_selected",
       actorId: input.actorUserId,
       actorKind: "user",
-      targetId: saved.data.id,
+      metadata: { ...input.auditMetadata, kept, metadataSource: input.source },
+      targetId: repositoryId,
       targetType: "repository",
       workspaceId: input.workspaceId,
     });
   }
-  return { repositoryId: saved.data.id };
+  return { kept, repositoryId, stored };
+}
+
+/**
+ * Brings the picker's inventory row up to GitHub's current record, so the
+ * label it lists converges on the canonical name after one selection.
+ */
+export async function refreshAvailableRepository(input: {
+  client?: SupabaseClient | undefined;
+  installationId: string;
+  repository: GitHubRepositoryChoice;
+  workspaceId: string;
+}): Promise<void> {
+  const admin = input.client ?? createAdminClient();
+  const refreshed = await admin
+    .from("github_available_repositories")
+    .update({
+      default_branch: input.repository.defaultBranch,
+      full_name: input.repository.fullName,
+      observed_at: new Date().toISOString(),
+    })
+    .eq("workspace_id", input.workspaceId)
+    .eq("installation_id", input.installationId)
+    .eq("github_repository_id", input.repository.githubRepositoryId);
+  if (refreshed.error) {
+    throw new Error(
+      `Failed to refresh available repository: ${refreshed.error.code}`,
+    );
+  }
 }
