@@ -49,6 +49,7 @@ PR #4의 `202609110015_containment_join_shape.sql` 프로덕션 적용과 `arr-w
 PR #8 후속(큐잉된 GitHub 읽기의 403)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-12-github-throttle.md)로 넘어가 있다: `202609120003` 적용 → 워커 재배포 순서, 검증 절차, 롤백 지점.
 PR #9 후속(홈의 현재 저장소 규칙, 첫 스캔 재시도)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-12-home-selection.md)로 넘어가 있다: `202609120004` 적용 → 웹 머지 순서, 선택·복구 검증 절차, 롤백 지점.
 PR #10 후속(이름이 바뀐 저장소의 canonical 이름, 웹훅 id 매칭)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-12-repository-name.md)로 넘어가 있다: 웹 머지만, picker 재선택으로 검증, 롤백 지점.
+PR #11 후속(전체 스캔·analyze의 GitHub 읽기를 아카이브 한 번으로 — primary-rate-limit 근거)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-12-scan-archive.md)로 넘어가 있다: 워커 재배포만, 워커 로그의 `archive:` 줄로 검증, `SCAN_ARCHIVE_FETCH=off` 롤백 스위치.
 
 ### 사용자 보고 선호 (2026-09-12)
 

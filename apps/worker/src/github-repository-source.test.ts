@@ -1,3 +1,4 @@
+import { strToU8, zipSync } from "fflate";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -8,6 +9,7 @@ import {
   MAX_JITTER_MS,
   MAX_THROTTLE_PAUSES,
   classifyGitHubRefusal,
+  type ArchiveOptions,
 } from "./github-repository-source";
 
 /**
@@ -375,5 +377,217 @@ describe("GitHubRepositorySource under a rate limit", () => {
     expect(listed.entries.map(({ path }) => path)).toEqual(["README.md"]);
     expect(sleeps).toEqual([45_000]);
     expect(fetchImplementation).toHaveBeenCalledTimes(2);
+  });
+});
+
+/**
+ * One archive for a full pass (PR #9 follow-up, 2026-09-12).
+ *
+ * The first classified 403 this installation produced was the primary
+ * limit at `0/5000 core`: a full scan reads one body per file, and three
+ * full scans of a ~1,200-file repository in one hour are the whole budget.
+ * These pin the archive path — one request, every body, released with the
+ * pass — and every way it steps aside for the per-file reads it replaces.
+ */
+describe("GitHubRepositorySource over one archive", () => {
+  const ROOT = "owner-repo-aaaaaaa";
+  const ENTRIES: Record<string, string> = {
+    "README.md": "# Readme\n",
+    "src/a.ts": "export const a = 1;\n",
+  };
+  const zipball = (entries: Record<string, string> = ENTRIES) =>
+    zipSync(
+      Object.fromEntries(
+        Object.entries(entries).map(([path, text]) => [
+          `${ROOT}/${path}`,
+          strToU8(text),
+        ]),
+      ),
+    );
+  const ZIPBALL = `/repos/owner/repo/zipball/${SHA}`;
+
+  function archiveHarness(
+    script: (url: string, index: number) => Response,
+    archive: ArchiveOptions = {},
+  ) {
+    const clock = { now: T0 };
+    const urls: string[] = [];
+    const sleeps: number[] = [];
+    const source = new GitHubRepositorySource(
+      "owner",
+      "repo",
+      "installation-token",
+      (async (input) => {
+        urls.push(String(input));
+        return script(String(input), urls.length - 1);
+      }) as typeof fetch,
+      {
+        now: () => clock.now,
+        random: () => 0,
+        sleep: async (ms) => {
+          sleeps.push(ms);
+          clock.now += ms;
+        },
+      },
+      archive,
+    );
+    return { sleeps, source, urls };
+  }
+
+  const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
+
+  it("fetches every body in one request, and later reads make none", async () => {
+    const zip = zipball();
+    const h = archiveHarness(() => new Response(zip, { status: 200 }));
+
+    const prefetch = await h.source.prefetchArchive(SHA);
+    const readme = await h.source.fetchContent("README.md", SHA);
+    const module = await h.source.fetchContent("src/a.ts", SHA);
+
+    expect(prefetch).toEqual({
+      archived: true,
+      bytes: zip.byteLength,
+      files: 2,
+      release: expect.any(Function),
+    });
+    expect(h.urls).toEqual([`https://api.github.com${ZIPBALL}`]);
+    expect(text(readme)).toBe("# Readme\n");
+    expect(text(module)).toBe("export const a = 1;\n");
+  });
+
+  it("a path the archive lacks is read per file, so a 404 still reads as a 404", async () => {
+    const h = archiveHarness((url) =>
+      url.includes("/zipball/")
+        ? new Response(zipball(), { status: 200 })
+        : new Response(null, { status: 404 }),
+    );
+
+    await h.source.prefetchArchive(SHA);
+    await expect(
+      h.source.fetchContent("missing.md", SHA),
+    ).rejects.toMatchObject({ name: "GitHubRequestError", status: 404 });
+
+    expect(h.urls).toHaveLength(2);
+    expect(h.urls[1]).toContain("/contents/missing.md?ref=");
+  });
+
+  it("another commit is not served from this archive", async () => {
+    const other = "b".repeat(40);
+    const h = archiveHarness((url) =>
+      url.includes("/zipball/")
+        ? new Response(zipball(), { status: 200 })
+        : new Response("at the other commit", { status: 200 }),
+    );
+
+    await h.source.prefetchArchive(SHA);
+    const body = await h.source.fetchContent("README.md", other);
+
+    expect(text(body)).toBe("at the other commit");
+    expect(h.urls[1]).toContain(`/contents/README.md?ref=${other}`);
+  });
+
+  it("release returns the reads to per file", async () => {
+    const h = archiveHarness((url) =>
+      url.includes("/zipball/")
+        ? new Response(zipball(), { status: 200 })
+        : new Response("fresh", { status: 200 }),
+    );
+
+    const prefetch = await h.source.prefetchArchive(SHA);
+    prefetch.release();
+    const body = await h.source.fetchContent("README.md", SHA);
+
+    expect(text(body)).toBe("fresh");
+    expect(h.urls).toHaveLength(2);
+  });
+
+  it("an entry over the per-file cap is left to a per-file read", async () => {
+    const h = archiveHarness(
+      (url) =>
+        url.includes("/zipball/")
+          ? new Response(zipball(), { status: 200 })
+          : new Response("export const a = 1;\n", { status: 200 }),
+      // Exactly the README's size: the module (20 bytes) stays out.
+      { entryMaxBytes: "# Readme\n".length },
+    );
+
+    const prefetch = await h.source.prefetchArchive(SHA);
+    await h.source.fetchContent("README.md", SHA);
+    await h.source.fetchContent("src/a.ts", SHA);
+
+    expect(prefetch).toMatchObject({ archived: true, files: 1 });
+    expect(h.urls).toHaveLength(2);
+    expect(h.urls[1]).toContain("/contents/src/a.ts?ref=");
+  });
+
+  it("an archive over the byte cap is given up with a reason, nothing thrown, and the reads go per file", async () => {
+    const zip = zipball();
+    const h = archiveHarness(
+      (url) =>
+        url.includes("/zipball/")
+          ? new Response(zip, { status: 200 })
+          : new Response("# Readme\n", { status: 200 }),
+      { maxBytes: zip.byteLength - 1 },
+    );
+
+    const prefetch = await h.source.prefetchArchive(SHA);
+    const body = await h.source.fetchContent("README.md", SHA);
+
+    expect(prefetch).toEqual({
+      archived: false,
+      reason: `archive exceeds ${zip.byteLength - 1} compressed bytes`,
+      release: expect.any(Function),
+    });
+    expect(text(body)).toBe("# Readme\n");
+    expect(h.urls).toHaveLength(2);
+  });
+
+  it("bytes that are not an archive are refused with a reason", async () => {
+    const h = archiveHarness(
+      () => new Response("this is not a zip file", { status: 200 }),
+    );
+
+    const prefetch = await h.source.prefetchArchive(SHA);
+
+    expect(prefetch).toMatchObject({ archived: false });
+    expect((prefetch as { reason: string }).reason).toMatch(
+      /^archive could not be unpacked: /,
+    );
+  });
+
+  it("a missing archive (404) falls back to per-file reads and says so", async () => {
+    const h = archiveHarness(() => new Response(null, { status: 404 }));
+
+    const prefetch = await h.source.prefetchArchive(SHA);
+
+    expect(prefetch).toMatchObject({
+      archived: false,
+      reason: `archive request failed: GitHub repository request failed: 404 (${ZIPBALL})`,
+    });
+    expect(h.sleeps).toEqual([]);
+  });
+
+  it("a spent budget on the archive request is the job's to defer, not a fallback", async () => {
+    const h = archiveHarness(() => primaryLimit(1800));
+
+    await expect(h.source.prefetchArchive(SHA)).rejects.toMatchObject({
+      kind: "primary-rate-limit",
+      name: "GitHubRequestError",
+    });
+    expect(h.sleeps).toEqual([]);
+  });
+
+  it("switched off, it makes no request and says why", async () => {
+    const h = archiveHarness(() => new Response(zipball(), { status: 200 }), {
+      enabled: false,
+    });
+
+    const prefetch = await h.source.prefetchArchive(SHA);
+
+    expect(prefetch).toMatchObject({
+      archived: false,
+      reason: "archive reads are off (SCAN_ARCHIVE_FETCH)",
+    });
+    expect(h.urls).toEqual([]);
   });
 });
