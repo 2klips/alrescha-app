@@ -24,8 +24,9 @@ export interface OpsHealthSnapshot {
   /** Age in hours of the newest accepted webhook delivery, null if none. */
   readonly newestDeliveryAgeHours: number | null;
   /**
-   * Jobs that failed and exhausted their attempts within the last
-   * `PERMANENT_FAILURE_WINDOW_DAYS` days (by `completed_at`).
+   * Jobs in the terminal `failed` state — attempts exhausted, or rejected by
+   * the worker at any attempt (schema-invalid AI output, credits unavailable)
+   * — within the last `PERMANENT_FAILURE_WINDOW_DAYS` days by `completed_at`.
    */
   readonly permanentlyFailedJobs: number;
   /** Jobs queued or running. */
@@ -126,9 +127,13 @@ export const OPS_HEALTH_SNAPSHOT_QUERY = `
       from public.github_webhook_deliveries
     ) as newest_delivery_age_hours,
     (
+      -- 'failed' is terminal in every queue path: finish_job and
+      -- reap_stale_jobs write it only once attempts are exhausted, reject_job
+      -- writes it at whatever attempt the worker gave up on, and a retry goes
+      -- back to 'queued' instead. So no attempt clause belongs here — one
+      -- would hide rejections, which stop at attempt 1 of 3.
       select count(*)::int from public.jobs
       where status = 'failed'
-        and attempt_count >= max_attempts
         and (
           -- No queue function leaves a failed job unstamped; one that is
           -- stays counted rather than silently ageing out.
@@ -238,7 +243,7 @@ export function evaluateOpsHealth(
       value: snapshot.queueDepth,
     },
     {
-      detail: `${snapshot.permanentlyFailedJobs} job(s) failed permanently in the last ${PERMANENT_FAILURE_WINDOW_DAYS} days (warn above ${thresholds.permanentFailureWarn}; older failures no longer count).`,
+      detail: `${snapshot.permanentlyFailedJobs} job(s) failed permanently in the last ${PERMANENT_FAILURE_WINDOW_DAYS} days — attempts exhausted or rejected (warn above ${thresholds.permanentFailureWarn}; older failures no longer count).`,
       level:
         snapshot.permanentlyFailedJobs > thresholds.permanentFailureWarn
           ? "warn"

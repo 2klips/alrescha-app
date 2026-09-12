@@ -149,11 +149,12 @@ passed, 1 pre-existing platform skip.
 
 ## Observations left as they are
 
-- `reject_job` marks a job `failed` at whatever attempt it was on
-  (`claim_job` increments `attempt_count` on claim, so typically 1 of 3),
-  which `attempt_count >= max_attempts` does not count as permanent even
-  though rejection is terminal. Pre-existing and unchanged here; read from
-  code, not checked against production rows.
+- ~~`reject_job` marks a job `failed` at whatever attempt it was on (typically
+  1 of 3), which `attempt_count >= max_attempts` does not count as permanent
+  even though rejection is terminal.~~ **Resolved 2026-09-12** in
+  `.omo/evidence/phase4/ops-health-rejected-jobs-2026-09-12.md`: the clause
+  is gone, `status = 'failed'` is terminal in every queue path and is what
+  the window counts.
 - The check still counts every kind together. Splitting the detail by
   `kind` would say *which* producer is failing, which is the question the
   warning raises; not done, the threshold rationale is per-total.
