@@ -45,6 +45,35 @@ export function describeFailure(error: unknown): string {
   return error.message;
 }
 
+/**
+ * The furthest a retry is pushed out on the failure's own word. A GitHub
+ * primary window resets within the hour; anything claiming longer is capped
+ * rather than trusted.
+ */
+export const MAX_RETRY_DEFERRAL_SECONDS = 3600;
+
+/**
+ * When to retry, if the failure says. A refusal that names the moment its
+ * cause clears — GitHub's `retry-after` or rate-limit reset, carried as
+ * `retryAt` on `GitHubRequestError` — schedules the retry for then. The
+ * queue's own backoff is two and four seconds: against a reset half an hour
+ * away it spent all three attempts inside ten seconds (2026-09-12).
+ * A time already past, or no time at all, leaves that backoff alone.
+ */
+export function retryDelaySeconds(
+  error: unknown,
+  now = Date.now(),
+): number | undefined {
+  const retryAt = (error as { retryAt?: unknown } | null)?.retryAt;
+  if (typeof retryAt !== "number" || !Number.isFinite(retryAt)) {
+    return undefined;
+  }
+  // One second of grace, so the claim lands after the reset, not on it.
+  const seconds = Math.ceil((retryAt - now) / 1000) + 1;
+  if (seconds <= 1) return undefined;
+  return Math.min(seconds, MAX_RETRY_DEFERRAL_SECONDS);
+}
+
 export async function runWorkerOnce(input: {
   readonly handlers: JobHandlers;
   /** Sink for failure reasons; the outcome alone never says why a job retried. */
@@ -82,8 +111,11 @@ export async function runWorkerOnce(input: {
     return outcome === "succeeded" ? "succeeded" : "failed";
   } catch (error) {
     const message = describeFailure(error);
+    const deferral = retryDelaySeconds(error);
     input.log?.(
-      `  ${input.workerId} ${job.kind} ${job.id} attempt ${job.attemptCount} failed: ${message}`,
+      `  ${input.workerId} ${job.kind} ${job.id} attempt ${job.attemptCount} failed: ${message}${
+        deferral === undefined ? "" : ` — retry deferred ${deferral}s`
+      }`,
     );
     if (job.kind === "judge" && CREDIT_UNAVAILABLE.test(message)) {
       await input.queue.reject(
@@ -99,12 +131,16 @@ export async function runWorkerOnce(input: {
       await input.queue.reject(job.id, input.workerId, message);
       return "failed";
     }
-    const outcome = await input.queue.finish(
-      job.id,
-      input.workerId,
-      false,
-      message,
-    );
+    const outcome =
+      deferral === undefined
+        ? await input.queue.finish(job.id, input.workerId, false, message)
+        : await input.queue.finish(
+            job.id,
+            input.workerId,
+            false,
+            message,
+            deferral,
+          );
     return outcome === "retrying" ? "retrying" : "failed";
   } finally {
     clearInterval(renewal);

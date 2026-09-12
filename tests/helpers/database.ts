@@ -153,6 +153,8 @@ export const NULL_SHA_SCAN_GUARD_MIGRATION =
   "supabase/migrations/202609120001_null_sha_scan_guard.sql";
 export const BACKFILL_ANALYZE_PAIR_MIGRATION =
   "supabase/migrations/202609120002_backfill_analyze_pair.sql";
+export const FINISH_JOB_RETRY_DELAY_MIGRATION =
+  "supabase/migrations/202609120003_finish_job_retry_delay.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -219,6 +221,7 @@ export const ALL_MIGRATIONS = [
   CONTAINMENT_JOIN_SHAPE_MIGRATION,
   NULL_SHA_SCAN_GUARD_MIGRATION,
   BACKFILL_ANALYZE_PAIR_MIGRATION,
+  FINISH_JOB_RETRY_DELAY_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

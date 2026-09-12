@@ -3,7 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { JudgmentValidationError } from "@alrescha/core";
 
 import type { ClaimedJob, WorkerQueue } from "./queue";
-import { runWorkerOnce } from "./worker";
+import {
+  MAX_RETRY_DEFERRAL_SECONDS,
+  retryDelaySeconds,
+  runWorkerOnce,
+} from "./worker";
 
 const job = (overrides: Partial<ClaimedJob> = {}): ClaimedJob => ({
   attemptCount: 1,
@@ -27,6 +31,30 @@ function queue(claimedJob: ClaimedJob): WorkerQueue {
     reserveCredits: vi.fn().mockResolvedValue("01J0000000000000000000000E"),
   };
 }
+
+describe("retryDelaySeconds", () => {
+  const now = 1_757_678_400_000;
+
+  it("is the seconds until the named time, plus a second of grace", () => {
+    expect(retryDelaySeconds({ retryAt: now + 60_000 }, now)).toBe(61);
+    expect(retryDelaySeconds({ retryAt: now + 500 }, now)).toBe(2);
+  });
+
+  it("is bounded at an hour", () => {
+    expect(retryDelaySeconds({ retryAt: now + 10 * 3_600_000 }, now)).toBe(
+      MAX_RETRY_DEFERRAL_SECONDS,
+    );
+  });
+
+  it("is nothing for a time already past, a missing time, or a non-error", () => {
+    expect(retryDelaySeconds({ retryAt: now - 1 }, now)).toBeUndefined();
+    expect(retryDelaySeconds({ retryAt: null }, now)).toBeUndefined();
+    expect(retryDelaySeconds({ retryAt: "soon" }, now)).toBeUndefined();
+    expect(retryDelaySeconds(new Error("plain"), now)).toBeUndefined();
+    expect(retryDelaySeconds(null, now)).toBeUndefined();
+    expect(retryDelaySeconds(undefined, now)).toBeUndefined();
+  });
+});
 
 describe("background worker orchestration", () => {
   it("runs deterministic jobs without reserving credits", async () => {
@@ -182,6 +210,77 @@ describe("background worker orchestration", () => {
       "Provider returned a schema-invalid judgment.",
     );
     expect(workerQueue.finish).not.toHaveBeenCalled();
+  });
+
+  it("defers the retry to the time a rate-limited failure names", async () => {
+    const workerQueue = queue(job({ kind: "analyze" }));
+    vi.mocked(workerQueue.finish).mockResolvedValue("retrying");
+    const failure = Object.assign(
+      new Error(
+        "GitHub repository request failed: 403 primary-rate-limit; retry after 1800s",
+      ),
+      { retryAt: Date.now() + 1_800_000 },
+    );
+    const handler = vi.fn().mockRejectedValue(failure);
+    const log = vi.fn();
+
+    const outcome = await runWorkerOnce({
+      handlers: {
+        analyze: handler,
+        coach: handler,
+        enrich: handler,
+        judge: handler,
+        pack: handler,
+        scan: handler,
+      },
+      log,
+      queue: workerQueue,
+      workerId: "worker-1",
+      workspaceId: job().workspaceId,
+    });
+
+    expect(outcome).toBe("retrying");
+    const [, , succeeded, message, deferral] =
+      vi.mocked(workerQueue.finish).mock.calls[0] ?? [];
+    expect(succeeded).toBe(false);
+    expect(message).toBe(failure.message);
+    // 1800s plus a second of grace, less however long the test itself took.
+    expect(deferral).toBeGreaterThanOrEqual(1799);
+    expect(deferral).toBeLessThanOrEqual(1801);
+    expect(log).toHaveBeenCalledWith(
+      expect.stringMatching(/retry deferred 18\d\ds$/),
+    );
+  });
+
+  it("leaves the queue's own backoff alone when the failure names no time", async () => {
+    const workerQueue = queue(job());
+    vi.mocked(workerQueue.finish).mockResolvedValue("retrying");
+    const handler = vi
+      .fn()
+      .mockRejectedValue(
+        new Error("GitHub repository request failed: 403 forbidden"),
+      );
+
+    await runWorkerOnce({
+      handlers: {
+        analyze: handler,
+        coach: handler,
+        enrich: handler,
+        judge: handler,
+        pack: handler,
+        scan: handler,
+      },
+      queue: workerQueue,
+      workerId: "worker-1",
+      workspaceId: job().workspaceId,
+    });
+
+    expect(workerQueue.finish).toHaveBeenCalledWith(
+      "01J0000000000000000000000A",
+      "worker-1",
+      false,
+      "GitHub repository request failed: 403 forbidden",
+    );
   });
 
   it("pauses exhausted-credit judgments with top-up guidance", async () => {

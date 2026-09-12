@@ -200,6 +200,8 @@ DATABASE_URL="<프로덕션 세션 풀러 URL>" pnpm ops:health
 
 `permanent-failures`는 전 기간 누적이 아니라 **`completed_at` 기준 최근 7일 창**(`PERMANENT_FAILURE_WINDOW_DAYS`)만 센다. 원인을 고친 뒤 새 실패가 없으면 창이 지나면서 스스로 `ok`로 돌아오므로, 실패 행을 `cancelled`로 철회하는 수동 정리는 경고를 즉시 걷고 싶을 때만 선택한다(철회한 행은 그 자리에서 빠진다). 7일은 실측이 아닌 가정값이다 — 하루 1회 실행 주기에서 한 주 내내 보이고, GitHub App Recent Deliveries 보존 기간(7일)과 같다. 임계값 5는 그대로다. 세는 것은 `status = 'failed'` 전부다 — 큐에서 `failed`는 언제나 종결 상태이며(재시도는 `queued`로 돌아간다), 워커가 스키마 불량 AI 출력·크레딧 부족으로 `reject_job`한 잡은 시도 1/3에서 끝나므로 "재시도 소진" 조건으로는 보이지 않았다(2026-09-12 수정, `.omo/evidence/phase4/ops-health-rejected-jobs-2026-09-12.md`). 거절은 환불 경로이기도 하므로 체크리스트의 "provider failures/refunds" 감시가 이 신호에 들어온다. `completed_at`이 비어 있는 failed 행은 큐 함수가 만들지 않으므로, 나타나면 창과 무관하게 계속 센다. 배경(2026-09-12 null sha 실패 6건): `.omo/evidence/phase4/ops-health-permanent-failure-window-2026-09-12.md`, 원인·검증 쿼리·철회 SQL: `.omo/evidence/phase4/null-sha-scan-requests-2026-09-12.md`.
 
+**GitHub 403의 종류는 `last_error`가 말한다(2026-09-12).** 큐잉된 scan/analyze의 GitHub 읽기가 거부되면 워커는 응답 헤더만으로 종류를 분류해 `GitHub repository request failed: 403 <kind>; retry after Ns; rate limit R/L core, resets in Ss (경로)` 형태로 남긴다. `primary-rate-limit`은 설치의 시간당 예산 소진(reset까지 대기), `secondary-rate-limit`은 분당 요청 압력(`retry-after`, 보통 60초), `forbidden`은 기다려도 바뀌지 않는 권한·범위 거부, `rate-limited`는 힌트 없는 429다. 90초 이내 대기는 잡 안에서 소화하고, 그보다 긴 reset은 `finish_job`의 다섯 번째 인자(`202609120003`)로 재시도를 그 시각까지 미룬다(상한 1시간) — `queued` 상태로 `available_at`이 수백 초 뒤라면 그것이 정상 동작이니 재큐잉하지 않는다. 응답 본문은 어디에도 남기지 않는다. 배경·검증 절차: `.omo/evidence/phase4/github-read-throttle-2026-09-12.md`.
+
 **권장 주기:** 파일럿 규모에서는 사람이 하루 1회 + 배포 직후 실행. 무인 스케줄링은 러너 자격증명이 필요하므로 도입하지 않았다.
 
 ### 10.2 DB에서 보이지 않는 것 — 콘솔에서 봐야 하는 신호
