@@ -58,4 +58,4 @@
 
 ## PR
 
-- (머지 전 채움)
+- <https://github.com/2klips/alrescha-app/pull/12> — 커밋 2건: `4a4e2c6`(Codex의 PR #11 롤아웃 기록·프론트 로그·WORKLOG 행·인수인계 상태 줄, 작업 트리에 남아 있던 그대로), `4831bcd`(구현·테스트·문서·라이브 측정). 머지 후 `fly deploy`가 필요하다.

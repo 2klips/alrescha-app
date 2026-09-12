@@ -9,7 +9,8 @@ run"), one in production during PR #11's rollout
 330 s, both jobs landing on attempt 2). **Boundary:** production was neither
 read nor changed; no pacer, concurrency dial, failed row, threshold or
 migration was touched. **Branch:** `claude/scan-archive-fetch` on
-`main@0283dc0`. **Scope:** `apps/worker/src/github-repository-source.ts`
+`main@0283dc0`, commit `4831bcd`; **PR:**
+<https://github.com/2klips/alrescha-app/pull/12>. **Scope:** `apps/worker/src/github-repository-source.ts`
 (+ test), `apps/worker/src/repository-scan.ts` (+ test, new),
 `apps/worker/src/analysis-job.ts` (+ test), `apps/worker/src/run-local.ts`,
 `apps/worker/src/github-archive-scan.test.ts` (new),
