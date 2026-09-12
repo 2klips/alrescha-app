@@ -231,6 +231,19 @@ export interface AnalysisJobDependencies {
   /** Fetches CI evidence for the analysed commit; omitted disables it. */
   readonly collectCiEvidence?: CiEvidenceCollector;
   /**
+   * Told how many bodies the job is about to read, before the first one, so
+   * a source can fetch them all at once (one archive request instead of one
+   * per file — PR #9 follow-up) and hand back the release that drops them.
+   * Omitted, every body is read on its own as before.
+   */
+  readonly prepareSources?: (input: {
+    commitSha: string;
+    reads: number;
+    repositoryFullName: string;
+    repositoryId: string;
+    workspaceId: string;
+  }) => Promise<() => void>;
+  /**
    * Transient read of one file at the analysed commit. Returning null drops the
    * file from the analysis rather than failing the job: a file can vanish
    * between the scan and the analysis, and a missing body is not a defect.
@@ -466,7 +479,7 @@ async function collectedCiEvidence(input: {
 export function createAnalysisJobHandler(
   dependencies: AnalysisJobDependencies,
 ): JobHandler {
-  const { collectCiEvidence, readSource, store } = dependencies;
+  const { collectCiEvidence, prepareSources, readSource, store } = dependencies;
 
   return async (job, context) => {
     const commitSha = commitShaOf(job);
@@ -483,26 +496,40 @@ export function createAnalysisJobHandler(
     }
 
     const files: AssuranceSourceFile[] = [];
-    for (const artifact of artifacts) {
-      const needsSource = assuranceSourceRequired(artifact);
-      const source = needsSource
-        ? await readSource({
-            commitSha,
-            path: artifact.path,
-            repositoryFullName,
-            repositoryId,
-            workspaceId,
-          })
-        : "";
-      if (source === null) continue;
-      files.push({
-        classification: artifact.classification,
-        exportedSymbols: artifact.exportedSymbols,
-        path: artifact.path,
-        source,
-      });
-      // Fetching bodies is the long part of this job; keep the lease alive.
-      if (needsSource) await context.heartbeat();
+    const reads = artifacts.filter(assuranceSourceRequired).length;
+    const releaseSources = prepareSources
+      ? await prepareSources({
+          commitSha,
+          reads,
+          repositoryFullName,
+          repositoryId,
+          workspaceId,
+        })
+      : () => {};
+    try {
+      for (const artifact of artifacts) {
+        const needsSource = assuranceSourceRequired(artifact);
+        const source = needsSource
+          ? await readSource({
+              commitSha,
+              path: artifact.path,
+              repositoryFullName,
+              repositoryId,
+              workspaceId,
+            })
+          : "";
+        if (source === null) continue;
+        files.push({
+          classification: artifact.classification,
+          exportedSymbols: artifact.exportedSymbols,
+          path: artifact.path,
+          source,
+        });
+        // Fetching bodies is the long part of this job; keep the lease alive.
+        if (needsSource) await context.heartbeat();
+      }
+    } finally {
+      releaseSources();
     }
 
     const nodeByPath = new Map(

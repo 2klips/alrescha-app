@@ -4,6 +4,7 @@ import {
   type RepositoryTree,
   type RepositoryTreeEntry,
 } from "@alrescha/core";
+import { unzipSync } from "fflate";
 
 /**
  * What a GitHub refusal was, read from the response's safe metadata alone
@@ -346,7 +347,148 @@ function treeResponse(value: unknown): RepositoryTree {
   return { entries, treeSha: response.sha, truncated: response.truncated };
 }
 
+/**
+ * One archive instead of one request per file (PR #9 follow-up, 2026-09-12).
+ *
+ * The first classified 403 this installation produced read
+ * `primary-rate-limit; rate limit 0/5000 core`: a full scan reads one
+ * `contents` body per file, the pilot has ~1,200 files, and three full scans
+ * in one hour spent the installation's whole budget. GitHub serves the same
+ * bodies as one archive — `GET /repos/{owner}/{repo}/zipball/{ref}`: one
+ * request against the budget, then a download from `codeload` that is not
+ * counted — so a full pass fetches the archive once and answers
+ * `fetchContent` from it. The bodies live in memory only until the pass
+ * releases them and are written nowhere: the same transient promise as the
+ * per-file reads (WORK_SPEC §3-3).
+ */
+export interface ArchiveOptions {
+  /** Off: every body is read per file, as before. On by default. */
+  readonly enabled?: boolean;
+  /** An entry larger than this is left to a per-file read. */
+  readonly entryMaxBytes?: number;
+  /** The most compressed bytes downloaded before the archive is given up. */
+  readonly maxBytes?: number;
+}
+
+export const ARCHIVE_MAX_BYTES = 64 * 1024 * 1024;
+/** The scanner's own default file cap; a bigger file is skipped by size anyway. */
+export const ARCHIVE_ENTRY_MAX_BYTES = 1024 * 1024;
+/**
+ * From how many per-file reads the archive is the cheaper way: one request
+ * and a download of the whole repository, against that many requests. A
+ * push that touched a handful of files is read per file; an analysis over
+ * a repository's documents and tests is not.
+ */
+export const ARCHIVE_WORTHWHILE_READS = 32;
+
+export type ArchivePrefetch =
+  | {
+      readonly archived: true;
+      /** Compressed bytes downloaded. */
+      readonly bytes: number;
+      /** Entries held in memory. */
+      readonly files: number;
+      /** Drops the bodies; later reads go per file again. */
+      readonly release: () => void;
+    }
+  | {
+      readonly archived: false;
+      /** Why the bodies are read per file instead. Never a response body. */
+      readonly reason: string;
+      readonly release: () => void;
+    };
+
+interface LoadedArchive {
+  readonly bytes: number;
+  readonly commitSha: string;
+  /** The archive as downloaded, still compressed; a body is inflated when read. */
+  readonly data: Uint8Array;
+  /** Repository path → the entry's name in the archive. */
+  readonly entries: ReadonlyMap<string, string>;
+}
+
+/** The body, up to `maxBytes`; `null` as soon as it would exceed them. */
+async function readBounded(
+  response: Response,
+  maxBytes: number,
+): Promise<Uint8Array | null> {
+  const declared = Number.parseInt(
+    response.headers.get("content-length") ?? "",
+    10,
+  );
+  if (Number.isSafeInteger(declared) && declared > maxBytes) {
+    await response.body?.cancel();
+    return null;
+  }
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return bytes.byteLength > maxBytes ? null : bytes;
+  }
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+/**
+ * The archive's entries by repository path, inflating none of them. GitHub
+ * roots every entry under `<owner>-<repo>-<sha>/`, and that segment is
+ * dropped; directories, entries over the per-file cap and anything not under
+ * a root folder are left out. Only the compressed bytes stay in memory — the
+ * pilot's archive is ~21 MiB compressed and several times that inflated, and
+ * a worker runs several passes side by side on a 512 MiB machine — and each
+ * body is inflated on the read that wants it. Bytes that are not an archive
+ * fail here, before anything is kept.
+ */
+function indexArchive(
+  bytes: Uint8Array,
+  entryMaxBytes: number,
+): Map<string, string> {
+  const entries = new Map<string, string>();
+  unzipSync(bytes, {
+    filter: (file) => {
+      if (file.name.endsWith("/") || file.originalSize > entryMaxBytes) {
+        return false;
+      }
+      const slash = file.name.indexOf("/");
+      if (slash > 0 && slash < file.name.length - 1) {
+        entries.set(file.name.slice(slash + 1), file.name);
+      }
+      return false;
+    },
+  });
+  return entries;
+}
+
+/** One body out of the archive, inflated for this read and not kept. */
+function inflateEntry(
+  archive: LoadedArchive,
+  name: string,
+): Uint8Array | undefined {
+  return unzipSync(archive.data, { filter: (file) => file.name === name })[
+    name
+  ];
+}
+
 export class GitHubRepositorySource implements RepositorySource {
+  private archive: LoadedArchive | null = null;
+  private readonly archiveOptions: Required<ArchiveOptions>;
   private readonly gate: ThrottleGate;
   private readonly now: () => number;
 
@@ -356,6 +498,7 @@ export class GitHubRepositorySource implements RepositorySource {
     private readonly installationToken: string,
     private readonly fetchImplementation: typeof fetch = fetch,
     clock: GitHubSourceClock = {},
+    archive: ArchiveOptions = {},
   ) {
     this.now = clock.now ?? Date.now;
     this.gate = new ThrottleGate(
@@ -363,6 +506,83 @@ export class GitHubRepositorySource implements RepositorySource {
       clock.random ?? Math.random,
       clock.sleep ?? defaultSleep,
     );
+    this.archiveOptions = {
+      enabled: archive.enabled ?? true,
+      entryMaxBytes: archive.entryMaxBytes ?? ARCHIVE_ENTRY_MAX_BYTES,
+      maxBytes: archive.maxBytes ?? ARCHIVE_MAX_BYTES,
+    };
+  }
+
+  /**
+   * Fetch every body at a commit as one archive and answer `fetchContent`
+   * from it until `release` is called. Says why when it cannot — no archive,
+   * one over a cap, one that does not unpack — and the reads then go per
+   * file, which is what they did before. A rate limit on the request itself
+   * is thrown rather than worked around: the per-file reads would meet the
+   * same limit, and the job is the one to defer.
+   */
+  async prefetchArchive(commitSha: string): Promise<ArchivePrefetch> {
+    const release = () => {
+      if (this.archive?.commitSha === commitSha) this.archive = null;
+    };
+    const fallback = (reason: string): ArchivePrefetch => ({
+      archived: false,
+      reason,
+      release,
+    });
+    if (!this.archiveOptions.enabled) {
+      return fallback("archive reads are off (SCAN_ARCHIVE_FETCH)");
+    }
+    const loaded = this.archive;
+    if (loaded?.commitSha === commitSha) {
+      return {
+        archived: true,
+        bytes: loaded.bytes,
+        files: loaded.entries.size,
+        release,
+      };
+    }
+
+    const owner = encodeURIComponent(this.owner);
+    const repository = encodeURIComponent(this.repository);
+    let response: Response;
+    try {
+      response = await this.request(
+        `/repos/${owner}/${repository}/zipball/${encodeURIComponent(commitSha)}`,
+      );
+    } catch (error) {
+      if (
+        error instanceof GitHubRequestError &&
+        error.kind !== "other" &&
+        error.kind !== "forbidden"
+      ) {
+        throw error;
+      }
+      return fallback(
+        `archive request failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    const bytes = await readBounded(response, this.archiveOptions.maxBytes);
+    if (bytes === null) {
+      return fallback(
+        `archive exceeds ${this.archiveOptions.maxBytes} compressed bytes`,
+      );
+    }
+    let entries: Map<string, string>;
+    try {
+      entries = indexArchive(bytes, this.archiveOptions.entryMaxBytes);
+    } catch (error) {
+      return fallback(
+        `archive could not be unpacked: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    this.archive = { bytes: bytes.byteLength, commitSha, data: bytes, entries };
+    return {
+      archived: true,
+      bytes: bytes.byteLength,
+      files: entries.size,
+      release,
+    };
   }
 
   private async request(
@@ -441,6 +661,13 @@ export class GitHubRepositorySource implements RepositorySource {
   }
 
   async fetchContent(path: string, commitSha: string): Promise<Uint8Array> {
+    const loaded = this.archive;
+    if (loaded?.commitSha === commitSha) {
+      const name = loaded.entries.get(path);
+      const body = name === undefined ? undefined : inflateEntry(loaded, name);
+      if (body !== undefined) return body;
+    }
+
     const owner = encodeURIComponent(this.owner);
     const repository = encodeURIComponent(this.repository);
     const encodedPath = path.split("/").map(encodeURIComponent).join("/");

@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: 이름이 바뀐 저장소의 canonical 이름 유지 (PR #10 후속)
 
 작성: 2026-09-12 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **대기 — 웹 배포(머지)만 남아 있다. 마이그레이션·워커 배포 없음.** 이 줄은 Codex가 갱신한다.
+상태: **2026-09-12 Codex 롤아웃 완료 — PR #11 merge `0283dc0`, Vercel SUCCESS, picker 재선택으로 홈·헤더·inventory의 canonical 이름과 감사 metadata 확인. 프로덕션 primary-rate-limit 이후 새 pair가 자동 재개해 모두 succeeded(시도 2·0크레딧), SHA 일치·큐 0·신규 실패 0·기존 14건 WARN. 다음 실제 push의 웹훅 검증은 이월. 마이그레이션·워커 배포 없음.** [프로덕션 기록](../../.omo/evidence/phase4/pr11-production-rollout-2026-09-12.md).
 브랜치: `claude/repository-canonical-name` (`main@80a99cb` 기준) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/repository-canonical-name-2026-09-12.md`](../../.omo/evidence/phase4/repository-canonical-name-2026-09-12.md) — 원인 사슬, 변경, red/green, 라이브 실행, 게이트, 검증 절차가 전부 거기 있다. 이 문서는 그 요약이다.
 

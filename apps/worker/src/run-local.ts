@@ -30,14 +30,18 @@ import { createCoachingJobHandler } from "./coaching-job";
 import { runDrainLoop } from "./drain-loop";
 import { createEnrichJobHandler } from "./enrich-job";
 import { GitHubCiEvidenceSource } from "./github-ci-evidence-source";
-import { GitHubRepositorySource } from "./github-repository-source";
+import {
+  ARCHIVE_WORTHWHILE_READS,
+  GitHubRepositorySource,
+  type ArchiveOptions,
+} from "./github-repository-source";
 import { createJudgmentJobHandler } from "./judgment-job";
 import { PostgresAnalysisStore } from "./postgres-analysis-store";
 import { PostgresCoachingJobStore } from "./postgres-coaching-store";
 import { PostgresEnrichJobStore } from "./postgres-enrich-store";
 import { PostgresJudgmentJobStore } from "./postgres-judgment-store";
 import { RepositoryScanStore } from "./repository-scan-store";
-import { runRepositoryScan } from "./repository-scan";
+import { runRepositoryScan, type ScanArchiveSummary } from "./repository-scan";
 import { reservedPackHandler } from "./reserved-jobs";
 import { createExpiringSourceCache, readTransientSource } from "./source-cache";
 import { type JobHandler, type JobHandlers } from "./worker";
@@ -99,6 +103,26 @@ function scanFetchConcurrency(): number | undefined {
   if (!raw) return undefined;
   const parsed = Number.parseInt(raw, 10);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+/**
+ * Whether a full scan reads its bodies as one archive (PR #9 follow-up).
+ * On unless `SCAN_ARCHIVE_FETCH=off`: the switch exists so an operator can
+ * return to per-file reads without a code change if the archive path
+ * misbehaves against a repository the tests did not foresee.
+ */
+function scanArchiveOptions(): ArchiveOptions {
+  const raw = process.env.SCAN_ARCHIVE_FETCH?.trim().toLowerCase();
+  return raw === "off" || raw === "0" || raw === "false"
+    ? { enabled: false }
+    : {};
+}
+
+function describeArchive(archive: ScanArchiveSummary): string {
+  if (archive === null) return "";
+  if (!archive.archived) return ` (archive fallback: ${archive.reason})`;
+  const kib = Math.round(archive.bytes / 1024).toLocaleString("en-US");
+  return ` (archive: ${archive.files.toLocaleString("en-US")} files, ${kib} KiB)`;
 }
 
 /**
@@ -202,7 +226,14 @@ function createSourceFactory(sql: postgres.Sql) {
       // one per job would double the calls for no separation (todo 18).
       source: {
         ci: new GitHubCiEvidenceSource(owner, repository, token.token),
-        contents: new GitHubRepositorySource(owner, repository, token.token),
+        contents: new GitHubRepositorySource(
+          owner,
+          repository,
+          token.token,
+          undefined,
+          {},
+          scanArchiveOptions(),
+        ),
       },
     };
   });
@@ -266,7 +297,7 @@ function createScanHandler(
       workspaceId: job.workspaceId,
     });
     console.log(
-      `  scan @${commitSha.slice(0, 7)} ${result.linkScope} → ${result.touchedRows} rows`,
+      `  scan @${commitSha.slice(0, 7)} ${result.linkScope}${describeArchive(result.archive)} → ${result.touchedRows} rows`,
     );
   };
 }
@@ -291,6 +322,28 @@ async function main(): Promise<void> {
       // Actions artifacts and check runs for the analysed commit — the only
       // input that can raise a node to `verified` (todo 18, ADR-001).
       collectCiEvidence: createCiEvidenceCollector(sourceFor),
+      // The documents and tests the rules read, as one archive when there
+      // are enough of them to be worth one request (PR #9 follow-up); the
+      // bodies are dropped again when the reads are done.
+      prepareSources: async ({
+        commitSha,
+        reads,
+        repositoryId,
+        workspaceId,
+      }) => {
+        if (reads < ARCHIVE_WORTHWHILE_READS) return () => {};
+        const archive = await (
+          await contentsFor(sourceFor, workspaceId, repositoryId)
+        ).prefetchArchive(commitSha);
+        console.log(
+          `  analyze @${commitSha.slice(0, 7)} ${reads} bodies${describeArchive(
+            archive.archived
+              ? { archived: true, bytes: archive.bytes, files: archive.files }
+              : { archived: false, reason: archive.reason },
+          )}`,
+        );
+        return archive.release;
+      },
       // Transient: the body is decoded, handed to the rules, and dropped.
       // Only a 404 reads as "file vanished" — any other failure (dead token,
       // throttling) fails the job into the retry path instead of letting the

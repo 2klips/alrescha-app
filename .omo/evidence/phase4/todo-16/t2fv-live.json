@@ -5,19 +5,20 @@
     "last_error": null
   },
   "analysisStage": "ready",
-  "head": "1eb4de74514fe5e8c9c0ac0241edf395f8dce6da",
+  "head": "0283dc09acd48e080f2d2bb254fe3b304c432dcf",
   "mapNodeCount": 1000,
   "measured": "rescan-full",
-  "measuredAt": "2026-09-12T11:31:50.571Z",
+  "measuredAt": "2026-09-12T14:48:11.240Z",
   "pilot": "2klips/alrescha-app",
-  "startToMapVisibleSeconds": 157.5,
-  "startToStructureReadySeconds": 151,
-  "startToWorkerIdleSeconds": 157.6,
+  "startToMapVisibleSeconds": 18.8,
+  "startToStructureReadySeconds": 12.3,
+  "startToWorkerIdleSeconds": 18.9,
   "structureStage": "ready",
   "workerExitCode": 0,
   "workerSummary": [
-    "worker local-30992 draining 1 workspace(s) across 1 loop(s) (once)",
-    "  scan @1eb4de7 full → 1 rows",
+    "worker local-24608 draining 1 workspace(s) across 1 loop(s) (once)",
+    "  scan @0283dc0 full (archive: 1,216 files, 21,588 KiB) → 1 rows",
+    "  analyze @0283dc0 291 bodies (archive: 1,216 files, 21,588 KiB)",
     "worker idle — exiting"
   ],
   "workspaceReused": true

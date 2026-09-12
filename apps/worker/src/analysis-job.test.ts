@@ -643,3 +643,64 @@ describe("analyze job — CI evidence", () => {
     expect(recorded.ciEvidence).toEqual([]);
   });
 });
+
+/**
+ * The bodies as one archive (PR #9 follow-up, 2026-09-12). The job says how
+ * many it is about to read before the first one, so the worker can decide
+ * whether one archive request beats that many per-file reads, and drops
+ * them when the reads are done — landed or not.
+ */
+describe("analyze job and prepared sources", () => {
+  it("announces the read count before the first read, and releases after the last", async () => {
+    const { recorded, store } = fakeStore();
+    const events: string[] = [];
+    const handler = createAnalysisJobHandler({
+      prepareSources: async (input) => {
+        events.push(`prepare ${input.reads} @${input.commitSha.slice(0, 7)}`);
+        expect(input).toMatchObject({
+          repositoryFullName: "2klips/alrescha-app",
+          repositoryId: "repository-1",
+          workspaceId: "workspace-1",
+        });
+        return () => {
+          events.push("release");
+        };
+      },
+      readSource: async ({ path }) => {
+        events.push(`read ${path}`);
+        recorded.read.push(path);
+        return path.endsWith(".md") ? SPEC : "";
+      },
+      store,
+    });
+
+    await handler(job(), { heartbeat: async () => true });
+
+    // Two of the four artifacts are read (the spec and the test file).
+    expect(events).toEqual([
+      "prepare 2 @aaaaaaa",
+      "read spec/auth.md",
+      "read tests/auth.test.ts",
+      "release",
+    ]);
+  });
+
+  it("releases the sources when a read fails, so the retry starts clean", async () => {
+    const { store } = fakeStore();
+    let released = false;
+    const handler = createAnalysisJobHandler({
+      prepareSources: async () => () => {
+        released = true;
+      },
+      readSource: async () => {
+        throw new Error("GitHub repository request failed: 403 forbidden");
+      },
+      store,
+    });
+
+    await expect(
+      handler(job(), { heartbeat: async () => true }),
+    ).rejects.toThrow("403 forbidden");
+    expect(released).toBe(true);
+  });
+});
