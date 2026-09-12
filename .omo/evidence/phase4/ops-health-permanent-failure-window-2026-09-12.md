@@ -138,10 +138,14 @@ passed, 1 pre-existing platform skip.
 - The null-sha hand-off's step 3 (withdraw the six scans) becomes optional
   for the warning; run it if the rows should be marked as withdrawn for the
   record, not because the check needs it.
-- When `claude/suspicious-goodall-734e3e` and this branch meet, the runbook
-  paragraph it adds under §10.1 (`permanent-failures`는 전 기간 누적이다 …)
-  and its "Observations left as they are" bullet about the check never
-  decaying are superseded by this change; keep this branch's paragraph.
+- `claude/suspicious-goodall-734e3e` (`9a4af68`) is merged into this branch
+  (`a0dbee5`), so both land in one PR. Its runbook paragraph under §10.1
+  (`permanent-failures`는 전 기간 누적이다 …) was dropped in favour of this
+  branch's, with its pointer to the null-sha evidence carried over; its
+  "never decays" observation and hand-off step 3 are marked resolved /
+  optional in that evidence. The PR therefore also carries migration
+  `202609120001_null_sha_scan_guard.sql` and the worker guards — the
+  null-sha hand-off (apply the migration, redeploy `arr-worker`) still stands.
 
 ## Observations left as they are
 

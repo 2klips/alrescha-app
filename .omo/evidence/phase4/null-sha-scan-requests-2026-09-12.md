@@ -148,10 +148,16 @@ way the 2026-09-12 batch was applied (checksum ledger; no data change, two
 and analyze guards — not urgent, the queue holds no null-sha job, but it is
 what stops a stray one from mass-resolving findings.
 
-**3. Clear the warning without touching the threshold.** The
-`permanent-failures` count is all-time (`status = 'failed' and attempt_count
->= max_attempts`, no window), so the six rows keep `ops:health` at `warn`
-until they are neutralised. Recommended, in one transaction:
+**3. Clear the warning without touching the threshold — now optional.** When
+this was written the `permanent-failures` count was all-time (`status =
+'failed' and attempt_count >= max_attempts`, no window), so the six rows
+would have kept `ops:health` at `warn` until neutralised. Since the merge
+with `.omo/evidence/phase4/ops-health-permanent-failure-window-2026-09-12.md`
+the count covers a rolling 7-day window on `completed_at`, so the check
+returns to `ok` on its own once the oldest of the six is more than seven
+days old (about 2026-09-16). Run the SQL below only to clear the warning
+immediately or to mark the rows as withdrawn for the record; in one
+transaction:
 
 ```sql
 -- withdraw the six scans that could never have succeeded; the rows stay
@@ -174,9 +180,10 @@ item and was not investigated here.
 
 ## Observations left as they are
 
-- `permanent-failures` never decays. A rolling window, or excluding
-  withdrawn jobs by construction, would let the check recover on its own;
-  changing it was outside this fix and the threshold is deliberately still 5.
+- ~~`permanent-failures` never decays.~~ **Resolved 2026-09-12**, same day, in
+  `.omo/evidence/phase4/ops-health-permanent-failure-window-2026-09-12.md`:
+  the count now covers a rolling 7-day window on `completed_at` and recovers
+  on its own; the threshold is still 5.
 - `inspection-report.ts` takes the newest run's `commit_sha` as the head
   shown in the stale banner; a deletion run at the null id would have shown
   `0000000` there until the next push. No new such run can be created now.
