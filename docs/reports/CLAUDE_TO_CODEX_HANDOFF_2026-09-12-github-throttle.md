@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: 큐잉된 GitHub 읽기의 403 (PR #8 후속)
 
 작성: 2026-09-12 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **대기 — 마이그레이션 적용과 워커 배포가 남아 있다.** 이 줄은 Codex가 갱신한다.
+상태: **배포 완료, UI 수용 기준 미충족 — PR #9 merge `5cb4379`, `202609120003` 적용, Fly v18. 새 pair는 둘 다 1회·0크레딧으로 succeeded, 저장소 SHA 일치, 새 실패 0건(기존 14 WARN). 홈은 기존 LostArk 실패를 계속 표시하므로 저장소 선택/첫 backfill 복구를 Claude lane에 인계한다. 이번 실행의 403 종류·큐 연기는 미관측.** 상세: [프로덕션 롤아웃 기록](../../.omo/evidence/phase4/pr9-production-rollout-2026-09-12.md).
 브랜치: `claude/github-read-throttle` (`main@35c88d4` 기준) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/github-read-throttle-2026-09-12.md`](../../.omo/evidence/phase4/github-read-throttle-2026-09-12.md) — 원인 분석, red/green 테스트, 게이트, 검증 절차, 롤백 지점이 전부 거기 있다. 이 문서는 그 요약이다.
 
