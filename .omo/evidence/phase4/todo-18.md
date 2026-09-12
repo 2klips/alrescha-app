@@ -147,3 +147,64 @@ cover the parsers and the archive split.
   node, which is now producible for the first time.
 
 > **정정(2026-09-07):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제 상태는 [e2e-debt.md](e2e-debt.md)에 있다.
+
+---
+
+## 2026-09-12 — the map snapshot exists; the live-fire is still owed
+
+### The snapshot (`tests/e2e/map-verified.spec.ts`)
+
+The spec the 2026-09-07 note said nobody had written. It seeds a workspace
+through `apply_repository_scan` (the drifted-demo fixture, 15 files), then
+writes the recorded Actions run through the **production writer** —
+`PostgresAnalysisStore.reconcileCiEvidence`, the call the analyze job makes,
+over a direct connection to the local Supabase — and reads the real stage.
+
+Asserted, in order:
+
+- **before any evidence, zero `verified` hit targets** on the painted map,
+  and the fixture's test file is `inferred` — the scan's import-derived
+  `tests` edges promote nothing (ADR-001), live rather than in a model test;
+- after the write (`written 1, supporting 1, removed 0`), **exactly two
+  nodes are `verified`**: the evidence node itself and the test file its
+  `tests` edge reaches — asserted as the set of node ids, not a count, so a
+  third promotion has to name itself; the code the test imports stays
+  `inferred`; the inspector's badge says `verified`;
+- both themes, 1440×900: `todo-18/map-verified-dark.png`,
+  `todo-18/map-verified-light.png` (the selected node is the test file, the
+  inspector lists the evidence node beside it).
+
+One thing the first run taught: the evidence node is a node on the map — it
+carries the grade too, and the spec's first draft expected one verified hit
+and found two. The assertion now names both, which is the right shape.
+
+### The pilot live-fire (G2) — skipped, with the exact reason
+
+Checked again today with the App's own view of the two installed
+repositories:
+
+| repository | workflows | runs | artifacts on the newest run |
+| --- | --- | --- | --- |
+| `2klips/alrescha-app` | 0 | 0 | — |
+| `2klips/LostArk_Scheduler` | 1 (`CI`) | 248, newest 2026-08-23 | 0 |
+
+Unchanged since 2026-09-06. The collector reads junit/lcov/istanbul reports
+from a run's **artifacts**, so neither repository can produce an evidence row
+however many times it is analysed — and the 2026-09-12 live run of todo 16
+confirms it from the other side: the analyze job ran on `2klips/alrescha-app`
+at `1eb4de7` and wrote 0 evidence rows, correctly.
+
+Two things close the gate, and both are outside this repository's tree:
+
+1. a CI step on a pilot repository that uploads its test report
+   (`actions/upload-artifact` with the JUnit or Vitest JSON output);
+2. test names that carry the requirement code (`REQ-…`) — the only signal
+   `ingestCiTestReports` reads. This repository's own suite has none
+   (OQ-064: 0 of 99 statements carry a code), so adding CI here alone would
+   still yield 0 rows. `LostArk_Scheduler` is the better candidate; whether
+   its tests name requirements is unknown.
+
+The checkbox stays open on that item alone. Everything else the acceptance
+lists is met: the database-level path (2026-09-06), the map snapshot (today),
+and the standing assertion that nothing is `verified` without execution
+evidence — now held on the live canvas as well as in the model.
