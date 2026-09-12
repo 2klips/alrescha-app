@@ -97,6 +97,8 @@ function rescanOutcomeCopy(notices: HomeNotices): string | null {
       return notices.rescanMode === "full"
         ? HOME.scan.rescan.outcomes.scheduledFull
         : HOME.scan.rescan.outcomes.scheduled;
+    case "first-scan":
+      return HOME.scan.rescan.outcomes.firstScan;
     case "never-scanned":
       return HOME.scan.rescan.outcomes.neverScanned;
     case "local":
@@ -144,7 +146,12 @@ function ScanProgress({
         </span>
       ) : null}
       <div className="home-rescan" data-rescan={scan.rescan}>
-        {scan.rescan === "available" && scan.repositoryId ? (
+        {(scan.rescan === "available" || scan.rescan === "retry") &&
+        scan.repositoryId ? (
+          // One button, one action: the queue decides whether this is a
+          // rescan at the last scanned head or the first scan tried again
+          // at the head the connect read (202609120004). The label says
+          // which, because the user is looking at a failed stage.
           <form action={requestRepositoryRescan}>
             <input
               name="repositoryId"
@@ -153,7 +160,9 @@ function ScanProgress({
             />
             <button className="home-step-cta" type="submit">
               <RefreshCw size={13} aria-hidden />
-              {HOME.scan.rescan.cta}
+              {scan.rescan === "retry"
+                ? HOME.scan.rescan.retryCta
+                : HOME.scan.rescan.cta}
             </button>
           </form>
         ) : scan.rescan === "busy" ? (
@@ -258,9 +267,30 @@ export function WorkspaceHomeScreen({
                 <StepState state={model.steps.connect} />
               </h2>
               {model.steps.connect === "done" && model.repoFullName ? (
-                <p className="home-step-done">
-                  {HOME.journey.connect.done(model.repoFullName)}
-                </p>
+                <>
+                  <p className="home-step-done">
+                    {HOME.journey.connect.done(model.repoFullName)}
+                  </p>
+                  {model.repositoryCount > 1 ? (
+                    // The home is about one repository at a time — the one
+                    // last selected. Say so when there are others, and
+                    // point at where another is selected (OQ-042 interim).
+                    <small
+                      className="home-repository-others"
+                      data-testid="repository-others"
+                    >
+                      {HOME.journey.connect.others(model.repositoryCount)}
+                      {model.repositorySwitchHref ? (
+                        <>
+                          {" "}
+                          <Link href={model.repositorySwitchHref}>
+                            {HOME.journey.connect.switchCta}
+                          </Link>
+                        </>
+                      ) : null}
+                    </small>
+                  ) : null}
+                </>
               ) : (
                 <>
                   <p>{HOME.journey.connect.body}</p>

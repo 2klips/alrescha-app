@@ -39,6 +39,7 @@ export default async function WorkspacePage({
     backfill: backfill === "unscheduled" ? "unscheduled" : null,
     rescan:
       rescan === "scheduled" ||
+      rescan === "first-scan" ||
       rescan === "never-scanned" ||
       rescan === "local" ||
       rescan === "rate-limited" ||

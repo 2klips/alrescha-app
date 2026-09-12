@@ -2,6 +2,10 @@ import { cache } from "react";
 
 import { getCurrentUserId } from "../auth/current-user";
 import { createClient } from "../supabase/server";
+import {
+  REPOSITORY_SELECTION_COLUMNS,
+  currentRepository,
+} from "./current-repository";
 
 /**
  * Data the AppShell repository header shows on every screen (WORK_SPEC §5:
@@ -37,14 +41,18 @@ export const getWorkspaceShellContext = cache(
       .maybeSingle();
     if (workspace.error || !workspace.data) return null;
 
-    const repository = await supabase
+    // The same repository the home is about (`currentRepository`): the
+    // header and the screen under it must not name two different ones.
+    const repositories = await supabase
       .from("repositories")
-      .select("full_name,default_branch,last_scanned_commit_sha")
+      .select(
+        `full_name,default_branch,last_scanned_commit_sha,${REPOSITORY_SELECTION_COLUMNS}`,
+      )
       .eq("workspace_id", workspace.data.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const repo = repository.error ? null : repository.data;
+      .order("created_at", { ascending: false });
+    const repo = repositories.error
+      ? null
+      : currentRepository(repositories.data ?? []);
 
     return {
       repoName: repo?.full_name ?? null,

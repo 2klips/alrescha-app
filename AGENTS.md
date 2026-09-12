@@ -47,3 +47,4 @@ Conflict priority: `spec/DECISIONS-ADR.md` = WORK_SPEC > BUILD_PLAN > IMPLEMENTA
 Codex는 배포 작업 전에 [인수인계 문서](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-12.md)를 읽는다.
 PR #4의 `202609110015_containment_join_shape.sql` 프로덕션 적용과 `arr-worker` 재배포 판단이 넘어가 있다. 적용·배포 후 그 문서의 상태 줄을 갱신한다.
 PR #8 후속(큐잉된 GitHub 읽기의 403)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-12-github-throttle.md)로 넘어가 있다: `202609120003` 적용 → 워커 재배포 순서, 검증 절차, 롤백 지점.
+PR #9 후속(홈의 현재 저장소 규칙, 첫 스캔 재시도)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-12-home-selection.md)로 넘어가 있다: `202609120004` 적용 → 웹 머지 순서, 선택·복구 검증 절차, 롤백 지점.

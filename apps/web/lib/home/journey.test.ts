@@ -131,6 +131,70 @@ describe("buildWorkspaceJourney", () => {
     });
     expect(model.steps.connect).toBe("done");
     expect(model.installationRevoked).toBe(false);
+    expect(model.repositoryCount).toBe(1);
+    expect(model.repositorySwitchHref).toBeNull();
+  });
+
+  /**
+   * Two connected repositories (PR #9 follow-up, OQ-042 interim rule). The
+   * home is about the one the user last *selected*, not the one created
+   * last — production showed a repository's old failed backfill while the
+   * other repository's fresh pair had just succeeded.
+   */
+  test("with several repositories, the last one selected leads, not the last one created", () => {
+    const selectedAgain: WorkspaceJourneyRepositoryRow = {
+      ...GITHUB_REPO,
+      created_at: "2026-09-06T00:00:00Z",
+      last_analyzed_commit_sha: HEAD,
+      last_scanned_commit_sha: HEAD,
+      selected_at: "2026-09-12T12:00:00Z",
+    };
+    const connectedLater: WorkspaceJourneyRepositoryRow = {
+      created_at: "2026-09-12T11:49:56Z",
+      full_name: "acme/other",
+      id: "repo-9",
+      installation_id: "inst-1",
+      last_analyzed_commit_sha: null,
+      last_scanned_commit_sha: null,
+      selected_at: "2026-09-12T11:49:56Z",
+    };
+    const model = build({
+      edgeCount: 3,
+      // Newest-created first, as the loader orders them.
+      jobs: [job("analyze", "succeeded"), job("scan", "succeeded")],
+      nodeCount: 5,
+      repositories: [connectedLater, selectedAgain],
+    });
+    expect(model.repoFullName).toBe("acme/app");
+    expect(model.lastScannedCommitSha).toBe(HEAD);
+    expect(model.scan).toMatchObject({
+      analysis: "ready",
+      repositoryId: "repo-1",
+      rescan: "available",
+      structure: "ready",
+    });
+    expect(model.repositoryCount).toBe(2);
+    expect(model.repositorySwitchHref).toBe(
+      "/app/connect/github/repositories?installation=inst-1",
+    );
+  });
+
+  test("a locally pushed repository counts by its creation, having never been selected", () => {
+    const selected: WorkspaceJourneyRepositoryRow = {
+      ...GITHUB_REPO,
+      created_at: "2026-09-06T00:00:00Z",
+      selected_at: "2026-09-12T10:00:00Z",
+    };
+    const pushed: WorkspaceJourneyRepositoryRow = {
+      ...LOCAL_REPO,
+      created_at: "2026-09-12T11:00:00Z",
+      selected_at: null,
+    };
+    const model = build({ repositories: [pushed, selected] });
+    expect(model.repoFullName).toBe("local/notes");
+    expect(model.scan.analysis).toBe("local");
+    // No picker for a local repository's installation: it has none.
+    expect(model.repositorySwitchHref).toBeNull();
   });
 });
 
@@ -203,8 +267,9 @@ describe("buildScanProgress", () => {
     expect(progress.structureError).toBe(
       "GitHub repository request failed: 403",
     );
-    // Nothing to rescan against yet: the first scan never landed.
-    expect(progress.rescan).toBe("never-scanned");
+    // Nothing to rescan against yet — but the first scan named the head it
+    // tried, so it can be tried again there (202609120004).
+    expect(progress.rescan).toBe("retry");
 
     const afterRescan = buildScanProgress(
       { ...GITHUB_REPO, last_scanned_commit_sha: HEAD },
@@ -218,6 +283,44 @@ describe("buildScanProgress", () => {
     expect(afterRescan.structure).toBe("failed");
     expect(afterRescan.commitSha).toBe(NEXT);
     expect(afterRescan.rescan).toBe("available");
+  });
+
+  /**
+   * The first scan that failed for good (PR #9 follow-up). Production's
+   * LostArk backfill: scan and analyze both exhausted, no scanned commit, and
+   * the screen offered nothing — a rescan refuses a never-scanned repository
+   * and the same-head backfill key pointed at the dead pair.
+   */
+  test("a first scan that failed for good can be tried again, at the head it tried", () => {
+    const exhausted = buildScanProgress(GITHUB_REPO, [
+      job("analyze", "failed", {
+        last_error: "analyze ran before any artifact was stored",
+      }),
+      job("scan", "failed", {
+        last_error: "GitHub repository request failed: 403 forbidden",
+      }),
+    ]);
+    expect(exhausted).toMatchObject({
+      analysis: "failed",
+      commitSha: HEAD,
+      rescan: "retry",
+      structure: "failed",
+    });
+
+    // A retry queued: the button gives way to the busy state, as any scan.
+    const retried = buildScanProgress(GITHUB_REPO, [
+      job("scan", "queued", { created_at: "2026-09-12T01:00:00Z" }),
+      job("analyze", "failed"),
+      job("scan", "failed"),
+    ]);
+    expect(retried.rescan).toBe("busy");
+    expect(retried.structure).toBe("queued");
+
+    // A failed scan without a head — nothing to try again at.
+    const headless = buildScanProgress(GITHUB_REPO, [
+      job("scan", "failed", { payload: null }),
+    ]);
+    expect(headless.rescan).toBe("never-scanned");
   });
 
   test("the newest job of a kind decides, not the oldest", () => {
