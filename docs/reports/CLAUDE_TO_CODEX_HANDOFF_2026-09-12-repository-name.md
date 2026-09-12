@@ -60,4 +60,4 @@
 
 ## PR
 
-- (머지 전 채움)
+- <https://github.com/2klips/alrescha-app/pull/11> — 커밋 2건: `f6c5b6d`(Codex의 PR #10 롤아웃 기록·AGENTS.md 보고 선호, 작업 트리에 남아 있던 그대로), `e615e3d`(구현·테스트·문서). 머지 후 머지 커밋이 Vercel에 배포된다.

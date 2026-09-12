@@ -8,7 +8,8 @@ label `2klips/arr-app` over the canonical `2klips/alrescha-app` on the home
 and the header. **Boundary:** production was neither read nor changed; no
 row, name, timestamp, failed job, threshold, applied migration or GitHub
 permission was touched. **Branch:** `claude/repository-canonical-name` on
-`main@80a99cb`. **Scope:** `apps/web/lib/github/api.ts`
+`main@80a99cb`, commit `e615e3d`; **PR:**
+<https://github.com/2klips/alrescha-app/pull/11>. **Scope:** `apps/web/lib/github/api.ts`
 (`fetchRepositoryById`), `apps/web/lib/github/repository-identity.ts` (new,
 + test), `apps/web/lib/github/onboarding-store.ts` (`saveSelectedRepository`,
 `refreshAvailableRepository`), `apps/web/lib/github/connect-repository.ts`,
