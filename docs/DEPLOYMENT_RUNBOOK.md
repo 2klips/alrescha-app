@@ -186,19 +186,19 @@ DATABASE_URL="<프로덕션 세션 풀러 URL>" pnpm ops:health
 
 읽기 전용 단일 쿼리(`scripts/ops-health.ts`)로 7개 신호를 판정해 한 줄씩 출력하고, `ok`가 아니면 종료 코드 1을 낸다. 페이로드·프롬프트·토큰·프로바이더 키는 읽지 않는다 — 집계값과 시각만 나온다.
 
-| 신호                         | 판정  | 의미                                                                              |
-| ---------------------------- | ----- | --------------------------------------------------------------------------------- |
-| `access-event-retention`     | alert | 보존 기간을 넘긴 access event가 남아 있다 = 일일 prune 미동작                     |
-| `audit-write-coverage`       | alert | scan 잡 수 > `scan_requested` 감사 행 수 = 감사 기록 유실                         |
-| `stale-leases`               | alert | 리스 만료 상태로 `running` = 워커가 잡 중간에 죽었다                              |
-| `credit-reservations`        | alert | reserve에 대응하는 settle·refund가 없다 = 예약 크레딧 미정산                      |
-| `queue-depth`                | warn  | queued+running > 25 = 드레인 루프 정지 의심                                       |
-| `permanent-failures`         | warn  | 최근 7일(`completed_at` 기준) 재시도 소진 실패 > 5 = 프로바이더·잡 종류 계통 실패 |
-| `webhook-delivery-freshness` | warn  | 최신 수신 delivery가 24시간보다 오래됐다 = webhook 경로 단절                      |
+| 신호                         | 판정  | 의미                                                                                                |
+| ---------------------------- | ----- | --------------------------------------------------------------------------------------------------- |
+| `access-event-retention`     | alert | 보존 기간을 넘긴 access event가 남아 있다 = 일일 prune 미동작                                       |
+| `audit-write-coverage`       | alert | scan 잡 수 > `scan_requested` 감사 행 수 = 감사 기록 유실                                           |
+| `stale-leases`               | alert | 리스 만료 상태로 `running` = 워커가 잡 중간에 죽었다                                                |
+| `credit-reservations`        | alert | reserve에 대응하는 settle·refund가 없다 = 예약 크레딧 미정산                                        |
+| `queue-depth`                | warn  | queued+running > 25 = 드레인 루프 정지 의심                                                         |
+| `permanent-failures`         | warn  | 최근 7일(`completed_at` 기준) 종결 실패(재시도 소진 + 워커 거절) > 5 = 프로바이더·잡 종류 계통 실패 |
+| `webhook-delivery-freshness` | warn  | 최신 수신 delivery가 24시간보다 오래됐다 = webhook 경로 단절                                        |
 
 임계값 근거는 `DEFAULT_OPS_HEALTH_THRESHOLDS` 주석에 실측과 함께 적혀 있다. 2026-09-03 프로덕션 실측은 전 항목 `ok`(`.omo/evidence/phase2c/followup-deployment-checklist.md`).
 
-`permanent-failures`는 전 기간 누적이 아니라 **`completed_at` 기준 최근 7일 창**(`PERMANENT_FAILURE_WINDOW_DAYS`)만 센다. 원인을 고친 뒤 새 실패가 없으면 창이 지나면서 스스로 `ok`로 돌아오므로, 실패 행을 `cancelled`로 철회하는 수동 정리는 경고를 즉시 걷고 싶을 때만 선택한다(철회한 행은 그 자리에서 빠진다). 7일은 실측이 아닌 가정값이다 — 하루 1회 실행 주기에서 한 주 내내 보이고, GitHub App Recent Deliveries 보존 기간(7일)과 같다. 임계값 5는 그대로다. `completed_at`이 비어 있는 failed 행은 큐 함수가 만들지 않으므로, 나타나면 창과 무관하게 계속 센다. 배경(2026-09-12 null sha 실패 6건): `.omo/evidence/phase4/ops-health-permanent-failure-window-2026-09-12.md`, 원인·검증 쿼리·철회 SQL: `.omo/evidence/phase4/null-sha-scan-requests-2026-09-12.md`.
+`permanent-failures`는 전 기간 누적이 아니라 **`completed_at` 기준 최근 7일 창**(`PERMANENT_FAILURE_WINDOW_DAYS`)만 센다. 원인을 고친 뒤 새 실패가 없으면 창이 지나면서 스스로 `ok`로 돌아오므로, 실패 행을 `cancelled`로 철회하는 수동 정리는 경고를 즉시 걷고 싶을 때만 선택한다(철회한 행은 그 자리에서 빠진다). 7일은 실측이 아닌 가정값이다 — 하루 1회 실행 주기에서 한 주 내내 보이고, GitHub App Recent Deliveries 보존 기간(7일)과 같다. 임계값 5는 그대로다. 세는 것은 `status = 'failed'` 전부다 — 큐에서 `failed`는 언제나 종결 상태이며(재시도는 `queued`로 돌아간다), 워커가 스키마 불량 AI 출력·크레딧 부족으로 `reject_job`한 잡은 시도 1/3에서 끝나므로 "재시도 소진" 조건으로는 보이지 않았다(2026-09-12 수정, `.omo/evidence/phase4/ops-health-rejected-jobs-2026-09-12.md`). 거절은 환불 경로이기도 하므로 체크리스트의 "provider failures/refunds" 감시가 이 신호에 들어온다. `completed_at`이 비어 있는 failed 행은 큐 함수가 만들지 않으므로, 나타나면 창과 무관하게 계속 센다. 배경(2026-09-12 null sha 실패 6건): `.omo/evidence/phase4/ops-health-permanent-failure-window-2026-09-12.md`, 원인·검증 쿼리·철회 SQL: `.omo/evidence/phase4/null-sha-scan-requests-2026-09-12.md`.
 
 **권장 주기:** 파일럿 규모에서는 사람이 하루 1회 + 배포 직후 실행. 무인 스케줄링은 러너 자격증명이 필요하므로 도입하지 않았다.
 

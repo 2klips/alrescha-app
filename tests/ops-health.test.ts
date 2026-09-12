@@ -289,4 +289,50 @@ describe("operations health snapshot query", () => {
 
     expect((await snapshot()).permanentlyFailedJobs).toBe(1);
   });
+
+  it("counts a job the worker rejected on its first attempt", async () => {
+    // The real lifecycle, not a hand-written row: a zero-credit judge job is
+    // enqueued, claimed (attempt 1 of 3) and rejected the way the worker does
+    // for schema-invalid AI output. `claim_next_job` reaps the expired scan
+    // lease first, which requeues that job with a one-second delay, so the
+    // judge job is the only claimable one.
+    const before = (await snapshot()).permanentlyFailedJobs;
+    const enqueued = await database.query<{ id: string }>(
+      `select public.enqueue_job($1, $2, $3, 'judge', 'ops-health-rejected',
+         '{}'::jsonb, 0, 3) as id`,
+      [workspace, REPOSITORY_ID, RUN_ID],
+    );
+    const claimed = await database.query<{ id: string; kind: string }>(
+      "select id, kind from public.claim_next_job($1, 'ops-worker', 30)",
+      [workspace],
+    );
+    expect(claimed.rows[0]).toEqual({
+      id: enqueued.rows[0]?.id,
+      kind: "judge",
+    });
+
+    const rejected = await database.query<{ outcome: string }>(
+      "select public.reject_job($1, 'ops-worker', 'schema-invalid output') as outcome",
+      [enqueued.rows[0]?.id],
+    );
+    expect(rejected.rows[0]?.outcome).toBe("failed");
+
+    const row = await database.query<{
+      attempt_count: number;
+      max_attempts: number;
+      stamped: boolean;
+      status: string;
+    }>(
+      `select attempt_count, max_attempts, completed_at is not null as stamped, status
+       from public.jobs where idempotency_key = 'ops-health-rejected'`,
+    );
+    // Terminal at attempt 1 of 3 — the case an attempts-exhausted clause hides.
+    expect(row.rows[0]).toEqual({
+      attempt_count: 1,
+      max_attempts: 3,
+      stamped: true,
+      status: "failed",
+    });
+    expect((await snapshot()).permanentlyFailedJobs).toBe(before + 1);
+  });
 });
