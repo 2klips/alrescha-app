@@ -365,6 +365,7 @@
 - 임시 결정: 현행 유지. v6 통합 마이그레이션에 `access_events.repository_id`·`progress_events.repository_id`를 추가한다(로더 변경은 별도).
 - 필요한 결정: ⑴ §5.1대로 라우트를 `/app/[repo]/…`로 전환(내비·로더 전면) ⑵ 라우트는 유지하고 상단 레포 선택기 + 모든 로더에 `repository_id` 필터 ⑶ 워크스페이스=레포 1개로 제품 정의를 바꾼다(§15 재판정).
 - 상태: open. 기본 후보 ⑵(Codex 프론트 트랙 후보). 사용자 결정 필요.
+- 임시 규칙 추가(2026-09-12, PR #9 후속): 결정 전까지 "화면이 말하는 저장소"는 하나의 규칙으로 통일한다 — **마지막으로 선택한 저장소**(`repositories.selected_at`, 연결 화면에서 고를 때마다 갱신)가 앞서고, 선택된 적 없는 로컬 push 저장소는 생성 시각으로 센다(`apps/web/lib/shell/current-repository.ts`). 홈·헤더·맵·설정 액션이 같은 함수를 쓴다. 저장소가 둘 이상이면 홈이 그 사실과 선택 경로(연결 화면의 picker)를 한 줄로 안내한다. 이는 선택 계약이지 선택기가 아니다 — ⑴/⑵의 결정은 그대로 열려 있다. 배경: 프로덕션에서 나중에 생성된 저장소의 실패한 첫 backfill이, 다른 저장소의 성공한 pair를 가리고 있었다(`.omo/evidence/phase4/home-current-repository-first-scan-retry-2026-09-12.md`).
 
 ## OQ-043 — 문서 노트화의 기본 포함 범위와 `.omo/evidence` 같은 로그 디렉터리
 

@@ -24,6 +24,14 @@ export const HOME = {
       revoked: "GitHub 연결이 끊겼습니다 — 다시 연결하세요.",
       body: "GitHub App을 읽기 전용으로 설치합니다. 코드 원본은 저장하지 않습니다.",
       cta: "GitHub 레포 연결",
+      /**
+       * The home, the header and the map are about one repository: the one
+       * last selected in the connect picker (OQ-042 interim rule). With
+       * several connected, say so and point at where another is chosen.
+       */
+      others: (count: number) =>
+        `연결된 레포 ${count}개 — 홈과 헤더는 마지막으로 선택한 레포를 보여줍니다.`,
+      switchCta: "다른 레포 선택",
     },
     graph: {
       title: "지식그래프 생성",
@@ -84,6 +92,8 @@ export const HOME = {
     commit: "commit",
     rescan: {
       cta: "다시 스캔",
+      /** The first scan failed for good and never landed: try it again. */
+      retryCta: "첫 스캔 다시 시도",
       busy: "스캔 진행 중",
       neverScanned: "첫 스캔이 끝나면 다시 스캔할 수 있습니다.",
       local: "로컬 레포는 alrescha push 로 다시 스캔합니다.",
@@ -92,6 +102,8 @@ export const HOME = {
           "다시 스캔을 예약했습니다 — 구조가 갱신되면 분석이 이어집니다.",
         scheduledFull:
           "전체 다시 링크를 예약했습니다 — 저장된 링크가 이전 세대라 모든 파일을 다시 읽습니다.",
+        firstScan:
+          "첫 스캔을 다시 예약했습니다 — 실패한 이전 시도는 기록에 남고, 새 시도가 이어집니다.",
         neverScanned:
           "아직 첫 스캔이 없어 다시 스캔할 기준이 없습니다. 레포에 push하면 시작됩니다.",
         local:

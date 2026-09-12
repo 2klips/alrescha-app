@@ -219,9 +219,56 @@ test("a GitHub connect shows its stages, its failure, and offers a rescan once l
     // The failed chip, the error line and the queued chip, audited in dark.
     await auditHomeContrast(page, "dark", "scan-failed");
 
-    // 5. The scan lands (what the worker would have written). Structure is
-    // ready while the analysis has not caught up: two states, and the
-    // button is back.
+    // 4b. A first scan that failed for good can be asked for again (PR #9
+    // follow-up, 202609120004): the button is there, worded as what it is,
+    // and it queues a new scan at the head the connect read — a new row
+    // under the next generation of the key, the failed row untouched, and
+    // the still-queued analysis reused rather than duplicated.
+    await expect(
+      page.getByTestId("scan-progress").locator("[data-rescan='retry']"),
+    ).toBeVisible();
+    await page.getByRole("button", { name: HOME.scan.rescan.retryCta }).click();
+    await expect(page).toHaveURL(/rescan=first-scan/);
+    await expect(page.getByTestId("rescan-outcome")).toHaveAttribute(
+      "data-outcome",
+      "first-scan",
+    );
+    await expect(page.getByTestId("rescan-outcome")).toContainText(
+      HOME.scan.rescan.outcomes.firstScan,
+    );
+    await expect(stages).toHaveAttribute("data-structure", "queued");
+    await expect(stages).toHaveAttribute("data-analysis", "queued");
+
+    const backfillJobs = await service
+      .from("jobs")
+      .select("id,kind,status,credit_cost,idempotency_key")
+      .eq("workspace_id", user.workspaceId)
+      .like("idempotency_key", "backfill:%")
+      .order("idempotency_key");
+    expect(backfillJobs.error).toBeNull();
+    expect(
+      (backfillJobs.data ?? []).map(
+        ({ credit_cost, idempotency_key, kind, status }) => [
+          idempotency_key.replace(`backfill:${repositoryId}:${HEAD}`, "…"),
+          kind,
+          status,
+          credit_cost,
+        ],
+      ),
+    ).toEqual([
+      ["…", "scan", "failed", 0],
+      ["…:analyze", "analyze", "queued", 0],
+      ["…:r1", "scan", "queued", 0],
+    ]);
+    const retriedScanJobId = String(
+      (backfillJobs.data ?? []).find(({ idempotency_key }) =>
+        idempotency_key.endsWith(":r1"),
+      )?.id,
+    );
+
+    // 5. The retried scan lands (what the worker would have written).
+    // Structure is ready while the analysis has not caught up: two states,
+    // and the button is back.
     const landed = await service
       .from("repositories")
       .update({
@@ -233,7 +280,7 @@ test("a GitHub connect shows its stages, its failure, and offers a rescan once l
     const succeeded = await service
       .from("jobs")
       .update({ last_error: null, status: "succeeded" })
-      .eq("id", scanJobId);
+      .eq("id", retriedScanJobId);
     expect(succeeded.error).toBeNull();
 
     await page.goto("/app");
@@ -276,6 +323,96 @@ test("a GitHub connect shows its stages, its failure, and offers a rescan once l
       ["scan", 0],
       ["analyze", 0],
     ]);
+  } finally {
+    await deleteWorkspaceUser(user.userId);
+  }
+});
+
+/**
+ * Two connected repositories (PR #9 follow-up, OQ-042 interim rule). The
+ * home and the header are about the repository the user last *selected*,
+ * not the one created last — production showed one repository's old failed
+ * backfill while the other's fresh pair had just succeeded. Selection is
+ * the connect picker's existing act; the home says there are others and
+ * points at it.
+ */
+test("the home and the header follow the repository last selected, not the newest", async ({
+  context,
+  page,
+}) => {
+  const user = await createWorkspaceUser("progress-selection");
+  const service = serviceRoleClient();
+  try {
+    await signIn(context, user);
+    const installation = await service
+      .from("github_installations")
+      .insert({
+        account_id: 8,
+        account_login: "arr-e2e",
+        github_installation_id: installationNumber(),
+        workspace_id: user.workspaceId,
+      })
+      .select("id")
+      .single();
+    expect(installation.error).toBeNull();
+    const installationId = String(installation.data?.id);
+
+    // Connected first, selected again most recently — and analysed.
+    const anHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const selected = await service
+      .from("repositories")
+      .insert({
+        default_branch: "main",
+        full_name: "arr-e2e/selected-again",
+        github_repository_id: 4343,
+        installation_id: installationId,
+        last_analyzed_commit_sha: HEAD,
+        last_scanned_commit_sha: HEAD,
+        link_schema_version: LINK_SCHEMA_VERSION,
+        selected_at: new Date().toISOString(),
+        workspace_id: user.workspaceId,
+      })
+      .select("id")
+      .single();
+    expect(selected.error).toBeNull();
+    // Connected after it (a newer row), but selected earlier — and failed.
+    const later = await service
+      .from("repositories")
+      .insert({
+        default_branch: "main",
+        full_name: "arr-e2e/connected-later",
+        github_repository_id: 4344,
+        installation_id: installationId,
+        selected_at: anHourAgo,
+        workspace_id: user.workspaceId,
+      })
+      .select("id")
+      .single();
+    expect(later.error).toBeNull();
+
+    await page.goto("/app");
+    await expect(page.getByTestId("journey-connect")).toContainText(
+      HOME.journey.connect.done("arr-e2e/selected-again"),
+    );
+    await expect(
+      page.locator(".repository-header .repository-identity strong"),
+    ).toHaveText("arr-e2e/selected-again");
+    const stages = page
+      .getByTestId("scan-progress")
+      .locator(".home-scan-stages");
+    await expect(stages).toHaveAttribute("data-structure", "ready");
+    await expect(stages).toHaveAttribute("data-analysis", "ready");
+    await expect(
+      page.getByRole("button", { name: HOME.scan.rescan.cta }),
+    ).toBeVisible();
+    const others = page.getByTestId("repository-others");
+    await expect(others).toContainText(HOME.journey.connect.others(2));
+    await expect(
+      others.getByRole("link", { name: HOME.journey.connect.switchCta }),
+    ).toHaveAttribute(
+      "href",
+      `/app/connect/github/repositories?installation=${installationId}`,
+    );
   } finally {
     await deleteWorkspaceUser(user.userId);
   }

@@ -23,6 +23,10 @@ import { readMinimalIndexSource } from "../../../../../lib/github/index-pr/sourc
 import { SupabaseMcpStore } from "../../../../../lib/mcp/supabase-store";
 import { resolveMcpUrlEnvironment } from "../../../../../lib/mcp/environment";
 import { recordSecurityAuditEvent } from "../../../../../lib/security/audit";
+import {
+  REPOSITORY_SELECTION_COLUMNS,
+  currentRepository,
+} from "../../../../../lib/shell/current-repository";
 import { createClient } from "../../../../../lib/supabase/server";
 import {
   INITIAL_INDEX_PROPOSAL_STATE,
@@ -137,15 +141,20 @@ export async function createMinimalIndexProposal(
 
   try {
     const { client, userId, workspaceId } = await settingsContext();
-    const repository = await client
+    // The repository the home and the header are about (`currentRepository`).
+    const repositories = await client
       .from("repositories")
       .select(
-        "id, default_branch, full_name, github_repository_id, installation_id",
+        `id, default_branch, full_name, github_repository_id, installation_id, ${REPOSITORY_SELECTION_COLUMNS}`,
       )
       .eq("workspace_id", workspaceId)
-      .order("selected_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
+    const repository = {
+      data: repositories.error
+        ? null
+        : currentRepository(repositories.data ?? []),
+      error: repositories.error,
+    };
     if (repository.error || !repository.data) {
       return {
         ...INITIAL_INDEX_PROPOSAL_STATE,

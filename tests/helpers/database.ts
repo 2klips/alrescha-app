@@ -155,6 +155,8 @@ export const BACKFILL_ANALYZE_PAIR_MIGRATION =
   "supabase/migrations/202609120002_backfill_analyze_pair.sql";
 export const FINISH_JOB_RETRY_DELAY_MIGRATION =
   "supabase/migrations/202609120003_finish_job_retry_delay.sql";
+export const FIRST_SCAN_RETRY_MIGRATION =
+  "supabase/migrations/202609120004_first_scan_retry.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -222,6 +224,7 @@ export const ALL_MIGRATIONS = [
   NULL_SHA_SCAN_GUARD_MIGRATION,
   BACKFILL_ANALYZE_PAIR_MIGRATION,
   FINISH_JOB_RETRY_DELAY_MIGRATION,
+  FIRST_SCAN_RETRY_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

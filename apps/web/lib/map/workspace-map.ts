@@ -20,6 +20,10 @@ import {
   type GraphNodeType,
 } from "../dashboard/graph-model";
 import type { GraphAccessEvent } from "../realtime/access-events";
+import {
+  REPOSITORY_SELECTION_COLUMNS,
+  currentRepository,
+} from "../shell/current-repository";
 
 /**
  * `/app/map` loader (Phase 3 Wave A todo 1).
@@ -118,11 +122,14 @@ export interface MapFindingRow {
 }
 
 export interface MapRepositoryRow {
+  readonly created_at?: string | null;
   readonly full_name: string;
   readonly id: string;
   readonly last_scanned_commit_sha: string | null;
   /** Parsed `.alrescha.json` for the commit that stated it (todo 4). */
   readonly layout_config?: unknown;
+  /** When the user last chose it in the connect picker; null for a local push. */
+  readonly selected_at?: string | null;
 }
 
 export interface MapAccessEventRow {
@@ -261,7 +268,7 @@ function isClassification(value: string): value is ArtifactClassification {
 function layoutConventionsOf(
   repositories: readonly MapRepositoryRow[],
 ): LayoutConventions | undefined {
-  const stored = repositories[0]?.layout_config;
+  const stored = currentRepository(repositories)?.layout_config;
   if (typeof stored !== "object" || stored === null || Array.isArray(stored)) {
     return undefined;
   }
@@ -737,7 +744,9 @@ export function buildWorkspaceMapModel(
     workspaceId,
   }));
 
-  const repository = rows.repositories[0] ?? null;
+  // The repository the home and the header name (`currentRepository`); the
+  // graph itself stays workspace-wide (OQ-042).
+  const repository = currentRepository(rows.repositories);
 
   return {
     counts: {
@@ -953,7 +962,9 @@ export async function loadWorkspaceMap(
       .limit(NODE_LIMIT),
     client
       .from("repositories")
-      .select("id,full_name,last_scanned_commit_sha,layout_config")
+      .select(
+        `id,full_name,last_scanned_commit_sha,layout_config,${REPOSITORY_SELECTION_COLUMNS}`,
+      )
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false }),
     client

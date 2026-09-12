@@ -5,6 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { getCurrentUserId } from "../../../../../lib/auth/current-user";
+import {
+  REPOSITORY_SELECTION_COLUMNS,
+  currentRepository,
+} from "../../../../../lib/shell/current-repository";
 import { createAdminClient } from "../../../../../lib/supabase/admin";
 import { createClient } from "../../../../../lib/supabase/server";
 
@@ -86,16 +90,16 @@ export async function runEnrichPass(): Promise<void> {
     throw new Error("Personal workspace is unavailable.");
   }
 
-  const repository = await client
+  // The repository the home and the header are about (`currentRepository`).
+  const repositories = await client
     .from("repositories")
-    .select("id")
+    .select(`id,${REPOSITORY_SELECTION_COLUMNS}`)
     .eq("workspace_id", workspace.data.id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (repository.error) {
+    .order("created_at", { ascending: false });
+  if (repositories.error) {
     throw new Error("Connected repositories are unavailable.");
   }
+  const repository = { data: currentRepository(repositories.data ?? []) };
   if (!repository.data) {
     redirect("/app/settings/ai?enrich=no-repository");
   }

@@ -24,7 +24,13 @@ import { createClient } from "../../../lib/supabase/server";
  * rides the redirect so the page can say which of those happened.
  */
 export type RescanOutcome =
-  "scheduled" | "never-scanned" | "local" | "rate-limited" | "error";
+  | "scheduled"
+  /** The first scan, which had failed for good, was queued again (202609120004). */
+  | "first-scan"
+  | "never-scanned"
+  | "local"
+  | "rate-limited"
+  | "error";
 
 interface RescanQueueResult {
   readonly jobId: string | null;
@@ -34,7 +40,9 @@ interface RescanQueueResult {
 }
 
 function outcomeOf(result: RescanQueueResult): RescanOutcome {
-  if (result.scheduled) return "scheduled";
+  if (result.scheduled) {
+    return result.reason === "first-scan-retry" ? "first-scan" : "scheduled";
+  }
   if (result.reason === "never-scanned") return "never-scanned";
   return "local";
 }

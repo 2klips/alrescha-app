@@ -506,4 +506,261 @@ describe("backfill and rescan", () => {
     expect(artifact.rows[0]?.source_blob_sha).toBe(OTHER_HEAD);
     expect(artifact.rows[0]?.summary_blob_sha).toBe(HEAD);
   });
+
+  /**
+   * A first scan that failed for good can be asked for again (PR #9
+   * follow-up, 202609120004).
+   *
+   * Production, 2026-09-12: a repository's backfill ended on GitHub 403s at
+   * both jobs. Re-connecting resolved to the same keys and got the dead
+   * pair back as "scheduled"; a rescan refused, the scanned commit being
+   * null. The keys now advance a generation once the pair is terminal —
+   * the mechanism the judgment queue has used since 2026-09-02 — and a
+   * rescan of a never-scanned repository retries the first scan at the
+   * head it tried. What is pinned: the failed rows are left exactly as
+   * they were, only what failed is retried, a live pair is still one pair,
+   * and nothing is charged.
+   */
+  describe("retrying a first scan that failed for good", () => {
+    /**
+     * Claim exactly this job. The pair is written in one transaction and
+     * shares a `created_at`, so the queue's tie-break between the two is
+     * arbitrary: the other queued jobs are parked an hour out for the
+     * duration of the claim and released after.
+     */
+    async function claimExactly(jobId: string): Promise<void> {
+      await database.query(
+        `update public.jobs set available_at = now() + interval '1 hour'
+         where workspace_id = $1 and id <> $2 and status = 'queued'`,
+        [workspaceId, jobId],
+      );
+      await database.query(
+        "update public.jobs set available_at = now() where id = $1",
+        [jobId],
+      );
+      const claimed = await database.query<{ id: string }>(
+        "select id from public.claim_next_job($1, 'worker-1', 30)",
+        [workspaceId],
+      );
+      expect(claimed.rows[0]?.id).toBe(jobId);
+      await database.query(
+        `update public.jobs set available_at = now()
+         where workspace_id = $1 and status = 'queued'`,
+        [workspaceId],
+      );
+    }
+
+    /** What the worker writes when a job's attempts run out. */
+    async function exhaust(jobId: string): Promise<void> {
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await claimExactly(jobId);
+        await database.query(
+          "select public.finish_job($1, 'worker-1', false, $2)",
+          [jobId, "GitHub repository request failed: 403 secondary-rate-limit"],
+        );
+      }
+      const row = await database.query<{ status: string }>(
+        "select status from public.jobs where id = $1",
+        [jobId],
+      );
+      expect(row.rows[0]?.status).toBe("failed");
+    }
+
+    async function jobRows() {
+      return database.query<{
+        attempt_count: number;
+        credit_cost: number;
+        id: string;
+        idempotency_key: string;
+        kind: string;
+        last_error: string | null;
+        run_id: string;
+        status: string;
+      }>(
+        `select id, kind, idempotency_key, status, attempt_count, credit_cost,
+                last_error, run_id
+         from public.jobs where workspace_id = $1
+         order by created_at, kind desc`,
+        [workspaceId],
+      );
+    }
+
+    async function runRows() {
+      return database.query<{
+        id: string;
+        status: string;
+        trigger_key: string;
+      }>(
+        "select id, status, trigger_key from public.runs where repository_id = $1 order by created_at",
+        [repositoryId],
+      );
+    }
+
+    it("queues a new pair under the next generation, leaving the failed rows as they were", async () => {
+      const firstScan = await backfill(HEAD);
+      const [scan, analyze] = (await jobRows()).rows;
+      // The scan is claimed first (queued first); the analysis then fails
+      // for want of artifacts, as it did in production.
+      await exhaust(scan!.id);
+      await exhaust(analyze!.id);
+      expect((await runRows()).rows.map(({ status }) => status)).toEqual([
+        "failed",
+      ]);
+
+      const retriedScan = await backfill(HEAD);
+
+      expect(retriedScan).not.toBe(firstScan);
+      const rows = (await jobRows()).rows;
+      expect(
+        rows.map(
+          ({ attempt_count, credit_cost, idempotency_key, kind, status }) => [
+            idempotency_key.replace(`backfill:${repositoryId}:${HEAD}`, "…"),
+            kind,
+            status,
+            attempt_count,
+            credit_cost,
+          ],
+        ),
+      ).toEqual([
+        ["…", "scan", "failed", 3, 0],
+        ["…:analyze", "analyze", "failed", 3, 0],
+        ["…:r1", "scan", "queued", 0, 0],
+        ["…:analyze:r1", "analyze", "queued", 0, 0],
+      ]);
+      // The failed rows still say why: `ops:health` keeps counting them.
+      expect(rows[0]?.last_error).toMatch(/403 secondary-rate-limit/);
+      // A run of its own — the settled one is never reopened.
+      expect(
+        (await runRows()).rows.map(({ status, trigger_key }) => [
+          trigger_key,
+          status,
+        ]),
+      ).toEqual([
+        [`backfill:${HEAD}`, "failed"],
+        [`backfill:${HEAD}:r1`, "pending"],
+      ]);
+      expect(new Set(rows.map(({ run_id }) => run_id)).size).toBe(2);
+      expect(rows[2]?.run_id).toBe(rows[3]?.run_id);
+    });
+
+    it("a live pair is still one pair, however often it is asked for", async () => {
+      const firstScan = await backfill(HEAD);
+      const [scan, analyze] = (await jobRows()).rows;
+      await exhaust(scan!.id);
+      await exhaust(analyze!.id);
+
+      const retried = await backfill(HEAD);
+      expect(await backfill(HEAD)).toBe(retried);
+      expect(await backfill(HEAD)).toBe(retried);
+      expect(retried).not.toBe(firstScan);
+      expect((await jobRows()).rows).toHaveLength(4);
+    });
+
+    it("retries only what failed: a landed scan is kept, its failed analysis is queued again", async () => {
+      const firstScan = await backfill(HEAD);
+      const [scan, analyze] = (await jobRows()).rows;
+      await claimExactly(scan!.id);
+      await database.query(
+        "select public.finish_job($1, 'worker-1', true, null)",
+        [scan!.id],
+      );
+      await exhaust(analyze!.id);
+
+      expect(await backfill(HEAD)).toBe(firstScan);
+      expect(
+        (await jobRows()).rows.map(({ idempotency_key, kind, status }) => [
+          idempotency_key.replace(`backfill:${repositoryId}:${HEAD}`, "…"),
+          kind,
+          status,
+        ]),
+      ).toEqual([
+        ["…", "scan", "succeeded"],
+        ["…:analyze", "analyze", "failed"],
+        ["…:analyze:r1", "analyze", "queued"],
+      ]);
+    });
+
+    it("a rescan of a never-scanned repository retries the first scan at the head it tried", async () => {
+      await backfill(HEAD);
+      const [scan, analyze] = (await jobRows()).rows;
+      await exhaust(scan!.id);
+      await exhaust(analyze!.id);
+
+      const result = await rescan();
+
+      expect(result).toMatchObject({
+        mode: "full",
+        reason: "first-scan-retry",
+        scheduled: true,
+      });
+      const rows = (await jobRows()).rows;
+      expect(result.jobId).toBe(rows[2]?.id);
+      expect(
+        rows.map(({ credit_cost, idempotency_key, kind, status }) => [
+          idempotency_key.replace(`backfill:${repositoryId}:${HEAD}`, "…"),
+          kind,
+          status,
+          credit_cost,
+        ]),
+      ).toEqual([
+        ["…", "scan", "failed", 0],
+        ["…:analyze", "analyze", "failed", 0],
+        ["…:r1", "scan", "queued", 0],
+        ["…:analyze:r1", "analyze", "queued", 0],
+      ]);
+      // The same request again resolves to the live retry, not a third pair.
+      expect((await rescan()).jobId).toBe(result.jobId);
+      expect((await jobRows()).rows).toHaveLength(4);
+    });
+
+    it("a rescan whose pair failed for good is retried the same way", async () => {
+      await markScanned(HEAD);
+      const first = await rescan("full");
+      const [scan, analyze] = (await jobRows()).rows;
+      await exhaust(scan!.id);
+      await exhaust(analyze!.id);
+
+      const again = await rescan("full");
+
+      expect(again.scheduled).toBe(true);
+      expect(again.jobId).not.toBe(first.jobId);
+      expect(
+        (await jobRows()).rows.map(({ idempotency_key, status }) => [
+          idempotency_key.replace(`rescan:${repositoryId}:${HEAD}:full`, "…"),
+          status,
+        ]),
+      ).toEqual([
+        ["…", "failed"],
+        ["…:analyze", "failed"],
+        ["…:r1", "queued"],
+        ["…:analyze:r1", "queued"],
+      ]);
+      expect(
+        (await runRows()).rows.map(({ trigger_key }) => trigger_key),
+      ).toEqual([`rescan:${HEAD}:full`, `rescan:${HEAD}:full:r1`]);
+    });
+
+    it("still refuses a repository from another workspace, and one with no head to retry at", async () => {
+      await expect(
+        asServiceRole(database, async (transaction) =>
+          transaction.query(
+            "select public.enqueue_repository_rescan($1, $2, $3, $4)",
+            [
+              workspaceId,
+              "01K200000000000000000000R9",
+              null,
+              LINK_SCHEMA_VERSION,
+            ],
+          ),
+        ),
+      ).rejects.toThrow(/is not in workspace/);
+      // No scan job at all: nothing was ever tried, nothing to try again at.
+      expect(await rescan()).toMatchObject({
+        jobId: null,
+        reason: "never-scanned",
+        scheduled: false,
+      });
+      expect((await jobRows()).rows).toHaveLength(0);
+    });
+  });
 });
