@@ -198,19 +198,21 @@ DATABASE_URL="<프로덕션 세션 풀러 URL>" pnpm ops:health
 
 임계값 근거는 `DEFAULT_OPS_HEALTH_THRESHOLDS` 주석에 실측과 함께 적혀 있다. 2026-09-03 프로덕션 실측은 전 항목 `ok`(`.omo/evidence/phase2c/followup-deployment-checklist.md`).
 
+`permanent-failures`는 전 기간 누적이다 — 원인을 고쳐도 스스로 내려가지 않으므로, 성공할 수 없었던 잡은 `cancelled`로 철회해야 경고가 걷힌다. 2026-09-12의 null sha(브랜치 삭제 push) 사례와 철회 SQL은 `.omo/evidence/phase4/null-sha-scan-requests-2026-09-12.md`.
+
 **권장 주기:** 파일럿 규모에서는 사람이 하루 1회 + 배포 직후 실행. 무인 스케줄링은 러너 자격증명이 필요하므로 도입하지 않았다.
 
 ### 10.2 DB에서 보이지 않는 것 — 콘솔에서 봐야 하는 신호
 
 거절된 webhook과 RLS 거부는 **저장되기 전에 끝나므로** DB에 흔적이 없다. 이 셋은 콘솔 로그에서만 보인다.
 
-| 신호                 | 어디                                                                                                             | 무엇을 찾나                                                                                |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| webhook 4xx/5xx      | GitHub App → Advanced → **Recent Deliveries** (7일 보존) / Vercel → 프로젝트 → Logs, `/api/github/webhooks` 필터 | 200 아닌 응답. `401` 연속 = 서명 불일치, `503 github_webhook_not_configured` = 시크릿 누락 |
-| 반복 서명 불일치     | 같은 두 곳                                                                                                       | 짧은 시간에 `401`이 반복되면 위조 시도 — 시크릿 회전 전에 **먼저 원인 확인**               |
-| 교차 테넌트·RLS 오류 | Supabase → Logs → Postgres, `permission denied` / `row-level security` 검색                                      | 정상 운영에서는 0건이어야 한다. 1건이라도 나오면 해당 쿼리 경로를 즉시 조사                |
-| 워커 드레인 루프     | `flyctl logs -a arr-worker`                                                                                      | 잡 클레임·완료 로그가 멈췄는지. **HTTP 헬스체크는 없는 게 정상**                           |
-| 워커 재시작·OOM      | `flyctl status -a arr-worker`, `flyctl releases -a arr-worker`                                                   | 의도하지 않은 버전 변화나 재시작 반복                                                      |
+| 신호                 | 어디                                                                                                             | 무엇을 찾나                                                                                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| webhook 4xx/5xx      | GitHub App → Advanced → **Recent Deliveries** (7일 보존) / Vercel → 프로젝트 → Logs, `/api/github/webhooks` 필터 | 200 아닌 응답. `401` 연속 = 서명 불일치, `503 github_webhook_not_configured` = 시크릿 누락. `202 ref_deleted`는 브랜치·태그 삭제 push — 정상이며 저장·큐잉되지 않는다 |
+| 반복 서명 불일치     | 같은 두 곳                                                                                                       | 짧은 시간에 `401`이 반복되면 위조 시도 — 시크릿 회전 전에 **먼저 원인 확인**                                                                                          |
+| 교차 테넌트·RLS 오류 | Supabase → Logs → Postgres, `permission denied` / `row-level security` 검색                                      | 정상 운영에서는 0건이어야 한다. 1건이라도 나오면 해당 쿼리 경로를 즉시 조사                                                                                           |
+| 워커 드레인 루프     | `flyctl logs -a arr-worker`                                                                                      | 잡 클레임·완료 로그가 멈췄는지. **HTTP 헬스체크는 없는 게 정상**                                                                                                      |
+| 워커 재시작·OOM      | `flyctl status -a arr-worker`, `flyctl releases -a arr-worker`                                                   | 의도하지 않은 버전 변화나 재시작 반복                                                                                                                                 |
 
 로그를 볼 때 **페이로드·시크릿을 복사해 붙여넣지 말 것** — evidence에는 상태 코드·건수·시각만 남긴다.
 

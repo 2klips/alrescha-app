@@ -1,3 +1,4 @@
+import { isScannableCommitSha } from "@alrescha/core";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -32,9 +33,10 @@ export async function scheduleBackfillScan(input: {
   readonly repositoryId: string;
   readonly workspaceId: string;
 }): Promise<BackfillScanResult> {
-  if (!input.headCommitSha || !/^[0-9a-f]{40}$/.test(input.headCommitSha)) {
+  if (!input.headCommitSha || !isScannableCommitSha(input.headCommitSha)) {
     // Without a head there is nothing to scan *at*. Saying so beats
-    // scheduling a job that would fail in the worker.
+    // scheduling a job that would fail in the worker. The null sha counts as
+    // no head: it is what an empty repository or a deleted branch reports.
     return {
       jobId: null,
       reason: "the repository's head commit is unknown",

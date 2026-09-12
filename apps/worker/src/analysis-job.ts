@@ -26,6 +26,7 @@ import {
   digestInTotoStatement,
   ingestCiTestReports,
   ingestCoverageReports,
+  isScannableCommitSha,
   prepareAssuranceContexts,
   requirementImplementationLinks,
   RECEIPT_PREDICATE_TYPE,
@@ -235,9 +236,16 @@ export interface AnalysisJobDependencies {
   readonly now?: () => Date;
 }
 
+/**
+ * The commit this job analyses. The null sha is refused with the malformed
+ * ones: at a commit GitHub cannot serve, every body read is a 404, which
+ * `readSource` must treat as "file vanished" — so the job would not fail, it
+ * would drop every document and test, supersede every requirement, resolve
+ * every finding and write a receipt for a commit that does not exist.
+ */
 function commitShaOf(job: ClaimedJob): string {
   const commitSha = (job.payload as { commitSha?: unknown }).commitSha;
-  if (typeof commitSha !== "string" || !/^[0-9a-f]{40}$/.test(commitSha)) {
+  if (typeof commitSha !== "string" || !isScannableCommitSha(commitSha)) {
     throw new Error("analyze job payload has no valid commitSha");
   }
   return commitSha;
