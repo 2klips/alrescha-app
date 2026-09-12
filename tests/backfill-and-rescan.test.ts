@@ -155,6 +155,19 @@ describe("backfill and rescan", () => {
     expect(await jobs()).toEqual([]);
   });
 
+  it("refuses the null sha, which is forty hex characters and no commit", async () => {
+    // What an empty repository or a just-deleted default branch reports as
+    // its head. The format check alone let it through, and the worker then
+    // asked GitHub for a tree that does not exist (2026-09-12 evidence).
+    await expect(backfill("0".repeat(40))).rejects.toThrow(/head commit sha/);
+    expect(await jobs()).toEqual([]);
+    const runs = await database.query<{ count: number }>(
+      "select count(*)::integer as count from public.runs where repository_id = $1",
+      [repositoryId],
+    );
+    expect(runs.rows[0]?.count).toBe(0);
+  });
+
   it("refuses a repository from another workspace", async () => {
     await expect(
       asServiceRole(database, async (transaction) =>

@@ -1,5 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
+import { NULL_GIT_SHA } from "../ingest/commit-sha";
+
 export type SupportedGitHubWebhook = "check_run" | "push" | "workflow_run";
 
 export const MAX_GITHUB_WEBHOOK_BODY_BYTES = 1_048_576;
@@ -277,6 +279,16 @@ export async function handleGitHubWebhook(input: {
 
   if (!event) {
     return { body: { ignored: true }, status: 202 };
+  }
+
+  // A push that deleted its ref carries Git's null id as `after` (`deleted`
+  // true, `head_commit` null). It is a well-formed delivery about no commit:
+  // persisting it would queue a scan and an analysis at a sha GitHub cannot
+  // serve a tree for, and the scan would fail every attempt — the six
+  // permanent failures of 2026-09-09 → 12. Acknowledged, so GitHub does not
+  // count it against the App; nothing is stored, so nothing is queued.
+  if (event.commitSha === NULL_GIT_SHA) {
+    return { body: { ignored: true, reason: "ref_deleted" }, status: 202 };
   }
 
   const repository = await input.store.resolveRepository(event);

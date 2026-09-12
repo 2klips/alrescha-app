@@ -380,6 +380,34 @@ describe("analyze job", () => {
       handler(job(), { heartbeat: async () => true }),
     ).rejects.toThrow(/has not applied its plan/);
   });
+
+  it("refuses the null sha before reading a body or touching the store", async () => {
+    // A deleted branch's push carries Git's null id as its commit. At that
+    // "commit" every body read is a 404, which reads as "file vanished" —
+    // so the old handler did not fail: it dropped every document and test,
+    // superseded every requirement, resolved every finding and wrote a
+    // receipt for a commit that does not exist.
+    const { recorded, store } = fakeStore({
+      openFingerprints: ["missing-implementation:spec/auth.md:5:3"],
+    });
+    const handler = createAnalysisJobHandler({
+      readSource: async ({ path }) => {
+        recorded.read.push(path);
+        return null;
+      },
+      store,
+    });
+
+    await expect(
+      handler(
+        { ...job(), payload: { commitSha: "0".repeat(40) } },
+        { heartbeat: async () => true },
+      ),
+    ).rejects.toThrow(/no valid commitSha/);
+    expect(recorded.read).toEqual([]);
+    expect(recorded.delta).toBeNull();
+    expect(recorded.statement).toBeNull();
+  });
 });
 
 /**
