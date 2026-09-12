@@ -194,13 +194,17 @@ test("connect → progress → map on the live GitHub App, with T2FV measured", 
   let worker: ChildProcess | null = null;
   const workerLines: string[] = [];
   try {
-    // What the OAuth callback stores for the picker to list.
+    // What the OAuth callback stores for the picker to list — under the
+    // label the repository had *before* a rename, which is what production
+    // held for the pilot (PR #10 follow-up). The connect must store GitHub's
+    // current name, read by id, and bring this row up to it too.
+    const staleLabel = `${PILOT}-before-rename`;
     const available = await service
       .from("github_available_repositories")
       .upsert(
         {
           default_branch: repo!.default_branch,
-          full_name: PILOT,
+          full_name: staleLabel,
           github_repository_id: repo!.id,
           installation_id: installationRowId,
           observed_at: new Date().toISOString(),
@@ -219,18 +223,32 @@ test("connect → progress → map on the live GitHub App, with T2FV measured", 
       `/app/connect/github/repositories?installation=${installationRowId}`,
     );
     const connectAt = Date.now();
-    await page.getByRole("button", { exact: true, name: PILOT }).click();
+    await page.getByRole("button", { exact: true, name: staleLabel }).click();
     await expect(page).toHaveURL(/\/app\?github=pending&backfill=scheduled$/, {
       timeout: 60_000,
     });
 
+    // The row is the repository with this id, and it carries GitHub's name —
+    // not the picker's label; the picker's row now carries it too.
     const repository = await service
       .from("repositories")
-      .select("id")
+      .select("id, full_name")
       .eq("workspace_id", user.workspaceId)
-      .eq("full_name", PILOT)
+      .eq("github_repository_id", repo!.id)
       .single();
     expect(repository.error).toBeNull();
+    expect(repository.data?.full_name).toBe(PILOT);
+    const listed = await service
+      .from("github_available_repositories")
+      .select("full_name")
+      .eq("workspace_id", user.workspaceId)
+      .eq("installation_id", installationRowId)
+      .eq("github_repository_id", repo!.id)
+      .single();
+    expect(listed.data?.full_name).toBe(PILOT);
+    await expect(
+      page.locator(".repository-header .repository-identity strong"),
+    ).toHaveText(PILOT);
     const repositoryId = String(repository.data?.id);
     const queued = await service
       .from("jobs")

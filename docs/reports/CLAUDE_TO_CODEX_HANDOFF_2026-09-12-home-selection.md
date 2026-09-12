@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: 홈의 현재 저장소 규칙과 첫 스캔 재시도 (PR #9 후속)
 
 작성: 2026-09-12 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **대기 — 마이그레이션 적용과 웹 배포(머지)가 남아 있다.** 이 줄은 Codex가 갱신한다.
+상태: **배포·복구 검증 완료, 저장소 이름 동기화 후속 필요 — `202609120004` 적용 후 PR #10 merge `80a99cb`와 웹 배포 완료, 워커 v18 유지. Picker 선택에 따라 홈·헤더가 함께 바뀌고 완료 단계·다시 스캔을 확인했다. LostArk `:r1` pair는 모두 1회·0크레딧 succeeded, SHA 일치, 기존 실패 행 보존, 새 실패 0건(기존 14 WARN). 다만 picker의 옛 `2klips/arr-app` 이름이 재선택 시 저장소 행에도 복사돼 canonical 이름 검증은 미충족이며 Claude lane 후속이다. 403 종류·연기는 미관측.** 상세: [프로덕션 롤아웃 기록](../../.omo/evidence/phase4/pr10-production-rollout-2026-09-12.md).
 브랜치: `claude/home-current-repository` (`main@5cb4379` 기준) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/home-current-repository-first-scan-retry-2026-09-12.md`](../../.omo/evidence/phase4/home-current-repository-first-scan-retry-2026-09-12.md) — 계약 조사, red/green, 게이트, 검증 절차, 롤백 지점이 전부 거기 있다. 이 문서는 그 요약이다.
 

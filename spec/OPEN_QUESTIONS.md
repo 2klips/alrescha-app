@@ -559,3 +559,11 @@
 - 임시 결정: 서빙 모드는 **결정론 그래프 전용으로 출하**(모든 산문 `missing`, 모든 리더가 이미 다루는 상태). todo 17은 이 항목을 남기고 닫는다 — 이관은 별도 커밋·별도 검토 단위다. 함께 남는 포장 문제(빌드 산출물이 워크스페이스 패키지를 external로 두어 `tsx` 없이는 `serve`도 `push`도 실행 불가)는 같은 변경에 묶지 않는다.
 - 필요한 결정: ⑴ ⓐ~ⓓ대로 이관을 Wave D todo 20(`docskeleton` — 본문 없이 도는 첫 잡, 워커 소스 팩토리 분리와 같은 세션)에 붙인다(기본 후보 — 프로바이더를 만지는 세션이 하나가 된다) ⑵ 이관 없이 CLI가 워커를 직접 import한다(기각 — 워커의 DB·크레딧 코드가 CLI로 딸려 들어가고 ADR-015 경계가 흐려진다) ⑶ BYOK enrich를 로컬 모드에서 영구 제외한다(정직하지만 OQ-030 ⑴의 약속을 철회하는 것이라 사용자 결정).
 - 상태: open. 기본 후보 ⑴.
+
+## OQ-066 — 저장소 inventory(`github_available_repositories`)는 설치 시점의 스냅샷이며, 선택 전에는 갱신되지 않는다
+
+- 발견: PR #10 프로덕션 검증(2026-09-12) / `apps/web/lib/github/onboarding-store.ts`(`savePendingInstallation`이 유일한 기록 경로), `packages/core/src/github/app-permissions.ts`(`GITHUB_WEBHOOK_EVENTS`에 `repository`·`installation_repositories` 없음), `apps/web/app/api/github/repositories/url/route.ts`(`findAvailableRepository`·`findConnectedRepository`가 이름으로 조회), `.omo/evidence/phase4/repository-canonical-name-2026-09-12.md`
+- 내용: GitHub에서 이름이 바뀐 저장소는 inventory에 옛 이름으로 남고, picker는 그 이름을 보여준다. PR #10 후속 수정은 **선택 시점**에 repo 범위 토큰으로 `GET /repositories/{id}`를 읽어 `repositories`와 inventory 행을 GitHub의 현재 이름으로 수렴시키고, 웹훅은 id로만 매칭한다. 그래서 picker는 한 번 선택한 뒤에는 맞지만, 선택 전 렌더는 여전히 옛 이름이며, URL 연결 경로는 inventory가 갱신되기 전까지 canonical URL에 `no_access`를 답한다.
+- 임시 결정: 선택 시점 갱신만 구현. 렌더 시 갱신은 모든 inventory 행 범위의 토큰(한 행이라도 접근 불가면 발급 실패)이거나 App의 웹훅 구독 확대(`repository.renamed`, `installation_repositories`)가 필요해 이번 수정에 섞지 않았다.
+- 필요한 결정: ⑴ App 웹훅 구독에 `repository`·`installation_repositories`를 추가하고 핸들러가 inventory·`repositories` 이름을 id 기준으로 갱신한다(권한 확대 없음, App 설정 변경 필요) ⑵ picker 렌더 시 App JWT로 `/app/installations/{id}` 계열 목록을 읽어 inventory를 갱신한다(호출 비용·실패 시 캐시 폴백) ⑶ 현행 유지 — 선택이 갱신 경로다.
+- 상태: open. 기본 후보 ⑴.

@@ -3,15 +3,21 @@ import {
   GITHUB_READ_ONLY_PERMISSIONS,
   requestInstallationToken,
   selectGitHubRepository,
+  type GitHubRepositoryChoice,
 } from "@alrescha/core";
 
 import {
   createGitHubAppJwt,
   fetchDefaultBranchHead,
+  fetchRepositoryById,
   type DefaultBranchHead,
+  type RepositoryRecord,
 } from "./api";
 import { githubAppEnvironment } from "./env";
-import { saveSelectedRepository } from "./onboarding-store";
+import {
+  reconcileConnectedRepository,
+  type ConnectedRepositoryMetadata,
+} from "./repository-identity";
 import { createAdminClient } from "../supabase/admin";
 import {
   resolveConnectHead,
@@ -29,6 +35,12 @@ export type ConnectSelectedRepositoryResult =
        * written would leave a half-finished setup with no way to retry.
        */
       backfill: BackfillScanResult;
+      /**
+       * What the row now holds, and whether GitHub's current record (read by
+       * id) is what it holds (PR #10 follow-up). A connect succeeds either
+       * way; when the read fails, nothing is overwritten and this says why.
+       */
+      metadata: ConnectedRepositoryMetadata;
       ok: true;
       repositoryId: string;
     }
@@ -58,6 +70,11 @@ export async function connectSelectedRepository(input: {
     fullName: string;
     token: string;
   }) => Promise<DefaultBranchHead>;
+  /** Test seam for the by-id repository read; production uses the GitHub API. */
+  readRepository?: (input: {
+    githubRepositoryId: number;
+    token: string;
+  }) => Promise<RepositoryRecord>;
   workspaceId: string;
 }): Promise<ConnectSelectedRepositoryResult> {
   const admin = createAdminClient();
@@ -94,18 +111,39 @@ export async function connectSelectedRepository(input: {
     installationData.permission_mode === "read_with_pr_proposals"
       ? { ...GITHUB_READ_ONLY_PERMISSIONS, ...GITHUB_PR_PROPOSAL_PERMISSION }
       : GITHUB_READ_ONLY_PERMISSIONS;
-  // Kept for the head read below and dropped with this call; it is never
-  // stored (the connect screen's promise).
-  let installationToken: string | null = null;
+  // The inventory row the picker listed — a snapshot from install time,
+  // possibly stale; GitHub's current record is read by id once the token
+  // below exists, and that is what gets stored.
+  const cached: GitHubRepositoryChoice = {
+    defaultBranch: repository.data.default_branch,
+    fullName: repository.data.full_name,
+    githubRepositoryId: repository.data.github_repository_id,
+  };
+  // Filled in by the two callbacks, in the order the core runs them: the
+  // access check mints the token (kept for the reads below and dropped with
+  // this call; it is never stored — the connect screen's promise), and the
+  // save records what the row holds.
+  const minted: {
+    metadata: ConnectedRepositoryMetadata | null;
+    token: string | null;
+  } = { metadata: null, token: null };
   const selection = await selectGitHubRepository({
     installationId: input.installationId,
-    repository: {
-      defaultBranch: repository.data.default_branch,
-      fullName: repository.data.full_name,
-      githubRepositoryId: repository.data.github_repository_id,
+    repository: cached,
+    saveSelection: async (candidate) => {
+      const stored = await reconcileConnectedRepository({
+        actorUserId: input.actorUserId,
+        cached: candidate.repository,
+        client: admin,
+        installationId: candidate.installationId,
+        readRepository:
+          input.readRepository ?? ((request) => fetchRepositoryById(request)),
+        token: minted.token,
+        workspaceId: candidate.workspaceId,
+      });
+      minted.metadata = stored.metadata;
+      return { repositoryId: stored.repositoryId };
     },
-    saveSelection: (candidate) =>
-      saveSelectedRepository({ ...candidate, actorUserId: input.actorUserId }),
     verifyCurrentAccess: async (repositoryId) => {
       const token = await requestInstallationToken({
         appJwt: createGitHubAppJwt(environment.appId, environment.privateKey),
@@ -113,19 +151,23 @@ export async function connectSelectedRepository(input: {
         permissions,
         repositoryIds: [repositoryId],
       });
-      installationToken = token.token;
+      minted.token = token.token;
     },
     workspaceId: input.workspaceId,
   });
+  if (minted.metadata === null) {
+    throw new Error("The repository selection was not stored.");
+  }
+  const connected = minted.metadata.repository;
 
   const head = await resolveConnectHead({
-    defaultBranch: repository.data.default_branch,
-    fullName: repository.data.full_name,
+    defaultBranch: connected.defaultBranch,
+    fullName: connected.fullName,
     providedHead: input.headCommitSha,
     readHead:
       input.readDefaultBranchHead ??
       ((request) => fetchDefaultBranchHead(request)),
-    token: installationToken,
+    token: minted.token,
   });
   const backfill = await scheduleBackfillAtHead({
     client: admin,
@@ -134,5 +176,10 @@ export async function connectSelectedRepository(input: {
     workspaceId: input.workspaceId,
   });
 
-  return { backfill, ok: true, repositoryId: selection.repositoryId };
+  return {
+    backfill,
+    metadata: minted.metadata,
+    ok: true,
+    repositoryId: selection.repositoryId,
+  };
 }
