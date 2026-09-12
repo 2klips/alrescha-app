@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: containment 조인 마이그레이션 (PR #4)
 
 작성: 2026-09-12 · 대상: Alrescha 배포를 담당하는 Codex
-상태: 코드는 `main`에 머지·검증 완료. **프로덕션 DB 마이그레이션 적용과 배포는 아직 실행하지 않았다** — 이 문서가 넘기는 일이다.
+상태: **완료 (2026-09-12 08:45 UTC).** 프로덕션 DB를 `202609110015_containment_join_shape.sql`까지 적용했고, `apply_repository_scan` 신규 shape를 확인했다. `arr-worker` v15를 `main` `a1a38ce`에서 재배포했고, 1,170-blob 저장소의 full/incremental 재스캔과 contains 집합 유지를 확인했다. 실행 증거: [`.omo/evidence/perf/containment-production-2026-09-12.md`](../../.omo/evidence/perf/containment-production-2026-09-12.md).
 
 ## 1. 지금 할 일
 
