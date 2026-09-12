@@ -159,3 +159,34 @@ The startup lines, on stderr:
   survive-if-unscanned rules exist to reconcile with stored rows, and there
   are none here. The equivalence test scans into an empty database for the
   same reason.
+
+---
+
+## Closed — 2026-09-12
+
+The one open item above, BYOK enrich, is not a few lines: the callable
+provider clients live in `apps/worker/src/ai-providers.ts` (731 lines, the
+enrich pair beside the judgment and coaching pairs, with the key envelope and
+the credit lifecycle around them) and the CLI does not depend on the worker
+— nor should it, or the worker's database and credit code would ride into
+the CLI bundle. Moving them is its own change with its own risk to the hosted
+path, so it is **scoped rather than done**: **OQ-065** defines the move (what
+goes, what stays in the worker, the byte-identical hosted path, the stdio
+freshness check that proves it) and names todo 20 as the session that
+touches providers next.
+
+What ships from todo 17 is the deterministic serving mode as verified on
+2026-09-06: local scan → `InMemoryMcpStore` → stdio MCP, the same 23-tool
+factory as hosted (21 after todo 22's diet), read scopes only, equivalence
+with `apply_repository_scan` pinned on two fixtures, and the queue's refusal
+of server work for a local repository. Every file's prose reports `missing`,
+which every reader already handles honestly.
+
+Not re-run here: the packaging note (the built binary still needs `tsx`)
+stands as written and is deliberately left out of OQ-065's scope. The
+"no e2e — Docker unavailable" line above was corrected on 2026-09-07
+(`e2e-debt.md`); the serve path has no browser surface and owes none.
+
+The checkbox closes on that basis: acceptance was the serving mode and the
+OQ-030 decision, both met; the BYOK half was a candidate the decision
+described, and it now has a definition of done instead of a "not built".

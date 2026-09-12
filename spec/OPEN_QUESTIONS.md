@@ -545,3 +545,16 @@
 - 임시 결정: 매처는 넓힌 채로 둔다(어휘 3분의 2를 못 보는 건 코퍼스와 무관한 결함이고, 2혹 가드로 오탐을 막았다). **순증 0을 그대로 보고한다** — 이 레포에서 이득을 못 보였다는 사실이 측정이다. 분류 변경은 하지 않았다: Wave A의 `classifyArtifactPath`와 밀도 픽스처에 파급이 있어 단독 판단할 일이 아니다.
 - 필요한 결정: ⑴ `spec/` 안에서 **규범 문서와 계획 문서를 분리**한다 — `BUILD_PLAN*`·`RESEARCH_*`·`REVIEW_*`·`OPEN_QUESTIONS`를 `todo_progress`나 `doc`으로 내리고 요구사항 추출은 `WORK_SPEC`·`DECISIONS-ADR` 급에서만(기본 후보, 밀도 픽스처 재측정 필요) ⑵ 요구사항→코드 링크의 신호를 이름 매칭에서 바꾼다 — 이미 있는 재료로는 **출처 문서가 코드를 `references` 하는 요구사항이 34/99**(문서 4개가 코드로 13개 참조)이고, 문서 단위라 statement 단위보다 약하지만 0보다는 많다 ⑶ G3 enrich의 의미 매칭에 맡긴다(비용 발생, ADR-001상 여전히 `inferred`) ⑷ 커버리지 지표를 **"요구사항 문서가 아직 코드를 지목하지 않았다"** 로 다시 쓰고 퍼센트를 안 보여준다.
 - 상태: open. ⑴과 ⑷는 서로 독립이고 둘 다 사용자 결정(OQ-041과 같은 결)이다. 그 전까지 어떤 화면도 이 커버리지를 퍼센트로 그리지 않는다.
+
+## OQ-065 — `serve --local`의 BYOK enrich는 프로바이더 클라이언트 이관이 선행 조건이다 (OQ-030 ⑴의 미구현 절반)
+
+- 발견: Phase 4 Wave C todo 17 마감(2026-09-12) / `apps/worker/src/ai-providers.ts`(731줄 — `OpenAiEnrichProvider`·`AnthropicEnrichProvider`가 `OpenAi/AnthropicJudgmentProvider`·`…CoachingProvider`와 한 파일에, 키 봉투 복호화와 크레딧 라이프사이클이 그 둘레에), `packages/core/src/enrich/{prose-summary,concept-graph}.ts`(산문 검증기 — 이미 core), `packages/cli/package.json`(의존성은 `@alrescha/core`·`@alrescha/mcp`뿐), `.omo/evidence/phase4/todo-17.md`
+- 내용: OQ-030 ⑴은 "BYOK 키가 있을 때 프로바이더를 직접 호출해 산문을 채운다(검증기 동일)"까지를 후보로 적었고, todo 17은 서빙 모드·동등성·큐 거절까지만 구현했다. 남은 절반이 안 된 이유는 설계가 아니라 **위치**다: 호출 가능한 enrich 프로바이더가 `apps/worker` 안에 있고 CLI는 워커에 의존하지 않는다(의존하면 워커의 DB·크레딧 코드가 CLI 번들에 딸려 들어간다). 따라서 BYOK enrich는 "코드 몇 줄"이 아니라 **프로바이더 클라이언트를 패키지로 옮기는 별도 변경**이며, 그 변경의 위험은 호스티드 enrich 경로(예약→정산/환불, 실패 무과금, BYOK 0)를 옮기는 동안 바꾸지 않는 것이다.
+- 범위(이관 변경의 정의 — 이 항목이 잠그는 것은 "무엇을 해야 완료인가"다):
+  - ⓐ `EnrichProvider` 인터페이스와 두 구현(+ HTTP 호출·응답 파싱)을 `apps/worker`에서 DB·크레딧 무의존 패키지(후보: `packages/core/src/ai/` 또는 새 `@alrescha/ai-providers`)로 옮긴다. 키 봉투 복호화(`BYOK_ENCRYPTION_KEY`)와 크레딧 예약/정산은 **워커에 남긴다** — CLI는 평문 환경변수 키만 쓴다.
+  - ⓑ 워커는 옮긴 모듈을 import만 하고 동작은 바이트 불변: 기존 `apps/worker/src/*.test.ts`·`tests/enrich-*.test.ts`가 수정 없이 green이어야 한다(테스트 약화 금지 규칙 그대로).
+  - ⓒ `alrescha serve --local`은 `ANTHROPIC_API_KEY`/`OPENAI_API_KEY`가 있을 때만 프로바이더를 호출해 `InMemoryMcpStore`의 산문을 `current`로 채운다(같은 검증기 — `EnrichValidationError` 축자 인용 거부 상속). 키가 없으면 지금처럼 전부 `missing`. 파일 본문은 프로바이더 외 어디로도 가지 않는다(하드룰 ③ — 서버 전송 0은 그대로).
+  - ⓓ 수용 기준: ⓑ green · stdio 실기에서 `get_node_content`의 freshness가 `missing`→`current`로 바뀌는 것을 SDK 클라이언트로 1회 확인 · 과금 경로 신설 0(크레딧 원장 무접촉) · `scripts/verify-scope-boundaries.ts` PASS.
+- 임시 결정: 서빙 모드는 **결정론 그래프 전용으로 출하**(모든 산문 `missing`, 모든 리더가 이미 다루는 상태). todo 17은 이 항목을 남기고 닫는다 — 이관은 별도 커밋·별도 검토 단위다. 함께 남는 포장 문제(빌드 산출물이 워크스페이스 패키지를 external로 두어 `tsx` 없이는 `serve`도 `push`도 실행 불가)는 같은 변경에 묶지 않는다.
+- 필요한 결정: ⑴ ⓐ~ⓓ대로 이관을 Wave D todo 20(`docskeleton` — 본문 없이 도는 첫 잡, 워커 소스 팩토리 분리와 같은 세션)에 붙인다(기본 후보 — 프로바이더를 만지는 세션이 하나가 된다) ⑵ 이관 없이 CLI가 워커를 직접 import한다(기각 — 워커의 DB·크레딧 코드가 CLI로 딸려 들어가고 ADR-015 경계가 흐려진다) ⑶ BYOK enrich를 로컬 모드에서 영구 제외한다(정직하지만 OQ-030 ⑴의 약속을 철회하는 것이라 사용자 결정).
+- 상태: open. 기본 후보 ⑴.
