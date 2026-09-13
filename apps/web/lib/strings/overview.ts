@@ -16,6 +16,8 @@ export const OVERVIEW = {
     tests: "테스트 커버리지",
     lastAnalysis: "마지막 분석",
     lastAnalysisNone: "기록 없음",
+    /** A percentage whose basis is missing — not 0%. */
+    unmeasured: "측정 안 됨",
   },
 
   graph: {

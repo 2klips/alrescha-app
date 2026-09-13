@@ -237,11 +237,19 @@ export function OverviewScreen({ model }: { model: OverviewViewModel }) {
           <span>{OVERVIEW.kpi.unresolved}</span>
         </article>
         <article>
-          <strong>{model.kpi.implementation}%</strong>
+          <strong>
+            {model.kpi.implementation === null
+              ? OVERVIEW.kpi.unmeasured
+              : `${model.kpi.implementation}%`}
+          </strong>
           <span>{OVERVIEW.kpi.implementation}</span>
         </article>
         <article>
-          <strong>{model.kpi.tests}%</strong>
+          <strong>
+            {model.kpi.tests === null
+              ? OVERVIEW.kpi.unmeasured
+              : `${model.kpi.tests}%`}
+          </strong>
           <span>{OVERVIEW.kpi.tests}</span>
         </article>
         <article>

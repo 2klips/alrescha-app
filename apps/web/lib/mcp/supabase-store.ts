@@ -1265,7 +1265,16 @@ export class SupabaseMcpStore implements McpStore {
     // (QW-17). Calling .send() on an unsubscribed channel worked too, but
     // only via an implicit, warning-emitting fallback the SDK has flagged
     // for removal — this is the explicit, supported replacement.
-    const realtime = this.client.channel(channel);
+    //
+    // Private, because the browser joins the topic as a private channel
+    // (Phase 4 Wave B todo 15): Realtime keeps public and private frames on
+    // the same topic apart, and a public publish never reaches a private
+    // subscriber — measured, not assumed. The service role publishes past
+    // the `realtime.messages` policy; that policy is what lets a workspace
+    // member, and nobody else, listen.
+    const realtime = this.client.channel(channel, {
+      config: { private: true },
+    });
     try {
       const result = await realtime.httpSend("access_event", event);
       if (!result.success) {

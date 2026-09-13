@@ -7,6 +7,7 @@ import {
 } from "@modelcontextprotocol/client";
 import { expect, test } from "@playwright/test";
 
+import { buildDashboardViewModel } from "../../apps/web/lib/dashboard/graph-model";
 import {
   ASSURANCE,
   DASHBOARD,
@@ -302,7 +303,9 @@ test("completes the GitHub-first pilot flow with MCP, credits, stats, and receip
       .first()
       .click();
     await expect(page.getByTestId("metric-evidence")).toContainText(
-      DASHBOARD.metricEvidence.unresolved[2],
+      DASHBOARD.metricEvidence.unresolved(
+        buildDashboardViewModel("scanned").metrics,
+      )[2]!,
     );
   });
 

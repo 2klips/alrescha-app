@@ -113,6 +113,8 @@ class FakeSupabaseClient {
   readonly builders: FakeQueryBuilder[] = [];
   readonly channels: FakeChannel[] = [];
   readonly removedChannels: FakeChannel[] = [];
+  /** What each `channel()` call was configured with, in call order. */
+  readonly channelParams: unknown[] = [];
   readonly #queues = new Map<string, TableResponse[]>();
   /**
    * Responses per RPC name, consumed in call order and holding on the last.
@@ -163,9 +165,10 @@ class FakeSupabaseClient {
     return builder;
   }
 
-  channel(topic: string) {
+  channel(topic: string, params?: unknown) {
     const channel = new FakeChannel(topic, this.channelResult);
     this.channels.push(channel);
+    this.channelParams.push(params);
     return channel;
   }
 
@@ -326,6 +329,9 @@ describe("SupabaseMcpStore.publishAccessEvent — REST broadcast (QW-17)", () =>
     expect(client.channels[0]?.calls).toEqual([
       { args: ["access_event", event], method: "httpSend" },
     ]);
+    // On the private topic (Wave B todo 15): the browser joins it as a
+    // private channel, and a public frame never reaches a private subscriber.
+    expect(client.channelParams).toEqual([{ config: { private: true } }]);
     expect(client.removedChannels).toEqual(client.channels);
   });
 

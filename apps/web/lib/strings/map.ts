@@ -77,5 +77,70 @@ export const WORKSPACE_MAP = {
     empty:
       "아직 기록된 MCP 접근이 없습니다. 토큰을 발급하면 에이전트의 조회가 여기에 나타나고, 조회된 노드가 Graph에서 빛납니다.",
     manageTokens: "MCP 토큰 관리",
+    /**
+     * The state of the workspace channel behind "Live" (Wave B todo 15).
+     * Shown as a word rather than a colour: a badge that says "Live" while
+     * the channel is still joining is a claim the page cannot yet back.
+     */
+    channel: {
+      aria: "실시간 채널 상태",
+      connecting: "채널 연결 중",
+      live: "실시간 수신 중",
+      retrying: "재연결 중",
+      closed: "연결 종료",
+    },
+  },
+
+  /**
+   * Real-data HUD (Wave B todo 15). Every chip names its source line, the
+   * same rule the demo dashboard's metric evidence follows (WORK_SPEC
+   * §5.2-①): a number that cannot say where it came from is not shown.
+   */
+  hud: {
+    aria: "워크스페이스 상태 칩",
+    findings: {
+      detail: "open 상태만 셉니다",
+      source: "출처: 저장된 Findings 행",
+    },
+    coverage: {
+      label: "구현 커버리지",
+      /** `<covered> / <total> 요구사항` */
+      measured: (covered: number, total: number) =>
+        `${covered} / ${total} 요구사항`,
+      /** 요구사항이 아직 없다 — 0%가 아니다. */
+      noData: "측정 안 됨",
+      /** 요구사항은 있는데 `implements` 엣지가 하나도 없다 — 0%가 아니다. */
+      noLinks: "미측정 — 구현 링크 없음",
+      source: "출처: 요구사항 → 코드 implements 엣지",
+    },
+    risk: {
+      kicker: "위험 상위",
+      aria: "위험 상위 파일",
+      empty: "위험 요인이 있는 코드가 없습니다",
+      /** `<n>개 파일` — files with at least one factor. */
+      count: (files: number) => `${files}개 파일`,
+      /** The risk map's bands; `low` has factors but draws no ring. */
+      levels: {
+        high: "높음",
+        elevated: "주의",
+        moderate: "보통",
+        low: "낮음",
+      },
+      unmeasuredCoverage: "커버리지 미측정",
+      source: "출처: 위험 지도 — 저장된 엣지·Findings·공변경",
+    },
+    lastScan: {
+      label: "마지막 스캔",
+      never: "스캔 전",
+      /** Freshness at page load, in the coarsest honest unit. */
+      age: (minutes: number) => {
+        if (minutes < 1) return "방금";
+        if (minutes < 60) return `${minutes}분 전`;
+        if (minutes < 60 * 24) return `${Math.floor(minutes / 60)}시간 전`;
+        return `${Math.floor(minutes / (60 * 24))}일 전`;
+      },
+      unknownAge: "완료 시각 없음",
+      source: "출처: 성공한 스캔 잡 · 로컬 push 실행",
+    },
   },
 } as const;

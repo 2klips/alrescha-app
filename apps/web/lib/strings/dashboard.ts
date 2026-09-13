@@ -3,6 +3,17 @@
  * Phase 2A todo 3 — Korean-first, conventional English terms kept.
  */
 
+/** The shape `metricEvidence` reads (`DashboardMetrics` in graph-model). */
+export interface DashboardEvidenceMetrics {
+  readonly implementation: number | null;
+  readonly requirements: { readonly covered: number; readonly total: number };
+  readonly tests: number | null;
+  readonly testsCovered: { readonly covered: number; readonly total: number };
+  readonly tokenCost: number;
+  readonly unresolved: number;
+  readonly unresolvedNodes: number;
+}
+
 export const DASHBOARD = {
   ariaMain: "Alrescha 프로젝트 보증 Dashboard",
   ariaRepoRail: "레포 요약",
@@ -27,6 +38,8 @@ export const DASHBOARD = {
     implementation: "구현 커버리지",
     tests: "테스트 커버리지",
     tokens: "상시 로드",
+    /** A chip whose basis is missing shows this instead of a number. */
+    unmeasured: "측정 안 됨",
   },
 
   legend: {
@@ -229,26 +242,37 @@ export const DASHBOARD = {
    * Metric drill-downs. Every line names its source — a number that cannot be
    * traced to evidence must not be shown at all (WORK_SPEC §5.2-①).
    */
+  /**
+   * Each line is a function of the derived metrics (Wave B todo 15): the
+   * headline repeats the chip's number, the middle line says what was
+   * counted, and the last names the source. Nothing here is typed in.
+   */
   metricEvidence: {
-    unresolved: [
-      "미해소 Findings 4건",
-      "missing-test 2 · stale-doc 1 · unproven-claim 1",
-      "출처: 최신 결정론 분석",
+    unresolved: (metrics: DashboardEvidenceMetrics): readonly string[] => [
+      `미해소 Findings ${metrics.unresolved}건`,
+      `finding 배지가 있는 노드 ${metrics.unresolvedNodes}개`,
+      "출처: 데모 픽스처 Graph의 finding 배지 합계",
     ],
-    implementation: [
-      "구현 커버리지 84%",
-      "활성 요구사항 13개 중 11개에 구현 증거가 있습니다",
-      "출처: 요구사항 → 코드 엣지",
+    implementation: (metrics: DashboardEvidenceMetrics): readonly string[] => [
+      metrics.implementation === null
+        ? "구현 커버리지 측정 안 됨"
+        : `구현 커버리지 ${metrics.implementation}%`,
+      `요구사항 ${metrics.requirements.total}개 중 ${metrics.requirements.covered}개에 implements 엣지가 있습니다`,
+      "출처: 요구사항 → 코드 implements 엣지",
     ],
-    tests: [
-      "테스트 커버리지 71%",
-      "파싱된 CI 리포트에서 verified 링크 10개",
-      "출처: bad0551 GitHub Actions 리포트",
+    tests: (metrics: DashboardEvidenceMetrics): readonly string[] => [
+      metrics.tests === null
+        ? "테스트 커버리지 측정 안 됨"
+        : `테스트 커버리지 ${metrics.tests}%`,
+      metrics.tests === null
+        ? "CI 리포트가 없어 verified 테스트 엣지를 셀 수 없습니다"
+        : `코드 ${metrics.testsCovered.total}개 중 ${metrics.testsCovered.covered}개에 verified 테스트 엣지가 있습니다`,
+      "출처: 코드 → 테스트 tests 엣지 (verified)",
     ],
-    tokens: [
-      "턴당 1,840 tokens",
-      "AGENTS.md와 하위 지시문이 항상 로드됩니다",
-      "가정: cl100k_base 호환 추정치",
+    tokens: (metrics: DashboardEvidenceMetrics): readonly string[] => [
+      `상시 로드 ${metrics.tokenCost.toLocaleString("en-US")} tokens`,
+      "데모 하네스의 루트 AGENTS.md가 항상 로드됩니다",
+      "가정: 4자/토큰, cl100k_base 호환 추정치",
     ],
   },
 

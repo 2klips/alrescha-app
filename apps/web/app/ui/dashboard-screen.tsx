@@ -104,6 +104,17 @@ const AREA_OPTIONS: readonly { label: string; value: BrainArea | "all" }[] = [
 
 const STATIC_ACTIVITY = DASHBOARD.activity.samples;
 
+/**
+ * The "상시 로드" chip's number and unit: whole tokens under a thousand, one
+ * decimal of thousands above — the demo harness costs 80 tokens, and
+ * "0.1k" says less than "80".
+ */
+function tokenChip(tokens: number): { suffix: string; value: number } {
+  return tokens < 1_000
+    ? { suffix: "", value: tokens }
+    : { suffix: "k", value: Number((tokens / 1_000).toFixed(1)) };
+}
+
 function MetricChip({
   active,
   label,
@@ -115,19 +126,21 @@ function MetricChip({
   label: string;
   onClick: () => void;
   suffix?: string;
-  value: number;
+  /** Null when the metric has no basis — rendered as a word, not a zero. */
+  value: number | null;
 }) {
   return (
     <button
       aria-pressed={active}
       className="arr-metric"
       data-active={active}
+      data-unmeasured={value === null}
       onClick={onClick}
       type="button"
     >
       <strong>
-        {value.toLocaleString()}
-        {suffix}
+        {value === null ? DASHBOARD.metrics.unmeasured : value.toLocaleString()}
+        {value === null ? null : suffix}
       </strong>
       <span>{label}</span>
     </button>
@@ -217,13 +230,15 @@ function StatusSurface({
 }
 
 function MetricEvidence({
+  metrics,
   panel,
   onClose,
 }: {
+  metrics: DashboardViewModel["metrics"];
   panel: MetricPanel;
   onClose: () => void;
 }) {
-  const content = DASHBOARD.metricEvidence[panel];
+  const content = DASHBOARD.metricEvidence[panel](metrics);
   return (
     <aside
       className="arr-metric-evidence"
@@ -646,12 +661,13 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
             active={metricPanel === "tokens"}
             label={DASHBOARD.metrics.tokens}
             onClick={() => setMetricPanel("tokens")}
-            suffix="k"
-            value={Number((model.metrics.tokenCost / 1000).toFixed(1))}
+            suffix={tokenChip(model.metrics.tokenCost).suffix}
+            value={tokenChip(model.metrics.tokenCost).value}
           />
         </div>
         {metricPanel ? (
           <MetricEvidence
+            metrics={model.metrics}
             onClose={() => setMetricPanel(null)}
             panel={metricPanel}
           />

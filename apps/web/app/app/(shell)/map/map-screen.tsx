@@ -14,6 +14,7 @@ import {
   Network,
   Radio,
   Search,
+  ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -44,12 +45,17 @@ import {
   type GraphAccessEvent,
   type RealtimeGraphState,
 } from "../../../../lib/realtime/access-events";
+import type { WorkspaceRealtimeBridgeStatus } from "../../../../lib/realtime/supabase-bridge";
 import { DASHBOARD, GRADE, WORKSPACE_MAP } from "../../../../lib/strings";
-import type { WorkspaceMapModel } from "../../../../lib/map/workspace-map";
+import type {
+  WorkspaceMapHud,
+  WorkspaceMapModel,
+} from "../../../../lib/map/workspace-map";
 import { BrainMapStage } from "../../../ui/brain-map-stage";
 import { FacetBandView } from "../../../ui/facet-band-view";
 import { useRealtimeClock } from "../../../ui/realtime-clock";
 import { StatusBadge } from "../../../ui/status-badge";
+import { useWorkspaceRealtimeBridge } from "../../../ui/workspace-realtime-bridge";
 
 /**
  * The workspace's own knowledge graph (Phase 3 Wave A todo 1).
@@ -59,6 +65,11 @@ import { StatusBadge } from "../../../ui/status-badge";
  * fallback for missing data. The glow pipeline runs against the *real*
  * workspace policy: events seeded from `access_events` rows and any live
  * events on this workspace's channel, with revoked tokens filtered out.
+ *
+ * Phase 4 Wave B todo 15 closes D10: the channel is now actually joined
+ * (`useWorkspaceRealtimeBridge`, private topic, member-only policy), and the
+ * rail's HUD chips read `model.hud` — coverage with its basis, the risk
+ * map's top files, the last scan's commit and age — instead of nothing.
  */
 
 const TYPE_OPTIONS = [
@@ -91,6 +102,140 @@ function CountChip({ label, value }: { label: string; value: number }) {
       <strong>{value.toLocaleString()}</strong>
       <span>{label}</span>
     </span>
+  );
+}
+
+/**
+ * A real-data chip: the number, its label, one line of detail, and the
+ * sentence saying where it came from. `data-basis` carries the coverage
+ * basis so a test can tell "measured 0%" from "unmeasured" without reading
+ * the copy (the same attribute the progress ledger's card uses).
+ */
+function HudChip({
+  basis,
+  detail,
+  label,
+  source,
+  testId,
+  value,
+}: {
+  basis?: string;
+  detail: string;
+  label: string;
+  source: string;
+  testId: string;
+  value: string;
+}) {
+  return (
+    <span
+      className="arr-metric arr-hud-chip"
+      data-active={false}
+      data-basis={basis}
+      data-testid={testId}
+    >
+      <strong>{value}</strong>
+      <span>{label}</span>
+      <small>{detail}</small>
+      <small className="arr-hud-source">{source}</small>
+    </span>
+  );
+}
+
+function coverageChip(hud: WorkspaceMapHud) {
+  const { coverage } = hud;
+  const copy = WORKSPACE_MAP.hud.coverage;
+  if (coverage.basis === "measured" && coverage.percent !== null) {
+    return {
+      detail: copy.measured(coverage.covered, coverage.total),
+      value: `${coverage.percent}%`,
+    };
+  }
+  return {
+    detail: coverage.basis === "no-links" ? copy.noLinks : copy.noData,
+    value: "—",
+  };
+}
+
+function lastScanChip(hud: WorkspaceMapHud) {
+  const { lastScan } = hud;
+  const copy = WORKSPACE_MAP.hud.lastScan;
+  if (lastScan.commitSha === null) {
+    return { detail: copy.never, value: "—" };
+  }
+  return {
+    detail:
+      lastScan.ageMinutes === null
+        ? copy.unknownAge
+        : copy.age(lastScan.ageMinutes),
+    value: lastScan.commitSha.slice(0, 7),
+  };
+}
+
+/**
+ * The risk map's top files (todo 21), as a list a reader can act on: each
+ * row focuses its node the way a hub row does. A workspace the map ranked
+ * nothing in says so — an empty list under a kicker is a chart with no
+ * axis.
+ */
+function RiskTopList({
+  hud,
+  nodes,
+  onFocusNode,
+  selectedNodeId,
+}: {
+  hud: WorkspaceMapHud;
+  nodes: readonly GraphNode[];
+  onFocusNode: (node: GraphNode) => void;
+  selectedNodeId: string | null;
+}) {
+  const copy = WORKSPACE_MAP.hud.risk;
+  const risk = hud.risk;
+  return (
+    <div
+      aria-label={copy.aria}
+      className="arr-hubs arr-hud-risk"
+      data-risk-ranked={risk?.ranked ?? ""}
+      data-testid="hud-risk"
+    >
+      <span className="arr-kicker">
+        <ShieldAlert size={12} />
+        {copy.kicker}
+        {risk ? <small>{copy.count(risk.ranked)}</small> : null}
+      </span>
+      {!risk || risk.top.length === 0 ? (
+        <small>{copy.empty}</small>
+      ) : (
+        <ol>
+          {risk.top.map((entry) => {
+            const node = nodes.find(
+              (candidate) => candidate.id === entry.nodeId,
+            );
+            return (
+              <li key={entry.nodeId}>
+                <button
+                  aria-pressed={entry.nodeId === selectedNodeId}
+                  data-risk-level={entry.level}
+                  data-risk-node={entry.nodeId}
+                  disabled={!node}
+                  onClick={() => {
+                    if (node) onFocusNode(node);
+                  }}
+                  type="button"
+                >
+                  <i className={`risk-ring ${entry.level}`} />
+                  <span>{entry.path}</span>
+                  <small>{copy.levels[entry.level]}</small>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+      {risk?.unmeasured.includes("coverage") ? (
+        <small className="arr-hud-unmeasured">{copy.unmeasuredCoverage}</small>
+      ) : null}
+      <small className="arr-hud-source">{copy.source}</small>
+    </div>
   );
 }
 
@@ -223,6 +368,7 @@ function GraphStageSurface({
 }
 
 interface LiveActivityFeedProps {
+  channel: WorkspaceRealtimeBridgeStatus;
   feed: readonly GraphAccessEvent[];
   nodes: readonly GraphNode[];
   onFocusNode: (node: GraphNode) => void;
@@ -235,6 +381,7 @@ interface LiveActivityFeedProps {
  * — see `ui/realtime-clock.ts`.
  */
 function LiveActivityFeed({
+  channel,
   feed,
   nodes,
   onFocusNode,
@@ -246,9 +393,14 @@ function LiveActivityFeed({
     <section className="arr-activity" aria-labelledby="map-activity-title">
       <header>
         <div>
-          <span className="arr-live">
+          <span className="arr-live" data-live-channel={channel}>
             <Radio size={12} />
             {WORKSPACE_MAP.activity.live}
+            {/* The channel's actual state beside the word: "Live" while the
+                join is still pending would be a claim the page cannot back. */}
+            <small aria-label={WORKSPACE_MAP.activity.channel.aria}>
+              {WORKSPACE_MAP.activity.channel[channel]}
+            </small>
           </span>
           <h2 id="map-activity-title">{WORKSPACE_MAP.activity.title}</h2>
         </div>
@@ -398,10 +550,29 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
     );
   }, [policy]);
 
+  // The server's channel, re-emitted onto the window bus the effect above
+  // listens to (todo 15). Node id → path is the feed row's label, derived
+  // once so the hook's subscription does not churn with every render.
+  const pathOf = useMemo(() => {
+    const byId = new Map(model.graph.nodes.map((node) => [node.id, node.path]));
+    return (nodeId: string) => byId.get(nodeId);
+  }, [model.graph.nodes]);
+  const channel = useWorkspaceRealtimeBridge(policy, pathOf);
+
   const isEmpty = model.graph.nodes.length === 0;
+  const coverage = coverageChip(model.hud);
+  const lastScan = lastScanChip(model.hud);
+  const focusNode = (node: GraphNode) => {
+    setSelectedNode(node);
+    setCameraFocusNodeId(node.id);
+  };
 
   return (
-    <main className="arr-home" aria-label={WORKSPACE_MAP.ariaMain}>
+    <main
+      className="arr-home"
+      aria-label={WORKSPACE_MAP.ariaMain}
+      data-live-channel={channel}
+    >
       <div className="arr-workspace">
         <aside className="arr-repo-rail" aria-label={DASHBOARD.ariaRepoRail}>
           <div className="arr-repo-block">
@@ -439,11 +610,41 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
               label={WORKSPACE_MAP.counts.concepts}
               value={model.counts.concepts}
             />
-            <CountChip
+          </div>
+          <div
+            className="arr-metrics arr-hud"
+            aria-label={WORKSPACE_MAP.hud.aria}
+            data-testid="map-hud"
+          >
+            <HudChip
+              detail={WORKSPACE_MAP.hud.findings.detail}
               label={WORKSPACE_MAP.counts.openFindings}
-              value={model.counts.openFindings}
+              source={WORKSPACE_MAP.hud.findings.source}
+              testId="hud-open-findings"
+              value={model.hud.openFindings.toLocaleString()}
+            />
+            <HudChip
+              basis={model.hud.coverage.basis}
+              detail={coverage.detail}
+              label={WORKSPACE_MAP.hud.coverage.label}
+              source={WORKSPACE_MAP.hud.coverage.source}
+              testId="hud-coverage"
+              value={coverage.value}
+            />
+            <HudChip
+              detail={lastScan.detail}
+              label={WORKSPACE_MAP.hud.lastScan.label}
+              source={WORKSPACE_MAP.hud.lastScan.source}
+              testId="hud-last-scan"
+              value={lastScan.value}
             />
           </div>
+          <RiskTopList
+            hud={model.hud}
+            nodes={model.graph.nodes}
+            onFocusNode={focusNode}
+            selectedNodeId={selectedNode?.id ?? null}
+          />
           <div
             className="arr-area-chips"
             aria-label={DASHBOARD.filters.areaLabel}
@@ -478,10 +679,7 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
                     <button
                       aria-pressed={node.id === selectedNode?.id}
                       data-hub-node={node.id}
-                      onClick={() => {
-                        setSelectedNode(node);
-                        setCameraFocusNodeId(node.id);
-                      }}
+                      onClick={() => focusNode(node)}
                       type="button"
                     >
                       <i className={node.type} />
@@ -733,12 +931,10 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
         </aside>
 
         <LiveActivityFeed
+          channel={channel}
           feed={realtime.feed}
           nodes={model.graph.nodes}
-          onFocusNode={(node) => {
-            setSelectedNode(node);
-            setCameraFocusNodeId(node.id);
-          }}
+          onFocusNode={focusNode}
           renderBatches={realtime.renderBatches}
         />
       </div>

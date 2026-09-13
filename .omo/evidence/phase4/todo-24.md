@@ -112,27 +112,52 @@ The dev-server pass on `/harness` caught what the unit tests did not:
 browser: the table, the demo label, the assumption line and the corrected
 totals are the numbers above.
 
-## Not done
+## Browser acceptance — met, 2026-09-13 (was "Not done")
 
-- **Playwright unrun.** `tests/e2e/instruction-cost.spec.ts` is written — the
-  two-theme axe pass on `/app/harness` and `/app/stats`, the demo label above
-  the table, the tokenizer assumption on screen, the benchmark caveat beside
-  the link — and this machine has no Docker, so **none of it has executed**.
-  The acceptance criterion "두 테마 axe" is written, not met.
-- **No live data behind the two new cards.** G2 is closed, so no hosted MCP
-  session has written a `response_chars` and no agent has reported usage: the
-  served and reported cards have only ever been rendered from fixtures.
-- **`/app/harness` shows a table only for a scanned repository.** The live
-  screen was exercised through unit tests and the demo route; the signed-in
-  route needs a workspace with artifacts, which needs G2.
+The first version of this section said Playwright had never run because
+this machine had no Docker; `e2e-debt.md` corrected that on 2026-09-07
+(7/7 passing). What remained open was not the axe pass but the *other*
+half of the criterion — the live table against a real repository's stored
+bytes — and the two-theme axe re-run. Both are measured now:
+
+- **Two-theme axe, met.** `tests/e2e/instruction-cost.spec.ts` 8/8. The
+  four reports in `todo-24/axe-contrast-{app-harness,app-stats}-{dark,light}.json`
+  are regenerated and all carry `violationCount: 0`. The demo label sits
+  above the table, the tokenizer assumption is on screen, and the benchmark
+  caveat is beside the link — each its own passing test.
+- **Real repository, ±10%, met.** The new eighth test scans this checkout
+  (the CLI's local source, `.claude/worktrees` and build outputs excluded
+  by the scanner's own list) and stores it through `apply_repository_scan`
+  — over a direct Postgres connection, as the worker does, because one
+  ~1,260-node call through PostgREST hits the API's statement timeout under
+  a parallel suite. Then it reads `/app/harness` back cell by cell:
+  4 instruction files, every byte cell equal to its stored
+  `size_bytes`, table tokens 1,582 against
+  6,323 bytes ÷ 4 = 1,580.75 → **0.08% drift**;
+  the always-loaded footer 1,409 tokens on
+  5,634 bytes. Written to `todo-24/live-cost-table.json`.
+  The unit test's earlier 0.1% (bytes read from disk, no screen) and this
+  browser reading agree on what they share: the per-file `ceil` is the only
+  drift there is. One harness note: the first run of this test timed out
+  after both steps had finished — closing the direct connection without a
+  deadline never returned inside the Playwright worker. The close is capped
+  at five seconds now, and the two heavy steps are `test.step`s so a
+  future timeout says which one it was (scan 6.2s, apply 2.3s here).
+
+## Still not claimed
+
+- **No live data behind the served and reported cards.** The served card
+  has been rendered from seeded `access_events` rows (the caveat test) and
+  from fixtures; no production MCP session has been read into it on this
+  machine. Todo 15 (same session) now makes the hosted server's access
+  events reach the browser, but the stats card is a different reader.
 - **The estimate is two assumptions deep, both stated.** 4 chars/token
-  (OQ-060) and bytes-read-as-characters (**OQ-063** — Korean is three bytes a
-  character, so a Korean `AGENTS.md` reads about three times its true
+  (OQ-060) and bytes-read-as-characters (**OQ-063** — Korean is three bytes
+  a character, so a Korean `AGENTS.md` reads about three times its true
   character count). The header says both. Nothing calls the result a
-  measurement.
+  measurement, and the ±10% above is byte arithmetic agreeing with byte
+  arithmetic, not a tokenizer measurement.
 - **`/app/stats` still has no per-repository *savings* claim** — it reports
   what each meter says and refuses to subtract one from another. Turning
   served bytes and reported usage into a savings figure needs OQ-060 settled
   first, and the plan's own RULE 4 is the reason not to guess it.
-
-> **정정(2026-09-07):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제 상태는 [e2e-debt.md](e2e-debt.md)에 있다.

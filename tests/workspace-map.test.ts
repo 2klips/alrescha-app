@@ -7,8 +7,10 @@ import { scanRepository } from "../packages/core/src/index";
 import { createLocalRepositorySource } from "../packages/cli/src/local-source";
 import { graphNodeArea } from "../apps/web/lib/dashboard/graph-model";
 import {
+  buildWorkspaceMapHud,
   buildWorkspaceMapModel,
   DIRECTORY_LIMIT,
+  HUD_RISK_TOP,
   EDGE_FAMILY_LIMITS,
   MAP_HIERARCHY_FOLD_THRESHOLD,
   type MapEdgeRow,
@@ -813,5 +815,202 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
     );
     expect(seenByB.rows).toEqual([]);
     expect(workspaceB).not.toBe("");
+  });
+});
+
+/**
+ * Phase 4 Wave B todo 15 — the HUD chips from stored rows. What the browser
+ * spec asserts against the screen is computed by this same builder from the
+ * rows it seeded, so these pin the rules the chips stand on.
+ */
+describe("buildWorkspaceMapHud", () => {
+  const NOW = Date.parse("2026-09-13T12:00:00.000Z");
+  const repositories = [
+    {
+      created_at: "2026-09-13T10:00:00.000Z",
+      full_name: "local/hud",
+      id: "repo-hud",
+      last_scanned_commit_sha: "b".repeat(40),
+      selected_at: null,
+    },
+  ];
+  const requirements = [
+    {
+      id: "req-1",
+      source_artifact_id: "doc-1",
+      source_span: null,
+      statement: "A",
+      status: "active",
+    },
+    {
+      id: "req-2",
+      source_artifact_id: "doc-1",
+      source_span: null,
+      statement: "B",
+      status: "active",
+    },
+    {
+      id: "req-old",
+      source_artifact_id: "doc-1",
+      source_span: null,
+      statement: "C",
+      status: "superseded",
+    },
+  ];
+
+  it("counts open findings only", () => {
+    const hud = buildWorkspaceMapHud(
+      {
+        findings: [
+          { source_node_id: "n1", status: "open" },
+          { source_node_id: "n2", status: "open" },
+          { source_node_id: "n3", status: "resolved" },
+          { source_node_id: "n4", status: "dismissed" },
+        ],
+        repositories: [],
+        requirements: [],
+      },
+      NOW,
+    );
+    expect(hud.openFindings).toBe(2);
+  });
+
+  it("keeps the coverage basis three-way: no requirements ≠ no links ≠ measured", () => {
+    const base = { findings: [], repositories: [], requirements: [] };
+    expect(buildWorkspaceMapHud(base, NOW).coverage).toEqual({
+      basis: "no-data",
+      covered: 0,
+      percent: null,
+      total: 0,
+    });
+    expect(
+      buildWorkspaceMapHud({ ...base, implementsEdges: [], requirements }, NOW)
+        .coverage,
+    ).toEqual({ basis: "no-links", covered: 0, percent: null, total: 2 });
+    // Two edges from the same requirement count once; an edge from a
+    // superseded requirement is not coverage of the active set.
+    expect(
+      buildWorkspaceMapHud(
+        {
+          ...base,
+          implementsEdges: [
+            { source_node_id: "req-1" },
+            { source_node_id: "req-1" },
+            { source_node_id: "req-old" },
+          ],
+          requirements,
+        },
+        NOW,
+      ).coverage,
+    ).toEqual({ basis: "measured", covered: 1, percent: 50, total: 2 });
+  });
+
+  it("reports the current commit and the age of its own completion", () => {
+    const hud = buildWorkspaceMapHud(
+      {
+        findings: [],
+        repositories,
+        requirements: [],
+        scanCompletions: [
+          // A newer completion of a different commit must not lend its
+          // time to the commit the header names.
+          {
+            commit_sha: "c".repeat(40),
+            completed_at: "2026-09-13T11:59:00.000Z",
+          },
+          {
+            commit_sha: "b".repeat(40),
+            completed_at: "2026-09-13T11:30:00.000Z",
+          },
+          {
+            commit_sha: "b".repeat(40),
+            completed_at: "2026-09-13T09:00:00.000Z",
+          },
+        ],
+      },
+      NOW,
+    );
+    expect(hud.lastScan).toEqual({
+      ageMinutes: 30,
+      commitSha: "b".repeat(40),
+      completedAt: "2026-09-13T11:30:00.000Z",
+    });
+  });
+
+  it("says the age is unknown rather than guessing when no completion matches", () => {
+    const hud = buildWorkspaceMapHud(
+      {
+        findings: [],
+        repositories,
+        requirements: [],
+        scanCompletions: [
+          {
+            commit_sha: "c".repeat(40),
+            completed_at: "2026-09-13T11:59:00.000Z",
+          },
+        ],
+      },
+      NOW,
+    );
+    expect(hud.lastScan).toEqual({
+      ageMinutes: null,
+      commitSha: "b".repeat(40),
+      completedAt: null,
+    });
+    expect(
+      buildWorkspaceMapHud(
+        { findings: [], repositories: [], requirements: [] },
+        NOW,
+      ).lastScan,
+    ).toEqual({ ageMinutes: null, commitSha: null, completedAt: null });
+  });
+
+  it("takes the top of the risk map in its own order and names unmeasured signals", () => {
+    const entry = (
+      path: string,
+      score: number,
+      level: "elevated" | "high" | "moderate",
+    ) => ({
+      factors: [{ detail: "x", kind: "fan-in" as const, weight: score }],
+      grade: "inferred" as const,
+      level,
+      nodeId: `node-${path}`,
+      path,
+      score,
+    });
+    const hud = buildWorkspaceMapHud(
+      {
+        findings: [],
+        repositories: [],
+        requirements: [],
+        riskMap: {
+          entries: [
+            entry("a.ts", 0.9, "high"),
+            entry("b.ts", 0.7, "elevated"),
+            entry("c.ts", 0.5, "moderate"),
+            entry("d.ts", 0.2, "moderate"),
+          ],
+          unmeasured: [{ reason: "no coverage report", signal: "coverage" }],
+        },
+      },
+      NOW,
+    );
+    expect(hud.risk).toEqual({
+      ranked: 4,
+      top: [
+        { level: "high", nodeId: "node-a.ts", path: "a.ts", score: 0.9 },
+        { level: "elevated", nodeId: "node-b.ts", path: "b.ts", score: 0.7 },
+        { level: "moderate", nodeId: "node-c.ts", path: "c.ts", score: 0.5 },
+      ],
+      unmeasured: ["coverage"],
+    });
+    expect(HUD_RISK_TOP).toBe(3);
+    // No risk map computed is null, not an empty list — the chip says so.
+    expect(
+      buildWorkspaceMapHud(
+        { findings: [], repositories: [], requirements: [] },
+        NOW,
+      ).risk,
+    ).toBeNull();
   });
 });
