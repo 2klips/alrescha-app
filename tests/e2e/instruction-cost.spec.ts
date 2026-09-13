@@ -3,12 +3,16 @@ import path from "node:path";
 
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import postgres from "postgres";
 
 import { HARNESS, STATS } from "../../apps/web/lib/strings";
 import { THEME_STORAGE_KEY } from "../../apps/web/lib/theme/theme-preference";
+import { createLocalRepositorySource } from "../../packages/cli/src/local-source";
+import { CHARS_PER_TOKEN, scanRepository } from "../../packages/core/src/index";
 import {
   createWorkspaceUser,
   deleteWorkspaceUser,
+  optionalEnv,
   serviceRoleClient,
   signIn,
 } from "./helpers/session";
@@ -217,6 +221,138 @@ test("the stats page carries the benchmark caveat beside the link", async ({
     await expect(
       page.getByRole("link", { name: STATS.methodology.benchmarkLink }),
     ).toBeVisible();
+  } finally {
+    await deleteWorkspaceUser(user.userId);
+  }
+});
+
+/**
+ * The live table against this repository's own scan (todo 24's second
+ * acceptance criterion: "실레포 표 합계가 size_bytes와 ±10% 정합").
+ *
+ * The repository root is scanned through the CLI's local source and stored
+ * through `apply_repository_scan` — the same rows a push would leave — and
+ * the screen's table is read back cell by cell. Two agreements are
+ * asserted: the byte column is the stored `size_bytes`, row for row, and
+ * the token column is those bytes at the stated ratio within ±10%.
+ *
+ * The scan is applied over a direct Postgres connection, as the worker
+ * applies one: this repository is ~1,260 nodes and ~4,000 edges, and one
+ * call of that size through PostgREST runs into the API's statement
+ * timeout under a parallel suite. The rows are the same either way — the
+ * function is the single persistence path (ADR-013).
+ */
+test("the live cost table agrees with the stored bytes of this repository's scan (±10%)", async ({
+  context,
+  page,
+}) => {
+  test.setTimeout(240_000);
+  const user = await createWorkspaceUser("cost-live");
+  try {
+    await signIn(context, user);
+    const admin = serviceRoleClient();
+    const repository = await admin.rpc("ensure_local_repository", {
+      target_workspace_id: user.workspaceId,
+      target_full_name: "local/alrescha-app",
+    });
+    expect(repository.error?.message ?? null).toBeNull();
+    const plan = await test.step("scan this checkout", async () => {
+      const { commitSha, source } = await createLocalRepositorySource(
+        path.resolve("."),
+      );
+      return scanRepository({ commitSha, source });
+    });
+    await test.step("apply the scan over a direct connection", async () => {
+      const databaseUrl = optionalEnv("DATABASE_URL");
+      expect(databaseUrl, "DATABASE_URL in apps/web/.env.local").toBeTruthy();
+      const sql = postgres(databaseUrl!, { max: 1, prepare: false });
+      try {
+        const applied = await sql<{ touched: number }[]>`
+          select public.apply_repository_scan(
+            ${user.workspaceId},
+            ${String(repository.data)},
+            ${sql.json(plan as unknown as postgres.JSONValue)}::jsonb
+          ) as touched
+        `;
+        expect(Number(applied[0]?.touched ?? 0)).toBeGreaterThan(0);
+      } finally {
+        await sql.end({ timeout: 5 });
+      }
+    });
+
+    const stored = await admin
+      .from("artifacts")
+      .select("path,size_bytes")
+      .eq("workspace_id", user.workspaceId)
+      .eq("kind", "instruction")
+      .order("path");
+    expect(stored.error?.message ?? null).toBeNull();
+    const storedRows = (stored.data ?? []) as {
+      path: string;
+      size_bytes: number;
+    }[];
+    expect(storedRows.length).toBeGreaterThan(0);
+    expect(storedRows.map(({ path: file }) => file)).toContain("AGENTS.md");
+
+    await page.goto("/app/harness");
+    const table = page.locator(".harness-cost-table");
+    await expect(table).toBeVisible();
+    const rows = table.locator("tbody tr");
+    await expect(rows).toHaveCount(storedRows.length);
+
+    const number = (text: string) => Number(text.replaceAll(",", ""));
+    const shown = new Map<string, { bytes: number; tokens: number }>();
+    for (const row of await rows.all()) {
+      const file = await row.locator("th code").innerText();
+      const cells = row.locator("td");
+      shown.set(file, {
+        bytes: number(await cells.nth(2).innerText()),
+        tokens: number(await cells.nth(3).innerText()),
+      });
+    }
+    // Row for row: the byte cell is the stored size, nothing rounded.
+    for (const { path: file, size_bytes } of storedRows) {
+      expect(shown.get(file)?.bytes, file).toBe(size_bytes);
+    }
+    const bytes = storedRows.reduce((sum, row) => sum + row.size_bytes, 0);
+    const tokens = [...shown.values()].reduce(
+      (sum, row) => sum + row.tokens,
+      0,
+    );
+    expect(
+      Math.abs(tokens - bytes / CHARS_PER_TOKEN) / (bytes / CHARS_PER_TOKEN),
+    ).toBeLessThanOrEqual(0.1);
+
+    // The always-loaded footer: its own bytes and tokens, the same ratio.
+    const always = table.locator("tfoot tr").first().locator("td");
+    const alwaysBytes = number(await always.nth(1).innerText());
+    const alwaysTokens = number(await always.nth(2).innerText());
+    expect(alwaysTokens).toBeGreaterThan(0);
+    expect(
+      Math.abs(alwaysTokens - alwaysBytes / CHARS_PER_TOKEN) /
+        (alwaysBytes / CHARS_PER_TOKEN),
+    ).toBeLessThanOrEqual(0.1);
+
+    await writeFile(
+      path.join(EVIDENCE, "live-cost-table.json"),
+      `${JSON.stringify(
+        {
+          alwaysBytes,
+          alwaysTokens,
+          charsPerToken: CHARS_PER_TOKEN,
+          drift:
+            Math.abs(tokens - bytes / CHARS_PER_TOKEN) /
+            (bytes / CHARS_PER_TOKEN),
+          files: storedRows.length,
+          repository: "2klips/alrescha-app (local scan of the checkout)",
+          storedBytes: bytes,
+          tableTokens: tokens,
+        },
+        null,
+        2,
+      )}\n`,
+      "utf8",
+    );
   } finally {
     await deleteWorkspaceUser(user.userId);
   }
