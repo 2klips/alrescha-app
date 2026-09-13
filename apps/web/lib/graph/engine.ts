@@ -10,15 +10,18 @@
 
 import type { GraphData } from "../dashboard/graph-model";
 import { hierarchyAssignment, hierarchyTemplates } from "./clustering";
+import { domainAnchorsFor } from "./domain-anchors";
 import type { LodLevel } from "./lod";
 import {
   buildRenderFrame,
   type Camera,
+  type GraphDisplaySettings,
   type GraphPalette,
   type GraphLayer,
   type RenderFrame,
   type Viewport,
   DEFAULT_CAMERA,
+  DEFAULT_DISPLAY_SETTINGS,
   DEFAULT_VIEWPORT,
 } from "./render-frame";
 import { fitToView } from "./camera";
@@ -99,7 +102,21 @@ export interface GraphEngineOptions {
   createBackend: () => GraphBackend | Promise<GraphBackend>;
   createWorker: () => SimulationWorkerLike;
   data: GraphData;
+  /** Orphans, arrows, node size, link thickness, groups (todo 13 ⓒ). */
+  display?: GraphDisplaySettings;
   forceConfig?: Partial<ForceConfig>;
+  /**
+   * A saved layout to start the simulation from (todo 13 ⓐ). Nodes it does
+   * not know start on the spiral; the worker begins at the reheat
+   * temperature rather than from cold.
+   */
+  initialPositions?: ReadonlyMap<string, Position> | null;
+  /**
+   * Nodes a person pinned, at their pinned points (todo 13 ⓒ). Sent to the
+   * worker with the start, so a warm start opens with the pins already
+   * holding.
+   */
+  pins?: ReadonlyMap<string, Position> | null;
   /** Injected for tests; defaults to `Date.now`. */
   now?: () => number;
   palette: GraphPalette;
@@ -180,7 +197,17 @@ export interface GraphEngine {
   settled(): boolean;
   resize(width: number, height: number): void;
   setCamera(camera: Camera): void;
-  setData(data: GraphData): void;
+  /**
+   * Replace the graph. Restarts the layout — from `initialPositions` when
+   * the caller has a saved one for the new graph, else from the spiral.
+   */
+  setData(
+    data: GraphData,
+    options?: { initialPositions?: ReadonlyMap<string, Position> | null },
+  ): void;
+  /** Display options are visual: applied in the frame, never a restart. */
+  setDisplay(display: GraphDisplaySettings): void;
+  display(): GraphDisplaySettings;
   setForceConfig(partial: Partial<ForceConfig>): void;
   /** In-place visual update — never touches the simulation. */
   setGlow(
@@ -219,6 +246,15 @@ export interface GraphEngine {
   releaseNode(nodeId: string): void;
   /** The node a pointer is currently holding, or null. */
   pinnedNode(): string | null;
+  /**
+   * Pin a node where it is, or at a point, until `unpinNode` (todo 13 ⓒ).
+   * Unlike a pointer hold this outlives the gesture: a dragged pinned node
+   * is re-pinned where it was dropped rather than released to the physics.
+   */
+  pinNodeAt(nodeId: string, position?: Position): boolean;
+  unpinNode(nodeId: string): void;
+  /** Every persistent pin and where it holds — what the screen saves. */
+  pinnedNodes(): ReadonlyMap<string, Position>;
   setTextFadeThreshold(value: number): void;
   setViewport(viewport: Viewport): void;
 }
@@ -236,6 +272,10 @@ export async function createGraphEngine(
   let data = options.data;
   let nodeIds = data.nodes.map((node) => node.id);
   let config = clampForceConfig(options.forceConfig);
+  let display: GraphDisplaySettings =
+    options.display ?? DEFAULT_DISPLAY_SETTINGS;
+  /** Persistent pins, by node id — the pointer hold is separate (`pinnedNodeId`). */
+  const persistentPins = new Map<string, Position>(options.pins ?? []);
   let camera: Camera = { ...DEFAULT_CAMERA };
   let palette = options.palette;
   let selectedNodeId: string | null = null;
@@ -317,8 +357,32 @@ export async function createGraphEngine(
     }
   });
 
-  worker.postMessage(createStartMessage(data, config, options.seed ?? 1));
-  layoutRestarts += 1;
+  /**
+   * Start (or restart) the worker on the current graph. Domain anchors travel
+   * with every start so the slider can be turned on later without a restart;
+   * a warm start carries the saved positions; persistent pins are re-sent
+   * after the start because a fresh layout knows nothing about them.
+   */
+  function startLayout(
+    initialPositions: ReadonlyMap<string, Position> | null | undefined,
+  ): void {
+    if (disposed) return;
+    worker.postMessage(
+      createStartMessage(data, config, options.seed ?? 1, {
+        anchors: domainAnchorsFor(data),
+        initialPositions,
+      }),
+    );
+    layoutRestarts += 1;
+    for (const [nodeId, position] of persistentPins) {
+      const slot = nodeIds.indexOf(nodeId);
+      if (slot === -1) continue;
+      buffer.hold(nodeId, position);
+      worker.postMessage({ slot, type: "pin", x: position.x, y: position.y });
+    }
+  }
+
+  startLayout(options.initialPositions);
   backend.setPalette(palette);
 
   /**
@@ -371,6 +435,7 @@ export async function createGraphEngine(
       hoveredNodeId,
       ...(visibleNodeIds ? { visible: visibleNodeIds } : {}),
       ...(hiddenLayers ? { hiddenLayers } : {}),
+      display,
       palette,
       positions,
       selectedNodeId,
@@ -458,7 +523,7 @@ export async function createGraphEngine(
       camera = { ...next };
       touchCamera();
     },
-    setData(next) {
+    setData(next, dataOptions) {
       data = next;
       nodeIds = next.nodes.map((node) => node.id);
       assignment = hierarchyAssignment(next, "far", {
@@ -468,10 +533,19 @@ export async function createGraphEngine(
       expanded.clear();
       buffer.reset();
       settled = false;
+      // A pin on a node the new graph does not have is a pin on nothing.
+      const ids = new Set(nodeIds);
+      for (const nodeId of [...persistentPins.keys()]) {
+        if (!ids.has(nodeId)) persistentPins.delete(nodeId);
+      }
       touch();
-      if (disposed) return;
-      worker.postMessage(createStartMessage(next, config, options.seed ?? 1));
-      layoutRestarts += 1;
+      startLayout(dataOptions?.initialPositions);
+    },
+    display: () => display,
+    setDisplay(next) {
+      display = next;
+      // Visual, like visibility: the frame changes, the layout does not.
+      touch();
     },
     setForceConfig(partial) {
       config = clampForceConfig({ ...config, ...partial });
@@ -524,12 +598,57 @@ export async function createGraphEngine(
     releaseNode(nodeId) {
       const slot = nodeIds.indexOf(nodeId);
       pinnedNodeId = null;
+      // A pinned node that was dragged stays pinned — where it was dropped.
+      // Letting the drag release it would make every adjustment an unpin.
+      const kept = persistentPins.has(nodeId)
+        ? (buffer.at(now()).get(nodeId) ?? persistentPins.get(nodeId) ?? null)
+        : null;
       buffer.release(nodeId);
+      if (kept) {
+        persistentPins.set(nodeId, { x: kept.x, y: kept.y });
+        buffer.hold(nodeId, { x: kept.x, y: kept.y });
+      }
       touch();
       if (slot !== -1 && !disposed) {
+        if (kept) {
+          worker.postMessage({ slot, type: "pin", x: kept.x, y: kept.y });
+        } else {
+          worker.postMessage({ slot, type: "unpin" });
+        }
+      }
+    },
+    pinNodeAt(nodeId, position) {
+      const slot = nodeIds.indexOf(nodeId);
+      if (slot === -1) return false;
+      const where =
+        position ??
+        buffer.at(now()).get(nodeId) ??
+        (() => {
+          const fallback = data.nodes.find((node) => node.id === nodeId);
+          return fallback ? { x: fallback.x, y: fallback.y } : null;
+        })();
+      if (!where || !Number.isFinite(where.x) || !Number.isFinite(where.y)) {
+        return false;
+      }
+      const point = { x: where.x, y: where.y };
+      persistentPins.set(nodeId, point);
+      buffer.hold(nodeId, point);
+      touch();
+      if (!disposed) {
+        worker.postMessage({ slot, type: "pin", x: point.x, y: point.y });
+      }
+      return true;
+    },
+    unpinNode(nodeId) {
+      if (!persistentPins.delete(nodeId)) return;
+      const slot = nodeIds.indexOf(nodeId);
+      if (pinnedNodeId !== nodeId) buffer.release(nodeId);
+      touch();
+      if (slot !== -1 && !disposed && pinnedNodeId !== nodeId) {
         worker.postMessage({ slot, type: "unpin" });
       }
     },
+    pinnedNodes: () => new Map(persistentPins),
     setHoveredNode(nodeId) {
       if (hoveredNodeId === nodeId) return;
       hoveredNodeId = nodeId;

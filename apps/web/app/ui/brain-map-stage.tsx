@@ -28,14 +28,18 @@ import type {
   GraphNode,
 } from "../../lib/dashboard/graph-model";
 import {
+  displaySettingsOf,
   forceConfigOf,
   type GraphPanelSettings,
 } from "../../lib/graph/graph-panel-settings";
 import type { LodLevel } from "../../lib/graph/lod";
 import {
-  hiddenNodeTypesFor,
+  edgeHiddenByLayers,
+  hiddenByDisplay,
+  nodeHiddenByLayers,
   type GraphLayer,
 } from "../../lib/graph/render-frame";
+import type { Position } from "../../lib/graph/simulation-protocol";
 import { hitTargets } from "../../lib/graph/hit-targets";
 import { DASHBOARD } from "../../lib/strings";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
@@ -78,6 +82,20 @@ export interface BrainMapStageProps {
   visibleNodeIds?: ReadonlySet<string> | undefined;
   /** Layers the viewer switched off (todo 13). */
   hiddenLayers?: ReadonlySet<GraphLayer> | undefined;
+  /**
+   * A saved layout to start warm from (todo 13 ⓐ). Read once, at mount:
+   * the engine is created once and a later value would mean a restart.
+   */
+  initialPositions?: ReadonlyMap<string, Position> | null | undefined;
+  /**
+   * Nodes a person pinned (todo 13 ⓒ). A null position means "pin it where
+   * it is now"; the engine answers with the resolved point through
+   * `onPinsChange`, which also fires when a pinned node is dragged.
+   */
+  pins?: ReadonlyMap<string, Position | null> | undefined;
+  onPinsChange?: (pins: ReadonlyMap<string, Position>) => void;
+  /** The layout converged — here is where everything sits, for saving. */
+  onLayoutSettled?: (positions: ReadonlyMap<string, Position>) => void;
 }
 
 export function BrainMapStage({
@@ -95,6 +113,10 @@ export function BrainMapStage({
   selectedNodeId,
   settings: externalSettings,
   hiddenLayers,
+  initialPositions,
+  onLayoutSettled,
+  onPinsChange,
+  pins,
   showForcePanel = true,
   visibleNodeIds,
 }: BrainMapStageProps) {
@@ -111,26 +133,34 @@ export function BrainMapStage({
   const [settled, setSettled] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
   const forceConfig = useMemo(() => forceConfigOf(settings), [settings]);
+  const display = useMemo(() => displaySettingsOf(settings), [settings]);
   const hitLayerRef = useRef<HTMLDivElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   // The accessibility layer follows visibility (todo 13): a keyboard user
-  // must not tab to a node the canvas is not drawing.
+  // must not tab to a node the canvas is not drawing — whether the filter,
+  // a layer or the orphan switch hid it — and the edge list a screen reader
+  // walks must not name an edge the viewer switched off either.
   const reachable = useMemo(() => {
-    const hiddenTypes = hiddenNodeTypesFor(hiddenLayers);
-    if (!visibleNodeIds && hiddenTypes.size === 0) return data;
+    const orphans = hiddenByDisplay(data, display);
+    const layersOff = hiddenLayers !== undefined && hiddenLayers.size > 0;
+    if (!visibleNodeIds && !layersOff && orphans.size === 0) return data;
     const nodes = data.nodes.filter(
       (node) =>
         (!visibleNodeIds || visibleNodeIds.has(node.id)) &&
-        !hiddenTypes.has(node.type),
+        !orphans.has(node.id) &&
+        !nodeHiddenByLayers(node, hiddenLayers),
     );
     const ids = new Set(nodes.map((node) => node.id));
     return {
       edges: data.edges.filter(
-        (edge) => ids.has(edge.source) && ids.has(edge.target),
+        (edge) =>
+          ids.has(edge.source) &&
+          ids.has(edge.target) &&
+          !edgeHiddenByLayers(edge, hiddenLayers),
       ),
       nodes,
     };
-  }, [data, hiddenLayers, visibleNodeIds]);
+  }, [data, display, hiddenLayers, visibleNodeIds]);
   const targets = useMemo(() => hitTargets(reachable), [reachable]);
 
   // OQ-006: roving tabindex. 600 buttons were 600 tab stops — unusable for a
@@ -199,6 +229,15 @@ export function BrainMapStage({
       }
       data-lod={lod.level}
       data-lod-labels={lod.labels}
+      // How many nodes a person has pinned (todo 13 ⓒ).
+      data-pinned-count={pins ? pins.size : 0}
+      // Whether this mount started from a saved layout (todo 13 ⓐ). A
+      // browser test asserts the fact rather than timing the settle.
+      data-warm-start={
+        initialPositions !== null &&
+        initialPositions !== undefined &&
+        initialPositions.size > 0
+      }
       // "The layout has stopped moving" — the worker has always known it and
       // until todo 9 nobody could see it. A browser test waits on this
       // instead of sleeping and hoping.
@@ -211,11 +250,16 @@ export function BrainMapStage({
           {...(afterglow ? { afterglow } : {})}
           data={data}
           {...(directionalFocus === undefined ? {} : { directionalFocus })}
+          display={display}
           fitRequest={fitRequest}
           {...(focusNodeId === undefined ? {} : { focusNodeId })}
           forceConfig={forceConfig}
           {...(glow ? { glow } : {})}
           hitLayer={hitLayerRef}
+          {...(initialPositions === undefined ? {} : { initialPositions })}
+          {...(onLayoutSettled ? { onLayoutSettled } : {})}
+          {...(onPinsChange ? { onPinsChange } : {})}
+          {...(pins ? { pins } : {})}
           onLodChange={(level, labels) => {
             setLod({ labels, level: level as LodLevel });
             onLodReport?.(level as LodLevel, labels);
@@ -276,6 +320,7 @@ export function BrainMapStage({
               className="brain-map-hit"
               data-grade={node.grade}
               data-node-id={node.id}
+              data-pinned={pins?.has(node.id) ? "true" : undefined}
               key={node.id}
               onClick={() => onNodeSelect?.(node)}
               onDoubleClick={() => onNodeActivate?.(node)}
@@ -304,7 +349,7 @@ export function BrainMapStage({
         />
       ) : null}
       <div aria-live="polite" className="sr-only">
-        {data.edges.map((edge) => (
+        {reachable.edges.map((edge) => (
           <button
             key={edge.id}
             onClick={() => onEdgeSelect?.(edge)}

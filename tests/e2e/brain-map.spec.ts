@@ -640,3 +640,82 @@ test("filtering hides nodes without moving the ones that stay", async ({
     expect(Math.abs(box.y - was.y), id).toBeLessThanOrEqual(2);
   }
 });
+
+/**
+ * Phase 4 Wave B todo 13 — the rest of the panel, on the demo route.
+ *
+ * The demo fixture has documents and nothing else the layers name, so the
+ * toggles for the other kinds are offered disabled rather than hidden or
+ * silently inert. Presets are the panel's own persistence, so they are
+ * proved the way the sliders were: through a reload.
+ */
+test("layers the demo has nothing for are offered disabled and say why", async ({
+  page,
+}) => {
+  // The legend folds away under 80rem; the default viewport is exactly that.
+  await page.setViewportSize({ height: 900, width: 1440 });
+  await page.goto("/map");
+  const toggles = page.getByTestId("graph-layer-toggles");
+  await expect(toggles.locator("[data-layer='doc']")).toBeEnabled();
+  for (const layer of ["config", "style", "section", "co_changed"]) {
+    const toggle = toggles.locator(`[data-layer='${layer}']`);
+    await expect(toggle).toBeDisabled();
+    await expect(toggle).toHaveAttribute("data-layer-available", "false");
+    await expect(toggle).toHaveAttribute("title", DASHBOARD.layers.unavailable);
+  }
+  // The one live layer still works and still costs no restart.
+  await expect(page.locator(STAGE)).toHaveAttribute("data-settled", "true", {
+    timeout: 15_000,
+  });
+  const before = Number(
+    await page.locator(STAGE).getAttribute("data-canvas-nodes"),
+  );
+  await toggles.locator("[data-layer='doc']").click();
+  await expect
+    .poll(async () =>
+      Number(await page.locator(STAGE).getAttribute("data-canvas-nodes")),
+    )
+    .toBeLessThan(before);
+  await expect(page.locator(STAGE)).toHaveAttribute("data-settled", "true");
+});
+
+test("a view preset saved in the panel survives a reload and applies", async ({
+  page,
+}) => {
+  await page.setViewportSize({ height: 900, width: 1440 });
+  await page.goto("/map");
+  await expect(page.locator(`${STAGE} canvas`)).toBeVisible();
+  const panel = await openForcePanel(page);
+
+  await panel.locator("[data-force-key='linkDistance']").fill("180");
+  await panel.locator("[data-display-key='showArrows']").check();
+  await panel.locator("[data-preset-name]").fill("화살표 뷰");
+  await panel
+    .getByRole("button", { name: DASHBOARD.forcePanel.presets.save })
+    .click();
+  await expect(panel.locator("[data-preset-apply='화살표 뷰']")).toBeVisible();
+
+  // Reset the view: the preset must outlive it.
+  await panel.getByRole("button", { name: DASHBOARD.forcePanel.reset }).click();
+  await expect(
+    panel.locator("[data-force-key='linkDistance']"),
+  ).not.toHaveValue("180");
+  await expect(
+    panel.locator("[data-display-key='showArrows']"),
+  ).not.toBeChecked();
+  await expect(panel.locator("[data-preset-apply='화살표 뷰']")).toBeVisible();
+
+  await page.reload();
+  const reopened = await openForcePanel(page);
+  await reopened.locator("[data-preset-apply='화살표 뷰']").click();
+  await expect(reopened.locator("[data-force-key='linkDistance']")).toHaveValue(
+    "180",
+  );
+  await expect(
+    reopened.locator("[data-display-key='showArrows']"),
+  ).toBeChecked();
+  await reopened.locator("[data-preset-remove='화살표 뷰']").click();
+  await expect(reopened.locator("[data-preset-apply='화살표 뷰']")).toHaveCount(
+    0,
+  );
+});

@@ -52,6 +52,7 @@ PR #10 후속(이름이 바뀐 저장소의 canonical 이름, 웹훅 id 매칭)�
 PR #11 후속(전체 스캔·analyze의 GitHub 읽기를 아카이브 한 번으로 — primary-rate-limit 근거)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-12-scan-archive.md)로 넘어가 있다: 워커 재배포만, 워커 로그의 `archive:` 줄로 검증, `SCAN_ARCHIVE_FETCH=off` 롤백 스위치.
 OQ-067 ⑴(enrich 잡의 아카이브 읽기)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-enrich-archive.md)로 넘어가 있다: 워커 재배포만, 확인은 다음 enrich 실행의 `enrich @sha N bodies (archive: …)` 줄로 — 확인만을 위해 enrich를 돌리지 않는다.
 Phase 4 todo 15·24(라이브 발광 브리지 + HUD 실데이터, todo 24 브라우저 수용 기준)는 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md)로 넘어가 있다: `202609130001` 적용 → 웹 머지 순서, `/app/map`에서 `search_index` 1회로 발광 검증, 롤백 지점.
+Phase 4 todo 13 남은 다섯(레이아웃 워밍·`/app/map` 힘 패널·Obsidian 옵션·도메인 앵커·style/config 레이어)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-map-panel.md)로 넘어가 있다: 웹 머지만, `/app/map`에서 필터·패널·핀·warm 마운트로 검증, 롤백 지점.
 
 ### 사용자 보고 선호 (2026-09-12)
 

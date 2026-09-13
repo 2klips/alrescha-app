@@ -9,15 +9,17 @@ import {
   GitCommitHorizontal,
   KeyRound,
   LayoutGrid,
-  Lightbulb,
   Link2,
   Network,
+  Pin,
+  PinOff,
   Radio,
   Search,
   ShieldAlert,
+  SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   filterGraph,
@@ -33,8 +35,21 @@ import {
   glowAfterglowNodes,
   glowFromRealtime,
 } from "../../../../lib/graph/glow";
+import { displaySettingsOf } from "../../../../lib/graph/graph-panel-settings";
 import type { LodLevel } from "../../../../lib/graph/lod";
-import { useGraphPanelSettings } from "../../../ui/graph-force-panel";
+import {
+  edgeHiddenByLayers,
+  hiddenByDisplay,
+  nodeHiddenByLayers,
+  type GraphLayer,
+} from "../../../../lib/graph/render-frame";
+import type { Position } from "../../../../lib/graph/simulation-protocol";
+import {
+  GraphForcePanel,
+  useGraphPanelSettings,
+} from "../../../ui/graph-force-panel";
+import { GraphLayerToggles } from "../../../ui/graph-layer-toggles";
+import { useLayoutWarmup } from "../../../ui/layout-warmup";
 import {
   createBrowserWorkspaceRealtimeSource,
   createRealtimeGraphState,
@@ -285,18 +300,30 @@ type PanelSettings = ReturnType<typeof useGraphPanelSettings>[0];
 interface GraphStageSurfaceProps {
   focusNodeId: string | null;
   groupByArea: boolean;
+  /** Layers the viewer switched off (todo 13). */
+  hiddenLayers: ReadonlySet<GraphLayer>;
+  /** A saved layout to start warm from, once storage has answered (todo 13 ⓐ). */
+  initialPositions: ReadonlyMap<string, Position> | null;
   isClustered: boolean;
   isEmpty: boolean;
   nodeCount: number;
+  onLayoutSettled: (positions: ReadonlyMap<string, Position>) => void;
   onLodReport: (level: LodLevel, labels: number) => void;
   onNodeSelect: (node: GraphNode) => void;
+  onPinsChange: (pins: ReadonlyMap<string, Position>) => void;
   onSettingsChange: (patch: Partial<PanelSettings>) => void;
+  pins: ReadonlyMap<string, Position | null>;
   realtime: RealtimeGraphState;
   /** The connected repository, for the empty state's "scanning" reading. */
   repoFullName: string | null;
   selectedNodeId: string | null;
   settings: PanelSettings;
+  /** Storage has answered (or timed out): the stage may mount (todo 13 ⓐ). */
+  warm: boolean;
+  /** The whole stored graph — the layout never changes with a filter. */
+  wholeGraph: GraphData;
   visibleGraph: GraphData;
+  visibleNodeIds: ReadonlySet<string> | null;
 }
 
 /**
@@ -308,17 +335,25 @@ interface GraphStageSurfaceProps {
 function GraphStageSurface({
   focusNodeId,
   groupByArea,
+  hiddenLayers,
+  initialPositions,
   isClustered,
   isEmpty,
   nodeCount,
+  onLayoutSettled,
   onLodReport,
   onNodeSelect,
+  onPinsChange,
   onSettingsChange,
+  pins,
   realtime,
   repoFullName,
   selectedNodeId,
   settings,
   visibleGraph,
+  visibleNodeIds,
+  warm,
+  wholeGraph,
 }: GraphStageSurfaceProps) {
   const clock = useRealtimeClock(realtime.feed.length, realtime.renderBatches);
   const glow = useMemo(
@@ -342,21 +377,34 @@ function GraphStageSurface({
           onNodeSelect={onNodeSelect}
           selectedNodeId={selectedNodeId}
         />
-      ) : (
+      ) : warm ? (
         <BrainMapStage
           afterglow={afterglow}
-          data={visibleGraph}
+          // The whole graph, always (todo 13): filtering is `visibleNodeIds`
+          // and layers are `hiddenLayers`, so a keystroke never restarts
+          // the layout. The saved layout and pins ride in with the mount.
+          data={wholeGraph}
           directionalFocus
           focusNodeId={focusNodeId}
           glow={glow}
+          {...(hiddenLayers.size > 0 ? { hiddenLayers } : {})}
+          initialPositions={initialPositions}
+          onLayoutSettled={onLayoutSettled}
           onLodReport={onLodReport}
           onNodeActivate={onNodeSelect}
           onNodeSelect={onNodeSelect}
+          onPinsChange={onPinsChange}
           onSettingsChange={onSettingsChange}
+          pins={pins}
           selectedNodeId={selectedNodeId}
           settings={settings}
           showForcePanel={false}
+          {...(visibleNodeIds ? { visibleNodeIds } : {})}
         />
+      ) : (
+        // Storage has not answered yet: a stage mounted now would start cold
+        // and restart the moment the saved layout arrived.
+        <div className="graph-state" data-testid="workspace-map-warming" />
       )}
       {isClustered ? (
         <div className="arr-cluster-note" role="status">
@@ -448,17 +496,99 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
   });
   const [localFocus, setLocalFocus] = useState(false);
   const [groupByArea, setGroupByArea] = useState(false);
-  const [showCoChanges, setShowCoChanges] = useState(true);
-  const [showConcepts, setShowConcepts] = useState(true);
+  // Layers a viewer switched off (todo 13). A Set rather than a record:
+  // "which are hidden" is the question every consumer asks. The former
+  // co-change and concept switches are two of these now.
+  const [hiddenLayers, setHiddenLayers] = useState<ReadonlySet<GraphLayer>>(
+    () => new Set(),
+  );
+  const toggleLayer = useCallback((layer: GraphLayer) => {
+    setHiddenLayers((current) => {
+      const next = new Set(current);
+      if (next.has(layer)) next.delete(layer);
+      else next.add(layer);
+      return next;
+    });
+  }, []);
+  const [forceOpen, setForceOpen] = useState(false);
+  const forceButtonRef = useRef<HTMLButtonElement | null>(null);
+  const forcePopoverRef = useRef<HTMLDivElement | null>(null);
   const [cameraFocusNodeId, setCameraFocusNodeId] = useState<string | null>(
     null,
   );
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [panelSettings, updatePanelSettings] = useGraphPanelSettings();
-  const [, setHudLod] = useState<{ labels: number; level: LodLevel }>({
+  const [hudLod, setHudLod] = useState<{ labels: number; level: LodLevel }>({
     labels: 0,
     level: "near",
   });
+  const display = useMemo(
+    () => displaySettingsOf(panelSettings),
+    [panelSettings],
+  );
+
+  // The saved layout for this commit and the workspace's pins (todo 13 ⓐ·ⓒ),
+  // read before the stage mounts so the worker starts warm.
+  const warmup = useLayoutWarmup(model.workspaceId, model.lastScannedCommitSha);
+  const [pins, setPins] = useState<ReadonlyMap<string, Position | null>>(
+    () => new Map(),
+  );
+  const adoptedPinsRef = useRef(false);
+  useEffect(() => {
+    if (!warmup.ready || adoptedPinsRef.current) return;
+    adoptedPinsRef.current = true;
+    setPins(new Map(warmup.pins));
+  }, [warmup.pins, warmup.ready]);
+  const onPinsChange = useCallback(
+    (resolved: ReadonlyMap<string, Position>) => {
+      setPins(new Map(resolved));
+      warmup.savePins(resolved);
+    },
+    [warmup],
+  );
+  const togglePin = useCallback(
+    (nodeId: string) => {
+      setPins((current) => {
+        const next = new Map(current);
+        if (next.has(nodeId)) {
+          next.delete(nodeId);
+          // The engine will confirm; persist the remaining resolved pins now
+          // so a reload between the two never brings the pin back.
+          const remaining = new Map<string, Position>();
+          for (const [id, position] of next) {
+            if (position) remaining.set(id, position);
+          }
+          warmup.savePins(remaining);
+        } else {
+          next.set(nodeId, null);
+        }
+        return next;
+      });
+    },
+    [warmup],
+  );
+  const onLayoutSettled = useCallback(
+    (positions: ReadonlyMap<string, Position>) => warmup.saveLayout(positions),
+    [warmup],
+  );
+
+  useEffect(() => {
+    if (!forceOpen) return;
+    forcePopoverRef.current
+      ?.querySelector<HTMLButtonElement>("[data-force-close]")
+      ?.focus();
+  }, [forceOpen]);
+
+  useEffect(() => {
+    if (!forceOpen) return;
+    function onKeyDown(event: globalThis.KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setForceOpen(false);
+      forceButtonRef.current?.focus();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [forceOpen]);
 
   const policy = useMemo<AccessPolicy>(
     () => ({
@@ -479,41 +609,48 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
     () => filterGraph(model.graph, filters),
     [filters, model.graph],
   );
-  const familyGraph = useMemo(() => {
-    let graph = baseGraph;
-    if (!showCoChanges) {
-      graph = {
-        edges: graph.edges.filter(
-          (edge) => edge.provenance.relation !== "co_changed",
-        ),
-        nodes: graph.nodes,
-      };
-    }
-    // Concept layer toggle (Wave C todo 7): off hides the AI-synthesized
-    // concept nodes and every edge touching them — the structural layer
-    // underneath is untouched.
-    if (!showConcepts) {
-      const conceptIds = new Set(
-        graph.nodes
-          .filter((node) => node.type === "concept")
-          .map((node) => node.id),
-      );
-      graph = {
-        edges: graph.edges.filter(
-          (edge) =>
-            !conceptIds.has(edge.source) && !conceptIds.has(edge.target),
-        ),
-        nodes: graph.nodes.filter((node) => !conceptIds.has(node.id)),
-      };
-    }
-    return graph;
-  }, [baseGraph, showCoChanges, showConcepts]);
+  // Layers and the orphan switch, applied with the same predicates the
+  // canvas uses (todo 13), so the band view, the counts and the stage agree.
+  const layeredGraph = useMemo(() => {
+    const orphans = hiddenByDisplay(model.graph, display);
+    if (hiddenLayers.size === 0 && orphans.size === 0) return baseGraph;
+    const nodes = baseGraph.nodes.filter(
+      (node) =>
+        !orphans.has(node.id) && !nodeHiddenByLayers(node, hiddenLayers),
+    );
+    const ids = new Set(nodes.map((node) => node.id));
+    return {
+      edges: baseGraph.edges.filter(
+        (edge) =>
+          ids.has(edge.source) &&
+          ids.has(edge.target) &&
+          !edgeHiddenByLayers(edge, hiddenLayers),
+      ),
+      nodes,
+    };
+  }, [baseGraph, display, hiddenLayers, model.graph]);
   const visibleGraph = useMemo(
     () =>
       localFocus && selectedNode
-        ? focusLocalGraph(familyGraph, selectedNode.id)
-        : familyGraph,
-    [familyGraph, localFocus, selectedNode],
+        ? focusLocalGraph(
+            layeredGraph,
+            selectedNode.id,
+            panelSettings.localGraphDepth,
+          )
+        : layeredGraph,
+    [layeredGraph, localFocus, panelSettings.localGraphDepth, selectedNode],
+  );
+  /**
+   * The same answer as `visibleGraph`, as a set of ids (todo 13). The canvas
+   * takes the whole graph plus this, so the layout survives a keystroke; the
+   * band view still takes `visibleGraph` itself, having no layout to keep.
+   */
+  const visibleNodeIds = useMemo(
+    () =>
+      visibleGraph.nodes.length === model.graph.nodes.length
+        ? null
+        : new Set(visibleGraph.nodes.map((node) => node.id)),
+    [model.graph.nodes.length, visibleGraph],
   );
   const hubs = useMemo(() => topHubNodes(model.graph), [model.graph]);
   // QW-6: one pass over the nodes instead of one `.filter().length` per area
@@ -832,43 +969,68 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
               <LayoutGrid size={14} />
               {DASHBOARD.filters.groupMode}
             </button>
-            <button
-              aria-label={WORKSPACE_MAP.coChange.toggleAria}
-              aria-pressed={showCoChanges}
-              className="arr-focus"
-              data-testid="graph-co-change-toggle"
-              onClick={() => setShowCoChanges((value) => !value)}
-              type="button"
-            >
-              <GitCommitHorizontal size={14} />
-              {WORKSPACE_MAP.coChange.toggle}
-            </button>
-            <button
-              aria-label={WORKSPACE_MAP.conceptLayer.toggleAria}
-              aria-pressed={showConcepts}
-              className="arr-focus"
-              data-testid="graph-concept-toggle"
-              onClick={() => setShowConcepts((value) => !value)}
-              type="button"
-            >
-              <Lightbulb size={14} />
-              {WORKSPACE_MAP.conceptLayer.toggle}
-            </button>
+            <GraphLayerToggles
+              data={model.graph}
+              hiddenLayers={hiddenLayers}
+              onToggle={toggleLayer}
+            />
+            <div className="graph-toolbar-popover-anchor">
+              <button
+                aria-expanded={forceOpen}
+                aria-haspopup="dialog"
+                className="arr-focus"
+                data-testid="graph-force-open"
+                disabled={isEmpty || groupByArea}
+                onClick={() => setForceOpen((value) => !value)}
+                ref={forceButtonRef}
+                type="button"
+              >
+                <SlidersHorizontal size={14} />
+                {DASHBOARD.forcePanel.open}
+              </button>
+              {forceOpen ? (
+                <div
+                  aria-label={DASHBOARD.forcePanel.aria}
+                  className="graph-force-popover"
+                  ref={forcePopoverRef}
+                  role="dialog"
+                >
+                  <GraphForcePanel
+                    labelCount={hudLod.labels}
+                    lod={hudLod.level}
+                    onChange={updatePanelSettings}
+                    onClose={() => {
+                      setForceOpen(false);
+                      forceButtonRef.current?.focus();
+                    }}
+                    settings={panelSettings}
+                  />
+                </div>
+              ) : null}
+            </div>
           </div>
           <GraphStageSurface
             focusNodeId={cameraFocusNodeId}
             groupByArea={groupByArea}
+            hiddenLayers={hiddenLayers}
+            initialPositions={warmup.initialPositions}
             isClustered={model.isClustered}
             isEmpty={isEmpty}
             nodeCount={model.graph.nodes.length}
+            onLayoutSettled={onLayoutSettled}
             onLodReport={(level, labels) => setHudLod({ labels, level })}
             onNodeSelect={setSelectedNode}
+            onPinsChange={onPinsChange}
             onSettingsChange={updatePanelSettings}
+            pins={pins}
             realtime={realtime}
             repoFullName={model.repoFullName}
             selectedNodeId={selectedNode?.id ?? null}
             settings={panelSettings}
             visibleGraph={visibleGraph}
+            visibleNodeIds={visibleNodeIds}
+            warm={warmup.ready}
+            wholeGraph={model.graph}
           />
         </section>
 
@@ -886,6 +1048,23 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
             <>
               <h2>{selectedNode.label}</h2>
               <code className="arr-selected-path">{selectedNode.path}</code>
+              <button
+                aria-pressed={pins.has(selectedNode.id)}
+                className="arr-focus arr-pin-toggle"
+                data-testid="pin-toggle"
+                onClick={() => togglePin(selectedNode.id)}
+                title={DASHBOARD.pin.note}
+                type="button"
+              >
+                {pins.has(selectedNode.id) ? (
+                  <PinOff size={14} />
+                ) : (
+                  <Pin size={14} />
+                )}
+                {pins.has(selectedNode.id)
+                  ? DASHBOARD.pin.unpin
+                  : DASHBOARD.pin.pin}
+              </button>
               {selectedNode.findingCount ? (
                 <span className="arr-finding">
                   <AlertTriangle size={13} />

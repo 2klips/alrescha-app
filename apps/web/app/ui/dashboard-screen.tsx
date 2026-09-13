@@ -53,16 +53,13 @@ import {
   type RealtimeGraphState,
 } from "../../lib/realtime/access-events";
 import type { LodLevel } from "../../lib/graph/lod";
-import {
-  GRAPH_LAYERS,
-  RISK_RING_BANDS,
-  type GraphLayer,
-} from "../../lib/graph/render-frame";
+import { RISK_RING_BANDS, type GraphLayer } from "../../lib/graph/render-frame";
 import { DASHBOARD, GRADE } from "../../lib/strings";
 import { BrainMapStage } from "./brain-map-stage";
 import { Button } from "./button";
 import { FacetBandView } from "./facet-band-view";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
+import { GraphLayerToggles } from "./graph-layer-toggles";
 import { GraphTableView } from "./graph-table-view";
 import { useRealtimeClock } from "./realtime-clock";
 import { StatusBadge } from "./status-badge";
@@ -484,9 +481,13 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
   const focusedGraph = useMemo(
     () =>
       localFocus && selectedNode
-        ? focusLocalGraph(baseGraph, selectedNode.id)
+        ? focusLocalGraph(
+            baseGraph,
+            selectedNode.id,
+            panelSettings.localGraphDepth,
+          )
         : baseGraph,
-    [baseGraph, localFocus, selectedNode],
+    [baseGraph, localFocus, panelSettings.localGraphDepth, selectedNode],
   );
   const visibleGraph = focusedGraph;
   /**
@@ -874,31 +875,18 @@ export function DashboardScreen({ model }: DashboardScreenProps) {
         {/* Layer toggles (Wave B todo 13). Beside the filters and not among
             them: a filter says what to look for, a layer says what kind of
             thing not to look at, and neither should clear the other. */}
-        <div
-          aria-label={DASHBOARD.layers.label}
-          className="arr-legend arr-layer-toggles"
-          data-testid="graph-layer-toggles"
-          title={DASHBOARD.layers.note}
-        >
-          {GRAPH_LAYERS.map((layer) => (
-            <button
-              aria-pressed={!hiddenLayers.has(layer)}
-              data-layer={layer}
-              key={layer}
-              onClick={() =>
-                setHiddenLayers((current) => {
-                  const next = new Set(current);
-                  if (next.has(layer)) next.delete(layer);
-                  else next.add(layer);
-                  return next;
-                })
-              }
-              type="button"
-            >
-              {DASHBOARD.layers.names[layer]}
-            </button>
-          ))}
-        </div>
+        <GraphLayerToggles
+          data={model.graph}
+          hiddenLayers={hiddenLayers}
+          onToggle={(layer) =>
+            setHiddenLayers((current) => {
+              const next = new Set(current);
+              if (next.has(layer)) next.delete(layer);
+              else next.add(layer);
+              return next;
+            })
+          }
+        />
         {/* The risk ring's own key (Wave B todo 12). Separate from the colour
             legend above because it is a different axis: colour says what a
             node is, the ring says what todo 21 thinks of it. */}

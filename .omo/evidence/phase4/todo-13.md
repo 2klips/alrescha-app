@@ -123,3 +123,156 @@ the stage mounted.
 assignment makes the collapse *deterministic*, which was the plan's ask, but
 the 179ms spike is the sprite pool growing from a few dozen supernodes to five
 thousand raw nodes in one frame. Keeping both draw sets warm is still open.
+
+---
+
+## Completed — 2026-09-13: the five, and the panel on `/app/map`
+
+**Scope of this pass:** `apps/web/lib/graph/{simulation-protocol,force-simulation,worker-runtime,engine,render-frame,pixi-backend,graph-panel-settings,domain-anchors,layout-store}.ts`,
+`apps/web/app/ui/{graph-force-panel,graph-layer-toggles,layout-warmup,brain-map-stage,brain-map,dashboard-screen}.tsx`,
+`apps/web/app/app/(shell)/map/map-screen.tsx`, `apps/web/lib/dashboard/graph-model.ts`,
+`apps/web/lib/map/workspace-map.ts`, `apps/web/lib/strings/dashboard.ts`,
+`apps/web/app/styles/screens/map-hud.css`,
+`tests/{graph-display,graph-layout-store}.test.ts` (new), `tests/graph-visibility.test.ts`,
+`apps/web/app/ui/graph-force-panel.test.tsx`, `tests/e2e/map-panel.spec.ts` (new),
+`tests/e2e/brain-map.spec.ts`.
+
+The boundary the first pass drew — "what the map draws" done, "the panel
+that drives it" not — is closed. Everything below is visual or a start
+condition; nothing restarts the layout, and the tests say so each time.
+
+### ⓐ Warm start — the layout is remembered per commit
+
+`lib/graph/layout-store.ts` keeps a settled layout in IndexedDB under
+`layout:<workspace>:<commit>` and pins under `pins:<workspace>` (a pin is a
+person's decision about a node and outlives the next push). The encoding
+and its refusals are pure and tested: a record of another version, a
+truncated buffer, a stray non-finite is not a layout, whole — a half-warm
+start is a layout nobody chose. IndexedDB is behind a three-method
+interface; the tests hand in a map, and a browser that refuses IndexedDB
+falls back to memory rather than failing to render.
+
+The positions travel to the worker in the `start` message as a
+transferable `Float32Array` (`NaN` for nodes the saved layout never saw —
+those start on the spiral as before), and the worker begins at the reheat
+temperature (`WARM_START_ALPHA` = 0.3) rather than from 1: the saved
+layout only has to absorb what changed. `useLayoutWarmup` reads storage
+*before* the stage mounts (a stage mounted cold and then told about the
+saved positions would restart), with a 1.5s deadline after which the map
+starts cold — what it did before, never worse. The stage says which it
+was: `data-warm-start`. The browser spec asserts the first visit is cold,
+that the settle wrote a record with a position for every node in the
+layout, and that the reload mounts warm.
+
+### ⓑ The force panel on `/app/map`
+
+The same `GraphForcePanel`, in the same popover pattern the demo has: a
+toolbar button, a `dialog`, focus to the close button on open, Escape back
+to the button. The LOD readout in it is the stage's own (`hudLod` was
+already being set on this screen and never read). And with the panel came
+the thing the first pass had only done on the demo: **filtering on
+`/app/map` is now visibility** — the stage takes the whole graph plus
+`visibleNodeIds`, so a keystroke in the workspace search box no longer
+restarts the layout. The earlier co-change and concept switches became two
+of the seven layers, keeping their test ids.
+
+### ⓒ Obsidian parity
+
+`GraphPanelSettings` grew `showOrphans`, `showArrows`, `nodeSize`,
+`linkThickness`, `localGraphDepth`, `groups` and `presets`, each clamped
+and validated from storage the way the sliders were (a group's colour must
+be one of six renderer tokens; eight groups, eight presets, the oldest
+makes room). Every one is applied in `buildRenderFrame`, so the engine's
+`setDisplay` is a `touch()`, not a restart — asserted.
+
+- **Orphans** are judged on the *whole* graph's degrees: a node whose only
+  neighbour is filtered out is out of view, not an orphan. The DOM hit
+  layer hides exactly what the canvas hides, and the browser spec computes
+  the orphan set from the stage's own edge list and asserts the count.
+- **Arrows** are one filled triangle per directed edge at the target's rim,
+  sized in screen pixels, one `fill` per style group (the same batching as
+  the strokes). A containment line and a co-change correlation have no
+  direction worth asserting and get none.
+- **Node size / link thickness** multiply the radius and the stroke; the
+  arrowhead stops at the scaled rim (`RenderEdge.targetRadius`). Visual
+  only — the collision force keeps the renderer's default curve, so the
+  physics do not change under a display slider.
+- **Local graph depth** (1–3) feeds `focusLocalGraph` on both screens.
+- **Groups**: a case-insensitive substring of label or path; the first
+  match paints. The swatch in the panel and the node on the canvas read
+  the same token, so they agree in both themes.
+- **Presets** store the view (forces, display, groups, depth, fade) — never
+  the card state or the other presets. "기본값 복원" resets the view and
+  keeps the presets; the demo spec saves one, resets, reloads, applies,
+  removes.
+- **Pins** persist. `engine.pinNodeAt` / `unpinNode` / `pinnedNodes` sit
+  beside the pointer hold from todo 11; a dragged pinned node is re-pinned
+  where it was dropped rather than released, and the resolved point goes
+  back up through `onPinsChange` for the screen to save. Pins ride in with
+  the first `start` message so a warm mount opens with them holding. The
+  inspector has the toggle; the hit target carries `data-pinned`; the
+  spec pins, reloads, sees it still pinned before any click.
+
+### ⓓ Domain anchor sliders
+
+`ForceConfig.domainAnchorStrength` (0–0.05, default 0). `domainAnchorsFor`
+puts each Data Brain area on a circle at 420 layout units, in `BRAIN_AREAS`
+order, from the same `graphNodeArea` the colour bands use — an anchor is
+never a second opinion about where a file belongs. The worker registers
+`forceX`/`forceY` **only while the strength is above zero**, so at zero the
+force list is identical to before and every existing layout stays
+byte-identical (asserted against a layout with no anchors at all). Anchors
+travel with every start, so the slider can be turned on later without a
+restart; a list that does not line up with the nodes is dropped whole.
+
+### ⓔ `style` and `config` layers
+
+The reason they were missing was that a `GraphNode` did not know what the
+scanner had classified it as. It does now (`classification`, set by the
+loader from the artifact row), and `nodeHiddenByLayers` hides by type
+*or* by classification. `availableLayers(data)` says which of the seven a
+graph can switch off at all; both screens offer all seven and **disable**
+the ones this graph has nothing for, with the reason as the title — the
+honest form of "a control that silently does nothing". On the drifted-demo
+scan `config` is live (its `package.json`) and `style` is disabled; on the
+demo route only `doc` is live.
+
+### Two things the browser taught
+
+- The first run of the new specs timed out on every click of a new
+  control. Not a product defect: the toolbar's `.arr-focus` buttons and the
+  legend fold away under 80rem, and Playwright's default viewport is
+  exactly 1280 wide. The workspace map's other specs already ran at 1440
+  for that reason; these do now too, with the reason written where the
+  viewport is set.
+- The first swatch tokens were `accent` and `danger`, which the screen
+  stylesheet test lists as legacy palette; they are `accent-fg` and
+  `danger-fg` now, and the Korean-first test rejected an English example in
+  the group placeholder — it says `예: 인증, AGENTS.md`.
+
+### Verification
+
+- vitest: `tests/graph-display.test.ts` 13 (display options, anchors, warm
+  start, engine display/pins), `tests/graph-layout-store.test.ts` 9,
+  `tests/graph-visibility.test.ts` 20 (+2: classification layers,
+  `availableLayers`), `apps/web/app/ui/graph-force-panel.test.tsx` 7 (+2,
+  the slider count updated 5 → 9 by name). Full `pnpm test`: 194 files / 1,796 passed / 1 skipped.
+- Playwright: `tests/e2e/map-panel.spec.ts` 6/6 on `/app/map` over a real
+  scan (panel persists · filter = visibility · config layer on, style
+  disabled · orphans exact · pin survives reload · layout saved + warm
+  mount); `tests/e2e/brain-map.spec.ts` 20/20 (+2: disabled layers, preset
+  round trip). Full suite: 166 passed / 1 skipped / 0 failed.
+- `pnpm lint`, `pnpm typecheck`, `scripts/verify-scope-boundaries.ts` PASS,
+  `git diff --check` clean.
+
+### Still open
+
+- **The zoom hitch todo 12 measured is still not fixed.** Nothing here
+  touched the collapse/raw draw-set handover.
+- **Arrows are drawn, not hit-tested**: an edge still cannot be clicked on
+  the canvas (todo 10's note stands).
+- **Groups colour nodes; they do not filter.** Obsidian's groups also
+  count as a query source; here they are paint only.
+- **Warm start keys by commit.** A repository with many commits leaves one
+  record per commit; nothing prunes them yet. The sizes are far from any
+  IndexedDB quota, and a prune is a small follow-up.

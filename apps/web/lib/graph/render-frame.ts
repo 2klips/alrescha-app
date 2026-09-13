@@ -134,21 +134,158 @@ const FAR_HIDDEN_RELATIONS: ReadonlySet<string> = new Set([
  * These are the kinds that mostly add texture: containment and co-change are
  * edges, concepts, sections and prose are nodes.
  *
- * The plan names seven. Five are here, and the two that are not — `style`
- * and `config` — are absent for a stated reason: the scanner classifies them,
- * but a stylesheet and a `tsconfig.json` both arrive at the map as `code`
- * nodes, so there is nothing on a `GraphNode` to switch off. Offering the
- * toggle anyway would give a viewer a control that silently does nothing.
+ * The plan names seven and all seven are here. `style` and `config` were
+ * absent until the loader carried the scanner's classification onto the
+ * node (`GraphNode.classification`): a stylesheet and a `tsconfig.json` both
+ * arrive at the map as `code` nodes, and until they said which they were,
+ * a toggle for them would have been a control that silently did nothing.
+ * `availableLayers` says which of the seven a given graph can switch off at
+ * all, so a screen can disable the rest rather than offer them.
  */
 export const GRAPH_LAYERS = [
   "co_changed",
   "concept",
+  "config",
   "contains",
   "doc",
   "section",
+  "style",
 ] as const;
 
 export type GraphLayer = (typeof GRAPH_LAYERS)[number];
+
+/** Artifact classifications a layer switches off (todo 13 ⓔ). */
+const LAYER_CLASSIFICATIONS: Readonly<Partial<Record<GraphLayer, string>>> = {
+  config: "config",
+  style: "style",
+};
+
+/**
+ * Whether the switched-off layers hide this node — by its type (a concept,
+ * a document, a section) or by what the scanner classified it as (a
+ * stylesheet, a config file). One predicate for the canvas and the DOM hit
+ * layer, so a keyboard user can never tab to a node nobody can see.
+ */
+export function nodeHiddenByLayers(
+  node: Pick<GraphNode, "classification" | "type">,
+  layers: ReadonlySet<GraphLayer> | null | undefined,
+): boolean {
+  if (!layers || layers.size === 0) return false;
+  for (const layer of layers) {
+    if (LAYER_NODE_TYPES[layer] === node.type) return true;
+    if (
+      node.classification !== undefined &&
+      LAYER_CLASSIFICATIONS[layer] === node.classification
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * The layers this graph has anything for. A toggle for a layer with no
+ * member is a control that does nothing; a screen disables those rather
+ * than hiding them, so the vocabulary stays stable across repositories.
+ */
+export function availableLayers(data: GraphData): ReadonlySet<GraphLayer> {
+  const present = new Set<GraphLayer>();
+  for (const layer of GRAPH_LAYERS) {
+    const relation = LAYER_RELATIONS[layer];
+    if (
+      relation &&
+      data.edges.some((edge) => edge.provenance.relation === relation)
+    ) {
+      present.add(layer);
+      continue;
+    }
+    if (data.nodes.some((node) => nodeHiddenByLayers(node, new Set([layer])))) {
+      present.add(layer);
+    }
+  }
+  return present;
+}
+
+/**
+ * Display options a viewer sets in the panel (todo 13 ⓒ — Obsidian's
+ * orphans, arrows, node size, link thickness and groups). None of them
+ * touches the layout: every one is applied while the frame is built.
+ */
+export const GROUP_COLOR_TOKENS = [
+  "accent-fg",
+  "success-fg",
+  "attention-fg",
+  "danger-fg",
+  "node-concept",
+  "node-route",
+] as const;
+
+export type GroupColorToken = (typeof GROUP_COLOR_TOKENS)[number];
+
+export interface GraphGroup {
+  readonly color: GroupColorToken;
+  /** Case-insensitive substring of a node's label or path. */
+  readonly query: string;
+}
+
+export interface GraphDisplaySettings {
+  /** Search term → colour; the first matching group paints the node. */
+  readonly groups: readonly GraphGroup[];
+  /** Multiplier on every edge's stroke width. */
+  readonly linkThickness: number;
+  /** Multiplier on every node's radius. */
+  readonly nodeSize: number;
+  /** Arrowheads at the target end of directed edges. */
+  readonly showArrows: boolean;
+  /** Draw nodes with no edge at all. Off hides them. */
+  readonly showOrphans: boolean;
+}
+
+export const DEFAULT_DISPLAY_SETTINGS: GraphDisplaySettings = {
+  groups: [],
+  linkThickness: 1,
+  nodeSize: 1,
+  showArrows: false,
+  showOrphans: true,
+};
+
+export const DISPLAY_LIMITS = {
+  linkThickness: { max: 3, min: 0.5 },
+  nodeSize: { max: 2, min: 0.5 },
+} as const;
+
+/** The first group whose query the node's label or path contains, or null. */
+export function groupColorTokenFor(
+  node: Pick<GraphNode, "label" | "path">,
+  groups: readonly GraphGroup[],
+): GroupColorToken | null {
+  if (groups.length === 0) return null;
+  const haystack = `${node.label} ${node.path}`.toLocaleLowerCase();
+  for (const group of groups) {
+    const query = group.query.trim().toLocaleLowerCase();
+    if (query.length > 0 && haystack.includes(query)) return group.color;
+  }
+  return null;
+}
+
+/**
+ * Nodes the display settings hide — today only the orphans. Exported for
+ * the DOM hit layer, which must hide exactly what the canvas hides.
+ */
+export function hiddenByDisplay(
+  data: GraphData,
+  display: GraphDisplaySettings | null | undefined,
+): ReadonlySet<string> {
+  if (!display || display.showOrphans) return EMPTY_IDS;
+  const degrees = degreeMap(data);
+  return new Set(
+    data.nodes
+      .filter((node) => (degrees.get(node.id) ?? 0) === 0)
+      .map((node) => node.id),
+  );
+}
+
+const EMPTY_IDS: ReadonlySet<string> = new Set();
 
 /**
  * Node types the given layers switch off. Exported because the DOM hit layer
@@ -178,6 +315,22 @@ const LAYER_NODE_TYPES: Readonly<Partial<Record<GraphLayer, string>>> = {
   section: "section",
 };
 
+/**
+ * Whether the switched-off layers hide this edge by its relation. The DOM
+ * edge list reads the same rule as the canvas, so a screen reader is never
+ * told about a co-change line the viewer switched off.
+ */
+export function edgeHiddenByLayers(
+  edge: Pick<GraphEdge, "provenance">,
+  layers: ReadonlySet<GraphLayer> | null | undefined,
+): boolean {
+  if (!layers || layers.size === 0) return false;
+  for (const layer of layers) {
+    if (LAYER_RELATIONS[layer] === edge.provenance.relation) return true;
+  }
+  return false;
+}
+
 /** How faintly a layout-only edge is drawn where it is drawn at all. */
 const LAYOUT_ONLY_ALPHA = 0.08;
 
@@ -190,6 +343,8 @@ const MERGED_EDGE_WIDTH_SCALE = 1;
 
 export interface RenderEdge {
   alpha: number;
+  /** Draw an arrowhead at the target end (todo 13 ⓒ). */
+  arrow: boolean;
   color: number;
   /** Broken evidence is drawn as a red dashed line. */
   dashed: boolean;
@@ -200,6 +355,8 @@ export interface RenderEdge {
   id: string;
   sourceX: number;
   sourceY: number;
+  /** The target node's painted radius, so an arrowhead stops at its rim. */
+  targetRadius: number;
   targetX: number;
   targetY: number;
   width: number;
@@ -519,6 +676,8 @@ export interface FrameInput {
   hiddenLayers?: ReadonlySet<GraphLayer> | undefined;
   /** Node id → 0..1 glow intensity. */
   glow?: ReadonlyMap<string, number>;
+  /** Orphans, arrows, node size, link thickness, groups (todo 13 ⓒ). */
+  display?: GraphDisplaySettings | undefined;
   /** Community key → the node that is that community (todo 13). */
   templates?: ReadonlyMap<string, GraphNode> | undefined;
   /**
@@ -618,23 +777,30 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
    * explicitly below: a line to nowhere is worse than no line.
    */
   const visible = input.visible;
-  /** Node types the switched-off layers cover. */
-  const hiddenTypes = new Set(
-    [...(input.hiddenLayers ?? [])].flatMap((layer) =>
-      LAYER_NODE_TYPES[layer] ? [LAYER_NODE_TYPES[layer] as string] : [],
-    ),
-  );
-  /** Edge relations they cover. */
+  const display = input.display ?? DEFAULT_DISPLAY_SETTINGS;
+  /** Edge relations the switched-off layers cover. */
   const hiddenRelations = new Set(
     [...(input.hiddenLayers ?? [])].flatMap((layer) =>
       LAYER_RELATIONS[layer] ? [LAYER_RELATIONS[layer] as string] : [],
     ),
   );
-  const typeById = new Map(data.nodes.map((node) => [node.id, node.type]));
-  const isVisible = (nodeId: string): boolean =>
-    (!visible || visible.has(nodeId)) &&
-    !hiddenTypes.has(typeById.get(nodeId) ?? "");
+  // Orphans are judged on the whole graph, never on the filtered one: a node
+  // whose only neighbour is filtered out is not an orphan, it is out of view.
+  const orphans = hiddenByDisplay(input.data, display);
+  const nodeById = new Map(data.nodes.map((node) => [node.id, node]));
+  const isVisible = (nodeId: string): boolean => {
+    const node = nodeById.get(nodeId);
+    return (
+      (!visible || visible.has(nodeId)) &&
+      !orphans.has(nodeId) &&
+      (!node || !nodeHiddenByLayers(node, input.hiddenLayers))
+    );
+  };
+  const radiusScale = display.nodeSize;
+  const widthScale = display.linkThickness;
 
+  /** Painted radius per drawn node, for arrowheads that stop at the rim. */
+  const radiusById = new Map<string, number>();
   const nodes: RenderNode[] = data.nodes.flatMap((node) => {
     const position = collapsed.positions.get(node.id) ?? {
       x: node.x,
@@ -646,10 +812,9 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     // pointing at nothing.
     if (!isVisible(node.id)) return [];
     const degree = degrees.get(node.id) ?? 0;
-    const radius = nodeRadius(
-      importance.get(node.id) ?? degree,
-      node.clusterCount,
-    );
+    const radius =
+      nodeRadius(importance.get(node.id) ?? degree, node.clusterCount) *
+      radiusScale;
     candidates.push({
       degree,
       id: node.id,
@@ -661,13 +826,19 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
       screenX: viewport.width / 2 + camera.x + position.x * camera.scale,
       screenY: viewport.height / 2 + camera.y + position.y * camera.scale,
     });
+    radiusById.set(node.id, radius);
     return [
       {
         afterglow: input.afterglow?.has(node.id) ?? false,
         alpha: dimmedNodeId && !keptNear.has(node.id) ? 0.22 : 1,
         badge: badges ? node.grade : null,
         clusterCount: node.clusterCount ?? null,
-        color: resolveColor(input.palette, nodeColorToken(node.type)),
+        // A group paints over the type colour: a viewer who named a set of
+        // files asked to see them as a set, whatever kind of file they are.
+        color: resolveColor(
+          input.palette,
+          groupColorTokenFor(node, display.groups) ?? nodeColorToken(node.type),
+        ),
         glow: glow?.get(node.id) ?? 0,
         id: node.id,
         radius,
@@ -751,9 +922,9 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     // traffic reads as thicker without a hub pair becoming a slab.
     const merged = edge.mergedCount ?? 1;
     const width =
-      merged > 1
+      (merged > 1
         ? stroke.width * (1 + Math.log10(merged) * MERGED_EDGE_WIDTH_SCALE)
-        : stroke.width;
+        : stroke.width) * widthScale;
     // Containment is drawn, faintly, at the zooms where it means something.
     // It is what makes a directory read as a cluster; at full strength 885 of
     // them bury the imports they exist to make legible (OQ-037), which is why
@@ -762,6 +933,13 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     if (edge.layoutOnly) alpha = Math.min(alpha, LAYOUT_ONLY_ALPHA);
     edges.push({
       alpha,
+      // Arrows say which way an edge points, so a layout-only containment
+      // line and a co-change correlation — which have no direction worth
+      // asserting — never get one.
+      arrow:
+        display.showArrows &&
+        !edge.layoutOnly &&
+        edge.provenance.relation !== "co_changed",
       color,
       dashed: stroke.dashed,
       family: edge.family ?? "structure",
@@ -769,6 +947,7 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
       id: edge.id,
       sourceX: source.x,
       sourceY: source.y,
+      targetRadius: radiusById.get(edge.target) ?? 0,
       targetX: target.x,
       targetY: target.y,
       width,

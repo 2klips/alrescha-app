@@ -64,10 +64,14 @@ export const DASHBOARD = {
     names: {
       co_changed: "공변경",
       concept: "개념",
+      config: "설정 파일",
       contains: "포함",
       doc: "문서",
       section: "문서 섹션",
+      style: "스타일시트",
     },
+    /** A layer this graph has nothing for — offered, disabled, explained. */
+    unavailable: "이 Graph에는 해당 노드가 없습니다",
   },
 
   riskLegend: {
@@ -165,10 +169,67 @@ export const DASHBOARD = {
     linkStrength: "링크 인력",
     linkDistance: "링크 거리",
     textFadeThreshold: "라벨 페이드",
+    /** forceX/forceY toward each domain's band (Wave B todo 13 ⓓ). */
+    domainAnchorStrength: "도메인 앵커",
+    domainAnchorNote:
+      "0이면 꺼짐. 최대 0.05 — 영역을 떼어 놓는 힌트이지, 링크를 이기지는 않습니다.",
     lodLevels: { far: "원경", mid: "중경", near: "근경" },
     /** `줌 단계 <원경|중경|근경> · 라벨 <n>개` */
     lodStatus: (level: string, labels: number) =>
       `줌 단계 ${level} · 라벨 ${labels}개`,
+    /** Obsidian display options (Wave B todo 13 ⓒ). Visual only — no relayout. */
+    sections: {
+      forces: "힘",
+      display: "표시",
+      groups: "그룹",
+      presets: "뷰 프리셋",
+    },
+    display: {
+      showOrphans: "고아 노드 표시",
+      showArrows: "화살표",
+      nodeSize: "노드 크기",
+      linkThickness: "링크 두께",
+      localGraphDepth: "로컬 Graph 깊이",
+      /** `<n>단계` */
+      depth: (hops: number) => `${hops}단계`,
+    },
+    groups: {
+      note: "검색어와 맞는 노드를 같은 색으로 칠합니다. 라벨과 경로 기준, 먼저 맞는 그룹이 이깁니다.",
+      queryLabel: "검색어",
+      queryPlaceholder: "예: 인증, AGENTS.md",
+      colorLabel: "색",
+      add: "그룹 추가",
+      remove: "그룹 삭제",
+      /** `그룹 <n>/<limit>` */
+      count: (count: number, limit: number) => `그룹 ${count}/${limit}`,
+      colors: {
+        "accent-fg": "강조",
+        "success-fg": "초록",
+        "attention-fg": "주황",
+        "danger-fg": "빨강",
+        "node-concept": "보라",
+        "node-route": "청록",
+      },
+    },
+    presets: {
+      note: "힘·표시·그룹·깊이를 이름으로 저장해 두고 되돌립니다. 저장한 설정은 이 브라우저에만 남습니다.",
+      nameLabel: "프리셋 이름",
+      namePlaceholder: "예: 구조만",
+      save: "현재 뷰 저장",
+      apply: "적용",
+      remove: "삭제",
+      empty: "저장된 프리셋이 없습니다",
+      /** `프리셋 <n>/<limit>` */
+      count: (count: number, limit: number) => `프리셋 ${count}/${limit}`,
+    },
+  },
+  /** Persistent pins (Wave B todo 13 ⓒ): a person's decision about a node. */
+  pin: {
+    pin: "이 노드 고정",
+    unpin: "고정 해제",
+    note: "고정한 노드는 레이아웃이 옮기지 않습니다. 끌어서 옮기면 그 자리에 다시 고정됩니다.",
+    /** `고정 <n>개` */
+    count: (count: number) => `고정 ${count}개`,
   },
 
   ci: {

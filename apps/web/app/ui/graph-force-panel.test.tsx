@@ -31,7 +31,12 @@ describe("graph force panel", () => {
       expect(html).toContain(`data-force-key="${key}"`);
     }
     expect(html).toContain('data-force-key="textFadeThreshold"');
-    expect(html.match(/type="range"/g)).toHaveLength(5);
+    for (const key of ["nodeSize", "linkThickness", "localGraphDepth"]) {
+      expect(html).toContain(`data-force-key="${key}"`);
+    }
+    // Four forces, the domain anchor, the label fade, and the three display
+    // sliders (node size, link thickness, local-graph depth) — todo 13 ⓒ·ⓓ.
+    expect(html.match(/type="range"/g)).toHaveLength(9);
   });
 
   test("sliders are bounded by the published force limits", () => {
@@ -72,6 +77,41 @@ describe("graph force panel", () => {
 
     expect(html).toContain("data-force-close");
     expect(html).toContain(`aria-label="${DASHBOARD.forcePanel.close}"`);
-    expect(html.match(/type="range"/g)).toHaveLength(5);
+    // Four forces, the domain anchor, the label fade, and the three display
+    // sliders (node size, link thickness, local-graph depth) — todo 13 ⓒ·ⓓ.
+    expect(html.match(/type="range"/g)).toHaveLength(9);
+  });
+
+  test("exposes the display options, the groups editor and the presets (todo 13)", () => {
+    const html = render();
+
+    expect(html).toContain('data-display-key="showOrphans"');
+    expect(html).toContain('data-display-key="showArrows"');
+    expect(html).toContain('data-force-key="domainAnchorStrength"');
+    expect(html).toContain(DASHBOARD.forcePanel.sections.display);
+    expect(html).toContain(DASHBOARD.forcePanel.sections.groups);
+    expect(html).toContain(DASHBOARD.forcePanel.sections.presets);
+    expect(html).toContain('data-testid="graph-groups"');
+    expect(html).toContain('data-testid="graph-presets"');
+    expect(html).toContain(DASHBOARD.forcePanel.presets.empty);
+  });
+
+  test("lists saved presets and groups with their own controls", () => {
+    const html = render(
+      clampPanelSettings({
+        groups: [{ color: "danger-fg", query: "auth" }],
+        presets: [
+          {
+            name: "구조만",
+            settings: { ...DEFAULT_PANEL_SETTINGS, showArrows: true },
+          },
+        ],
+      }),
+    );
+
+    expect(html).toContain('data-preset-apply="구조만"');
+    expect(html).toContain('data-preset-remove="구조만"');
+    expect(html).toContain("<code>auth</code>");
+    expect(html).toContain("graph-group-swatch danger-fg");
   });
 });

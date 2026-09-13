@@ -15,7 +15,9 @@ import {
 } from "../apps/web/lib/graph/clustering";
 import {
   GRAPH_LAYERS,
+  availableLayers,
   buildRenderFrame,
+  nodeHiddenByLayers,
   type GraphLayer,
   type GraphPalette,
   type Viewport,
@@ -375,16 +377,87 @@ describe("layers switch off a whole kind of thing", () => {
     expect(frameWith([]).edges).toHaveLength(data.edges.length);
   });
 
-  it("offers only the layers it can actually switch off", () => {
-    // The plan names seven. `style` and `config` are not here: the scanner
-    // classifies them, but both arrive at the map as `code` nodes, so a
-    // toggle for them would be a control that silently does nothing.
+  it("offers all seven layers now that a node says what the scanner classified it as", () => {
+    // `style` and `config` used to be absent: a stylesheet and a
+    // `tsconfig.json` both arrive at the map as `code` nodes, and until the
+    // loader carried the classification there was nothing to switch off.
     expect([...GRAPH_LAYERS]).toEqual([
       "co_changed",
       "concept",
+      "config",
       "contains",
       "doc",
       "section",
+      "style",
+    ]);
+  });
+
+  it("hides stylesheets and config files by classification, not by type", () => {
+    const classified: GraphData = {
+      edges: [],
+      nodes: [
+        node({ classification: "style", id: "theme", path: "app/theme.css" }),
+        node({
+          classification: "config",
+          id: "tsconfig",
+          path: "tsconfig.json",
+        }),
+        node({ classification: "code_metadata", id: "engine" }),
+        // A code node with no classification (a demo fixture) is never a
+        // stylesheet or a config file: nothing to switch off.
+        node({ id: "fixture" }),
+      ],
+    };
+    const drawn = (layers: GraphLayer[]) =>
+      buildRenderFrame({
+        data: classified,
+        hiddenLayers: new Set(layers),
+        palette: PALETTE,
+        positions: positionsOf(classified),
+        viewport: VIEWPORT,
+      }).nodes.map((n) => n.id);
+
+    expect(drawn(["style"])).toEqual(["tsconfig", "engine", "fixture"]);
+    expect(drawn(["config"])).toEqual(["theme", "engine", "fixture"]);
+    expect(drawn(["style", "config"])).toEqual(["engine", "fixture"]);
+    expect(nodeHiddenByLayers(classified.nodes[3]!, new Set(["style"]))).toBe(
+      false,
+    );
+  });
+
+  it("says which layers a graph can actually switch off", () => {
+    // The demo fixture has documents and nothing else the layers name.
+    const demo = createFixtureGraph();
+    expect([...availableLayers(demo)].sort()).toEqual(["doc"]);
+
+    const classified: GraphData = {
+      edges: [
+        {
+          broken: false,
+          grade: "inferred",
+          id: "e-co",
+          provenance: {
+            confidence: 0.5,
+            endLine: 1,
+            grade: "inferred",
+            relation: "co_changed",
+            sourcePath: "a",
+            startLine: 1,
+          },
+          source: "a",
+          target: "b",
+        },
+      ],
+      nodes: [
+        node({ id: "a" }),
+        node({ classification: "style", id: "b", path: "b.css" }),
+        node({ id: "c", type: "concept" }),
+      ],
+    };
+    expect([...availableLayers(classified)].sort()).toEqual([
+      "co_changed",
+      "concept",
+      "style",
     ]);
   });
 });

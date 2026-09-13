@@ -795,6 +795,9 @@ export function buildWorkspaceMapModel(
       type,
       ...(artifact && isClassification(artifact.classification)
         ? {
+            // The scanner's own word for the file, so the `style` and
+            // `config` layers have something to switch off (todo 13 ⓔ).
+            classification: artifact.classification,
             unit: deriveArtifactUnit({
               classification: artifact.classification,
               exportedSymbols: artifact.exported_symbols ?? [],
