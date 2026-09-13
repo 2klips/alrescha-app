@@ -57,4 +57,4 @@ core·워커·MCP·SQL·의존성 무변경.
 
 ## PR
 
-- TBD_PR_URL — 커밋 1건: `feat(map): visibility filters, persisted layout, deterministic collapse, layer toggles, and Obsidian option parity`. 머지만 필요하다(§4).
+- https://github.com/2klips/alrescha-app/pull/17 — 커밋 1건(`ff622d8`): `feat(map): visibility filters, persisted layout, deterministic collapse, layer toggles, and Obsidian option parity`. 머지만 필요하다(§4).
