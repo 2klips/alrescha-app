@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: enrich 잡도 아카이브로 읽는다 (OQ-067 ⑴)
 
 작성: 2026-09-13 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **대기 — 워커 재배포(`fly deploy`)만 남아 있다. 마이그레이션·웹 변경 없음. 확인만을 위해 enrich를 돌리지 않는다.** 이 줄은 Codex가 갱신한다.
+상태: **배포 완료(2026-09-13) — PR #14 merge `e564df9`, Fly v20. 머지 push pair succeeded·0크레딧: scan은 v19 attempt 1, analyze는 배포 재시작을 거쳐 v20 attempt 2에서 archive 로그와 성공 확인. 큐 0·새 실패 0·기존 14건 WARN. enrich는 실행하지 않았으며 다음 사용자 실행의 로그 관측은 대기.** [프로덕션 기록](../../.omo/evidence/phase4/pr14-production-rollout-2026-09-13.md).
 브랜치: `claude/enrich-archive` (`main@d8e4c1b` 기준) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/enrich-archive-2026-09-13.md`](../../.omo/evidence/phase4/enrich-archive-2026-09-13.md).
 
