@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
+import { buildDashboardViewModel } from "../../apps/web/lib/dashboard/graph-model";
 import { DASHBOARD, SHELL } from "../../apps/web/lib/strings";
 
 /**
@@ -39,13 +40,18 @@ async function token(page: Page, name: string): Promise<string> {
 test("every HUD metric opens its own provenance", async ({ page }) => {
   await page.goto("/map");
 
+  // The numbers the demo derives from its fixture (Wave B todo 15 removed
+  // the typed-in constants), so the evidence lines are computed here the
+  // same way the screen computes them rather than copied from it.
+  const metrics = buildDashboardViewModel("scanned").metrics;
   for (const [key, label] of METRICS) {
     await page.getByRole("button", { name: label }).first().click();
     const panel = page.getByTestId("metric-evidence");
     // Each metric names its source; a number that cannot be traced to evidence
     // must not be on the HUD at all (WORK_SPEC §5.2-①).
-    await expect(panel).toContainText(DASHBOARD.metricEvidence[key][0]);
-    await expect(panel).toContainText(DASHBOARD.metricEvidence[key][2]);
+    const evidence = DASHBOARD.metricEvidence[key](metrics);
+    await expect(panel).toContainText(evidence[0]!);
+    await expect(panel).toContainText(evidence[2]!);
     await page
       .getByRole("button", { name: DASHBOARD.metricEvidenceClose })
       .click();

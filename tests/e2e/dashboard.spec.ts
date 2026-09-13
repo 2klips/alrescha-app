@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { buildDashboardViewModel } from "../../apps/web/lib/dashboard/graph-model";
 import { DASHBOARD, ONBOARDING } from "../../apps/web/lib/strings";
 
 test("onboards through mocked GitHub into the fixture evidence graph", async ({
@@ -54,7 +55,9 @@ test("links every HUD metric to visible provenance and filters graph", async ({
     .first()
     .click();
   await expect(page.getByTestId("metric-evidence")).toContainText(
-    DASHBOARD.metricEvidence.unresolved[2],
+    DASHBOARD.metricEvidence.unresolved(
+      buildDashboardViewModel("scanned").metrics,
+    )[2]!,
   );
 
   await page.getByLabel(DASHBOARD.filters.gradeLabel).selectOption("broken");

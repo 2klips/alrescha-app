@@ -157,6 +157,8 @@ export const FINISH_JOB_RETRY_DELAY_MIGRATION =
   "supabase/migrations/202609120003_finish_job_retry_delay.sql";
 export const FIRST_SCAN_RETRY_MIGRATION =
   "supabase/migrations/202609120004_first_scan_retry.sql";
+export const ACCESS_EVENTS_CHANNEL_POLICY_MIGRATION =
+  "supabase/migrations/202609130001_access_events_channel_policy.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -225,6 +227,7 @@ export const ALL_MIGRATIONS = [
   BACKFILL_ANALYZE_PAIR_MIGRATION,
   FINISH_JOB_RETRY_DELAY_MIGRATION,
   FIRST_SCAN_RETRY_MIGRATION,
+  ACCESS_EVENTS_CHANNEL_POLICY_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

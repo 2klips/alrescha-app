@@ -99,8 +99,91 @@ export interface WorkspaceRealtimeSource {
   ) => () => void;
 }
 
-function workspaceChannel(workspaceId: string): string {
+/**
+ * The topic the hosted MCP server broadcasts on, one per workspace
+ * (`packages/mcp/src/hosted.ts` `emitAccessEvent`). The same string names
+ * the `window` bus below, so a live frame and a demo replay travel the same
+ * wire once they are inside the page.
+ */
+export function workspaceAccessChannel(workspaceId: string): string {
   return `workspace:${workspaceId}:access-events`;
+}
+
+function workspaceChannel(workspaceId: string): string {
+  return workspaceAccessChannel(workspaceId);
+}
+
+/** The broadcast event name the server uses (`httpSend("access_event", …)`). */
+export const ACCESS_EVENT_BROADCAST = "access_event";
+
+/**
+ * The path a feed row shows for an event: the first target node the graph
+ * knows, else the tool name. One rule for the rows the loader seeds from
+ * `access_events` and the frames the channel delivers, so a live event and
+ * its stored twin read the same on the next load.
+ */
+export function accessEventTargetPath(
+  targetNodeIds: readonly string[],
+  pathOf: (nodeId: string) => string | undefined,
+  tool: string,
+): string {
+  for (const nodeId of targetNodeIds) {
+    const path = pathOf(nodeId);
+    if (path && path.length > 0) return path;
+  }
+  return tool;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return (
+    Array.isArray(value) && value.every((entry) => typeof entry === "string")
+  );
+}
+
+/**
+ * A broadcast payload, admitted field by field (Phase 4 Wave B todo 15).
+ *
+ * The server publishes `McpAccessEvent` — id, ISO timestamp, target node
+ * ids, token id, tool, workspace id, and optionally the response *length*.
+ * This copies the six fields the feed and the glow need and nothing else,
+ * by name: a frame carrying anything more (a `text`, a prompt, a payload a
+ * future writer adds) cannot reach the page through here, which is how the
+ * ADR-004 rule "no prompt bodies on the glow stream" holds at the receiving
+ * end as well as the sending one. A frame missing or mistyping any of the
+ * six is dropped whole rather than patched.
+ */
+export function parseBroadcastAccessEvent(
+  payload: unknown,
+  pathOf: (nodeId: string) => string | undefined,
+): GraphAccessEvent | null {
+  if (typeof payload !== "object" || payload === null) return null;
+  const fields = payload as Record<string, unknown>;
+  const { id, occurredAt, targetNodeIds, tokenId, tool, workspaceId } = fields;
+  if (
+    typeof id !== "string" ||
+    id.length === 0 ||
+    typeof occurredAt !== "string" ||
+    typeof tokenId !== "string" ||
+    tokenId.length === 0 ||
+    typeof tool !== "string" ||
+    tool.length === 0 ||
+    typeof workspaceId !== "string" ||
+    workspaceId.length === 0 ||
+    !isStringArray(targetNodeIds)
+  ) {
+    return null;
+  }
+  const occurredAtMs = Date.parse(occurredAt);
+  if (!Number.isFinite(occurredAtMs)) return null;
+  return {
+    id,
+    occurredAt: occurredAtMs,
+    targetNodeIds: [...targetNodeIds],
+    targetPath: accessEventTargetPath(targetNodeIds, pathOf, tool),
+    tokenId,
+    tool,
+    workspaceId,
+  };
 }
 
 export function createBrowserWorkspaceRealtimeSource(

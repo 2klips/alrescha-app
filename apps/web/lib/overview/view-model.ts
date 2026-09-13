@@ -45,9 +45,10 @@ export interface OverviewViewModel {
     readonly typeCounts: ReadonlyArray<{ count: number; type: GraphNodeType }>;
   };
   readonly kpi: {
-    readonly implementation: number;
+    /** Null when the demo has no basis for the percentage (todo 15). */
+    readonly implementation: number | null;
     readonly lastAnalysis: { commitSha: string; status: string } | null;
-    readonly tests: number;
+    readonly tests: number | null;
     readonly unresolved: number;
   };
   readonly repo: string;

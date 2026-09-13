@@ -1468,3 +1468,95 @@
 .arr-layer-toggles button:hover {
   border-color: var(--border-default);
 }
+
+/*
+ * Real-data HUD chips on the workspace map's rail (Phase 4 Wave B todo 15).
+ * A chip is the demo dashboard's metric chip plus two lines: what the number
+ * is of, and where it came from. The source line is the smallest text on
+ * the rail and still a line — a number that cannot say its source is not on
+ * the HUD at all (WORK_SPEC §5.2-①).
+ */
+.arr-hud {
+  display: grid;
+  gap: var(--space-1);
+  grid-template-columns: 1fr;
+  margin-left: 0;
+}
+
+.arr-hud-chip {
+  cursor: default;
+  min-width: 0;
+}
+
+.arr-hud-chip small {
+  color: var(--fg-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--line-body-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.arr-hud-chip[data-basis="no-links"] strong,
+.arr-hud-chip[data-basis="no-data"] strong {
+  color: var(--fg-muted);
+}
+
+.arr-hud-source {
+  font-family: var(--font-mono);
+}
+
+.arr-hud-risk .arr-kicker {
+  align-items: center;
+  display: flex;
+  gap: var(--space-1);
+}
+
+.arr-hud-risk .arr-kicker small {
+  color: var(--fg-muted);
+  font-weight: 400;
+  margin-left: auto;
+}
+
+.arr-hud-risk > small {
+  color: var(--fg-muted);
+  display: block;
+  font-size: var(--text-body-sm);
+  line-height: var(--line-body-sm);
+  margin-top: var(--space-2);
+}
+
+.arr-hud-risk button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+/* The same ring the canvas draws (todo 12), so the list and the map agree. */
+.arr-hud-risk button i.risk-ring {
+  background: transparent;
+  border: 2px solid currentColor;
+  border-radius: var(--radius-full);
+  color: var(--border-default);
+}
+
+.arr-hud-risk button i.risk-ring.high {
+  color: var(--danger-fg);
+}
+
+.arr-hud-risk button i.risk-ring.elevated {
+  color: var(--attention-fg);
+}
+
+.arr-hud-unmeasured {
+  color: var(--attention-fg);
+}
+
+.arr-live small {
+  color: var(--fg-muted);
+  font-weight: 400;
+  margin-left: var(--space-1);
+}
+
+.arr-live[data-live-channel="live"] small {
+  color: var(--success-fg);
+}

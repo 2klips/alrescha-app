@@ -7,6 +7,7 @@ import {
 import type { ArtifactClassification, RiskLevel } from "@alrescha/core";
 
 import { DASHBOARD } from "../strings";
+import { demoAlwaysLoadedTokens } from "./demo-harness";
 
 export type DashboardState =
   | "loading"
@@ -758,18 +759,102 @@ export function planCanvasFrame(data: GraphData): CanvasFramePlan {
   };
 }
 
+/**
+ * The demo HUD's four numbers, each derived from the fixture rather than
+ * typed in (Phase 4 Wave B todo 15 removed the constants that used to sit
+ * here). A percentage is null when its basis is missing — no CI report, no
+ * requirements — because 0% would be a measurement the fixture never made.
+ */
+export interface DashboardMetrics {
+  /** Active requirements with an unbroken `implements` edge, as a percent. */
+  implementation: number | null;
+  requirements: { covered: number; total: number };
+  /** Code nodes with a `verified` `tests` edge, as a percent; null without CI. */
+  tests: number | null;
+  testsCovered: { covered: number; total: number };
+  /** Always-loaded instruction tokens (the demo harness table's total). */
+  tokenCost: number;
+  /** Open findings: the sum of every node's finding badge. */
+  unresolved: number;
+  /** How many nodes carry at least one badge. */
+  unresolvedNodes: number;
+}
+
 export interface DashboardViewModel {
   ciMessage: string;
   graph: GraphData;
   isClustered: boolean;
-  metrics: {
-    implementation: number;
-    tests: number;
-    tokenCost: number;
-    unresolved: number;
-  };
+  metrics: DashboardMetrics;
   repo: string;
   state: DashboardState;
+}
+
+function percentOf(covered: number, total: number): number | null {
+  return total === 0 ? null : Math.round((covered / total) * 100);
+}
+
+/**
+ * The HUD numbers from the fixture graph itself. Read from the unclustered
+ * source, since a clustered node's badge count already sums its members
+ * and its edges are a chain the layout invented.
+ */
+export function deriveDashboardMetrics(
+  source: GraphData,
+  state: DashboardState,
+  alwaysLoadedTokens: number,
+): DashboardMetrics {
+  const badged = source.nodes.filter((node) => node.findingCount > 0);
+  const unresolved = badged.reduce((sum, node) => sum + node.findingCount, 0);
+
+  const requirementIds = new Set(
+    source.nodes
+      .filter((node) => node.type === "requirement")
+      .map((node) => node.id),
+  );
+  const implemented = new Set(
+    source.edges
+      .filter(
+        (edge) =>
+          edge.provenance.relation === "implements" &&
+          !edge.broken &&
+          requirementIds.has(edge.source),
+      )
+      .map((edge) => edge.source),
+  );
+
+  const codeIds = new Set(
+    source.nodes.filter((node) => node.type === "code").map((node) => node.id),
+  );
+  const tested = new Set(
+    source.edges
+      .filter(
+        (edge) =>
+          edge.provenance.relation === "tests" &&
+          edge.grade === "verified" &&
+          codeIds.has(edge.source),
+      )
+      .map((edge) => edge.source),
+  );
+  const requirements = {
+    covered: implemented.size,
+    total: requirementIds.size,
+  };
+  const testsCovered = { covered: tested.size, total: codeIds.size };
+
+  return {
+    implementation: percentOf(requirements.covered, requirements.total),
+    requirements,
+    // Without a CI report nothing is `verified` by execution, so the demo's
+    // no-CI state has no test coverage to report rather than a zero.
+    tests:
+      state === "no-ci"
+        ? null
+        : percentOf(testsCovered.covered, testsCovered.total),
+    testsCovered,
+    tokenCost: alwaysLoadedTokens,
+    unresolved,
+    unresolvedNodes: badged.length,
+  };
 }
 
 /**
@@ -807,12 +892,7 @@ export function buildDashboardViewModel(
     ciMessage: state === "no-ci" ? DASHBOARD.ci.missing : DASHBOARD.ci.present,
     graph,
     isClustered: state === "large",
-    metrics: {
-      implementation: 84,
-      tests: state === "no-ci" ? 0 : 71,
-      tokenCost: 1840,
-      unresolved: 4,
-    },
+    metrics: deriveDashboardMetrics(source, state, demoAlwaysLoadedTokens()),
     repo,
     state,
   };

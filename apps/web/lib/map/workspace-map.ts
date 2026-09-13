@@ -6,7 +6,11 @@ import {
   type BrainArea,
   type LayoutConventions,
 } from "@alrescha/core/artifact-facets";
-import type { ArtifactClassification } from "@alrescha/core";
+import type {
+  ArtifactClassification,
+  RiskLevel,
+  RiskMap,
+} from "@alrescha/core";
 
 import {
   DISPLAY_RELATIONS,
@@ -19,6 +23,7 @@ import {
   type GraphNode,
   type GraphNodeType,
 } from "../dashboard/graph-model";
+import { loadWorkspaceRiskMap } from "../inspection/inspection-report";
 import type { GraphAccessEvent } from "../realtime/access-events";
 import {
   REPOSITORY_SELECTION_COLUMNS,
@@ -63,6 +68,8 @@ export interface MapRationaleRow {
 }
 
 export interface MapRequirementRow {
+  /** `active` requirements are the coverage denominator (todo 15 HUD). */
+  readonly status?: string | null;
   readonly id: string;
   readonly source_artifact_id: string;
   readonly source_span: unknown;
@@ -167,8 +174,32 @@ export interface MapConceptRow {
   readonly slug: string;
 }
 
+/** An `implements` edge, by its requirement end (todo 15 HUD coverage). */
+export interface MapImplementsEdgeRow {
+  readonly source_node_id: string;
+}
+
+/**
+ * One finished scan: a succeeded `scan` job, or a local push's `manual`
+ * run, by the commit it landed (todo 15 HUD freshness).
+ */
+export interface MapScanCompletionRow {
+  readonly commit_sha: string | null;
+  readonly completed_at: string | null;
+}
+
 export interface WorkspaceMapRows {
   readonly accessEvents: readonly MapAccessEventRow[];
+  /**
+   * Every `implements` edge in the workspace, regardless of the family
+   * budgets above — coverage is a count, and a capped page would report a
+   * repository as less covered the larger it grew. Absent on callers that
+   * predate the HUD; the builder then reports the metric as unmeasured.
+   */
+  readonly implementsEdges?: readonly MapImplementsEdgeRow[] | undefined;
+  /** The risk map `/app/inspection` computes, from the same rows (todo 21). */
+  readonly riskMap?: RiskMap | null | undefined;
+  readonly scanCompletions?: readonly MapScanCompletionRow[] | undefined;
   readonly artifacts: readonly MapArtifactRow[];
   readonly assertions: readonly MapAssertionRow[];
   readonly coChanges: readonly MapCoChangeRow[];
@@ -187,6 +218,56 @@ export interface WorkspaceMapRows {
   readonly tokens: readonly MapTokenRow[];
 }
 
+/**
+ * Requirement coverage on the HUD, with the same three-way basis the
+ * progress ledger uses (`packages/core/src/progress/dashboard.ts`): a
+ * repository whose requirements were never linked to code is *unmeasured*,
+ * not 0% (WORK_SPEC §3-8).
+ */
+export interface WorkspaceMapCoverage {
+  readonly basis: "measured" | "no-data" | "no-links";
+  readonly covered: number;
+  /** Null exactly when `basis` is not `measured`. */
+  readonly percent: number | null;
+  readonly total: number;
+}
+
+export interface WorkspaceMapRiskEntry {
+  readonly level: RiskLevel;
+  readonly nodeId: string;
+  readonly path: string;
+  readonly score: number;
+}
+
+export interface WorkspaceMapRisk {
+  /** Files the map ranked at all — a file with no factor is not on it. */
+  readonly ranked: number;
+  /** The top of the list, in the map's own order. */
+  readonly top: readonly WorkspaceMapRiskEntry[];
+  /** Signals nobody measured, named rather than scored as zero. */
+  readonly unmeasured: readonly ("coverage" | "dependency-audit")[];
+}
+
+export interface WorkspaceMapLastScan {
+  /** Minutes between the scan's completion and the page load; null if unknown. */
+  readonly ageMinutes: number | null;
+  readonly commitSha: string | null;
+  readonly completedAt: string | null;
+}
+
+/**
+ * The HUD's real-data chips (Phase 4 Wave B todo 15, D10). Each value is
+ * derived from stored rows by `buildWorkspaceMapHud`; the browser spec reads
+ * the same rows through the same builder and expects the screen to agree.
+ */
+export interface WorkspaceMapHud {
+  readonly coverage: WorkspaceMapCoverage;
+  readonly lastScan: WorkspaceMapLastScan;
+  readonly openFindings: number;
+  /** Null when the loader did not compute a risk map. */
+  readonly risk: WorkspaceMapRisk | null;
+}
+
 export interface WorkspaceMapModel {
   readonly counts: {
     readonly artifacts: number;
@@ -198,6 +279,7 @@ export interface WorkspaceMapModel {
   };
   readonly feed: readonly GraphAccessEvent[];
   readonly graph: GraphData;
+  readonly hud: WorkspaceMapHud;
   readonly isClustered: boolean;
   readonly lastScannedCommitSha: string | null;
   readonly repoFullName: string | null;
@@ -408,9 +490,111 @@ function requirementPath(
   return artifactPaths.get(requirement.source_artifact_id) ?? "";
 }
 
+/** How many ranked files the HUD names. */
+export const HUD_RISK_TOP = 3;
+
+/**
+ * The HUD from stored rows (todo 15). Pure, so the browser spec can compute
+ * what the screen must show from the rows it seeded — "HUD 값이 로더 출처와
+ * 일치" is then an equality, not a plausibility check.
+ */
+export function buildWorkspaceMapHud(
+  rows: Pick<
+    WorkspaceMapRows,
+    | "findings"
+    | "implementsEdges"
+    | "repositories"
+    | "requirements"
+    | "riskMap"
+    | "scanCompletions"
+  >,
+  now: number,
+): WorkspaceMapHud {
+  const openFindings = rows.findings.filter(
+    ({ status }) => status === "open",
+  ).length;
+
+  // Coverage, the way the progress ledger measures it: active requirements
+  // over those with at least one `implements` edge. No edge anywhere in the
+  // workspace is "never linked", a different fact from "linked, none hit".
+  const active = new Set(
+    rows.requirements
+      // Rows without a status column (older callers) count as active — the
+      // ledger's own query reads the column, and the loader below selects it.
+      .filter(({ status }) => status === undefined || status === "active")
+      .map(({ id }) => id),
+  );
+  const links = rows.implementsEdges ?? null;
+  const covered =
+    links === null
+      ? 0
+      : new Set(
+          links
+            .map(({ source_node_id }) => source_node_id)
+            .filter((id) => active.has(id)),
+        ).size;
+  const basis: WorkspaceMapCoverage["basis"] =
+    active.size === 0
+      ? "no-data"
+      : links === null || links.length === 0
+        ? "no-links"
+        : "measured";
+  const coverage: WorkspaceMapCoverage = {
+    basis,
+    covered,
+    percent:
+      basis === "measured" ? Math.round((covered / active.size) * 100) : null,
+    total: active.size,
+  };
+
+  // The current repository's last scan (`currentRepository`, OQ-042), and
+  // when it finished: the newest completion for that commit if one is
+  // recorded, else the newest completion of any commit — a scan applied by
+  // a path that logged no completion still has a commit, and the age is
+  // then "unknown" rather than a guess.
+  const repository = currentRepository(rows.repositories);
+  const commitSha = repository?.last_scanned_commit_sha ?? null;
+  const completions = (rows.scanCompletions ?? [])
+    .filter(({ completed_at }) => typeof completed_at === "string")
+    .sort((left, right) =>
+      String(right.completed_at).localeCompare(String(left.completed_at)),
+    );
+  const completion =
+    completions.find(({ commit_sha }) => commit_sha === commitSha) ?? null;
+  const completedAt = completion?.completed_at ?? null;
+  const completedMs =
+    completedAt === null ? Number.NaN : Date.parse(completedAt);
+  const lastScan: WorkspaceMapLastScan = {
+    ageMinutes:
+      commitSha !== null && Number.isFinite(completedMs)
+        ? Math.max(0, Math.floor((now - completedMs) / 60_000))
+        : null,
+    commitSha,
+    completedAt: commitSha !== null ? completedAt : null,
+  };
+
+  const riskMap = rows.riskMap ?? null;
+  const risk: WorkspaceMapRisk | null =
+    riskMap === null
+      ? null
+      : {
+          ranked: riskMap.entries.length,
+          top: riskMap.entries.slice(0, HUD_RISK_TOP).map((entry) => ({
+            level: entry.level,
+            nodeId: entry.nodeId,
+            path: entry.path,
+            score: entry.score,
+          })),
+          unmeasured: riskMap.unmeasured.map(({ signal }) => signal),
+        };
+
+  return { coverage, lastScan, openFindings, risk };
+}
+
 export function buildWorkspaceMapModel(
   workspaceId: string,
   rows: WorkspaceMapRows,
+  now: number = Date.now(),
 ): WorkspaceMapModel {
   const artifactById = new Map(rows.artifacts.map((row) => [row.id, row]));
   const artifactPaths = new Map(
@@ -759,6 +943,7 @@ export function buildWorkspaceMapModel(
     },
     feed,
     graph,
+    hud: buildWorkspaceMapHud(rows, now),
     isClustered,
     lastScannedCommitSha: repository?.last_scanned_commit_sha ?? null,
     repoFullName: repository?.full_name ?? null,
@@ -773,6 +958,26 @@ export function buildWorkspaceMapModel(
 const NODE_LIMIT = 2_000;
 const EDGE_LIMIT = 6_000;
 const FEED_LIMIT = 20;
+/** Enough completions to find the current commit's; the newest wins anyway. */
+const SCAN_COMPLETION_LIMIT = 20;
+
+/**
+ * A succeeded scan job with its run's commit embedded. PostgREST answers a
+ * to-one embed as an object; the untyped client infers an array, so the
+ * row admits both and the loader reads whichever arrived.
+ */
+interface ScanJobQueryRow {
+  readonly completed_at: string | null;
+  readonly runs:
+    | { readonly commit_sha: string | null }
+    | readonly { readonly commit_sha: string | null }[]
+    | null;
+}
+
+function embeddedCommit(runs: ScanJobQueryRow["runs"]): string | null {
+  const run = Array.isArray(runs) ? (runs[0] ?? null) : runs;
+  return run && typeof run === "object" ? (run.commit_sha ?? null) : null;
+}
 
 /**
  * Hubs are read on their own budget (R5 §2.7, OQ-038).
@@ -823,6 +1028,7 @@ export const EDGE_FAMILY_LIMITS: Readonly<Record<GraphEdgeFamily, number>> = {
 export async function loadWorkspaceMap(
   client: SupabaseClient,
   userId: string,
+  now: number = Date.now(),
 ): Promise<WorkspaceMapModel> {
   const workspaceResult = await client
     .from("workspaces")
@@ -868,6 +1074,10 @@ export async function loadWorkspaceMap(
     requirements,
     evidence,
     tokens,
+    implementsEdges,
+    scanJobs,
+    completedRuns,
+    riskMap,
   ] = await Promise.all([
     client
       .from("access_events")
@@ -969,7 +1179,7 @@ export async function loadWorkspaceMap(
       .order("created_at", { ascending: false }),
     client
       .from("requirements")
-      .select("id,statement,source_artifact_id,source_span")
+      .select("id,statement,source_artifact_id,source_span,status")
       .eq("workspace_id", workspaceId)
       .limit(NODE_LIMIT),
     client
@@ -981,6 +1191,33 @@ export async function loadWorkspaceMap(
       .from("mcp_tokens")
       .select("id,revoked_at")
       .eq("workspace_id", workspaceId),
+    // HUD coverage (todo 15): every `implements` edge, outside the family
+    // budgets above — a count, so it must not be a capped page.
+    client
+      .from("edges")
+      .select("source_node_id")
+      .eq("workspace_id", workspaceId)
+      .eq("relation", "implements"),
+    // HUD freshness (todo 15): when the last scan finished. A GitHub push
+    // lands as a succeeded `scan` job whose run carries the commit; a local
+    // push (`alrescha push`) records a completed `manual` run and no job.
+    client
+      .from("jobs")
+      .select("completed_at,runs(commit_sha)")
+      .eq("workspace_id", workspaceId)
+      .eq("kind", "scan")
+      .eq("status", "succeeded")
+      .order("completed_at", { ascending: false })
+      .limit(SCAN_COMPLETION_LIMIT),
+    client
+      .from("runs")
+      .select("commit_sha,completed_at")
+      .eq("workspace_id", workspaceId)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false })
+      .limit(SCAN_COMPLETION_LIMIT),
+    // HUD risk (todo 15): the inspection screen's own map, from its rows.
+    loadWorkspaceRiskMap(client, workspaceId),
   ]);
 
   for (const result of [
@@ -1002,34 +1239,52 @@ export async function loadWorkspaceMap(
     requirements,
     evidence,
     tokens,
+    implementsEdges,
+    scanJobs,
+    completedRuns,
   ]) {
     if (result.error) {
       throw new Error(result.error.message);
     }
   }
 
+  const scanCompletions: MapScanCompletionRow[] = [
+    ...((scanJobs.data ?? []) as unknown as ScanJobQueryRow[]).map((job) => ({
+      commit_sha: embeddedCommit(job.runs),
+      completed_at: job.completed_at,
+    })),
+    ...((completedRuns.data ?? []) as MapScanCompletionRow[]),
+  ];
+
   const edgeRows = [
     ...familyEdges.flatMap((result) => (result.data ?? []) as MapEdgeRow[]),
     ...((legacyEdges.data ?? []) as MapEdgeRow[]),
   ];
 
-  return buildWorkspaceMapModel(workspaceId, {
-    accessEvents: (accessEvents.data ?? []) as MapAccessEventRow[],
-    artifacts: (artifacts.data ?? []) as MapArtifactRow[],
-    assertions: (assertions.data ?? []) as MapAssertionRow[],
-    coChanges: (coChanges.data ?? []) as MapCoChangeRow[],
-    concepts: (concepts.data ?? []) as MapConceptRow[],
-    dbObjects: (dbObjectRows.data ?? []) as MapDbObjectRow[],
-    directories: (directories.data ?? []) as MapDirectoryRow[],
-    edges: edgeRows,
-    routes: (routeRows.data ?? []) as MapRouteRow[],
-    evidence: (evidence.data ?? []) as MapEvidenceRow[],
-    findings: (findings.data ?? []) as MapFindingRow[],
-    graphNodes: (graphNodes.data ?? []) as MapGraphNodeRow[],
-    rationales: (rationales.data ?? []) as MapRationaleRow[],
-    repositories: (repositories.data ?? []) as MapRepositoryRow[],
-    requirements: (requirements.data ?? []) as MapRequirementRow[],
-    sections: (sectionRows.data ?? []) as MapSectionRow[],
-    tokens: (tokens.data ?? []) as MapTokenRow[],
-  });
+  return buildWorkspaceMapModel(
+    workspaceId,
+    {
+      accessEvents: (accessEvents.data ?? []) as MapAccessEventRow[],
+      artifacts: (artifacts.data ?? []) as MapArtifactRow[],
+      assertions: (assertions.data ?? []) as MapAssertionRow[],
+      coChanges: (coChanges.data ?? []) as MapCoChangeRow[],
+      concepts: (concepts.data ?? []) as MapConceptRow[],
+      dbObjects: (dbObjectRows.data ?? []) as MapDbObjectRow[],
+      directories: (directories.data ?? []) as MapDirectoryRow[],
+      edges: edgeRows,
+      routes: (routeRows.data ?? []) as MapRouteRow[],
+      evidence: (evidence.data ?? []) as MapEvidenceRow[],
+      findings: (findings.data ?? []) as MapFindingRow[],
+      graphNodes: (graphNodes.data ?? []) as MapGraphNodeRow[],
+      rationales: (rationales.data ?? []) as MapRationaleRow[],
+      repositories: (repositories.data ?? []) as MapRepositoryRow[],
+      requirements: (requirements.data ?? []) as MapRequirementRow[],
+      sections: (sectionRows.data ?? []) as MapSectionRow[],
+      tokens: (tokens.data ?? []) as MapTokenRow[],
+      implementsEdges: (implementsEdges.data ?? []) as MapImplementsEdgeRow[],
+      riskMap,
+      scanCompletions,
+    },
+    now,
+  );
 }
