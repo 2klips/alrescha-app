@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: 라이브 발광 브리지 + HUD 실데이터 (Phase 4 todo 15 · todo 24 마무리)
 
 작성: 2026-09-13 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **배포 대기 — 마이그레이션 1건(`202609130001`) → 웹 머지 순서.** 워커·환경변수 무변경.
+상태: **프로덕션 배포·관측 완료 (2026-09-13)** — `202609130001` 적용·정책 1행 확인 후 PR #16 merge `5b8942a`, Vercel 성공. `search_index` 1회 → 새로고침 없이 발광 5개·피드 수신, HUD/inspection 위험 순위 일치. 승인된 임시 읽기 토큰 취소 완료, 크레딧 18 유지. Fly v20·환경변수 무변경, 큐 0·새 실패 0·기존 15 WARN. [프로덕션 기록](../../.omo/evidence/phase4/pr16-production-rollout-2026-09-13.md). 필수 후속 구현 없음; OQ-069 사용자 결정 대기.
 브랜치: `phase4/todo-24-15` (`main@26b0d1d` 기준) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/todo-15.md`](../../.omo/evidence/phase4/todo-15.md), [`.omo/evidence/phase4/todo-24.md`](../../.omo/evidence/phase4/todo-24.md), 프론트 로그 [`docs/frontend/logs/2026-09-13-live-glow-bridge-hud.md`](../frontend/logs/2026-09-13-live-glow-bridge-hud.md).
 
@@ -56,8 +56,8 @@ core·워커·MCP 패키지·의존성 무변경. `packages/mcp` 계약(툴 22�
 - 발광 프레임은 서버가 **private 토픽**으로 보내야 도달한다. 이전 코드(public)는 구독자가 없었기 때문에 티가 나지 않았을 뿐이다.
 - revoked 토큰 집합은 페이지 로드 시점 스냅샷이다(OQ-069). 폐기된 토큰은 서버가 호출을 거부하므로 새 프레임이 오지 않는다.
 - 데모 `/map`의 숫자가 바뀌었다(4·84%·71%·1.8k → 5·75%·50%·80). 상수를 픽스처 유도로 바꾼 결과이며 의도된 변화다.
-- Codex가 같은 체크아웃에서 동시에 편집한 두 파일(`.omo/evidence/phase4/pr14-production-rollout-2026-09-13.md`, `docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-enrich-archive.md`)은 이 PR에 포함하지 않았다 — 워킹 트리에 미커밋 상태로 보존되어 있다.
+- Codex가 같은 체크아웃에서 동시에 편집한 두 파일(`.omo/evidence/phase4/pr14-production-rollout-2026-09-13.md`, `docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-enrich-archive.md`)은 PR #16에 포함하지 않았다. 사용자 요청에 따라 Codex의 이번 프로덕션 기록 커밋에 함께 보존한다.
 
 ## PR
 
-- <https://github.com/2klips/alrescha-app/pull/16> — 커밋 2건: todo 24 마무리(`feat(stats)…`), todo 15(`feat(map)…`). 머지 전 프로덕션 마이그레이션이 필요하다(§4).
+- <https://github.com/2klips/alrescha-app/pull/16> — 커밋 3건: todo 24(`f3de893`), todo 15(`46826da`), 인계 문서(`e652064`). 마이그레이션 적용 후 merge commit `5b8942a`로 머지 완료(2026-09-13).
