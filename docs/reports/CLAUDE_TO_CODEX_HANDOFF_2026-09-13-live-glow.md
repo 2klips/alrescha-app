@@ -60,4 +60,4 @@ core·워커·MCP 패키지·의존성 무변경. `packages/mcp` 계약(툴 22�
 
 ## PR
 
-- TBD_PR_URL — 커밋 2건: todo 24 마무리(`feat(stats)…`), todo 15(`feat(map)…`). 머지 전 프로덕션 마이그레이션이 필요하다(§4).
+- <https://github.com/2klips/alrescha-app/pull/16> — 커밋 2건: todo 24 마무리(`feat(stats)…`), todo 15(`feat(map)…`). 머지 전 프로덕션 마이그레이션이 필요하다(§4).
