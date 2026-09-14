@@ -1,0 +1,49 @@
+# The automated gate (docs/DEPLOYMENT_CHECKLIST.md "Automated gate", OQ-026),
+# minus the two steps that need what a runner does not have: `pnpm build`
+# (the web app's environment) and `pnpm test:e2e` (a local Supabase in
+# Docker). Those stay on the operator's machine.
+#
+# The test step also writes a JUnit report and uploads it as an artifact.
+# That artifact is what Alrescha's own analysis reads back (Phase 4 Wave C
+# todo 18): `GitHubCiEvidenceSource` lists a run's artifacts for the analysed
+# commit, `ingestCiTestReports` grades each test file the run executed, and
+# the map shows those files `verified`. Uploading on failure too is
+# deliberate — a failing run's report is evidence of what did not pass, and
+# the check run's conclusion is what withholds the grade.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - name: Unit tests with a JUnit report
+        run: pnpm exec vitest run --reporter=default --reporter=junit --outputFile.junit=reports/vitest-junit.xml
+      - name: Upload the test report as CI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vitest-junit
+          path: reports/vitest-junit.xml
+          if-no-files-found: error
+          retention-days: 90
