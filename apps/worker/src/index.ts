@@ -13,6 +13,17 @@ export type {
   StoredArtifact,
 } from "./analysis-job";
 export { PostgresAnalysisStore } from "./postgres-analysis-store";
+export {
+  buildDocSkeletonPages,
+  createDocSkeletonJobHandler,
+  reservedDocPageHandler,
+} from "./doc-skeleton-job";
+export type {
+  DocSkeletonPage,
+  DocSkeletonRows,
+  DocSkeletonStore,
+} from "./doc-skeleton-job";
+export { PostgresDocSkeletonStore } from "./postgres-doc-store";
 export { runWorkerOnce } from "./worker";
 export type {
   JobContext,

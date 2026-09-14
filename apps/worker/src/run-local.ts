@@ -27,6 +27,10 @@ import postgres from "postgres";
 
 import { createAnalysisJobHandler } from "./analysis-job";
 import { createCoachingJobHandler } from "./coaching-job";
+import {
+  createDocSkeletonJobHandler,
+  reservedDocPageHandler,
+} from "./doc-skeleton-job";
 import { runDrainLoop } from "./drain-loop";
 import { createEnrichJobHandler } from "./enrich-job";
 import { GitHubCiEvidenceSource } from "./github-ci-evidence-source";
@@ -38,6 +42,7 @@ import {
 import { createJudgmentJobHandler } from "./judgment-job";
 import { PostgresAnalysisStore } from "./postgres-analysis-store";
 import { PostgresCoachingJobStore } from "./postgres-coaching-store";
+import { PostgresDocSkeletonStore } from "./postgres-doc-store";
 import { PostgresEnrichJobStore } from "./postgres-enrich-store";
 import { PostgresJudgmentJobStore } from "./postgres-judgment-store";
 import { RepositoryScanStore } from "./repository-scan-store";
@@ -350,6 +355,7 @@ async function main(): Promise<void> {
   const sourceFor = createSourceFactory(sql);
   const aiKeys = aiKeyConfig();
 
+  const docStore = new PostgresDocSkeletonStore(sql);
   const handlers: JobHandlers = {
     analyze: createAnalysisJobHandler({
       // Actions artifacts and check runs for the analysed commit — the only
@@ -370,8 +376,13 @@ async function main(): Promise<void> {
           commitSha,
         ),
       store: new PostgresAnalysisStore(sql),
+      // The skeleton pass follows every analysis (todo 20): free, idempotent
+      // per commit, and it reads the edges this job just wrote.
+      enqueueDocSkeleton: (input) => docStore.enqueueDocSkeleton(input),
     }),
     coach: createCoachingJobHandler(new PostgresCoachingJobStore(sql, aiKeys)),
+    docpage: reservedDocPageHandler(),
+    docskeleton: createDocSkeletonJobHandler({ store: docStore }),
     enrich: createEnrichJobHandler({
       // The pending files, as one archive at the commit most of them were
       // last seen at, when there are enough of them (OQ-067 ⑴); files last

@@ -20,6 +20,8 @@ const noopHandler = vi.fn().mockResolvedValue(undefined);
 const handlers = {
   analyze: noopHandler,
   coach: noopHandler,
+  docpage: noopHandler,
+  docskeleton: noopHandler,
   enrich: noopHandler,
   judge: noopHandler,
   pack: noopHandler,
