@@ -7,7 +7,11 @@ import { createAdminClient } from "../../../../lib/supabase/admin";
 import { createClient } from "../../../../lib/supabase/server";
 import { Button } from "../../../ui/button";
 import { InspectionView } from "../../../ui/inspection-view";
-import { requestFindingJudgment, requestRequirementJudgment } from "./actions";
+import {
+  dismissFinding,
+  requestFindingJudgment,
+  requestRequirementJudgment,
+} from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -44,6 +48,15 @@ interface RequirementJudgmentRow {
 }
 
 type Verdict = keyof typeof INSPECTION.requirementJudgment.verdicts;
+
+/** What the dismiss action said, echoed once after the redirect (todo 19 ⑷). */
+const DISMISS_STATUS_COPY: Readonly<Record<string, string>> = {
+  "already-resolved": INSPECTION.dismiss.alreadyResolved,
+  done: INSPECTION.dismiss.done,
+  failed: INSPECTION.dismiss.failed,
+  "needs-reason": INSPECTION.dismiss.needsReason,
+  "not-found": INSPECTION.dismiss.notFound,
+};
 
 /** The latest judgment job per target — the queue keeps every generation. */
 function latestJobByTarget(
@@ -99,11 +112,13 @@ function excerpt(statement: string, limit = 120): string {
 export default async function WorkspaceInspectionPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ judgment?: string }>;
+  searchParams?: Promise<{ dismiss?: string; judgment?: string }>;
 }) {
   const userId = await getCurrentUserId();
   if (!userId) redirect("/auth/login");
-  const { judgment } = (await searchParams) ?? {};
+  const { dismiss, judgment } = (await searchParams) ?? {};
+  const dismissStatus =
+    dismiss === undefined ? null : (DISMISS_STATUS_COPY[dismiss] ?? null);
 
   const client = await createClient();
   const { dashboard, workspaceId } = await loadWorkspaceInspectionDashboard(
@@ -183,6 +198,11 @@ export default async function WorkspaceInspectionPage({
           {judgment === "queued" ? (
             <p role="status">{INSPECTION.judgment.queued}</p>
           ) : null}
+          {dismissStatus !== null ? (
+            <p data-testid="dismiss-status" role="status">
+              {dismissStatus}
+            </p>
+          ) : null}
           {findings.length === 0 ? (
             <p>{INSPECTION.judgment.empty}</p>
           ) : (
@@ -213,6 +233,30 @@ export default async function WorkspaceInspectionPage({
                         </Button>
                       </form>
                     )}
+                    <form
+                      action={dismissFinding}
+                      className="inspection-dismiss-form"
+                      data-dismiss={finding.id}
+                    >
+                      <input
+                        type="hidden"
+                        name="findingId"
+                        value={finding.id}
+                      />
+                      <label>
+                        <span>{INSPECTION.dismiss.reasonLabel}</span>
+                        <input
+                          maxLength={400}
+                          name="reason"
+                          placeholder={INSPECTION.dismiss.reasonPlaceholder}
+                          required
+                          type="text"
+                        />
+                      </label>
+                      <Button size="sm" type="submit" variant="ghost">
+                        {INSPECTION.dismiss.action}
+                      </Button>
+                    </form>
                   </li>
                 );
               })}

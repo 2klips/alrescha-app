@@ -18,8 +18,9 @@ describe("InspectionView", () => {
   it("labels every widget with its data source", () => {
     const html = render("busy");
     const sources = html.match(new RegExp(INSPECTION.sourcePrefix, "g"));
-    // Seven widgets, seven sources — the risk map joined them in todo 21.
-    expect(sources).toHaveLength(7);
+    // Eight widgets, eight sources — the risk map joined them in todo 21,
+    // the dismissed board in todo 19 ⑷.
+    expect(sources).toHaveLength(8);
     expect(html).toContain("npm audit --json ingest");
     expect(html).toContain("deterministic drift rules");
     expect(html).toContain("append-only ruled-out log");
@@ -122,5 +123,53 @@ describe("InspectionView", () => {
     // No fabricated numbers appear in the empty state.
     expect(html).not.toContain("0%");
     expect(html).not.toContain("0 / 0");
+  });
+});
+
+describe("InspectionView — finding detail and dismissal (todo 19 ⑶ ⑷)", () => {
+  it("renders the stored detail of a finding: spans, confidence with its grade, reason, action", () => {
+    const html = render("busy");
+    expect(html).toContain("docs/auth.md:12");
+    expect(html).toContain(INSPECTION.findings.detail.confidence(98));
+    expect(html).toContain("deterministic stale-doc rule");
+    expect(html).toContain("문서의 경로·심볼 참조를 갱신하거나 지우세요.");
+    expect(html).toContain(INSPECTION.findings.detail.spanLabel);
+    expect(html).toContain(INSPECTION.findings.detail.actionLabel);
+    // A finding whose row carries no provenance shows no detail block of its
+    // own — nothing is computed on the screen.
+    const claim = html.slice(
+      html.indexOf('data-finding-id="finding-claim"'),
+      html.indexOf('data-finding-id="finding-stale"'),
+    );
+    expect(claim).not.toContain("inspection-finding-detail");
+  });
+
+  it("keeps a dismissed finding on the board with its reason, apart from the open ones", () => {
+    const html = render("busy");
+    const dismissed = html.slice(
+      html.indexOf('data-testid="inspection-dismissed"'),
+    );
+    expect(dismissed).toContain(INSPECTION.dismissed.title);
+    expect(dismissed).toContain(INSPECTION.dismissed.count(1));
+    expect(dismissed).toContain(
+      "docs/runbook.md가 어떤 노드와도 연결되지 않았습니다",
+    );
+    expect(dismissed).toContain(INSPECTION.dismissed.reasonLabel);
+    expect(dismissed).toContain("운영 런북은 코드와 링크하지 않기로 했습니다");
+    // The open-findings widget does not list it; the resolved one is not
+    // dismissed either.
+    const open = html.slice(
+      html.indexOf('data-testid="inspection-findings"'),
+      html.indexOf('data-testid="inspection-dismissed"'),
+    );
+    expect(open).not.toContain("docs/runbook.md");
+    expect(open).toContain(INSPECTION.findings.count(3));
+  });
+
+  it("says 제외한 발견 없음 rather than 증거 부족 when nobody dismissed anything", () => {
+    const html = render("empty");
+    expect(html).toContain(INSPECTION.dismissed.empty);
+    // Seven widgets short of evidence, and the eighth is simply empty.
+    expect(html.match(/inspection-insufficient/g)).toHaveLength(7);
   });
 });

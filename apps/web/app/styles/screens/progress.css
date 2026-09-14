@@ -425,3 +425,144 @@
   background: var(--bg-default);
   border-radius: var(--radius-medium);
 }
+
+/* ---- Digest and attention (Phase 4 Wave D todo 19 ⑵) ---- */
+
+.digest-windows {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0.75rem 0 0;
+}
+
+.digest-window {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 1.05rem;
+}
+
+.digest-window dt {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+
+.digest-window dd {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.digest-window dd strong {
+  color: var(--fg-default);
+  font: var(--text-xl) var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+.digest-window dd > span {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+
+.digest-never,
+.digest-empty {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+}
+
+.digest-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0.2rem 0 0;
+}
+
+.digest-refs code {
+  color: var(--fg-muted);
+  font: var(--text-2xs) var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.digest-refs small {
+  color: var(--fg-muted);
+  font-size: var(--text-2xs);
+}
+
+.attention-empty {
+  color: var(--fg-muted);
+  font-size: var(--text-xs);
+  margin: 0.75rem 0 0;
+}
+
+.attention-lists {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.75rem;
+}
+
+.attention-list {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
+  border-left: 2px solid var(--attention-fg);
+  padding: 0.9rem 1.05rem;
+}
+
+.attention-list.blocked {
+  border-left-color: var(--danger-fg);
+}
+
+.attention-list h3 {
+  align-items: baseline;
+  display: flex;
+  font-size: var(--text-xs);
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+}
+
+.attention-list h3 span {
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.attention-list ol {
+  display: grid;
+  gap: 0.6rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.attention-list li {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.attention-list li strong {
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.attention-reason {
+  color: var(--fg-default);
+  font-size: var(--text-xs);
+  margin: 0;
+}
+
+.attention-reason[data-stated="false"] {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+.attention-list time {
+  color: var(--fg-muted);
+  font: var(--text-2xs) var(--font-mono);
+}
+
+@media (max-width: 60rem) {
+  .digest-windows,
+  .attention-lists {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

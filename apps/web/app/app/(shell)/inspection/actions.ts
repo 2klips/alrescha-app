@@ -103,3 +103,54 @@ export async function requestRequirementJudgment(
   revalidatePath("/app/inspection");
   redirect("/app/inspection?judgment=queued");
 }
+
+/**
+ * Take one finding off the board, with a reason (Phase 4 Wave D todo 19 ⑷).
+ *
+ * Runs as the signed-in member: `dismiss_finding` is `security invoker`, so
+ * RLS decides what this person may touch and the database requires the
+ * reason. The function answers with a status rather than an error for the
+ * cases a person can cause — an already-resolved finding, one that is not
+ * theirs — and the screen repeats that answer instead of a stack trace.
+ */
+export async function dismissFinding(formData: FormData): Promise<void> {
+  const userId = await getCurrentUserId();
+  if (!userId) redirect("/auth/login");
+
+  const findingId = String(formData.get("findingId") ?? "").trim();
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!findingId) throw new Error("A finding id is required.");
+  if (!reason) redirect("/app/inspection?dismiss=needs-reason");
+
+  const client = await createClient();
+  const workspace = await client
+    .from("workspaces")
+    .select("id")
+    .eq("owner_user_id", userId)
+    .limit(1)
+    .single();
+  if (workspace.error || !workspace.data) {
+    throw new Error("Personal workspace is unavailable.");
+  }
+
+  const result = await client.rpc("dismiss_finding", {
+    dismissal_reason: reason,
+    target_finding_id: findingId,
+    target_workspace_id: workspace.data.id,
+  });
+  if (result.error) {
+    throw new Error("Unable to dismiss the finding.");
+  }
+  const outcome = (result.data ?? null) as {
+    dismissed?: boolean;
+    reason?: string;
+  } | null;
+  const status = outcome?.dismissed
+    ? "done"
+    : outcome?.reason === "already-resolved" || outcome?.reason === "not-found"
+      ? outcome.reason
+      : "failed";
+
+  revalidatePath("/app/inspection");
+  redirect(`/app/inspection?dismiss=${status}`);
+}

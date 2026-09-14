@@ -183,3 +183,97 @@ harness was under-modelling production — it grants them now.
   this todo is the zero-credit bundle.
 
 > **정정(2026-09-07):** 위의 "Docker 부재" 전제는 틀렸다. 실측과 각 항목의 실제 상태는 [e2e-debt.md](e2e-debt.md)에 있다.
+
+
+---
+
+## 2026-09-14 — the screens catch up with the model (⑵ ⑶ ⑷ rendered, dismissal has a button)
+
+**Scope:** `apps/web/app/ui/{progress-dashboard,inspection-view}.tsx`,
+`apps/web/app/app/(shell)/inspection/{actions,page}.tsx`,
+`apps/web/lib/strings/{inspection,progress}.ts`,
+`apps/web/app/styles/screens/{inspection,progress}.css`,
+`apps/web/lib/inspection/fixtures.ts`, `tests/e2e/inspection-dismiss.spec.ts`
+(new), `tests/e2e/{inspection,progress}.spec.ts`,
+`apps/web/app/ui/{progress-dashboard,inspection-view}.test.tsx`.
+
+The 2026-09-06 pass stopped at the view model: `digest`, `attention`, the
+finding `detail` and the `dismissed` section were computed and typed, and no
+component read any of them — `apps/web/app` had no `dismiss` in it. This
+closes that gap. Nothing new is computed on a screen; every number and
+sentence below comes from the model the earlier pass tested.
+
+### `/app/progress` — what moved, and what is stuck
+
+Three windows under the metrics: today, the last seven days, and since this
+member last opened the screen. The third is the one that needed a decision:
+a viewer with no visit record does not get a zero, because "nothing since
+your last visit" and "you have never been here" are different facts and the
+model already distinguishes them with `null`. The window says so in a
+sentence (`data-total="never-visited"`). Each window shows the total the eye
+lands on first, the split (진행 · commit · 해소), and up to six of the refs
+the counted entries named.
+
+Below it, the attention list: stale in-progress items and blocked items,
+oldest first as the model orders them. A blocked item's reason is whoever
+blocked it, in their words; a checkbox nobody explained carries the model's
+`NO_STATED_BLOCKER` marker, which the screen renders as `사유가 기록되지
+않았습니다` with `data-stated="false"` rather than an empty line — the case
+worth surfacing, not the case worth hiding. Stale items show the label and
+their last change date; the screen never prints an English sentence from
+the model.
+
+### `/app/inspection` — the detail, and a decision that stays visible
+
+Every finding row that carries stored provenance now shows it: the spans
+(`docs/auth.md:12`), the rule's confidence beside its evidence grade (a
+deterministic rule is `inferred`; the badge says so), the reason, the
+suggested action, the evidence nodes. A row without provenance shows
+nothing extra — the demo's `finding-claim` proves the block is absent, not
+empty.
+
+The `제외한 문제` widget is the eighth on the board. It lists dismissed
+findings with their detail and their reason, and it is the one widget whose
+empty state is not `증거 부족`: a board with no dismissals is not short of
+evidence, so the `Widget` learned an `emptyCopy` and the demo's empty state
+still counts seven insufficient widgets.
+
+The dismiss control lives in the live-only judgment panel beside each open
+finding's `AI 확정` button: a reason input (`required`, ≤400 chars) and
+`제외`. `dismissFinding` runs `dismiss_finding` as the signed-in member —
+security invoker, so RLS decides what this person may touch and the
+database insists on the reason — and echoes the function's own status words
+(`already-resolved`, `not-found`) as a status line instead of a stack
+trace. The reason is checked before any client is created.
+
+### Verification
+
+- `tests/e2e/inspection-dismiss.spec.ts` (new, live workspace): a finding
+  seeded the way the analyze job writes it → its detail is on the screen
+  (`spec.md:3`, `확신 50%`, the action) → the reason is typed into the
+  product's form → `?dismiss=done` → the finding is in the dismissed board
+  with the reason and the count, gone from the open list and the judgment
+  panel → the row reads `status: dismissed`, `dismissed_by` = this user,
+  `dismissed_reason` = the typed text. Screenshot
+  [`todo-19/inspection-dismissed.png`](todo-19/inspection-dismissed.png).
+- `inspection.spec.ts` (demo): eight widgets with sources, the dismissed
+  reason visible, `docs/auth.md:12` on the findings widget; the empty state
+  still says 증거 부족 in exactly seven. `progress.spec.ts` (demo): the third
+  window is `never-visited`, the blocked todo is listed with the reason its
+  event stated.
+- vitest: `progress-dashboard.test.tsx` +4 (windows and counts, the visit
+  record, stale/blocked with the unstated marker, the empty attention
+  copy), `inspection-view.test.tsx` +3 (detail present and absent, the
+  dismissed board apart from the open list, the empty copy). Korean-first
+  and legacy-palette sweeps green.
+- Two-theme axe (`a11y-contrast.spec.ts`) and the keyboard sweep — counts in
+  the session report; the demo's dismissed entry and detail block are in
+  the audited surface.
+
+### Still open
+
+- **⑴ concept summary · module card · concept MCP exposure** — the one
+  numbered item with no work in this commit; next on this branch.
+- The dismiss form is on the live page only. The demo route shows the board
+  and the detail but cannot write, which is the correct shape for a fixture.
+- `touch_screen_view` still stamps during the page load (unchanged).

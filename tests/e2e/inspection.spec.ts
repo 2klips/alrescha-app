@@ -25,6 +25,7 @@ test("every widget carries its source label and the audit stays a collector", as
     "inspection-progress",
     "inspection-risk",
     "inspection-findings",
+    "inspection-dismissed",
     "inspection-documents",
     "inspection-drift",
     "inspection-audit",
@@ -36,6 +37,17 @@ test("every widget carries its source label and the audit stays a collector", as
       INSPECTION.sourcePrefix.trim(),
     );
   }
+
+  // A dismissal stays visible with its reason (todo 19 ⑷), and the stored
+  // detail of a finding is on the screen (⑶).
+  const dismissed = page.getByTestId("inspection-dismissed");
+  await expect(dismissed).toContainText(INSPECTION.dismissed.reasonLabel);
+  await expect(dismissed).toContainText(
+    "운영 런북은 코드와 링크하지 않기로 했습니다",
+  );
+  await expect(page.getByTestId("inspection-findings")).toContainText(
+    "docs/auth.md:12",
+  );
 
   const audit = page.getByTestId("inspection-audit");
   await expect(audit).toContainText(INSPECTION.dependencyAudit.note);
