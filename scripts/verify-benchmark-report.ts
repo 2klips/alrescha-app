@@ -18,11 +18,16 @@ import type {
   BenchmarkReportV2,
   BenchmarkTrialResultV1,
 } from "./databrain-benchmark/types";
+import {
+  auditGraphSurfaceReleases,
+  type GraphSurfaceAudit,
+} from "./graph-surface-benchmark/audit";
 
 export type BenchmarkAuditFindingKind =
   | "claim-accuracy"
   | "claim-traceability"
   | "measurement-integrity"
+  | "preregistration-lock"
   | "publication-integrity"
   | "run-contract"
   | "trial-coverage"
@@ -50,6 +55,11 @@ export interface BenchmarkAudit {
   readonly claimFileCount: number;
   readonly expectedTrialCount: number;
   readonly findings: readonly BenchmarkAuditFinding[];
+  /**
+   * The graph-surface releases (todo 25), audited by the same rules; null
+   * when the repository has no `benchmarks/graph-surface` directory.
+   */
+  readonly graphSurface: GraphSurfaceAudit | null;
   readonly model: string;
   /** Pre-registered manifests whose real run has not been executed yet. */
   readonly pendingReleases: readonly string[];
@@ -733,6 +743,10 @@ export async function verifyBenchmarkRelease(
   const findings: BenchmarkAuditFinding[] = releases.flatMap(
     (release) => release.findings,
   );
+  const graphSurface = await auditGraphSurfaceReleases(root);
+  for (const release of graphSurface?.releases ?? []) {
+    findings.push(...release.findings);
+  }
   const claimFiles = await collectClaimFiles(resolve(root, "apps"));
 
   try {
@@ -794,6 +808,7 @@ export async function verifyBenchmarkRelease(
     claimFileCount: claimFiles.length,
     expectedTrialCount: primary.expectedTrialCount,
     findings,
+    graphSurface,
     model: primary.model,
     pendingReleases,
     releases,
@@ -814,6 +829,21 @@ async function main(): Promise<void> {
       console.log(
         `Pending pre-registered releases (no real run yet): ${audit.pendingReleases.join(", ")}`,
       );
+    }
+    if (audit.graphSurface) {
+      console.log(
+        `PASS graph-surface benchmark: ${audit.graphSurface.releases
+          .map(
+            (release) =>
+              `${release.id} ${release.trialCount}/${release.expectedTrialCount} (${release.failedTrials} failed, ${release.verdict})`,
+          )
+          .join(", ")}`,
+      );
+      if (audit.graphSurface.pendingReleases.length > 0) {
+        console.log(
+          `Pending graph-surface pre-registrations (no real run yet): ${audit.graphSurface.pendingReleases.join(", ")}`,
+        );
+      }
     }
 
     return;

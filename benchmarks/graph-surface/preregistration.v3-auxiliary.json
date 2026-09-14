@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "graph-surface-v3-auxiliary",
+  "name": "graph-surface-v3-auxiliary-experiments",
+  "registeredAt": "2026-09-14",
+  "purpose": "todo 25 부속 실험 — 주 가설(results.v3)과 분리. ①②③은 주 실행의 시행을 읽기만 한다(프로토콜 무변경), ④는 별도 사전등록(preregistration.v3-relational.json), ⑤는 오프라인 라벨링. 결과는 판정 무관 게시.",
+  "mainResults": "benchmarks/graph-surface/results.v3.json",
+  "relationalResults": "benchmarks/graph-surface/results.v3-relational.json",
+  "adoption": {
+    "tool": "log_progress",
+    "definition": "① 진행 기록 채택률 = graph-surface 군 시행 중 log_progress를 1회 이상 부른 시행 / graph-surface 군 전체 시행(실패 시행 포함 — 실패는 채택하지 않은 것). pooled·모델별."
+  },
+  "tokensPerCall": {
+    "definition": "② 호출당 토큰 = 모델 호출 1회의 provider 보고 usage 평균(input·cache creation·cache read·output), 군·모델별. cache read share = cache read / (input + cache read + cache creation)."
+  },
+  "duplication": {
+    "definition": "③ todo 중복률 = graph-surface 군에서 log_progress가 발행한 todo 중 정규화 제목이 스토어의 다른 todo와 같은 것 / 발행된 todo. writer의 matched 분포(created·id·source_key·normalized_title·todo_id) 병기. 스토어는 시행마다 새로 열리므로 시행 간 오염 없음."
+  },
+  "risk": {
+    "definition": "⑤ 위험 상위 N 정밀도 = 위험 지도(workspaceRiskMap, 프로덕션 형태 스토어 위) 상위 N 파일 중 참 양성 / N. 참 양성 규칙(결정론): 최근 sinceDays일 안의 non-merge 커밋 중 제목이 subjectPattern(대소문자 무시)에 맞는 커밋이 그 파일을 건드렸으면 참. 대리 지표이지 위험의 정의가 아니다. 층(stratum): 스토어에 kind=ci 증거가 있으면 with-ci, 없으면 without-ci — 이 레포에는 CI 워크플로가 없어 with-ci는 n=0으로 게시된다. 파일럿 레포는 프로덕션에서 이 저장소(2klips/alrescha-app) 자체이므로 별도 코퍼스가 없다.",
+    "repository": ".",
+    "repositoryFullName": "local/alrescha-app",
+    "topN": 30,
+    "sinceDays": 90,
+    "subjectPattern": "\\b(fix|bug|hotfix|regress|revert)",
+    "excludedSegments": [
+      ".omo",
+      ".reports",
+      "benchmarks",
+      "expected-artifacts.json",
+      "expected-findings.json",
+      "fixtures"
+    ]
+  }
+}

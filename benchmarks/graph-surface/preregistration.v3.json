@@ -1,0 +1,236 @@
+{
+  "schemaVersion": "graph-surface-v3",
+  "name": "graph-surface-installed-budget-benchmark",
+  "registeredAt": "2026-09-14 (v3)",
+  "purpose": "Phase 4 Wave E todo 25 — 설치된 예산(todo 22 카탈로그 + 지시 블록)이 프로덕션 형태(요약 전용) 스토어 위에서, 체크아웃만 쓰는 베이스라인 대비 에이전트 턴 수를 늘리지 않으면서 품질을 유지하는지 측정한다(R5 §4.6 (d): PASS 비열등·턴 비증가). 질문 세트·채점·그리드·턴 캡은 v1과 바이트 동일.",
+  "questionSource": {
+    "manifest": "benchmarks/databrain/tasks.v3.json",
+    "manifestDigest": "7a317232cfb4f7c13db3e4c8c4f9bfd3f8eb26dd6f02dccc519b04ad77a9c2a7",
+    "filter": "grader.kind === 'answer-manifest'",
+    "taskIds": [
+      "fixture-answer-session-policy",
+      "fixture-answer-audit-schema",
+      "fixture-answer-api-rule-conflict",
+      "fixture-answer-legacy-billing",
+      "real-answer-github-permissions",
+      "real-answer-mcp-contract",
+      "real-answer-job-queue-claim",
+      "real-answer-graph-renderer",
+      "real-answer-receipt-statement",
+      "real-answer-credit-honesty",
+      "real-answer-index-pr-limits",
+      "real-answer-evidence-grade-rule"
+    ]
+  },
+  "models": [
+    {
+      "id": "gpt-5.6-luna",
+      "provider": "openai"
+    },
+    {
+      "id": "claude-sonnet-5",
+      "provider": "anthropic"
+    }
+  ],
+  "arms": {
+    "file-exploration": {
+      "description": "MCP 없음 베이스라인 — 체크아웃 탐색 툴만(list/grep/read). v1·v2와 동일.",
+      "tools": [
+        "list_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ]
+    },
+    "graph-surface": {
+      "description": "설치된 예산: 같은 체크아웃 툴 + 제품 hosted 서버의 tools/list 카탈로그 전부(21툴, 정의는 tools/list 출력에서 변환·다이제스트 잠금) + 설치 지시 블록(renderAgentInstructionBlock). 스토어는 실스캔의 buildLocalWorkspace 투영 = 요약 전용(본문 0). 시행마다 자기 스토어.",
+      "tools": [
+        "assert_link",
+        "explain_module",
+        "get_artifact",
+        "get_findings",
+        "get_graph_schema",
+        "get_neighbors",
+        "impact_of",
+        "log_progress",
+        "memory_read",
+        "memory_write",
+        "query_brain",
+        "record_note",
+        "record_prompt",
+        "record_ruled_out",
+        "repo_map",
+        "repo_overview",
+        "report_session_usage",
+        "request_context_pack",
+        "request_rescan",
+        "search_index",
+        "trace_path",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ]
+    }
+  },
+  "protocol": {
+    "repeatsPerCell": 2,
+    "trialCount": 96,
+    "turnCap": 10,
+    "concurrency": 2,
+    "toolOutputCaps": {
+      "fileContentChars": 6000,
+      "listFilesMaxPaths": 200,
+      "grepFilesMaxHits": 30,
+      "grepExcerptChars": 120,
+      "searchNodesMaxResults": 10,
+      "repoMapDefaultBudget": 1200
+    },
+    "workspaceEdges": "실스캔 projection — 스캐너의 14패밀리 링크(imports·references·calls·contains·handles·defines·modifies·queries·tests·implements…), A′ 허브(route·db_object·section). contains는 제품 MCP 어휘가 제외하므로 답에 나오지 않는다(edgeOmissionReason).",
+    "tokenAccounting": "provider 보고 usage 합계(시행 내 전 호출) + cache_creation/cache_read(Anthropic)·cached_tokens(OpenAI) 그대로. 명시적 캐시 브레이크포인트 없음(양 군 동일). 로컬 추정 없음.",
+    "failedTrialRule": "턴 캡 도달·provider 실패 시행은 FAIL(score 0)로 분모에 남고 턴 수·토큰은 기록값 그대로.",
+    "storeShape": "production — createLocalRepositorySource → scanRepository(full) → buildLocalWorkspace; content은 모든 아티팩트에서 빈 문자열(assertBodilessWorkspace가 실행 전 단언). 메모리 픽스처는 v2와 동일하게 주입.",
+    "toolResultCaps": "MCP 툴 결과는 텍스트 블록 결합 후 toolResultChars(6,000자)에서 절단 — read_file의 fileContentChars와 같은 값."
+  },
+  "v3": {
+    "excludedSegments": [
+      ".omo",
+      ".reports",
+      "benchmarks",
+      "expected-artifacts.json",
+      "expected-findings.json",
+      "fixtures"
+    ],
+    "fileTools": [
+      "list_files",
+      "grep_files",
+      "read_file"
+    ],
+    "instructionBlock": true,
+    "primaryHypothesis": "turns-non-increasing",
+    "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+    "productTools": [
+      "assert_link",
+      "explain_module",
+      "get_artifact",
+      "get_findings",
+      "get_graph_schema",
+      "get_neighbors",
+      "impact_of",
+      "log_progress",
+      "memory_read",
+      "memory_write",
+      "query_brain",
+      "record_note",
+      "record_prompt",
+      "record_ruled_out",
+      "repo_map",
+      "repo_overview",
+      "report_session_usage",
+      "request_context_pack",
+      "request_rescan",
+      "search_index",
+      "trace_path"
+    ],
+    "store": "production-shape",
+    "tokenScopes": [
+      "mcp:read",
+      "mcp:write"
+    ],
+    "toolResultChars": 6000,
+    "usageFields": [
+      "input_tokens",
+      "output_tokens",
+      "cache_creation_input_tokens",
+      "cache_read_input_tokens",
+      "input_tokens_details.cached_tokens"
+    ]
+  },
+  "memoryFixtures": {
+    "note": "메모리 블록은 에이전트가 증류해 두는 표면이므로 사전등록 픽스처로 주입한다. 모든 항목은 코퍼스 파일에서 유도 가능한 사실만 담아 두 군의 도달 가능 정보를 동일하게 유지한다(출처 병기).",
+    "entries": [
+      {
+        "corpus": "fixtures/drifted-demo",
+        "name": "conventions",
+        "entryKey": "api-json-keys",
+        "text": "이 픽스처의 API 응답 JSON 키는 snake_case를 강제한다. 테스트 이름에는 요구사항 ID를 포함해야 한다.",
+        "sourcePaths": [
+          "AGENTS.md"
+        ]
+      },
+      {
+        "corpus": "fixtures/drifted-demo",
+        "name": "decisions",
+        "entryKey": "session-timeout",
+        "text": "세션 타임아웃은 30분(SESSION_TIMEOUT_MS = 30 * 60 * 1000)으로 결정됐다 — ADR-001.",
+        "sourcePaths": [
+          "docs/adr/ADR-001-session-timeout.md",
+          "src/session.ts"
+        ]
+      },
+      {
+        "corpus": ".",
+        "name": "conventions",
+        "entryKey": "evidence-grades",
+        "text": "verified는 실행 증거가 있을 때만 부여한다. AI 추론은 언제나 inferred이며, inferred만으로 이루어진 판정 체인의 심각도 상한은 medium이다.",
+        "sourcePaths": [
+          "AGENTS.md",
+          "packages/core/src/assurance/rules.ts"
+        ]
+      },
+      {
+        "corpus": ".",
+        "name": "decisions",
+        "entryKey": "job-queue-claim",
+        "text": "잡 큐는 Postgres 자체 구현 — SELECT ... FOR UPDATE SKIP LOCKED 클레임(claim_next_job)과 heartbeat_at/lease_expires_at 컬럼을 쓴다.",
+        "sourcePaths": [
+          "apps/worker/src/queue.ts"
+        ]
+      },
+      {
+        "corpus": ".",
+        "name": "gotchas",
+        "entryKey": "repo-write-path",
+        "text": "레포 쓰기 경로는 advisory 최소 인덱스 PR 제안 하나뿐이다 — ARR:BEGIN/END 마커로 감싼 30줄 이하 관리 섹션, byte-idempotent 재생성.",
+        "sourcePaths": [
+          "packages/core/src/context/minimal-index.ts"
+        ]
+      }
+    ]
+  },
+  "grading": {
+    "method": "동결 v3 answer-manifest 그대로 — required-fact 그룹 매칭",
+    "PASS": "모든 fact 그룹 매칭",
+    "PARTIAL": "1개 이상, 전부는 아님",
+    "FAIL": "0개 또는 미제출·실패",
+    "score": "matched / total (연속값, 병기)"
+  },
+  "hypothesis": {
+    "primary": "graph-surface 군의 시행당 평균 모델 호출 수(턴)가 file-exploration 군보다 높지 않다 (pooled 점추정, Δ ≤ 0). v1 기준(Δ < 0)도 리포트에 병기하되 판정에는 쓰지 않는다.",
+    "qualityNonInferiority": "graph-surface 군 pooled PASS율이 file-exploration 군 대비 5pp 이상 낮지 않다.",
+    "secondary": "provider 보고 총 토큰(입력·출력·cache creation·cache read)·툴콜 수 병기 (목표치 없음 — 기록).",
+    "publication": "판정과 무관하게 수치 그대로 게시. 소표본(군·모델당 24시행) — 점추정 단독 해석 금지, ADR-012 문구 규칙(구간·가정 병기, 리포트 인용으로만 주장). 사이트 문구 변경은 ADR-012 절차로만."
+  },
+  "resultsBasename": "results.v3",
+  "changesFromV2": {
+    "rationale": "v2는 하네스가 만든 워크스페이스(파일 코퍼스 본문 첨부)와 하네스 자체 JSON 툴 정의로 그래프군을 쟀다 — 출하되지 않는 표면이다(R5 §4.5 ⒀, OQ-039). v3는 제품 그대로를 잰다: 실스캔을 alrescha serve --local과 같은 코드로 투영한 요약 전용 스토어, hosted 서버 팩토리가 tools/list로 답하는 카탈로그(다이제스트 잠금), 설치 지시 블록. 본문이 없는 스토어 위에서 그래프 툴만 가진 군은 본문 사실 질문에 답할 수 없어 측정이 아니라 퇴화이고, 지시 블록의 세 번째 단계(Then read the file)가 파일 읽기를 전제하므로, 그래프군은 실제 에이전트처럼 자기 체크아웃 툴을 함께 가진다. 베이스라인은 v1·v2와 동일(MCP 없음). 따라서 v3의 질문은 그래프가 파일 탐색을 이기는가가 아니라 예산을 설치하면 손해인가다.",
+    "changes": [
+      "graph-surface 군: 스토어를 프로덕션 형태(buildLocalWorkspace, 본문 0)로 — 실행 전 assertBodilessWorkspace",
+      "graph-surface 군: 툴 정의를 제품 tools/list 출력에서 변환(21툴), 카탈로그 SHA-256을 사전등록에 고정 — 불일치 시 실행 거부",
+      "graph-surface 군: 시스템 프롬프트에 설치 지시 블록(renderAgentInstructionBlock, ≤300토큰 예산)을 붙인다",
+      "graph-surface 군: 체크아웃 툴(list_files·grep_files·read_file)을 베이스라인과 동일하게 가진다 — 두 군의 차이는 제품의 유무뿐",
+      "시행마다 InMemoryMcpStore·엔드포인트·SDK 클라이언트를 새로 연다 — 쓰기 툴이 다른 시행의 상태를 보지 않는다",
+      "usage에 cache_creation_input_tokens·cache_read_input_tokens(Anthropic)·input_tokens_details.cached_tokens(OpenAI)를 호출 단위로 기록",
+      "1차 가설을 R5 §4.6 (d)의 턴 비증가(Δ ≤ 0)로 — v1 기준(Δ < 0)은 병기",
+      "get_doc_page: 없음(todo 20 미구현) — 그래프군에 넣지 않는다",
+      "A′ 계층: 스캔 투영이 route·db_object·section 허브와 그 엣지를 싣는다; 디렉터리 contains는 제품 어휘가 제외(todo 22 메모)하므로 그대로 제외"
+    ],
+    "unchanged": [
+      "질문 세트 12과제(동결 v3 매니페스트 다이제스트 동일)",
+      "채점기(required-fact 그룹 매칭)",
+      "그리드 96시행·턴 캡 10·동시성 2·출력 캡",
+      "모델 2종",
+      "메모리 픽스처 5건"
+    ]
+  }
+}

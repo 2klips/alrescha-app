@@ -1,0 +1,286 @@
+{
+  "schemaVersion": "graph-surface-v3",
+  "name": "graph-surface-v3-relational-set",
+  "registeredAt": "2026-09-14 (v3 auxiliary ④)",
+  "purpose": "부속 실험 ④ — 관계형 질문 4개(의존·라우트→핸들러·DB 객체 정의/변경·섹션 토큰 참조)에서 설치된 예산의 턴·품질을 같은 두 군으로 잰다. 주 가설(results.v3)과 분리 게시하며 주 판정에 쓰지 않는다. 정답 근거는 전부 레포 내 실측 문자열이고 프롬프트는 정답을 흘리지 않는다.",
+  "questionSource": {
+    "inline": true,
+    "note": "인라인 answer-manifest 4과제 — 이 파일의 SHA-256이 잠금. 동결 v3 매니페스트에 없는 질문이므로 관계형 질문만 새로 등록한다.",
+    "tasks": [
+      {
+        "id": "relational-importers-local-workspace",
+        "type": "question-answering",
+        "repository": ".",
+        "retrievalQuery": "packages/mcp/src/local-workspace.ts importers",
+        "prompt": "In this repository, which non-test source files inside `packages/mcp/src` import the module `./local-workspace`? Give every importer's repository-relative path in `answer`.",
+        "grader": {
+          "kind": "answer-manifest",
+          "requiredFacts": [
+            [
+              "packages/mcp/src/index.ts",
+              "mcp/src/index.ts"
+            ],
+            [
+              "packages/mcp/src/local-serve.ts",
+              "local-serve.ts"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "relational-mcp-route-handler",
+        "type": "question-answering",
+        "repository": ".",
+        "retrievalQuery": "hosted MCP HTTP route handler apps/web/app/api/mcp",
+        "prompt": "In the web app, which file handles POST requests for the hosted MCP HTTP route `/api/mcp`, which function does it import to handle the request, and from which module (repository-relative path) does that function come? Put all three in `answer`.",
+        "grader": {
+          "kind": "answer-manifest",
+          "requiredFacts": [
+            [
+              "apps/web/app/api/mcp/route.ts",
+              "api/mcp/route.ts"
+            ],
+            [
+              "handleHostedMcpRequest"
+            ],
+            [
+              "apps/web/lib/mcp/endpoint",
+              "lib/mcp/endpoint"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "relational-access-events-migrations",
+        "type": "question-answering",
+        "repository": ".",
+        "retrievalQuery": "access_events table migration index occurred_at",
+        "prompt": "Which migration file first creates the `access_events` table, and which later migration file — one whose own name mentions access events — adds an index on that table? Name both migration files and the index the later one creates in `answer`.",
+        "grader": {
+          "kind": "answer-manifest",
+          "requiredFacts": [
+            [
+              "202608100002_evidence_graph_domain",
+              "202608100002"
+            ],
+            [
+              "202608300002_access_events_occurred_idx",
+              "202608300002"
+            ],
+            [
+              "access_events_workspace_occurred_idx"
+            ]
+          ]
+        }
+      },
+      {
+        "id": "relational-oq-069-references",
+        "type": "question-answering",
+        "repository": ".",
+        "retrievalQuery": "OQ-069 open question heading handoff report",
+        "prompt": "Which document declares the heading for open question `OQ-069`, and which handoff report under `docs/reports` refers to that question? Give both repository-relative paths in `answer`.",
+        "grader": {
+          "kind": "answer-manifest",
+          "requiredFacts": [
+            [
+              "spec/OPEN_QUESTIONS.md",
+              "OPEN_QUESTIONS.md"
+            ],
+            [
+              "CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md"
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "models": [
+    {
+      "id": "gpt-5.6-luna",
+      "provider": "openai"
+    },
+    {
+      "id": "claude-sonnet-5",
+      "provider": "anthropic"
+    }
+  ],
+  "arms": {
+    "file-exploration": {
+      "description": "MCP 없음 베이스라인 — 체크아웃 탐색 툴만(list/grep/read). v1·v2와 동일.",
+      "tools": [
+        "list_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ]
+    },
+    "graph-surface": {
+      "description": "설치된 예산: 같은 체크아웃 툴 + 제품 hosted 서버의 tools/list 카탈로그 전부(21툴, 정의는 tools/list 출력에서 변환·다이제스트 잠금) + 설치 지시 블록(renderAgentInstructionBlock). 스토어는 실스캔의 buildLocalWorkspace 투영 = 요약 전용(본문 0). 시행마다 자기 스토어.",
+      "tools": [
+        "assert_link",
+        "explain_module",
+        "get_artifact",
+        "get_findings",
+        "get_graph_schema",
+        "get_neighbors",
+        "impact_of",
+        "log_progress",
+        "memory_read",
+        "memory_write",
+        "query_brain",
+        "record_note",
+        "record_prompt",
+        "record_ruled_out",
+        "repo_map",
+        "repo_overview",
+        "report_session_usage",
+        "request_context_pack",
+        "request_rescan",
+        "search_index",
+        "trace_path",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ]
+    }
+  },
+  "protocol": {
+    "repeatsPerCell": 2,
+    "trialCount": 32,
+    "turnCap": 10,
+    "concurrency": 2,
+    "toolOutputCaps": {
+      "fileContentChars": 6000,
+      "listFilesMaxPaths": 200,
+      "grepFilesMaxHits": 30,
+      "grepExcerptChars": 120,
+      "searchNodesMaxResults": 10,
+      "repoMapDefaultBudget": 1200
+    },
+    "workspaceEdges": "실스캔 projection — 스캐너의 14패밀리 링크(imports·references·calls·contains·handles·defines·modifies·queries·tests·implements…), A′ 허브(route·db_object·section). contains는 제품 MCP 어휘가 제외하므로 답에 나오지 않는다(edgeOmissionReason).",
+    "tokenAccounting": "provider 보고 usage 합계(시행 내 전 호출) + cache_creation/cache_read(Anthropic)·cached_tokens(OpenAI) 그대로. 명시적 캐시 브레이크포인트 없음(양 군 동일). 로컬 추정 없음.",
+    "failedTrialRule": "턴 캡 도달·provider 실패 시행은 FAIL(score 0)로 분모에 남고 턴 수·토큰은 기록값 그대로.",
+    "storeShape": "production — createLocalRepositorySource → scanRepository(full) → buildLocalWorkspace; content은 모든 아티팩트에서 빈 문자열(assertBodilessWorkspace가 실행 전 단언). 메모리 픽스처는 v2와 동일하게 주입.",
+    "toolResultCaps": "MCP 툴 결과는 텍스트 블록 결합 후 toolResultChars(6,000자)에서 절단 — read_file의 fileContentChars와 같은 값."
+  },
+  "v3": {
+    "excludedSegments": [
+      ".omo",
+      ".reports",
+      "benchmarks",
+      "expected-artifacts.json",
+      "expected-findings.json",
+      "fixtures"
+    ],
+    "fileTools": [
+      "list_files",
+      "grep_files",
+      "read_file"
+    ],
+    "instructionBlock": true,
+    "primaryHypothesis": "turns-non-increasing",
+    "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+    "productTools": [
+      "assert_link",
+      "explain_module",
+      "get_artifact",
+      "get_findings",
+      "get_graph_schema",
+      "get_neighbors",
+      "impact_of",
+      "log_progress",
+      "memory_read",
+      "memory_write",
+      "query_brain",
+      "record_note",
+      "record_prompt",
+      "record_ruled_out",
+      "repo_map",
+      "repo_overview",
+      "report_session_usage",
+      "request_context_pack",
+      "request_rescan",
+      "search_index",
+      "trace_path"
+    ],
+    "store": "production-shape",
+    "tokenScopes": [
+      "mcp:read",
+      "mcp:write"
+    ],
+    "toolResultChars": 6000,
+    "usageFields": [
+      "input_tokens",
+      "output_tokens",
+      "cache_creation_input_tokens",
+      "cache_read_input_tokens",
+      "input_tokens_details.cached_tokens"
+    ]
+  },
+  "memoryFixtures": {
+    "note": "메모리 블록은 에이전트가 증류해 두는 표면이므로 사전등록 픽스처로 주입한다. 모든 항목은 코퍼스 파일에서 유도 가능한 사실만 담아 두 군의 도달 가능 정보를 동일하게 유지한다(출처 병기).",
+    "entries": [
+      {
+        "corpus": "fixtures/drifted-demo",
+        "name": "conventions",
+        "entryKey": "api-json-keys",
+        "text": "이 픽스처의 API 응답 JSON 키는 snake_case를 강제한다. 테스트 이름에는 요구사항 ID를 포함해야 한다.",
+        "sourcePaths": [
+          "AGENTS.md"
+        ]
+      },
+      {
+        "corpus": "fixtures/drifted-demo",
+        "name": "decisions",
+        "entryKey": "session-timeout",
+        "text": "세션 타임아웃은 30분(SESSION_TIMEOUT_MS = 30 * 60 * 1000)으로 결정됐다 — ADR-001.",
+        "sourcePaths": [
+          "docs/adr/ADR-001-session-timeout.md",
+          "src/session.ts"
+        ]
+      },
+      {
+        "corpus": ".",
+        "name": "conventions",
+        "entryKey": "evidence-grades",
+        "text": "verified는 실행 증거가 있을 때만 부여한다. AI 추론은 언제나 inferred이며, inferred만으로 이루어진 판정 체인의 심각도 상한은 medium이다.",
+        "sourcePaths": [
+          "AGENTS.md",
+          "packages/core/src/assurance/rules.ts"
+        ]
+      },
+      {
+        "corpus": ".",
+        "name": "decisions",
+        "entryKey": "job-queue-claim",
+        "text": "잡 큐는 Postgres 자체 구현 — SELECT ... FOR UPDATE SKIP LOCKED 클레임(claim_next_job)과 heartbeat_at/lease_expires_at 컬럼을 쓴다.",
+        "sourcePaths": [
+          "apps/worker/src/queue.ts"
+        ]
+      },
+      {
+        "corpus": ".",
+        "name": "gotchas",
+        "entryKey": "repo-write-path",
+        "text": "레포 쓰기 경로는 advisory 최소 인덱스 PR 제안 하나뿐이다 — ARR:BEGIN/END 마커로 감싼 30줄 이하 관리 섹션, byte-idempotent 재생성.",
+        "sourcePaths": [
+          "packages/core/src/context/minimal-index.ts"
+        ]
+      }
+    ]
+  },
+  "grading": {
+    "method": "동결 v3 answer-manifest 그대로 — required-fact 그룹 매칭",
+    "PASS": "모든 fact 그룹 매칭",
+    "PARTIAL": "1개 이상, 전부는 아님",
+    "FAIL": "0개 또는 미제출·실패",
+    "score": "matched / total (연속값, 병기)"
+  },
+  "hypothesis": {
+    "primary": "관계형 질문에서 graph-surface 군의 시행당 평균 턴이 file-exploration 군보다 높지 않다 (Δ ≤ 0). 기록용 — 4과제 32시행은 판정이 아니라 관측이다.",
+    "qualityNonInferiority": "PASS율 −5pp 이내.",
+    "publication": "판정과 무관하게 게시. 주 가설 오염 금지 — results.v3의 어떤 수치도 이 파일에 의존하지 않는다."
+  },
+  "resultsBasename": "results.v3-relational"
+}
