@@ -57,6 +57,7 @@ Phase 4 todo 25(graph-surface v3 — 프로덕션 형태 스토어 위 설치된
 OQ-070 ⑴(동결 질문 세트 v4 — `tasks.v4.json`, 개명 후 별칭 추가, 벤치 실행 없음)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-tasks-v4.md)로 넘어가 있다: 머지만, `print-manifest-digest.ts`로 v3·v4 다이제스트 확인, 벤치 실행 금지.
 Phase 4 todo 19 마감(진행 다이제스트·finding 상세·제외 보드·`/app/map` 인스펙터 카드·concept MCP 노출)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-todo-19-screens.md)로 넘어가 있다: PR #19 다음에 웹 머지만, `/app/progress`·`/app/inspection`·`/app/map`에서 검증, 롤백 지점.
 Phase 4 todo 20 결정론 나머지(`docskeleton` 워커 잡·analyze 연쇄·`/app/docs`·`/app/docs/[slug]`·옛 주소 리다이렉트)는 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-doc-pages.md)로 넘어가 있다: PR #20 다음에 웹 머지 → 워커 재배포 순서, 워커 로그의 `docskeleton` 줄과 `/app/docs`로 검증, 롤백 지점. G3(산문 생성)은 이 범위 밖.
+Phase 4 todo 18 파일럿 실기(CI 증거 단위를 테스트 파일로 — OQ-072, 이 레포의 CI 워크플로가 JUnit 아티팩트 업로드)는 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-ci-evidence.md)로 넘어가 있다: 머지 → 워커 재배포 → `다시 스캔` 1회 순서, 워커 로그의 `ci evidence N row(s), M supporting` 줄과 `/app/map`의 verified 테스트 파일로 검증, 롤백 지점.
 
 ### 사용자 보고 선호 (2026-09-12)
 
