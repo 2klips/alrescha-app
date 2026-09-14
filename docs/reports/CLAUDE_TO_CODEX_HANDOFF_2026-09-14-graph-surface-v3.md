@@ -56,4 +56,4 @@ v1·v2는 출하되지 않는 표면을 쟀다 — 하네스가 본문을 붙여
 
 ## PR
 
-- TBD_PR_URL — 커밋 2건: `feat(bench): preregister graph-surface v3 against the production-shaped store`(`c172b6b`, 잠금), `feat(bench): run graph-surface v3 against the production-shaped store`(실행·게시). 머지만 필요하다(§5).
+- https://github.com/2klips/alrescha-app/pull/18 — 커밋 2건: `feat(bench): preregister graph-surface v3 against the production-shaped store`(`c172b6b`, 잠금), `feat(bench): run graph-surface v3 against the production-shaped store`(실행·게시). 머지만 필요하다(§5).
