@@ -599,7 +599,8 @@
 - 내용: graph-surface v1·v2·v3는 동결 v3 매니페스트(다이제스트 `7a317232…`)의 answer-manifest 12문항을 바이트 동일하게 쓴다. 그 사이 제품이 Arr → Alrescha로 개명되면서(2026-09-01 F5 naming migration) 두 문항의 정답 문자열이 소스에서 사라졌다 — 지금은 개명 기록 문서와 receipts 테스트에만 남아 있다. v3에서 두 문항은 양 군 모두 최대 2/3(PARTIAL)로 상한이 걸렸다. 쌍대 비교는 그대로 유효하지만 절대 PASS율은 v2(베이스라인 0.875)와 비교할 수 없고(v3 0.688), 향후 실행은 매 회 같은 상한을 안고 간다. databrain v3 릴리스(600시행, 2026-08-25)는 개명 전 코퍼스에서 돌았으므로 영향 없다.
 - 임시 결정: 동결 유지. v3 리포트·근거에 상한을 명시했다. 매니페스트를 고치는 것은 사전등록 변경이므로 이 todo에서 하지 않는다.
 - 필요한 결정: ⑴ v4 매니페스트 개정(두 문항의 별칭에 개명 후 문자열을 **추가** — 기존 별칭 삭제 없음, 새 다이제스트, graph-surface 다음 실행부터) ⑵ 두 문항을 다음 사전등록에서 제외하고 10문항 그리드로 ⑶ 현행 유지(상한을 안고 비교만 본다).
-- 상태: open. 기본 후보 ⑴ — 다음 graph-surface 실행 전에.
+- 적용(2026-09-14, 사용자 결정 ⑴): `benchmarks/databrain/tasks.v4.json` — v3 텍스트에 별칭 4개 추가(`https://arr-app-web.vercel.app/receipt/v1`·`arr-app-web.vercel.app/receipt/v1`, `alrescha:begin`·`alrescha begin`), 삭제 없음, diff 삽입 6줄. 로더 다이제스트 `4baeed030abf564e7e3b162dac99eefc6b53c8656d471cf304efb5e4f3d08899`(v3 `7a317232…` 불변). graph-surface 사전등록의 `questionSource.manifest`가 이제 파싱되어 다음 실행이 v4를 이름으로 핀한다(v1–v3 파일은 종전대로 v3). v4 graph-surface 사전등록 자체는 OQ-071 결정 뒤에. 근거: `.omo/evidence/phase4/oq-070-v4-manifest-2026-09-14.md`.
+- 상태: **⑴ 적용 — closed.** 다음 graph-surface 사전등록이 `tasks.v4.json`을 핀하는 것으로 종결.
 
 ## OQ-071 — 지시 블록의 강제 첫 호출은 grep이 한 홉에 답하는 질문에서 턴 하나이고, 본문 없는 포인터는 파일 읽기로 끝난다
 

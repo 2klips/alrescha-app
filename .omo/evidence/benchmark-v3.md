@@ -289,3 +289,7 @@ pooled(200쌍) Δ +3.01pp [-2.06, +8.06] 비열등 통과 · 토큰 67.0% [61.6,
 ### ADR-012 복원 절차 이행
 
 site/index.html: 히어로 stat 타일을 v3 수치로 교체(-67.4% CI 병기 + 정확도 +8.7pp CI 병기 타일 신설), 벤치 절 문구를 "구간 하한이 0을 넘어 개선을 주장 / +5pp 목표 구간 통과는 아직 아님 / v2 리포트는 그대로 공개 유지"로 갱신, 링크를 v3 리포트로 교체. 점추정 단독 표기 없음 — 전 수치 구간 병기.
+
+## 17. 질문 세트 v4 — 개명 후 별칭 추가 (2026-09-14, OQ-070 ⑴)
+
+`tasks.v3.json`은 그대로 동결이다(파일 SHA-256 `9318cb67…`, 로더 다이제스트 `7a317232…`). graph-surface v3(todo 25)가 두 문항(`real-answer-receipt-statement`, `real-answer-index-pr-limits`)의 정답 문자열이 제품 개명 뒤 소스에 없음을 드러내, 별칭만 **추가**한 `tasks.v4.json`을 만들었다 — 로더 다이제스트 `4baeed030abf564e7e3b162dac99eefc6b53c8656d471cf304efb5e4f3d08899`, 파일 SHA-256 `e7e9ee10d57d5b4b744b7b5afb1bdecbf34776cd0c59e8ede38ceac564461b04`. databrain v3 릴리스(§16)는 개명 전 코퍼스 실행이라 무관하고 v4는 databrain 릴리스가 아니다(F5 감사 목록에 넣지 않았다). graph-surface 다음 사전등록이 이 파일을 이름으로 핀한다. 상세: `.omo/evidence/phase4/oq-070-v4-manifest-2026-09-14.md`.
