@@ -107,6 +107,13 @@ export type EdgeConfidenceTier =
   "agent_asserted" | "inferred" | "reference" | "resolved";
 
 export interface GraphNode {
+  /**
+   * What the scanner classified the file as, carried from the loader (Phase
+   * 4 Wave B todo 13 ⓔ). A stylesheet and a `tsconfig.json` are both `code`
+   * to the type axis; this is what lets the `style` and `config` layers
+   * switch them off. Absent on demo fixtures and on nodes that are not files.
+   */
+  classification?: ArtifactClassification;
   clusterCount?: number;
   /**
    * The colour axis (R5 §2.6), derived once by the loader with the

@@ -14,6 +14,8 @@ import {
   forceLink,
   forceManyBody,
   forceSimulation,
+  forceX,
+  forceY,
   type Simulation,
   type SimulationLinkDatum,
   type SimulationNodeDatum,
@@ -29,10 +31,12 @@ import {
   encodePositions,
   linkFamilyCode,
   linkFamilyOf,
+  type AnchorPoint,
   type ForceConfig,
   type LinkFamily,
   type LinkPair,
   type Position,
+  POSITION_STRIDE,
 } from "./simulation-protocol";
 
 /**
@@ -47,6 +51,15 @@ const COLLIDE_PADDING = 2;
  * than re-running the whole layout every time someone nudges a node.
  */
 const REHEAT_ALPHA = 0.3;
+
+/**
+ * Where a warm start begins (todo 13 ⓐ). The saved positions are already
+ * near equilibrium, so the layout only needs the reheat's worth of energy to
+ * absorb whatever changed — starting at 1 would throw the saved layout away
+ * in the first few ticks, which is the explosion the warm start exists to
+ * avoid.
+ */
+export const WARM_START_ALPHA = REHEAT_ALPHA;
 
 export interface LayoutNode extends SimulationNodeDatum {
   /** Position in the original node array — the transfer buffer's ordering. */
@@ -107,7 +120,17 @@ export function buildGraphologyGraph(data: GraphData): Graph<GraphNode> {
 }
 
 export interface ForceLayoutOptions {
+  /**
+   * Per-slot domain anchor (todo 13 ⓓ), or absent for no anchor forces at
+   * all. Pulls with `config.domainAnchorStrength`, which defaults to off.
+   */
+  anchors?: readonly AnchorPoint[] | undefined;
   config?: Partial<ForceConfig>;
+  /**
+   * A previous layout's `[x0, y0, …]` (todo 13 ⓐ). Slots holding `NaN` —
+   * nodes the saved layout never saw — start on the spiral as before.
+   */
+  initialPositions?: Float32Array | null | undefined;
   links: readonly LinkPair[];
   nodeCount: number;
   seed?: number;
@@ -141,11 +164,22 @@ export function createForceLayout(options: ForceLayoutOptions): ForceLayout {
   let config = clampForceConfig(options.config);
 
   const start = seededInitialPositions(options.nodeCount, seed);
-  const nodes: LayoutNode[] = start.map((position, slot) => ({
-    slot,
-    x: position.x,
-    y: position.y,
-  }));
+  const saved = options.initialPositions ?? null;
+  let warmed = 0;
+  const nodes: LayoutNode[] = start.map((position, slot) => {
+    const x = saved?.[slot * POSITION_STRIDE];
+    const y = saved?.[slot * POSITION_STRIDE + 1];
+    if (
+      typeof x === "number" &&
+      typeof y === "number" &&
+      Number.isFinite(x) &&
+      Number.isFinite(y)
+    ) {
+      warmed += 1;
+      return { slot, x, y };
+    }
+    return { slot, x: position.x, y: position.y };
+  });
   const links: LayoutLink[] = options.links.map(([source, target]) => ({
     source,
     target,
@@ -251,6 +285,34 @@ export function createForceLayout(options: ForceLayoutOptions): ForceLayout {
     .force("collide", collideForce)
     .stop();
 
+  /**
+   * Domain anchors (todo 13 ⓓ): a weak `forceX`/`forceY` toward each
+   * node's band. Registered only while the strength is above zero — at zero
+   * the force would be arithmetic no-ops, and keeping the force list
+   * identical when the slider is off is what keeps every existing layout
+   * byte-identical.
+   */
+  const anchors = options.anchors ?? null;
+  const anchorX = forceX<LayoutNode>((node) => anchors?.[node.slot]?.[0] ?? 0);
+  const anchorY = forceY<LayoutNode>((node) => anchors?.[node.slot]?.[1] ?? 0);
+  const applyAnchors = () => {
+    const strength = anchors ? config.domainAnchorStrength : 0;
+    if (strength > 0) {
+      const perNode = (node: LayoutNode) =>
+        anchors?.[node.slot] ? strength : 0;
+      anchorX.strength(perNode);
+      anchorY.strength(perNode);
+      simulation.force("anchorX", anchorX).force("anchorY", anchorY);
+    } else {
+      simulation.force("anchorX", null).force("anchorY", null);
+    }
+  };
+  applyAnchors();
+
+  // A warm start (todo 13 ⓐ) begins at the reheat temperature: the saved
+  // positions only need to absorb what changed since they were saved.
+  if (warmed > 0) simulation.alpha(WARM_START_ALPHA);
+
   return {
     alpha: () => simulation.alpha(),
     config: () => ({ ...config }),
@@ -276,6 +338,7 @@ export function createForceLayout(options: ForceLayoutOptions): ForceLayout {
       linkForce.distance(linkDistanceOf).strength(linkStrengthOf);
       chargeForce.strength(-config.repelStrength);
       centerForce.strength(config.centerStrength);
+      applyAnchors();
       simulation.alpha(Math.max(simulation.alpha(), REHEAT_ALPHA));
     },
     stop() {

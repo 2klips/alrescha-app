@@ -31,10 +31,14 @@ import {
 } from "../../lib/graph/engine";
 import type {
   Camera,
+  GraphDisplaySettings,
   GraphLayer,
   RenderFrame,
 } from "../../lib/graph/render-frame";
-import type { ForceConfig } from "../../lib/graph/simulation-protocol";
+import type {
+  ForceConfig,
+  Position,
+} from "../../lib/graph/simulation-protocol";
 import { readDesignToken, readRendererPalette } from "../../lib/theme/tokens";
 
 export interface BrainMapProps {
@@ -43,6 +47,8 @@ export interface BrainMapProps {
   data: GraphData;
   /** Directional focus mode: selection tints edges by direction (todo 2). */
   directionalFocus?: boolean;
+  /** Orphans, arrows, node size, link thickness, groups (todo 13 ⓒ). */
+  display?: GraphDisplaySettings;
   /**
    * Increment to ask the camera to frame the whole graph. A number rather
    * than a callback because the request travels *into* this component: the
@@ -77,6 +83,14 @@ export interface BrainMapProps {
   visibleNodeIds?: ReadonlySet<string> | undefined;
   /** Layers the viewer switched off (todo 13). */
   hiddenLayers?: ReadonlySet<GraphLayer> | undefined;
+  /** A saved layout to start warm from; read at mount only (todo 13 ⓐ). */
+  initialPositions?: ReadonlyMap<string, Position> | null | undefined;
+  /** Fires once each time the layout converges, with where everything sits. */
+  onLayoutSettled?: (positions: ReadonlyMap<string, Position>) => void;
+  /** Persistent pins; null = "where it is now" (todo 13 ⓒ). */
+  pins?: ReadonlyMap<string, Position | null> | undefined;
+  /** The engine's resolved pins, after a pin request or a drag of a pinned node. */
+  onPinsChange?: (pins: ReadonlyMap<string, Position>) => void;
   seed?: number;
   selectedNodeId?: string | null;
   textFadeThreshold?: number;
@@ -105,20 +119,40 @@ const HIT_LAYER_SYNC_MS = 100;
 /** Smallest comfortable click target, whatever the node's painted radius. */
 const MIN_HIT_SIZE = 20;
 
+/** The pins that already have a point — what a start message can carry. */
+function resolvedPins(
+  pins: ReadonlyMap<string, Position | null> | undefined,
+): Map<string, Position> {
+  const resolved = new Map<string, Position>();
+  for (const [nodeId, position] of pins ?? []) {
+    if (position) resolved.set(nodeId, position);
+  }
+  return resolved;
+}
+
+function samePoint(left: Position, right: Position): boolean {
+  return left.x === right.x && left.y === right.y;
+}
+
 export function BrainMap({
   afterglow,
   data,
   directionalFocus,
+  display,
   fitRequest,
   focusNodeId,
   forceConfig,
   glow,
   hitLayer,
+  initialPositions,
   onHoverChange,
+  onLayoutSettled,
   onLodChange,
   onNodeActivate,
   onNodeSelect,
+  onPinsChange,
   onSettledChange,
+  pins,
   seed,
   selectedNodeId,
   textFadeThreshold,
@@ -145,14 +179,20 @@ export function BrainMap({
   const latest = useRef({
     data,
     directionalFocus,
+    display,
     forceConfig,
+    initialPositions,
+    pins,
     seed,
     textFadeThreshold,
   });
   latest.current = {
     data,
     directionalFocus,
+    display,
     forceConfig,
+    initialPositions,
+    pins,
     seed,
     textFadeThreshold,
   };
@@ -175,6 +215,10 @@ export function BrainMap({
   onNodeActivateRef.current = onNodeActivate;
   const onHoverChangeRef = useRef(onHoverChange);
   onHoverChangeRef.current = onHoverChange;
+  const onLayoutSettledRef = useRef(onLayoutSettled);
+  onLayoutSettledRef.current = onLayoutSettled;
+  const onPinsChangeRef = useRef(onPinsChange);
+  onPinsChangeRef.current = onPinsChange;
 
   useEffect(() => {
     const host = viewportRef.current;
@@ -254,7 +298,14 @@ export function BrainMap({
           ),
         ),
       data: initial.data,
+      ...(initial.display ? { display: initial.display } : {}),
       ...(initial.forceConfig ? { forceConfig: initial.forceConfig } : {}),
+      // A warm start and the saved pins travel with the first start message
+      // (todo 13 ⓐ·ⓒ); handing them over later would mean a restart.
+      ...(initial.initialPositions
+        ? { initialPositions: initial.initialPositions }
+        : {}),
+      pins: resolvedPins(initial.pins),
       palette: readRendererPalette(),
       ...(initial.seed === undefined ? {} : { seed: initial.seed }),
       textFadeThreshold: initial.textFadeThreshold ?? 0,
@@ -289,6 +340,9 @@ export function BrainMap({
           }
           reportedSettled = isSettled;
           onSettledChangeRef.current?.(isSettled);
+          // Where everything sits, once it has stopped — the layout the next
+          // visit starts from (todo 13 ⓐ).
+          if (isSettled) onLayoutSettledRef.current?.(created.positions());
         }
 
         const target = cameraTargetRef.current;
@@ -451,7 +505,14 @@ export function BrainMap({
       dragging = true;
     };
     const onPointerUp = (event: PointerEvent) => {
-      if (draggingNode) engine?.releaseNode(draggingNode);
+      if (draggingNode) {
+        const wasPinned = engine?.pinnedNodes().has(draggingNode) ?? false;
+        engine?.releaseNode(draggingNode);
+        // A dragged pinned node is re-pinned where it was dropped; the screen
+        // that persists pins needs the new point.
+        if (wasPinned && engine)
+          onPinsChangeRef.current?.(engine.pinnedNodes());
+      }
       draggingNode = null;
       dragging = false;
       if (captured && host.hasPointerCapture?.(event.pointerId)) {
@@ -627,6 +688,38 @@ export function BrainMap({
   useEffect(() => {
     engineRef.current?.setHiddenLayers(hiddenLayers ?? null);
   }, [hiddenLayers]);
+
+  // Display options are visual too: applied in the frame, never a restart.
+  useEffect(() => {
+    if (display) engineRef.current?.setDisplay(display);
+  }, [display]);
+
+  /**
+   * Persistent pins (todo 13 ⓒ): the prop is the intent, the engine holds
+   * the truth. A pin with no point is pinned where the node is now, and the
+   * resolved point goes back up so the screen can persist it; a node no
+   * longer in the prop is released.
+   */
+  useEffect(() => {
+    const engine = engineRef.current;
+    if (!engine || !pins) return;
+    const held = engine.pinnedNodes();
+    let changed = false;
+    for (const [nodeId, position] of pins) {
+      const current = held.get(nodeId);
+      if (current && (position === null || samePoint(current, position))) {
+        continue;
+      }
+      if (engine.pinNodeAt(nodeId, position ?? undefined)) changed = true;
+    }
+    for (const nodeId of held.keys()) {
+      if (!pins.has(nodeId)) {
+        engine.unpinNode(nodeId);
+        changed = true;
+      }
+    }
+    if (changed) onPinsChangeRef.current?.(engine.pinnedNodes());
+  }, [pins]);
 
   // The canvas is owned by the effect above, not by React's reconciler.
   return null;

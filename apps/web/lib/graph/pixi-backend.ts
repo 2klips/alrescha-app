@@ -65,6 +65,9 @@ const SHAPE_TEXTURE_SIZE = 64;
 /** Dash length in **screen** pixels — converted through the camera each frame. */
 const DASH_SCREEN_LENGTH = 7;
 
+/** Arrowhead length on screen, whatever the zoom (todo 13 ⓒ). */
+const ARROW_SCREEN_LENGTH = 9;
+
 /** Margin outside the viewport kept in the draw set, so nothing pops at the edge. */
 const CULL_MARGIN = 64;
 
@@ -485,6 +488,42 @@ export async function createPixiBackend(
             color: style.color,
             width: style.width / frame.camera.scale,
           });
+          // Arrowheads (Phase 4 Wave B todo 13 ⓒ): one filled triangle per
+          // directed edge, at the target's rim, sized in screen pixels so it
+          // reads the same at every zoom. One fill per style group, like the
+          // stroke above — the group is what keeps this a handful of draw
+          // calls rather than one per edge.
+          let arrows = 0;
+          for (const edge of members) {
+            if (!edge.arrow) continue;
+            const dx = edge.targetX - edge.sourceX;
+            const dy = edge.targetY - edge.sourceY;
+            const length = Math.hypot(dx, dy);
+            if (length === 0) continue;
+            const ux = dx / length;
+            const uy = dy / length;
+            const size = ARROW_SCREEN_LENGTH / frame.camera.scale;
+            const tipX = edge.targetX - ux * edge.targetRadius;
+            const tipY = edge.targetY - uy * edge.targetRadius;
+            const baseX = tipX - ux * size;
+            const baseY = tipY - uy * size;
+            const half = size * 0.45;
+            edgeLayer.poly(
+              [
+                tipX,
+                tipY,
+                baseX - uy * half,
+                baseY + ux * half,
+                baseX + uy * half,
+                baseY - ux * half,
+              ],
+              true,
+            );
+            arrows += 1;
+          }
+          if (arrows > 0) {
+            edgeLayer.fill({ alpha: style.alpha, color: style.color });
+          }
         }
 
         // Nodes: one tinted sprite each, and one overlay path for the few

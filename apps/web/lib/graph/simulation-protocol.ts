@@ -14,6 +14,13 @@ import type { GraphData } from "../dashboard/graph-model";
 export interface ForceConfig {
   /** Pull towards the origin. */
   centerStrength: number;
+  /**
+   * Pull of each node toward its domain's anchor point (Phase 4 Wave B todo
+   * 13 ⓓ). Off at 0, and capped low: at 0.05 the bands separate without the
+   * anchors overriding the links, which is what the plan asks for — a hint
+   * about where a domain lives, not a layout dictated by it.
+   */
+  domainAnchorStrength: number;
   /** Rest length of a link, in layout units. */
   linkDistance: number;
   /** Spring stiffness of a link. */
@@ -24,6 +31,7 @@ export interface ForceConfig {
 
 export const DEFAULT_FORCE_CONFIG: ForceConfig = {
   centerStrength: 0.12,
+  domainAnchorStrength: 0,
   linkDistance: 90,
   linkStrength: 0.55,
   repelStrength: 260,
@@ -33,6 +41,7 @@ export const FORCE_LIMITS: Readonly<
   Record<keyof ForceConfig, { max: number; min: number }>
 > = {
   centerStrength: { max: 1, min: 0 },
+  domainAnchorStrength: { max: 0.05, min: 0 },
   linkDistance: { max: 400, min: 10 },
   linkStrength: { max: 1, min: 0 },
   repelStrength: { max: 2_000, min: 0 },
@@ -183,9 +192,47 @@ export function linkFamilyOf(code: number): LinkFamily {
 /** Index pair into `nodeIds`, plus the family code (todo 11). */
 export type LinkPair = readonly [number, number, number];
 
+/** A node's domain anchor in layout units, or null for a node with none. */
+export type AnchorPoint = readonly [number, number] | null;
+
+/**
+ * `[x0, y0, x1, y1, …]` from a previous layout of the same graph, in
+ * `nodeIds` order; a `NaN` pair is a node the saved layout did not know
+ * (todo 13 ⓐ). Travels as a transferable so a five-thousand-node warm start
+ * is one buffer, not a structured clone of a map.
+ */
+export function encodeInitialPositions(
+  nodeIds: readonly string[],
+  positions: ReadonlyMap<string, Position> | null | undefined,
+): Float32Array<ArrayBuffer> | null {
+  if (!positions || positions.size === 0) return null;
+  const buffer = new Float32Array(nodeIds.length * POSITION_STRIDE);
+  let known = 0;
+  for (let index = 0; index < nodeIds.length; index += 1) {
+    const position = positions.get(nodeIds[index] as string);
+    if (
+      position &&
+      Number.isFinite(position.x) &&
+      Number.isFinite(position.y)
+    ) {
+      buffer[index * POSITION_STRIDE] = position.x;
+      buffer[index * POSITION_STRIDE + 1] = position.y;
+      known += 1;
+    } else {
+      buffer[index * POSITION_STRIDE] = Number.NaN;
+      buffer[index * POSITION_STRIDE + 1] = Number.NaN;
+    }
+  }
+  return known === 0 ? null : buffer;
+}
+
 export type SimulationHostMessage =
   | {
+      /** Per-node domain anchor, same length as `nodeIds` (todo 13 ⓓ). */
+      anchors?: readonly AnchorPoint[] | undefined;
       config: ForceConfig;
+      /** Warm start (todo 13 ⓐ): where the nodes were last time. */
+      initialPositions?: Float32Array | null | undefined;
       links: readonly LinkPair[];
       nodeIds: readonly string[];
       seed: number;
@@ -282,8 +329,44 @@ export function parseHostMessage(value: unknown): SimulationHostMessage | null {
     // change the shape of the graph over a vocabulary mismatch.
     links.push([source, target, linkFamilyCode(linkFamilyOf(family))]);
   }
+  // Anchors are all-or-nothing: a list that does not line up with the node
+  // list would pull nodes toward the wrong band, which is worse than no pull.
+  let anchors: AnchorPoint[] | undefined;
+  if (Array.isArray(value.anchors) && value.anchors.length === nodeIds.length) {
+    const parsed: AnchorPoint[] = [];
+    let valid = true;
+    for (const anchor of value.anchors) {
+      if (anchor === null) {
+        parsed.push(null);
+        continue;
+      }
+      if (
+        !Array.isArray(anchor) ||
+        anchor.length !== 2 ||
+        typeof anchor[0] !== "number" ||
+        typeof anchor[1] !== "number" ||
+        !Number.isFinite(anchor[0]) ||
+        !Number.isFinite(anchor[1])
+      ) {
+        valid = false;
+        break;
+      }
+      parsed.push([anchor[0], anchor[1]]);
+    }
+    if (valid) anchors = parsed;
+  }
+  // A warm start needs a float per coordinate per node; a short buffer is a
+  // buffer from a different graph, and reading past its end would be NaN
+  // positions for the tail — dropped whole instead.
+  const initialPositions =
+    value.initialPositions instanceof Float32Array &&
+    value.initialPositions.length >= nodeIds.length * POSITION_STRIDE
+      ? value.initialPositions
+      : null;
   return {
+    ...(anchors ? { anchors } : {}),
     config: clampForceConfig(value.config as Partial<ForceConfig>),
+    ...(initialPositions ? { initialPositions } : {}),
     links,
     nodeIds,
     seed: typeof value.seed === "number" ? value.seed : 1,
@@ -322,12 +405,24 @@ export function parseWorkerMessage(
  * Build the `start` message for a graph. Edges whose endpoints are missing are
  * dropped here rather than crashing the worker mid-simulation.
  */
+export interface StartMessageOptions {
+  /** Per-node domain anchors, in `data.nodes` order (todo 13 ⓓ). */
+  readonly anchors?: readonly AnchorPoint[] | undefined;
+  /** A saved layout to start from instead of the spiral (todo 13 ⓐ). */
+  readonly initialPositions?: ReadonlyMap<string, Position> | null | undefined;
+}
+
 export function createStartMessage(
   data: GraphData,
   config?: Partial<ForceConfig>,
   seed = 1,
+  options: StartMessageOptions = {},
 ): Extract<SimulationHostMessage, { type: "start" }> {
   const nodeIds = data.nodes.map((node) => node.id);
+  const initialPositions = encodeInitialPositions(
+    nodeIds,
+    options.initialPositions,
+  );
   const indexById = new Map(nodeIds.map((id, index) => [id, index]));
   const links: LinkPair[] = [];
   /**
@@ -367,7 +462,11 @@ export function createStartMessage(
     }
   }
   return {
+    ...(options.anchors && options.anchors.length === nodeIds.length
+      ? { anchors: options.anchors }
+      : {}),
     config: clampForceConfig(config),
+    ...(initialPositions ? { initialPositions } : {}),
     links,
     nodeIds,
     seed,

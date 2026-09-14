@@ -88,7 +88,11 @@ export function createSimulationRuntime(
       revision += 1;
       settled = false;
       layout = createForceLayout({
+        ...(message.anchors ? { anchors: message.anchors } : {}),
         config: message.config,
+        ...(message.initialPositions
+          ? { initialPositions: message.initialPositions }
+          : {}),
         links: message.links,
         nodeCount: message.nodeIds.length,
         seed: message.seed,
