@@ -56,6 +56,7 @@ Phase 4 todo 13 남은 다섯(레이아웃 워밍·`/app/map` 힘 패널·Obsidi
 Phase 4 todo 25(graph-surface v3 — 프로덕션 형태 스토어 위 설치된 예산 벤치, 판정 NOT MET 게시)는 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-graph-surface-v3.md)로 넘어가 있다: 머지만(배포·검증·사이트 문구 없음), `verify-benchmark-report.ts` PASS 1회로 확인, 벤치 재실행 금지.
 OQ-070 ⑴(동결 질문 세트 v4 — `tasks.v4.json`, 개명 후 별칭 추가, 벤치 실행 없음)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-tasks-v4.md)로 넘어가 있다: 머지만, `print-manifest-digest.ts`로 v3·v4 다이제스트 확인, 벤치 실행 금지.
 Phase 4 todo 19 마감(진행 다이제스트·finding 상세·제외 보드·`/app/map` 인스펙터 카드·concept MCP 노출)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-todo-19-screens.md)로 넘어가 있다: PR #19 다음에 웹 머지만, `/app/progress`·`/app/inspection`·`/app/map`에서 검증, 롤백 지점.
+Phase 4 todo 20 결정론 나머지(`docskeleton` 워커 잡·analyze 연쇄·`/app/docs`·`/app/docs/[slug]`·옛 주소 리다이렉트)는 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-doc-pages.md)로 넘어가 있다: PR #20 다음에 웹 머지 → 워커 재배포 순서, 워커 로그의 `docskeleton` 줄과 `/app/docs`로 검증, 롤백 지점. G3(산문 생성)은 이 범위 밖.
 
 ### 사용자 보고 선호 (2026-09-12)
 
