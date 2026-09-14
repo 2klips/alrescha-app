@@ -44,4 +44,4 @@ graph-surface **v4 사전등록은 만들지 않았다** — 다음 실행이 �
 
 ## PR
 
-- TBD_PR_URL — 커밋 1건: `feat(bench): add the tasks.v4 question manifest with post-rename aliases (OQ-070 ⑴)`. 머지만 필요하다(§4).
+- https://github.com/2klips/alrescha-app/pull/19 — 커밋 1건(`bd6dbca`): `feat(bench): add the tasks.v4 question manifest with post-rename aliases (OQ-070 ⑴)`. 머지만 필요하다(§4).
