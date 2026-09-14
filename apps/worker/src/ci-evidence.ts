@@ -7,13 +7,18 @@
  * (`workspace-map.ts` — a `test`/`ci` row with a `supports` verdict, and the
  * edges out of it) was unreachable in production. This is the join.
  *
- * **What becomes verified, and what does not.** Two claims are direct enough
- * to carry the grade:
+ * **What becomes verified, and what does not.** The unit of evidence is a
+ * test file the run executed (2026-09-14): one row per file per analysed
+ * commit, carrying the two claims a report makes directly —
  *
  * - the **test file** ran and passed at the analysed commit — a `tests` edge
  *   out of the evidence node onto the file;
- * - the **requirement** its test name names is supported by that run — a
- *   `supports` edge onto the requirement node.
+ * - each **requirement** its test names name is supported by that run — a
+ *   `supports` edge onto the requirement node, when this analysis wrote one.
+ *
+ * The requirement code is a property of the file's evidence, not the gate
+ * for it: a repository whose tests name no requirement still gets its test
+ * files graded, which is what makes the grade reachable at all.
  *
  * The code *under* the test is not promoted. The scan's file→file `tests`
  * edges are import-derived: they say a test file imports a source file, not
@@ -29,7 +34,7 @@
 
 import {
   resolveReportedPath,
-  type CiRequirementEvidence,
+  type CiTestFileEvidence,
   type MeasuredFile,
 } from "@alrescha/core";
 
@@ -71,7 +76,8 @@ export interface CiEvidenceInput {
     readonly repositoryId: string;
     readonly workspaceId: string;
   };
-  readonly testEvidence: readonly CiRequirementEvidence[];
+  /** The run's test files, as the parser graded them. */
+  readonly testFiles: readonly CiTestFileEvidence[];
 }
 
 const LABEL_LIMIT = 80;
@@ -92,6 +98,39 @@ function evidenceId(
 }
 
 /**
+ * One repository file, as every report that named it saw it.
+ *
+ * A JUnit report and a Vitest JSON report from the same run spell the same
+ * file two ways (a repository path, a runner's absolute path); once both
+ * resolve to one scanned path they are one claim, verified only if every
+ * report agrees.
+ */
+interface ResolvedTestFile {
+  readonly entries: CiTestFileEvidence[];
+  readonly nodeId: string;
+  readonly path: string;
+}
+
+function resolvedTestFiles(
+  input: CiEvidenceInput,
+): readonly ResolvedTestFile[] {
+  const scannedPaths = new Set(input.nodeByPath.keys());
+  const byPath = new Map<string, ResolvedTestFile>();
+  for (const entry of input.testFiles) {
+    const path = resolveReportedPath(entry.testFile, scannedPaths);
+    if (path === null) continue;
+    const nodeId = input.nodeByPath.get(path);
+    if (nodeId === undefined) continue;
+    const current = byPath.get(path) ?? { entries: [], nodeId, path };
+    current.entries.push(entry);
+    byPath.set(path, current);
+  }
+  return [...byPath.values()].sort((left, right) =>
+    left.path < right.path ? -1 : 1,
+  );
+}
+
+/**
  * The evidence rows and edges one analysis should hold.
  *
  * Ids are derived from the analysed commit and what the evidence is about, so
@@ -105,81 +144,85 @@ export function ciEvidenceRecords(input: CiEvidenceInput): CiEvidenceRecords {
   const edges: PersistedEvidenceEdge[] = [];
   const seen = new Set<string>();
 
-  for (const requirement of input.testEvidence) {
-    // Group the run's sources by the repository file they came from: one
-    // evidence row per (requirement, test file) is the finest grain the
-    // report supports, and the coarsest that still names a file.
-    const byTestPath = new Map<string, typeof requirement.sources>();
-    for (const source of requirement.sources) {
-      const path = resolveReportedPath(source.testFile, scannedPaths);
-      if (path === null) continue;
-      byTestPath.set(path, [...(byTestPath.get(path) ?? []), source]);
-    }
+  for (const file of resolvedTestFiles(input)) {
+    const id = evidenceId(input.scope, [
+      "ci-test",
+      input.analyzedCommitSha,
+      file.path,
+    ]);
+    if (seen.has(id)) continue;
+    seen.add(id);
 
-    for (const [testPath, sources] of [...byTestPath].sort(([left], [right]) =>
-      left < right ? -1 : 1,
-    )) {
-      const testNodeId = input.nodeByPath.get(testPath);
-      if (testNodeId === undefined) continue;
-      const id = evidenceId(input.scope, [
-        "ci-test",
-        input.analyzedCommitSha,
-        requirement.requirementId,
-        testPath,
-      ]);
-      if (seen.has(id)) continue;
-      seen.add(id);
-
-      evidence.push({
-        id,
-        kind: "test",
-        label: truncated(`${requirement.requirementId} · ${testPath}`),
-        metadata: {
-          analyzedCommitSha: input.analyzedCommitSha,
-          artifacts: sources.map((source) => ({
+    const verified = file.entries.every(({ grade }) => grade === "verified");
+    const reason = verified
+      ? (file.entries[0]?.reason ?? "")
+      : (file.entries.find(({ grade }) => grade !== "verified")?.reason ?? "");
+    const sources = file.entries.flatMap(({ sources }) => sources);
+    const requirementCodes = [
+      ...new Set(file.entries.flatMap(({ requirementIds }) => requirementIds)),
+    ].sort();
+    const artifacts = [
+      ...new Map(
+        sources.map((source) => [
+          source.artifactId,
+          {
             artifactId: source.artifactId,
             artifactName: source.artifactName,
             format: source.format,
             headSha: source.headSha,
-          })),
-          grade: requirement.grade,
-          reason: requirement.reason,
-          requirementCode: requirement.requirementId,
-          source: "ci",
-          testNames: sources.map((source) => source.testName).sort(),
-        },
-        sourceArtifactId: testNodeId,
-        // `unknown` where the run did not verify: the row records what was
-        // found, and the map promotes nothing from it (ADR-001).
-        verdict: requirement.verdict === "supports" ? "supports" : "unknown",
-      });
+          },
+        ]),
+      ).values(),
+    ].sort((left, right) => left.artifactId - right.artifactId);
 
-      // The file ran and passed — the one claim the report makes directly.
-      edges.push({
-        confidence: requirement.grade === "verified" ? 1 : 0.6,
-        evidenceId: id,
-        provenance: {
-          method: "ci-report",
-          reason: `CI ran ${testPath} at ${input.analyzedCommitSha}`,
-          tier: requirement.grade === "verified" ? "resolved" : "reference",
-        },
-        relation: "tests",
-        targetNodeId: testNodeId,
-      });
+    evidence.push({
+      id,
+      kind: "test",
+      label: truncated(`CI run · ${file.path}`),
+      metadata: {
+        analyzedCommitSha: input.analyzedCommitSha,
+        artifacts,
+        grade: verified ? "verified" : "inferred",
+        reason,
+        requirementCodes,
+        source: "ci",
+        testNames: [...new Set(sources.map((source) => source.testName))].sort(),
+      },
+      sourceArtifactId: file.nodeId,
+      // `unknown` where the run did not verify: the row records what was
+      // found, and the map promotes nothing from it (ADR-001).
+      verdict: verified ? "supports" : "unknown",
+    });
 
-      // …and the requirement its test name claims, when this analysis wrote
-      // a node for that code. A report naming a requirement no document
-      // states gets no edge rather than a dangling one.
-      for (const requirementNodeId of input.requirementNodesByCode.get(
-        requirement.requirementId,
-      ) ?? []) {
+    const confidence = verified ? 1 : 0.6;
+    const tier = verified ? "resolved" : "reference";
+
+    // The file ran and passed — the one claim the report makes directly.
+    edges.push({
+      confidence,
+      evidenceId: id,
+      provenance: {
+        method: "ci-report",
+        reason: `CI ran ${file.path} at ${input.analyzedCommitSha}`,
+        tier,
+      },
+      relation: "tests",
+      targetNodeId: file.nodeId,
+    });
+
+    // …and each requirement its test names claim, when this analysis wrote
+    // a node for that code. A report naming a requirement no document
+    // states gets no edge rather than a dangling one.
+    for (const code of requirementCodes) {
+      for (const requirementNodeId of input.requirementNodesByCode.get(code) ??
+        []) {
         edges.push({
-          confidence: requirement.grade === "verified" ? 1 : 0.6,
+          confidence,
           evidenceId: id,
           provenance: {
             method: "ci-report",
-            reason: `test name names ${requirement.requirementId}`,
-            tier: requirement.grade === "verified" ? "resolved" : "reference",
+            reason: `test name names ${code}`,
+            tier,
           },
           relation: "supports",
           targetNodeId: requirementNodeId,

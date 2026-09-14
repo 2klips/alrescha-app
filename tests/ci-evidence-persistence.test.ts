@@ -152,12 +152,20 @@ describe("CI evidence reaches the map", () => {
     return new Map(model.graph.nodes.map((node) => [node.id, node.grade]));
   }
 
-  /** The records one analysis of the recorded run would produce. */
-  function records() {
+  /**
+   * The records one analysis of the recorded run would produce — or of the
+   * same run with the requirement code stripped from every test name.
+   */
+  function records(options: { readonly withoutRequirementCodes?: boolean } = {}) {
     const ingestion = ingestCiTestReports({
       analyzedCommitSha: fixture.analyzedCommitSha,
       checkRuns: fixture.checkRuns,
-      reports: fixture.reports,
+      reports: options.withoutRequirementCodes
+        ? fixture.reports.map((report) => ({
+            ...report,
+            content: report.content.replaceAll("REQ-AUTH-002 ", ""),
+          }))
+        : fixture.reports,
     });
     return ciEvidenceRecords({
       analyzedCommitSha: fixture.analyzedCommitSha,
@@ -169,7 +177,7 @@ describe("CI evidence reaches the map", () => {
       ]),
       requirementNodesByCode: new Map([["REQ-AUTH-002", [REQUIREMENT_NODE]]]),
       scope: { repositoryId: REPOSITORY, workspaceId: workspace },
-      testEvidence: ingestion.evidence,
+      testFiles: ingestion.testFiles,
     });
   }
 
@@ -272,6 +280,39 @@ describe("CI evidence reaches the map", () => {
     // import-derived, and inference does not carry an execution grade.
     expect(grades.get(CODE_NODE)).toBe("inferred");
     expect(grades.get(SPEC_NODE)).toBe("inferred");
+  });
+
+  /**
+   * The grade without a requirement code (2026-09-14). The file ran and
+   * passed is the claim; the code in a test's name is what the file supports,
+   * not what makes it evidence. A suite that names no requirement — this
+   * repository's own, for one — still gets its test files graded.
+   */
+  it("promotes the test file when its names carry no requirement code, and nothing else", async () => {
+    const delta = await store.reconcileCiEvidence({
+      ...records({ withoutRequirementCodes: true }),
+      repositoryId: REPOSITORY,
+      workspaceId: workspace,
+    });
+    expect(delta).toMatchObject({ removed: 0, supporting: 1, written: 1 });
+
+    const grades = await gradeById();
+    expect(grades.get(TEST_NODE)).toBe("verified");
+    // No name named it, so no edge reaches it.
+    expect(grades.get(REQUIREMENT_NODE)).toBe("inferred");
+    expect(grades.get(CODE_NODE)).toBe("inferred");
+    const edges = await database.query<{ relation: string }>(
+      `select e.relation from public.edges e
+       join public.evidence v on v.id = e.source_node_id
+       where e.workspace_id = $1`,
+      [workspace],
+    );
+    expect(edges.rows).toEqual([{ relation: "tests" }]);
+    const metadata = await database.query<{ codes: string[] }>(
+      "select metadata->'requirementCodes' as codes from public.evidence where workspace_id = $1",
+      [workspace],
+    );
+    expect(metadata.rows[0]?.codes).toEqual([]);
   });
 
   it("writes the row and the edges the map reads", async () => {

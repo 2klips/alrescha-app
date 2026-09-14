@@ -171,7 +171,7 @@ test("a CI run makes its test file verified on the map — and nothing else", as
     // 2. The recorded run, through the production writer.
     const run = await recordedRun();
     const ingestion = ingestCiTestReports(run);
-    expect(ingestion.evidence.length).toBeGreaterThan(0);
+    expect(ingestion.testFiles.length).toBeGreaterThan(0);
     const records = ciEvidenceRecords({
       analyzedCommitSha: run.analyzedCommitSha,
       measured: [],
@@ -180,7 +180,7 @@ test("a CI run makes its test file verified on the map — and nothing else", as
       // test-file promotion is the one under test.
       requirementNodesByCode: new Map(),
       scope: { repositoryId, workspaceId: user.workspaceId },
-      testEvidence: ingestion.evidence,
+      testFiles: ingestion.testFiles,
     });
     const store = new PostgresAnalysisStore(sql);
     const delta = await store.reconcileCiEvidence({
