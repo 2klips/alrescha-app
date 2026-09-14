@@ -34,6 +34,7 @@ export const NAV = {
   receipts: "Receipts",
   harness: "에이전트 지시문",
   library: "저장된 증거",
+  docs: "문서",
   connectRepo: "레포 연결",
   stats: "통계",
   settingsMcp: "MCP 접근",

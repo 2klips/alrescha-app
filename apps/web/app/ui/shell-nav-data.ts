@@ -2,6 +2,7 @@ import {
   Activity,
   AlertTriangle,
   Archive,
+  BookOpen,
   BookmarkPlus,
   Bot,
   Braces,
@@ -98,6 +99,7 @@ const WORKSPACE_GROUPS: readonly ShellNavGroup[] = [
       { href: "/app/team", icon: Users, label: NAV.team },
       { href: "/app/harness", icon: BookmarkPlus, label: NAV.harness },
       { href: "/app/library", icon: Archive, label: NAV.library },
+      { href: "/app/docs", icon: BookOpen, label: NAV.docs },
     ],
   },
   {

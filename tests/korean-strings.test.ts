@@ -9,6 +9,7 @@ import * as AUTH_MODULE from "../apps/web/lib/strings/auth";
 import * as COMMITS_MODULE from "../apps/web/lib/strings/commits";
 import * as COMMON_MODULE from "../apps/web/lib/strings/common";
 import * as DASHBOARD_MODULE from "../apps/web/lib/strings/dashboard";
+import * as DOCS_MODULE from "../apps/web/lib/strings/docs";
 import * as GRAPH_MODULE from "../apps/web/lib/strings/graph";
 import * as HARNESS_MODULE from "../apps/web/lib/strings/harness";
 import * as HOME_MODULE from "../apps/web/lib/strings/home";
@@ -74,6 +75,10 @@ const CONVERTED_SCREENS = [
   "apps/web/app/app/(shell)/map/map-screen.tsx",
   // Phase 4 Wave D todo 19 ⑴
   "apps/web/app/ui/inspector-card.tsx",
+  // Phase 4 Wave D todo 20
+  "apps/web/app/ui/doc-pages.tsx",
+  "apps/web/app/app/(shell)/docs/page.tsx",
+  "apps/web/app/app/(shell)/docs/[slug]/page.tsx",
   // Phase 3 Wave D
   "apps/web/app/app/(shell)/settings/mcp/instruction-blocks.tsx",
   // Phase 3 Wave E
@@ -271,6 +276,7 @@ describe("korean-first copy policy", () => {
     NOT_FOUND: COMMON_MODULE.NOT_FOUND,
     COMMITS: COMMITS_MODULE.COMMITS,
     DASHBOARD: DASHBOARD_MODULE.DASHBOARD,
+    DOCS: DOCS_MODULE.DOCS,
     GRAPH: GRAPH_MODULE.GRAPH,
     HARNESS: HARNESS_MODULE.HARNESS,
     HOME: HOME_MODULE.HOME,

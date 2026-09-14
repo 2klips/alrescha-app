@@ -1,0 +1,6 @@
+{
+  "route": "/app/docs/[slug]",
+  "theme": "dark",
+  "violationCount": 0,
+  "violations": []
+}

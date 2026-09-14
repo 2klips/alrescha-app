@@ -1,0 +1,213 @@
+/*
+ * Screens: /app/docs and /app/docs/[slug] (doc-pages).
+ * Phase 4 Wave D todo 20 — a page is the readable face of a node. The
+ * layout is a reading column: the prose sits under its inferred badge, and
+ * everything else is names and counts in chips and lists.
+ */
+
+.docs-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin: 0 auto;
+  max-width: var(--layout-page-max);
+  padding: var(--layout-page-padding) var(--layout-page-padding) var(--space-7);
+  width: 100%;
+}
+
+.docs-back a {
+  color: var(--fg-muted);
+  font: var(--text-body-sm) / var(--line-body-sm) var(--font-mono);
+  text-decoration: none;
+}
+
+.docs-back a:hover,
+.docs-back a:focus-visible {
+  color: var(--accent-fg);
+  text-decoration: underline;
+}
+
+.docs-meta {
+  align-items: baseline;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.docs-meta code {
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+}
+
+.docs-scope {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-full);
+  color: var(--fg-muted);
+  display: inline-block;
+  font: var(--text-body-sm) / var(--line-body-sm) var(--font-mono);
+  padding: 0 var(--space-2);
+  white-space: nowrap;
+}
+
+.docs-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.docs-empty {
+  align-items: flex-start;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-medium);
+  color: var(--fg-muted);
+  display: grid;
+  gap: var(--space-2);
+  max-width: var(--layout-readable-max);
+  padding: var(--space-5);
+}
+
+.docs-empty h2 {
+  color: var(--fg-default);
+  font-size: var(--text-title-sm);
+  line-height: var(--line-title-sm);
+  margin: 0;
+}
+
+.docs-empty p,
+.docs-empty-line {
+  color: var(--fg-muted);
+  font-size: var(--text-body-md);
+  line-height: var(--line-body-lg);
+  margin: 0;
+}
+
+.docs-empty-line {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--space-1);
+}
+
+.docs-list {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.docs-row {
+  align-items: baseline;
+  border-top: 1px solid var(--border-muted);
+  display: grid;
+  gap: var(--space-2) var(--space-4);
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: var(--space-3) 0;
+}
+
+.docs-row:last-child {
+  border-bottom: 1px solid var(--border-muted);
+}
+
+.docs-row a {
+  align-items: baseline;
+  color: var(--fg-default);
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+  text-decoration: none;
+}
+
+.docs-row a strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.docs-row a:hover strong,
+.docs-row a:focus-visible strong {
+  color: var(--accent-fg);
+  text-decoration: underline;
+}
+
+.docs-row small {
+  align-items: baseline;
+  color: var(--fg-muted);
+  display: inline-flex;
+  flex-wrap: wrap;
+  font-size: var(--text-body-sm);
+  gap: var(--space-2);
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.docs-prose-absent {
+  color: var(--fg-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--line-body-md);
+  margin: 0;
+}
+
+.docs-summary {
+  align-items: flex-start;
+  display: grid;
+  gap: var(--space-2);
+  max-width: var(--layout-readable-max);
+}
+
+.docs-summary p {
+  color: var(--fg-default);
+  font-size: var(--text-body-md);
+  line-height: var(--line-body-lg);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.docs-paths,
+.docs-citations {
+  display: grid;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.docs-paths code,
+.docs-citations code {
+  color: var(--fg-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+  overflow-wrap: anywhere;
+}
+
+.docs-citations li {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.docs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.docs-chips li {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-full);
+  color: var(--fg-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--line-body-md);
+  padding: 0 var(--space-2);
+}
+
+.docs-chips code {
+  color: var(--fg-default);
+  font-family: var(--font-mono);
+  font-size: var(--text-body-sm);
+}
