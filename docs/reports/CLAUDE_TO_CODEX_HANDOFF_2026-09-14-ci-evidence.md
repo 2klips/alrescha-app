@@ -52,7 +52,7 @@ SQL·웹·의존성 무변경. 녹화 픽스처의 행·엣지 수는 종전과 
 
 ## PR
 
-- (머지 보류 중 — PR 번호는 생성 뒤 기입)
+- https://github.com/2klips/alrescha-app/pull/22 — base `phase4/wave-d-todo-20`. 커밋 3건: `feat(worker): grade CI evidence per test file, with requirement codes as edges rather than the gate`(`e70b576`), `ci: run the gate on GitHub Actions and upload the Vitest JUnit report as an artifact`(`092fd45`), 문서(`712e9cd`). PR #19 → #20 → #21 다음에 머지. 브랜치의 첫 CI 실행 결과는 이 문서의 "게이트 수치" 아래에 적는다.
 
 ## 게이트 수치
 
