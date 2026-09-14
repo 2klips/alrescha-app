@@ -1,7 +1,7 @@
 # Claude → Codex 인수인계: todo 25 — graph-surface v3 사전등록·실행 (프로덕션 형태 스토어)
 
 작성: 2026-09-14 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **머지만 — 배포·검증 없음.** 벤치 하네스·사전등록·결과·감사 스크립트·문서만 바뀐다. 웹 화면·워커·마이그레이션·환경변수 무변경, 사이트 문구 무변경.
+상태: **머지·감사 확인 완료 (2026-09-14)** — PR #18 merge `c5984e9`, Vercel 자동 배포 성공. `verify-benchmark-report.ts` 1회 실행으로 efficacy 600/600·graph-surface v1/v2/v3 각 96/96·relational 32/32 PASS 확인. 판정 `NOT MET` 유지, 벤치 재실행·사이트 문구 변경 없음. 큐 0·기존 실패 15 WARN·나머지 OK, Fly v20 유지. [머지 기록](../../.omo/evidence/phase4/pr18-merge-2026-09-14.md). OQ-070/071 사용자 결정 대기.
 브랜치: `phase4/wave-e-todo-25` (`main@ecc68d5` 기준) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/todo-25.md`](../../.omo/evidence/phase4/todo-25.md), 결과 [`benchmarks/graph-surface/results.v3.md`](../../benchmarks/graph-surface/results.v3.md) · [`results.v3-relational.md`](../../benchmarks/graph-surface/results.v3-relational.md) · [`results.v3-auxiliary.md`](../../benchmarks/graph-surface/results.v3-auxiliary.md).
 
@@ -56,4 +56,4 @@ v1·v2는 출하되지 않는 표면을 쟀다 — 하네스가 본문을 붙여
 
 ## PR
 
-- https://github.com/2klips/alrescha-app/pull/18 — 커밋 2건: `feat(bench): preregister graph-surface v3 against the production-shaped store`(`c172b6b`, 잠금), `feat(bench): run graph-surface v3 against the production-shaped store`(실행·게시). 머지만 필요하다(§5).
+- https://github.com/2klips/alrescha-app/pull/18 — 커밋 3건(`c172b6b` 잠금, `a7b83dd` 실행·게시, `91761a7` 인계 문서)을 유지한 merge commit `c5984e9`로 머지 완료(2026-09-14).
