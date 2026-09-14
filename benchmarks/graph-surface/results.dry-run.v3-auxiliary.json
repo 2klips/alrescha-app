@@ -1,0 +1,555 @@
+{
+  "adoption": [
+    {
+      "adopted": 0,
+      "model": "pooled",
+      "rate": 0,
+      "trials": 48
+    },
+    {
+      "adopted": 0,
+      "model": "gpt-5.6-luna",
+      "rate": 0,
+      "trials": 24
+    },
+    {
+      "adopted": 0,
+      "model": "claude-sonnet-5",
+      "rate": 0,
+      "trials": 24
+    }
+  ],
+  "duplication": {
+    "created": 0,
+    "duplicated": 0,
+    "matched": {},
+    "rate": null,
+    "trials": 48
+  },
+  "generatedAt": "2026-09-14T09:57:24.496Z",
+  "mainReport": {
+    "file": "benchmarks/graph-surface/results.dry-run.v3.json",
+    "mode": "dry-run",
+    "preregistrationSha256": "7ce54ebf6cae6794290a2e56b76ebff0c47aadce4f3bf014feebe191a146f34d",
+    "trialCount": 96
+  },
+  "preregistrationSha256": "5f6a6d7b573025f43fc9b207808765bf64caf0e4aa6a6f8536f3ceba153f305f",
+  "relational": {
+    "judgment": {
+      "baselineMeanTurns": 2,
+      "baselinePassRate": 1,
+      "graphMeanTurns": 2,
+      "graphPassRate": 1,
+      "passRateDelta": 0,
+      "primaryHypothesis": "turns-non-increasing",
+      "primaryMet": true,
+      "qualityNonInferior": true,
+      "turnsDelta": 0,
+      "turnsReduced": false,
+      "verdict": "MET"
+    },
+    "models": [
+      "gpt-5.6-luna",
+      "claude-sonnet-5"
+    ],
+    "preregistrationSha256": "34b8fa8730ae47d5d25f62a28225175656506f5c7d82cc668fc760ed4bfd5f14",
+    "rows": [
+      {
+        "arm": "file-exploration",
+        "meanTurns": 2,
+        "model": "pooled",
+        "passRate": 1,
+        "trials": 16
+      },
+      {
+        "arm": "graph-surface",
+        "meanTurns": 2,
+        "model": "pooled",
+        "passRate": 1,
+        "trials": 16
+      },
+      {
+        "arm": "file-exploration",
+        "meanTurns": 2,
+        "model": "gpt-5.6-luna",
+        "passRate": 1,
+        "trials": 8
+      },
+      {
+        "arm": "graph-surface",
+        "meanTurns": 2,
+        "model": "gpt-5.6-luna",
+        "passRate": 1,
+        "trials": 8
+      },
+      {
+        "arm": "file-exploration",
+        "meanTurns": 2,
+        "model": "claude-sonnet-5",
+        "passRate": 1,
+        "trials": 8
+      },
+      {
+        "arm": "graph-surface",
+        "meanTurns": 2,
+        "model": "claude-sonnet-5",
+        "passRate": 1,
+        "trials": 8
+      }
+    ],
+    "trialCount": 32
+  },
+  "risk": {
+    "corpusCommit": "ecc68d569608548d877fca03634949b39443aff9",
+    "entryCount": 577,
+    "fixCommits": 39,
+    "repository": "local/alrescha-app",
+    "sinceDays": 90,
+    "strata": [
+      {
+        "entries": 0,
+        "labels": [],
+        "precisionAt10": null,
+        "precisionAtN": null,
+        "stratum": "with-ci",
+        "truePositives": 0
+      },
+      {
+        "entries": 30,
+        "labels": [
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 10,
+            "level": "elevated",
+            "path": "tests/helpers/database.ts",
+            "rank": 1,
+            "score": 3,
+            "truePositive": true
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/lib/auth/current-user.ts",
+            "rank": 2,
+            "score": 1.684,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/lib/supabase/server.ts",
+            "rank": 3,
+            "score": 1.667,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/lib/supabase/admin.ts",
+            "rank": 4,
+            "score": 1.396,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 1,
+            "level": "moderate",
+            "path": "apps/web/app/app/(shell)/settings/mcp/actions.ts",
+            "rank": 5,
+            "score": 1.388,
+            "truePositive": true
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/app/(shell)/map/map-screen.tsx",
+            "rank": 6,
+            "score": 1.352,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "tests/e2e/helpers/session.ts",
+            "rank": 7,
+            "score": 1.339,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/app/(shell)/harness/actions.ts",
+            "rank": 8,
+            "score": 1.248,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "scripts/graph-surface-benchmark/product-surface.ts",
+            "rank": 9,
+            "score": 1.225,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 1,
+            "level": "moderate",
+            "path": "apps/web/lib/github/connect-repository.ts",
+            "rank": 10,
+            "score": 1.214,
+            "truePositive": true
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 1,
+            "level": "moderate",
+            "path": "apps/web/lib/shell/context.ts",
+            "rank": 11,
+            "score": 1.188,
+            "truePositive": true
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 1,
+            "level": "moderate",
+            "path": "apps/web/app/app/(shell)/settings/ai/actions.ts",
+            "rank": 12,
+            "score": 1.162,
+            "truePositive": true
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/ui/button.tsx",
+            "rank": 13,
+            "score": 1.162,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/lib/security/audit.ts",
+            "rank": 14,
+            "score": 1.157,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/ui/app-shell.tsx",
+            "rank": 15,
+            "score": 1.154,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "fan-in"
+            ],
+            "fixCommits": 3,
+            "level": "moderate",
+            "path": "packages/core/src/ingest/repository-scanner.ts",
+            "rank": 16,
+            "score": 1.154,
+            "truePositive": true
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/ui/onboarding-flow.tsx",
+            "rank": 17,
+            "score": 1.153,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "tests/helpers/pglite-sql.ts",
+            "rank": 18,
+            "score": 1.153,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/lib/github/env.ts",
+            "rank": 19,
+            "score": 1.144,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/lib/supabase/env.ts",
+            "rank": 20,
+            "score": 1.144,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/ui/brain-map.tsx",
+            "rank": 21,
+            "score": 1.143,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/ui/status-badge.tsx",
+            "rank": 22,
+            "score": 1.14,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "packages/core/src/ingest/path-conventions.ts",
+            "rank": 23,
+            "score": 1.139,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/ui/shell-header.tsx",
+            "rank": 24,
+            "score": 1.138,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 1,
+            "level": "moderate",
+            "path": "tests/helpers/github-shaped-plan.ts",
+            "rank": 25,
+            "score": 1.137,
+            "truePositive": true
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/ui/command-palette.tsx",
+            "rank": 26,
+            "score": 1.134,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/web/app/ui/ui-icon.tsx",
+            "rank": 27,
+            "score": 1.134,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 1,
+            "level": "moderate",
+            "path": "apps/web/app/ui/overview-screen.tsx",
+            "rank": 28,
+            "score": 1.13,
+            "truePositive": true
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 0,
+            "level": "moderate",
+            "path": "apps/worker/src/postgres-judgment-store.ts",
+            "rank": 29,
+            "score": 1.13,
+            "truePositive": false
+          },
+          {
+            "factors": [
+              "untested",
+              "fan-in"
+            ],
+            "fixCommits": 1,
+            "level": "moderate",
+            "path": "apps/web/app/app/(shell)/actions.ts",
+            "rank": 30,
+            "score": 1.127,
+            "truePositive": true
+          }
+        ],
+        "precisionAt10": 0.3,
+        "precisionAtN": 0.3,
+        "stratum": "without-ci",
+        "truePositives": 9
+      }
+    ],
+    "subjectPattern": "\\b(fix|bug|hotfix|regress|revert)",
+    "topN": 30,
+    "unmeasured": [
+      "coverage",
+      "dependency-audit"
+    ]
+  },
+  "tokensPerCall": [
+    {
+      "arm": "file-exploration",
+      "calls": 96,
+      "cacheReadShare": null,
+      "meanCacheCreation": 0,
+      "meanCacheRead": 0,
+      "meanInput": 0,
+      "meanOutput": 0,
+      "model": "pooled"
+    },
+    {
+      "arm": "graph-surface",
+      "calls": 96,
+      "cacheReadShare": null,
+      "meanCacheCreation": 0,
+      "meanCacheRead": 0,
+      "meanInput": 0,
+      "meanOutput": 0,
+      "model": "pooled"
+    },
+    {
+      "arm": "file-exploration",
+      "calls": 48,
+      "cacheReadShare": null,
+      "meanCacheCreation": 0,
+      "meanCacheRead": 0,
+      "meanInput": 0,
+      "meanOutput": 0,
+      "model": "gpt-5.6-luna"
+    },
+    {
+      "arm": "graph-surface",
+      "calls": 48,
+      "cacheReadShare": null,
+      "meanCacheCreation": 0,
+      "meanCacheRead": 0,
+      "meanInput": 0,
+      "meanOutput": 0,
+      "model": "gpt-5.6-luna"
+    },
+    {
+      "arm": "file-exploration",
+      "calls": 48,
+      "cacheReadShare": null,
+      "meanCacheCreation": 0,
+      "meanCacheRead": 0,
+      "meanInput": 0,
+      "meanOutput": 0,
+      "model": "claude-sonnet-5"
+    },
+    {
+      "arm": "graph-surface",
+      "calls": 48,
+      "cacheReadShare": null,
+      "meanCacheCreation": 0,
+      "meanCacheRead": 0,
+      "meanInput": 0,
+      "meanOutput": 0,
+      "model": "claude-sonnet-5"
+    }
+  ]
+}

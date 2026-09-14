@@ -1,0 +1,1253 @@
+{
+  "corpusCommit": "ecc68d569608548d877fca03634949b39443aff9",
+  "corpusScans": {
+    ".": {
+      "artifactCount": 758,
+      "commitSha": "0513a7ae59ec96f4a99974b69f8b5b5ac0d26399",
+      "edgeCount": 4657
+    }
+  },
+  "generatedAt": "2026-09-14T09:57:21.726Z",
+  "judgment": {
+    "baselineMeanTurns": 2,
+    "baselinePassRate": 1,
+    "graphMeanTurns": 2,
+    "graphPassRate": 1,
+    "passRateDelta": 0,
+    "primaryHypothesis": "turns-non-increasing",
+    "primaryMet": true,
+    "qualityNonInferior": true,
+    "turnsDelta": 0,
+    "turnsReduced": false,
+    "verdict": "MET"
+  },
+  "mode": "dry-run",
+  "preregistrationFile": "benchmarks/graph-surface/preregistration.v3-relational.json",
+  "preregistrationSha256": "34b8fa8730ae47d5d25f62a28225175656506f5c7d82cc668fc760ed4bfd5f14",
+  "primaryHypothesis": "turns-non-increasing",
+  "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+  "render": {
+    "armNotes": [
+      "file-exploration: 체크아웃 툴 list_files, grep_files, read_file — MCP 없음.",
+      "graph-surface: 같은 체크아웃 툴 + 제품 tools/list 21툴(요약 전용 스토어 — 본문 0) + 설치 지시 블록.",
+      "프로덕션 스토어 스캔: . 758노드·4657엣지 (scan 0513a7ae59ec)."
+    ],
+    "corpusCommit": "ecc68d569608548d877fca03634949b39443aff9",
+    "generatedAt": "2026-09-14T09:57:21.726Z",
+    "mode": "dry-run",
+    "models": [
+      "gpt-5.6-luna",
+      "claude-sonnet-5"
+    ],
+    "preregistrationFile": "benchmarks/graph-surface/preregistration.v3-relational.json",
+    "preregistrationSha256": "34b8fa8730ae47d5d25f62a28225175656506f5c7d82cc668fc760ed4bfd5f14",
+    "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+    "questionSourceLine": "- 질문 출처: 사전등록 파일 내 인라인 answer-manifest 4과제 (파일 다이제스트가 잠금)",
+    "title": "그래프 표면 v3 — 관계형 질문 4개 세트 (부속 실험 ④)",
+    "v3ManifestDigest": null
+  },
+  "schemaVersion": "graph-surface-v3",
+  "trials": [
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts. packages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts. packages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts. packages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts. packages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts. packages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts. packages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts. packages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts. packages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "apps/web/app/api/mcp/route.ts. handleHostedMcpRequest. apps/web/lib/mcp/endpoint",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "apps/web/app/api/mcp/route.ts. handleHostedMcpRequest. apps/web/lib/mcp/endpoint",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "apps/web/app/api/mcp/route.ts. handleHostedMcpRequest. apps/web/lib/mcp/endpoint",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "apps/web/app/api/mcp/route.ts. handleHostedMcpRequest. apps/web/lib/mcp/endpoint",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "apps/web/app/api/mcp/route.ts. handleHostedMcpRequest. apps/web/lib/mcp/endpoint",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "apps/web/app/api/mcp/route.ts. handleHostedMcpRequest. apps/web/lib/mcp/endpoint",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "apps/web/app/api/mcp/route.ts. handleHostedMcpRequest. apps/web/lib/mcp/endpoint",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "apps/web/app/api/mcp/route.ts. handleHostedMcpRequest. apps/web/lib/mcp/endpoint",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-access-events-migrations",
+      "answer": "202608100002_evidence_graph_domain. 202608300002_access_events_occurred_idx. access_events_workspace_occurred_idx",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-access-events-migrations",
+      "answer": "202608100002_evidence_graph_domain. 202608300002_access_events_occurred_idx. access_events_workspace_occurred_idx",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-access-events-migrations",
+      "answer": "202608100002_evidence_graph_domain. 202608300002_access_events_occurred_idx. access_events_workspace_occurred_idx",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-access-events-migrations",
+      "answer": "202608100002_evidence_graph_domain. 202608300002_access_events_occurred_idx. access_events_workspace_occurred_idx",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-access-events-migrations",
+      "answer": "202608100002_evidence_graph_domain. 202608300002_access_events_occurred_idx. access_events_workspace_occurred_idx",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-access-events-migrations",
+      "answer": "202608100002_evidence_graph_domain. 202608300002_access_events_occurred_idx. access_events_workspace_occurred_idx",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-access-events-migrations",
+      "answer": "202608100002_evidence_graph_domain. 202608300002_access_events_occurred_idx. access_events_workspace_occurred_idx",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-access-events-migrations",
+      "answer": "202608100002_evidence_graph_domain. 202608300002_access_events_occurred_idx. access_events_workspace_occurred_idx",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-oq-069-references",
+      "answer": "spec/OPEN_QUESTIONS.md. CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-oq-069-references",
+      "answer": "spec/OPEN_QUESTIONS.md. CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-oq-069-references",
+      "answer": "spec/OPEN_QUESTIONS.md. CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-oq-069-references",
+      "answer": "spec/OPEN_QUESTIONS.md. CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-oq-069-references",
+      "answer": "spec/OPEN_QUESTIONS.md. CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-oq-069-references",
+      "answer": "spec/OPEN_QUESTIONS.md. CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-oq-069-references",
+      "answer": "spec/OPEN_QUESTIONS.md. CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-oq-069-references",
+      "answer": "spec/OPEN_QUESTIONS.md. CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 0,
+          "outputTokens": 0
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 0,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 0,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "assert_link",
+        "submit_answer"
+      ],
+      "turns": 2
+    }
+  ],
+  "v3ManifestDigest": null
+}

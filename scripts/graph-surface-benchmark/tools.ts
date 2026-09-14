@@ -23,17 +23,24 @@ import {
 import type { McpWorkspaceData } from "../../packages/mcp/src/store";
 import type { GraphSurfaceArm, GraphSurfaceProtocol } from "./manifest";
 
+/**
+ * A JSON-schema object for a tool's input. The v1/v2 arms wrote theirs by
+ * hand; the v3 graph arm converts the product's `tools/list` output, whose
+ * schemas are the zod-generated ones the shipped server answers with —
+ * nested, with enums and arrays — so the shape is a schema, not a table.
+ */
+export interface ToolParameterSchema {
+  readonly [key: string]: unknown;
+  readonly additionalProperties?: boolean;
+  readonly properties?: Readonly<Record<string, unknown>>;
+  readonly required?: readonly string[];
+  readonly type: "object";
+}
+
 export interface ToolDefinition {
   readonly description: string;
   readonly name: string;
-  readonly parameters: {
-    readonly additionalProperties: false;
-    readonly properties: Readonly<
-      Record<string, { description?: string; type: string }>
-    >;
-    readonly required: readonly string[];
-    readonly type: "object";
-  };
+  readonly parameters: ToolParameterSchema;
 }
 
 export const SUBMIT_ANSWER_TOOL: ToolDefinition = {
@@ -231,6 +238,18 @@ function clip(text: string, maxChars: number): string {
 
 export interface ToolExecutor {
   execute(name: string, args: Record<string, unknown>): string;
+}
+
+/**
+ * What the agent loop actually needs from an executor. The corpus executor
+ * answers synchronously; the v3 product executor goes through an MCP client
+ * and cannot. The loop awaits either.
+ */
+export interface AgentToolExecutor {
+  execute(
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<string> | string;
 }
 
 export function createToolExecutor(input: {

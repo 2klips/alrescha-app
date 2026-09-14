@@ -1,0 +1,6077 @@
+{
+  "corpusCommit": "c172b6bc5e690f32e3d550ff3290c52d90d4413a",
+  "corpusScans": {
+    "fixtures/drifted-demo": {
+      "artifactCount": 15,
+      "commitSha": "a50f2daf79d20917a278a192bc5bce1cc6cb051d",
+      "edgeCount": 5
+    },
+    ".": {
+      "artifactCount": 759,
+      "commitSha": "a8089d11ceef519fe5600c7f5e08ff36ef6a71b0",
+      "edgeCount": 4687
+    }
+  },
+  "generatedAt": "2026-09-14T10:16:33.318Z",
+  "judgment": {
+    "baselineMeanTurns": 4.896,
+    "baselinePassRate": 0.688,
+    "graphMeanTurns": 5.271,
+    "graphPassRate": 0.688,
+    "passRateDelta": 0,
+    "primaryHypothesis": "turns-non-increasing",
+    "primaryMet": false,
+    "qualityNonInferior": true,
+    "turnsDelta": 0.375,
+    "turnsReduced": false,
+    "verdict": "NOT MET"
+  },
+  "mode": "real",
+  "preregistrationFile": "benchmarks/graph-surface/preregistration.v3.json",
+  "preregistrationSha256": "7ce54ebf6cae6794290a2e56b76ebff0c47aadce4f3bf014feebe191a146f34d",
+  "primaryHypothesis": "turns-non-increasing",
+  "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+  "render": {
+    "armNotes": [
+      "file-exploration: 체크아웃 툴 list_files, grep_files, read_file — MCP 없음.",
+      "graph-surface: 같은 체크아웃 툴 + 제품 tools/list 21툴(요약 전용 스토어 — 본문 0) + 설치 지시 블록.",
+      "프로덕션 스토어 스캔: fixtures/drifted-demo 15노드·5엣지 (scan a50f2daf79d2) · . 759노드·4687엣지 (scan a8089d11ceef)."
+    ],
+    "corpusCommit": "c172b6bc5e690f32e3d550ff3290c52d90d4413a",
+    "generatedAt": "2026-09-14T10:16:33.318Z",
+    "mode": "real",
+    "models": [
+      "gpt-5.6-luna",
+      "claude-sonnet-5"
+    ],
+    "preregistrationFile": "benchmarks/graph-surface/preregistration.v3.json",
+    "preregistrationSha256": "7ce54ebf6cae6794290a2e56b76ebff0c47aadce4f3bf014feebe191a146f34d",
+    "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+    "title": "그래프 표면 v3 — 설치된 예산 · 프로덕션 형태 스토어 vs 체크아웃 탐색",
+    "v3ManifestDigest": "7a317232cfb4f7c13db3e4c8c4f9bfd3f8eb26dd6f02dccc519b04ad77a9c2a7"
+  },
+  "schemaVersion": "graph-surface-v3",
+  "trials": [
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is **30 minutes**, defined by `SESSION_TIMEOUT_MS = 30 * 60 * 1_000` (1,800,000 ms) in `src/session.ts`.\n\nExpiration occurs at the **inclusive boundary**: `isSessionExpired` returns `true` when:\n\n```ts\nnow - session.lastActivityAt >= SESSION_TIMEOUT_MS\n```\n\nThus, exactly 30 minutes after `lastActivityAt` is expired; one millisecond before is not. This is required by **REQ-AUTH-002** and confirmed in `docs/adr/ADR-001-session-timeout.md`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1375,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 248,
+          "outputTokens": 75
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1378,
+          "outputTokens": 109
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 1375,
+          "inputTokens": 1890,
+          "outputTokens": 129
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 3516,
+      "outputTokens": 313,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is **30 minutes (1,800,000 ms)**, defined by `SESSION_TIMEOUT_MS = 30 * 60 * 1_000` in `src/session.ts`. Expiration occurs at the exact boundary: `isSessionExpired` returns true when `now - session.lastActivityAt >= SESSION_TIMEOUT_MS` (so exactly 30 minutes is expired; one millisecond before is not). This is required by `REQ-AUTH-002` in `spec.md` and confirmed by `docs/adr/ADR-001-session-timeout.md`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 3432,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 248,
+          "outputTokens": 90
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 1716,
+          "inputTokens": 1719,
+          "outputTokens": 92
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 1716,
+          "inputTokens": 2214,
+          "outputTokens": 169
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 4181,
+      "outputTokens": 351,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is 30 minutes, defined as `SESSION_TIMEOUT_MS = 30 * 60 * 1_000` (milliseconds) in `src/session.ts`.\n\nExpiration is determined by `isSessionExpired(session, now)`, which returns `now - session.lastActivityAt >= SESSION_TIMEOUT_MS`. This uses a **greater-than-or-equal (`>=`)** comparison, meaning the boundary is inclusive: a session is considered expired at the exact instant 30 minutes have elapsed (i.e., `now - lastActivityAt === SESSION_TIMEOUT_MS` counts as expired, not still valid).\n\nThis matches the requirement/decision in `docs/adr/ADR-001-session-timeout.md` (\"The boundary at exactly 30 minutes counts as expired...\") and requirement `REQ-AUTH-002` in `TODO.md` (\"enforce the 30-minute session timeout\"). It is also verified by `tests/session.test.ts`, which checks that `lastActivityAt + SESSION_TIMEOUT_MS - 1` is not expired but `lastActivityAt + SESSION_TIMEOUT_MS` is expired.</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 918,
+          "outputTokens": 123
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1428,
+          "outputTokens": 114
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1825,
+          "outputTokens": 452
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 4171,
+      "outputTokens": 689,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is defined by `SESSION_TIMEOUT_MS` in `src/session.ts`, set to `30 * 60 * 1_000` = 1,800,000 ms (30 minutes).\n\nExpiration is determined by the `isSessionExpired(session, now)` function:\n```ts\nreturn now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n```\nSo the boundary comparison is inclusive (`>=`, not `>`): a session is considered expired exactly when the elapsed time since `lastActivityAt` equals the timeout (30 minutes), not only when it exceeds it. This is confirmed in `tests/session.test.ts`, where `now = lastActivityAt + SESSION_TIMEOUT_MS - 1` is *not* expired, but `now = lastActivityAt + SESSION_TIMEOUT_MS` (exactly the boundary) *is* expired.</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 918,
+          "outputTokens": 124
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1613,
+          "outputTokens": 52
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1784,
+          "outputTokens": 351
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 4315,
+      "outputTokens": 527,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is **30 minutes (1,800,000 ms)**, defined by `src/session.ts#SESSION_TIMEOUT_MS`:\n\n```ts\nexport const SESSION_TIMEOUT_MS = 30 * 60 * 1_000;\n```\n\nExpiration occurs at the **inclusive boundary**: `isSessionExpired` returns `true` when:\n\n```ts\nnow - session.lastActivityAt >= SESSION_TIMEOUT_MS\n```\n\nThus, a session is still valid at timeout minus 1 ms, but expires at **exactly 30 minutes elapsed**. This is specified by **REQ-AUTH-002** in `spec.md` and confirmed by `docs/adr/ADR-001-session-timeout.md` and `tests/session.test.ts`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 12171,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2610,
+          "inputTokens": 2613,
+          "outputTokens": 47
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2610,
+          "inputTokens": 2695,
+          "outputTokens": 90
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2692,
+          "inputTokens": 4262,
+          "outputTokens": 107
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4259,
+          "inputTokens": 4772,
+          "outputTokens": 155
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 14342,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 399,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "search_index",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is **30 minutes**, i.e. **1,800,000 ms**, defined by `src/session.ts#SESSION_TIMEOUT_MS` as `30 * 60 * 1_000`. Expiration occurs **at the exact timeout boundary**: `src/session.ts#isSessionExpired` returns `now - session.lastActivityAt >= SESSION_TIMEOUT_MS`, so a session is expired when elapsed time is **greater than or equal to** 30 minutes (not only after it). This is specified by `REQ-AUTH-002` in `spec.md` and confirmed by `tests/session.test.ts` (`lastActivityAt + SESSION_TIMEOUT_MS` is expected to be `true`); ADR-001 states that exactly 30 minutes counts as expired.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 11773,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2610,
+          "inputTokens": 2613,
+          "outputTokens": 49
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2610,
+          "inputTokens": 2699,
+          "outputTokens": 90
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2696,
+          "inputTokens": 3860,
+          "outputTokens": 108
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3857,
+          "inputTokens": 4371,
+          "outputTokens": 207
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 13543,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 454,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "search_index",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is 30 minutes, defined as `SESSION_TIMEOUT_MS = 30 * 60 * 1_000` (milliseconds) in `src/session.ts`.\n\nExpiration is checked in `isSessionExpired(session, now)`:\n```ts\nreturn now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n```\nThe comparison boundary is inclusive (`>=`), so a session is considered expired exactly at the 30-minute mark (elapsed time equal to `SESSION_TIMEOUT_MS`), not only when it exceeds it. This matches ADR-001 (`docs/adr/ADR-001-session-timeout.md`), which states \"Sessions expire when 30 minutes have elapsed since `lastActivityAt`\" and explicitly notes \"the boundary at exactly 30 minutes counts as expired.\"</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6313,
+          "outputTokens": 65
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7132,
+          "outputTokens": 164
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7579,
+          "outputTokens": 346
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 21024,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 575,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "Session timeout is 30 minutes, defined as `SESSION_TIMEOUT_MS = 30 * 60 * 1_000` (1,800,000 ms) in `src/session.ts`.\n\nThe expiration check `isSessionExpired(session, now)` in `src/session.ts` uses the comparison `now - session.lastActivityAt >= SESSION_TIMEOUT_MS` — i.e. it uses a `>=` (greater-than-or-equal) boundary, so a session is considered expired the instant exactly 30 minutes have elapsed since `lastActivityAt` (not only when strictly more than 30 minutes have passed).\n\nThis matches the requirement in `docs/adr/ADR-001-session-timeout.md`, which states: \"Sessions expire when 30 minutes have elapsed since `lastActivityAt`... The boundary at exactly 30 minutes counts as expired,\" implemented by `src/session.ts#isSessionExpired`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6313,
+          "outputTokens": 66
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7132,
+          "outputTokens": 173
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7588,
+          "outputTokens": 532
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 21033,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 771,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-audit-schema",
+      "answer": "{\"event_name\":\"login_succeeded\",\"user_id\":\"<userId>\"}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 246,
+          "outputTokens": 76
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 719,
+          "outputTokens": 86
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1155,
+          "outputTokens": 20
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 2120,
+      "outputTokens": 182,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-audit-schema",
+      "answer": "{\"event_name\":\"login_succeeded\",\"user_id\":\"<successful login user ID>\"}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 246,
+          "outputTokens": 76
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 742,
+          "outputTokens": 22
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 988,
+      "outputTokens": 98,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-audit-schema",
+      "answer": "The audit event fired by `recordSuccessfulLogin` in `src/audit.ts` uses:\n\n- event name field: `\"event_name\": \"login_succeeded\"`\n- user identifier field: `\"user_id\": \"<userId>\"`",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 907,
+          "outputTokens": 114
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1087,
+          "outputTokens": 79
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1494,
+          "outputTokens": 102
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1899,
+          "outputTokens": 124
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 5387,
+      "outputTokens": 419,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-audit-schema",
+      "answer": "The audit event emitted after a successful login (see src/audit.ts) uses:\n- event_name: \"login_succeeded\"\n- user_id: (the user's identifier, keyed as \"user_id\")",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 907,
+          "outputTokens": 66
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1212,
+          "outputTokens": 82
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1432,
+          "outputTokens": 111
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 3551,
+      "outputTokens": 259,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-audit-schema",
+      "answer": "{\"event_name\":\"login_succeeded\",\"user_id\":\"<userId>\"}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 10726,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2611,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2608,
+          "inputTokens": 2692,
+          "outputTokens": 47
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2689,
+          "inputTokens": 2853,
+          "outputTokens": 30
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2850,
+          "inputTokens": 2971,
+          "outputTokens": 20
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 11127,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 143,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "read_file"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-audit-schema",
+      "answer": "{\"event_name\":\"login_succeeded\",\"user_id\":\"<the successful user's identifier>\"}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 10900,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2608,
+          "inputTokens": 2611,
+          "outputTokens": 49
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2608,
+          "inputTokens": 2697,
+          "outputTokens": 78
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2694,
+          "inputTokens": 2993,
+          "outputTokens": 41
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2990,
+          "inputTokens": 3122,
+          "outputTokens": 36
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 11423,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 204,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-audit-schema",
+      "answer": "The audit event emitted after a successful login (see src/audit.ts, `recordSuccessfulLogin`) uses:\n- event_name: \"login_succeeded\"\n- user_id: \"<the user's id>\" (key name is \"user_id\")",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6302,
+          "outputTokens": 111
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6655,
+          "outputTokens": 53
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6846,
+          "outputTokens": 125
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 19803,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 289,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "grep_files",
+        "search_index",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-audit-schema",
+      "answer": "The event emitted on a successful login (src/audit.ts, `recordSuccessfulLogin`) has:\\n- \"event_name\": \"login_succeeded\"\\n- \"user_id\": <the user's id> (key name is \"user_id\")",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6302,
+          "outputTokens": 114
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6687,
+          "outputTokens": 53
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6878,
+          "outputTokens": 123
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 19867,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 290,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-api-rule-conflict",
+      "answer": "`src/api/health.ts` is governed by two conflicting response-key conventions:\n\n- `AGENTS.md` (repository/fixture scope: `fixtures/drifted-demo`) requires **snake_case** JSON keys for all API responses.\n- `src/api/AGENTS.md` (the `src/api` subtree scope, including `src/api/health.ts`) requires **camelCase** JSON keys.\n\nThe file currently uses the camelCase key `serviceName` (with `status` unchanged), so it follows the more-local `src/api/AGENTS.md` convention while conflicting with the broader fixture-level `snake_case` rule, which would require `service_name`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 247,
+          "outputTokens": 32
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 295,
+          "outputTokens": 84
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 496,
+          "outputTokens": 23
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 558,
+          "outputTokens": 45
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 624,
+          "outputTokens": 84
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 878,
+          "outputTokens": 294
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 3098,
+      "outputTokens": 562,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 12,
+      "toolNames": [
+        "list_files",
+        "read_file",
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "list_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-api-rule-conflict",
+      "answer": "`src/api/health.ts` is governed by conflicting response-key instructions:\n\n- `AGENTS.md` (the fixture-wide scope, explicitly applying inside `fixtures/drifted-demo`) requires **snake_case** JSON keys for all API responses—so `serviceName` would be `service_name`.\n- `src/api/AGENTS.md` (the more specific `src/api` subtree scope) requires **camelCase** JSON keys for all API responses—so `serviceName` is the expected spelling.\n\nThe file currently follows the subtree convention: `HealthResponse.serviceName` and the returned object key are both `serviceName` (with `status` unchanged).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 247,
+          "outputTokens": 77
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 426,
+          "outputTokens": 79
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 691,
+          "outputTokens": 265
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 1364,
+      "outputTokens": 421,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "read_file",
+        "list_files",
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-api-rule-conflict",
+      "answer": "There are two different AGENTS.md files in the repo that both claim to govern the JSON keys returned by API responses, and `src/api/health.ts` falls inside both of their scopes, so they directly contradict each other:\n\n1. **Root `AGENTS.md`** (\"Fixture-only agent rules\") – states: *\"All API responses in this fixture MUST use snake_case JSON keys.\"* Its declared scope is explicitly \"only inside `fixtures/drifted-demo`\" — i.e., the whole drifted-demo fixture (this repository), which includes `src/api/health.ts`.\n\n2. **`src/api/AGENTS.md`** (\"API subtree rules\") – states: *\"All API responses in this subtree MUST use camelCase JSON keys.\"* Its scope is the `src/api` subtree specifically, which also includes `health.ts`.\n\nBecause `src/api/health.ts` sits inside both the fixture-wide scope (root rule → snake_case) and the more narrowly-scoped `src/api` directory (nested rule → camelCase), the two instruction files give directly opposite conventions for the same file. The current implementation of `HealthResponse` (`serviceName`, `status`) follows the camelCase convention from the nested `src/api/AGENTS.md`, which satisfies the more specific/closer instruction file but violates the snake_case requirement mandated by the root-level `AGENTS.md` that governs the whole fixture.</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 919,
+          "outputTokens": 83
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1331,
+          "outputTokens": 158
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1815,
+          "outputTokens": 317
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 2322,
+          "outputTokens": 978
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 6387,
+      "outputTokens": 1536,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-api-rule-conflict",
+      "answer": "There are two different, mutually exclusive instructions about the casing of JSON keys in API responses, and `src/api/health.ts`'s `HealthResponse`/`getHealth()` currently follows only one of them, leaving it in violation of the other:\n\n1. **Root-level convention – snake_case** (from the top-level `AGENTS.md`, the \"Fixture-only agent rules\"): \n   - Scope as written: \"These rules apply only inside `fixtures/drifted-demo`.\"\n   - Rule: \"All API responses in this fixture MUST use snake_case JSON keys.\"\n   - Because the repo's own service is named `\"drifted-demo\"` (as returned by `getHealth()`'s `serviceName` field) and there is no actual `fixtures/drifted-demo` directory in the tree, this repository *is* the `drifted-demo` fixture itself, so this snake_case rule's scope self-referentially covers the whole repo, including `src/api/health.ts`.\n\n2. **Subtree convention – camelCase** (from `src/api/AGENTS.md`, the \"API subtree rules\"):\n   - Scope: applies to \"this subtree,\" i.e. everything under `src/api/`.\n   - Rule: \"All API responses in this subtree MUST use camelCase JSON keys.\"\n\n`src/api/health.ts` lives under `src/api/`, so per the subtree rule its response keys (`serviceName`, `status`) must be camelCase — which is exactly what the file currently does. But because the whole repository is the `drifted-demo` fixture referenced by the root `AGENTS.md`, the broader \"fixture-only\" snake_case rule also claims authority over the same file, demanding `service_name`/`status` (snake_case) instead. The two `AGENTS.md` files thus give contradictory, overlapping-scope instructions (camelCase vs. snake_case) for the same response object in `health.ts`.</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 919,
+          "outputTokens": 84
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1332,
+          "outputTokens": 158
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1816,
+          "outputTokens": 138
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1976,
+          "outputTokens": 213
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 2547,
+          "outputTokens": 805
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 8590,
+      "outputTokens": 1398,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "list_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-api-rule-conflict",
+      "answer": "`src/api/health.ts` is governed by conflicting response-key instructions:\n\n- **Repository/fixture scope (`AGENTS.md`)**: all API responses under the `fixtures/drifted-demo` fixture must use **snake_case** JSON keys (for example, `service_name`).\n- **`src/api` subtree scope (`src/api/AGENTS.md`)**: all API responses in this subtree must use **camelCase** JSON keys (for example, `serviceName`).\n\nThe file currently follows the subtree convention: `HealthResponse` and `getHealth()` use `serviceName` (with `status` unchanged), while the broader fixture instruction requires `service_name`. Thus the conflict is snake_case at the fixture-wide scope versus camelCase at the more specific `src/api` scope.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 16873,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2612,
+          "outputTokens": 56
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2609,
+          "inputTokens": 2708,
+          "outputTokens": 45
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2705,
+          "inputTokens": 2870,
+          "outputTokens": 22
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2867,
+          "inputTokens": 2954,
+          "outputTokens": 103
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2951,
+          "inputTokens": 3165,
+          "outputTokens": 55
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3162,
+          "inputTokens": 3331,
+          "outputTokens": 264
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 17640,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 545,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 10,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "read_file",
+        "list_files",
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-api-rule-conflict",
+      "answer": "`src/api/health.ts` is subject to conflicting response-key instructions:\n\n- **Repository/fixture scope (`AGENTS.md`)**: all API responses must use **snake_case** JSON keys (so `serviceName` would be expected as `service_name`).\n- **API-subtree scope (`src/api/AGENTS.md`)**: all API responses under `src/api/` must use **camelCase** JSON keys (matching the current `serviceName` in `HealthResponse` and `getHealth()`).\n\nThus the file currently follows the nearer `src/api/` convention while conflicting with the repository-wide fixture convention.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 29251,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2609,
+          "inputTokens": 2612,
+          "outputTokens": 55
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2609,
+          "inputTokens": 2706,
+          "outputTokens": 40
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2703,
+          "inputTokens": 2762,
+          "outputTokens": 22
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2759,
+          "inputTokens": 2846,
+          "outputTokens": 42
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2843,
+          "inputTokens": 2943,
+          "outputTokens": 18
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2940,
+          "inputTokens": 2972,
+          "outputTokens": 30
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2940,
+          "inputTokens": 3099,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3096,
+          "inputTokens": 3262,
+          "outputTokens": 40
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3259,
+          "inputTokens": 3496,
+          "outputTokens": 97
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3493,
+          "inputTokens": 3757,
+          "outputTokens": 245
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 30455,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 635,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 12,
+      "toolNames": [
+        "search_index",
+        "list_files",
+        "read_file",
+        "grep_files",
+        "list_files",
+        "repo_overview",
+        "search_index",
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-api-rule-conflict",
+      "answer": "`src/api/health.ts` is subject to two AGENTS.md instruction files whose response-key conventions directly contradict each other:\n\n1. **Root/fixture-level convention** — defined in the repository root `AGENTS.md` (\"Fixture-only agent rules\"), which states its scope applies to the whole `fixtures/drifted-demo` repository: \"All API responses in this fixture MUST use **snake_case** JSON keys\" (plus a rule that test names must include their requirement ID). This is a repo-wide scope covering every file, including `src/api/health.ts`.\n\n2. **Subtree-level convention** — defined in `src/api/AGENTS.md` (\"API subtree rules\"), whose scope is narrower (just the `src/api` subtree): \"All API responses in this subtree MUST use **camelCase** JSON keys\" (plus a determinism note for recorded tests).\n\nSince `src/api/health.ts` lives inside `src/api/`, it falls under both the broader fixture-wide rule (snake_case) and the more specific subtree rule (camelCase). The two instruction scopes overlap on this exact file and prescribe opposite casing conventions for the API response JSON keys — snake_case (root AGENTS.md, fixture-wide scope) vs. camelCase (src/api/AGENTS.md, src/api-subtree scope) — which is the response-key instruction conflict affecting this file.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6314,
+          "outputTokens": 126
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6709,
+          "outputTokens": 238
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7243,
+          "outputTokens": 107
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7567,
+          "outputTokens": 144
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7724,
+          "outputTokens": 530
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 35557,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 1145,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "search_index",
+        "memory_read",
+        "search_index",
+        "search_index",
+        "read_file",
+        "read_file",
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-api-rule-conflict",
+      "answer": "There are two conflicting AGENTS.md instructions that both apply to `src/api/health.ts`:\n\n1. **Root-level convention** — `AGENTS.md` (repo root, scope: the whole `fixtures/drifted-demo` fixture repository) states: \"All API responses in this fixture MUST use snake_case JSON keys\" (plus \"Test names MUST include their requirement ID\").\n\n2. **Subtree-level convention** — `src/api/AGENTS.md` (scope: everything under the `src/api/` subtree, which includes `health.ts`) states: \"All API responses in this subtree MUST use camelCase JSON keys.\"\n\nSince `src/api/health.ts` falls under both the repository-wide scope (root AGENTS.md) and the more narrowly-scoped `src/api/` subtree rule, the two instructions directly contradict each other on key casing: snake_case (root-wide rule) vs. camelCase (src/api subtree rule). Indeed, the current implementation of `getHealth()` in `src/api/health.ts` returns camelCase keys (`serviceName`, `status`), which satisfies the subtree rule but violates the root fixture-wide snake_case convention recorded in workspace memory (\"이 픽스처의 API 응답 JSON 키는 snake_case를 강제한다\").</answer_end>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6314,
+          "outputTokens": 128
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6711,
+          "outputTokens": 214
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7036,
+          "outputTokens": 107
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7360,
+          "outputTokens": 124
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7573,
+          "outputTokens": 488
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 34994,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 1061,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "search_index",
+        "memory_read",
+        "list_files",
+        "search_index",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-legacy-billing",
+      "answer": "Claimed path: `src/legacy-billing.ts#legacyCharge` (from `spec.md`, under “Retired integration”). Evidence-based status: **not present**. The repository has no `src/legacy-billing.ts` file, and the only `legacyCharge` occurrence is the documentation claim in `spec.md:15`; the listed `src/` files contain no implementation.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 244,
+          "outputTokens": 65
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 350,
+          "outputTokens": 64
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 567,
+          "outputTokens": 36
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 797,
+          "outputTokens": 158
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 1958,
+      "outputTokens": 323,
+      "quality": "PARTIAL",
+      "score": 0.3333333333333333,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "grep_files",
+        "list_files",
+        "read_file",
+        "list_files",
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-legacy-billing",
+      "answer": "Claimed path: `src/legacy-billing.ts#legacyCharge` (documented in `spec.md:15`). Evidence-based status: **not present**. The repository contains no `src/legacy-billing.ts` file, and the only `legacyCharge` reference is the stale documentation in `spec.md`; `TODO.md` also explicitly says to remove that stale legacy billing reference.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 244,
+          "outputTokens": 28
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 466,
+          "outputTokens": 91
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 817,
+          "outputTokens": 189
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 1527,
+      "outputTokens": 308,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-legacy-billing",
+      "answer": "Claimed path: `src/legacy-billing.ts` (function `legacyCharge`), as stated in spec.md line 15 (\"`src/legacy-billing.ts#legacyCharge` implements subscription billing.\").\n\nStatus: NOT PRESENT. A repository-wide search finds `legacyCharge` mentioned only in spec.md itself — there is no `src/legacy-billing.ts` file in the repo (the `src` directory only contains `src/api/AGENTS.md`, `src/api/health.ts`, `src/audit.ts`, and `src/session.ts`), and no function named `legacyCharge` exists anywhere in the codebase. The documented implementation is missing/stale relative to the actual code.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 907,
+          "outputTokens": 80
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1026,
+          "outputTokens": 50
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1267,
+          "outputTokens": 50
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1340,
+          "outputTokens": 72
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1451,
+          "outputTokens": 332
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 5991,
+      "outputTokens": 584,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "grep_files",
+        "read_file",
+        "list_files",
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-legacy-billing",
+      "answer": "Claimed path: `src/legacy-billing.ts` (function `legacyCharge`), as stated in spec.md line 15 (\"`src/legacy-billing.ts#legacyCharge` implements subscription billing.\").\n\nEvidence-based status: **Not present.** The repository's `src` directory only contains `src/api/health.ts`, `src/api/AGENTS.md`, `src/audit.ts`, and `src/session.ts` — there is no `legacy-billing.ts` file anywhere in the repo, and a full-text search for \"legacyCharge\" only turns up the single mention in spec.md itself. The documented implementation does not exist in the codebase.</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 907,
+          "outputTokens": 83
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1029,
+          "outputTokens": 100
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1380,
+          "outputTokens": 84
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1503,
+          "outputTokens": 270
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 4819,
+      "outputTokens": 537,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "grep_files",
+        "read_file",
+        "list_files",
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-legacy-billing",
+      "answer": "Claimed path: `src/legacy-billing.ts#legacyCharge` (documented in `spec.md`, under “Retired integration”). Evidence-based status: **not present**. The repository has no `src/legacy-billing.ts` file and no `legacyCharge` implementation; the only occurrence is the documentation claim in `spec.md:15`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 10810,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2609,
+          "outputTokens": 50
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2606,
+          "inputTokens": 2691,
+          "outputTokens": 92
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2688,
+          "inputTokens": 2940,
+          "outputTokens": 79
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2937,
+          "inputTokens": 3181,
+          "outputTokens": 136
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 11421,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 357,
+      "quality": "PARTIAL",
+      "score": 0.3333333333333333,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "search_index",
+        "repo_overview",
+        "read_file",
+        "list_files",
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-legacy-billing",
+      "answer": "Claimed path: `src/legacy-billing.ts#legacyCharge` (documented in `spec.md`, under “Retired integration”). Evidence-based status: **not present/verified**. The repository contains the claim in `spec.md`, but no `src/legacy-billing.ts` file was found, and the indexed search returned no implementation or symbol evidence for `legacyCharge`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 13540,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2606,
+          "inputTokens": 2609,
+          "outputTokens": 44
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2606,
+          "inputTokens": 2685,
+          "outputTokens": 79
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2682,
+          "inputTokens": 2826,
+          "outputTokens": 64
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2823,
+          "inputTokens": 3022,
+          "outputTokens": 70
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2823,
+          "inputTokens": 3126,
+          "outputTokens": 105
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 14268,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 362,
+      "quality": "PARTIAL",
+      "score": 0.3333333333333333,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "search_index",
+        "read_file",
+        "list_files",
+        "search_index",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-legacy-billing",
+      "answer": "No — the documented `legacyCharge` implementation is not present in the repository.\n\nClaimed path (per spec.md, \"Retired integration\" section): `src/legacy-billing.ts#legacyCharge` (\"implements subscription billing\").\n\nEvidence-based status: MISSING. A grep for \"legacyCharge\" only finds the reference in spec.md itself; there is no `src/legacy-billing.ts` file anywhere in the repo. Listing files under `src/` shows only `src/api/health.ts`, `src/audit.ts`, `src/session.ts`, and `src/api/AGENTS.md` — no billing-related file exists. This is a stale/drifted spec entry referencing code that has been removed (or never existed) in the current codebase.</answer:>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6302,
+          "outputTokens": 75
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6419,
+          "outputTokens": 124
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6671,
+          "outputTokens": 100
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7022,
+          "outputTokens": 120
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7243,
+          "outputTokens": 392
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 33657,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 811,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "search_index",
+        "read_file",
+        "list_files",
+        "list_files",
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-legacy-billing",
+      "answer": "Claimed path: `src/legacy-billing.ts#legacyCharge` (per spec.md line 15: \"`src/legacy-billing.ts#legacyCharge` implements subscription billing.\").\n\nEvidence-based status: NOT PRESENT. A repository-wide search (search_index, grep_files for \"legacyCharge\" and \"legacy-billing\", and list_files filtered on \"legacy\") found no such file or symbol anywhere in the codebase — the only occurrence of the string \"legacyCharge\"/\"legacy-billing\" is the spec.md documentation itself. This is a documented/spec claim with no corresponding implementation (a drifted/retired-integration entry that was never actually implemented or has since been removed).</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6302,
+          "outputTokens": 66
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6410,
+          "outputTokens": 135
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6673,
+          "outputTokens": 100
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7050,
+          "outputTokens": 97
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7169,
+          "outputTokens": 301
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 33604,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 699,
+      "quality": "PARTIAL",
+      "score": 0.3333333333333333,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "search_index",
+        "read_file",
+        "grep_files",
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-github-permissions",
+      "answer": "answer:\n\nactions:read  \nchecks:read  \ncontents:read  \nmetadata:read  \npull_requests:write",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 23083,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 265,
+          "outputTokens": 28
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5175,
+          "outputTokens": 82
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 5172,
+          "inputTokens": 7783,
+          "outputTokens": 71
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7780,
+          "inputTokens": 10134,
+          "outputTokens": 39
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 10131,
+          "inputTokens": 10678,
+          "outputTokens": 26
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 34035,
+      "outputTokens": 246,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-github-permissions",
+      "answer": "contents:read, checks:read, actions:read, metadata:read, pull_requests:write",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 27398,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 265,
+          "outputTokens": 28
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 5172,
+          "inputTokens": 5175,
+          "outputTokens": 31
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 5172,
+          "inputTokens": 6532,
+          "outputTokens": 71
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 6529,
+          "inputTokens": 10528,
+          "outputTokens": 80
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 10525,
+          "inputTokens": 11113,
+          "outputTokens": 47
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 33613,
+      "outputTokens": 257,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-github-permissions",
+      "answer": "Default (read-only) GitHub App permissions — `GITHUB_READ_ONLY_PERMISSIONS` in `packages/core/src/github/app-permissions.ts`:\n\n- actions:read\n- checks:read\n- contents:read\n- metadata:read\n\nOptional write permission for advisory PR proposals — `GITHUB_PR_PROPOSAL_PERMISSION`:\n\n- pull_requests:write</answer>\n</invoke>\n\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 933,
+          "outputTokens": 72
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3266,
+          "outputTokens": 136
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8183,
+          "outputTokens": 86
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9185,
+          "outputTokens": 192
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 21567,
+      "outputTokens": 486,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-github-permissions",
+      "answer": "Default (read-only) GitHub App permissions, defined in `packages/core/src/github/app-permissions.ts` as `GITHUB_READ_ONLY_PERMISSIONS`:\n\n- actions:read\n- checks:read\n- contents:read\n- metadata:read\n\nOptional additional permission for advisory PR proposals, defined as `GITHUB_PR_PROPOSAL_PERMISSION`:\n\n- pull_requests:write",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 933,
+          "outputTokens": 75
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3269,
+          "outputTokens": 138
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5107,
+          "outputTokens": 63
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6086,
+          "outputTokens": 199
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 15395,
+      "outputTokens": 475,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-github-permissions",
+      "answer": "actions:read\nchecks:read\ncontents:read\nmetadata:read\npull_requests:write",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 14575,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2630,
+          "outputTokens": 54
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2627,
+          "inputTokens": 2723,
+          "outputTokens": 92
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2720,
+          "inputTokens": 6652,
+          "outputTokens": 39
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 6649,
+          "inputTokens": 7196,
+          "outputTokens": 93
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 19201,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 278,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "grep_files",
+        "repo_overview",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-github-permissions",
+      "answer": "Default GitHub App permissions:\n- actions:read\n- checks:read\n- contents:read\n- metadata:read\n\nOptional write permission for advisory PR proposals:\n- pull_requests:write",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 12120,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2627,
+          "inputTokens": 2630,
+          "outputTokens": 55
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2627,
+          "inputTokens": 2726,
+          "outputTokens": 42
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2723,
+          "inputTokens": 4146,
+          "outputTokens": 34
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4143,
+          "inputTokens": 4685,
+          "outputTokens": 97
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 14187,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 228,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-github-permissions",
+      "answer": "Default GitHub App permissions (GITHUB_READ_ONLY_PERMISSIONS in packages/core/src/github/app-permissions.ts):\n- actions:read\n- checks:read\n- contents:read\n- metadata:read\n\nOptional write permission for advisory PR proposals (GITHUB_PR_PROPOSAL_PERMISSION):\n- pull_requests:write</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6328,
+          "outputTokens": 156
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8627,
+          "outputTokens": 187
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9730,
+          "outputTokens": 172
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 24685,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 515,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-github-permissions",
+      "answer": "Defined in `packages/core/src/github/app-permissions.ts`:\n\nDefault GitHub App permissions (read-only profile, `GITHUB_READ_ONLY_PERMISSIONS`):\n- actions:read\n- checks:read\n- contents:read\n- metadata:read\n\nOptional write permission for advisory PR proposals (`GITHUB_PR_PROPOSAL_PERMISSION`, added when `allowPullRequestProposals` is true):\n- pull_requests:write",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6328,
+          "outputTokens": 81
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9029,
+          "outputTokens": 63
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 10008,
+          "outputTokens": 222
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 25365,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 366,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-mcp-contract",
+      "answer": "- **Hosted MCP protocol version:** `2026-07-28`\n- **State model:** **Stateless**; no protocol session state/sessions.\n- **Forbidden capabilities:** MCP **Sampling**, **Roots**, and **Logging**. Hosted MCP tools also must not write to GitHub/repositories; repository changes remain advisory-only via PR proposals.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 30106,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 243,
+          "outputTokens": 92
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3666,
+          "outputTokens": 122
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3663,
+          "inputTokens": 10711,
+          "outputTokens": 122
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 10708,
+          "inputTokens": 15738,
+          "outputTokens": 90
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 15735,
+          "inputTokens": 18462,
+          "outputTokens": 143
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 48820,
+      "outputTokens": 569,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 15,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-mcp-contract",
+      "answer": "- **Hosted MCP protocol version:** `2026-07-28`\n- **State model:** **stateless** (Streamable HTTP; no protocol session state)\n- **Forbidden capabilities:** MCP **Sampling**, **Roots**, and **Logging**; protocol sessions/session state are also forbidden. The hosted MCP must not expose tools that write to GitHub/repositories (repository changes remain advisory-only PR proposals).\n\nSources: `spec/WORK_SPEC.md` §11; `AGENTS.md` hard rules; `spec/IMPLEMENTATION_GUIDE.md` §6; `spec/BUILD_PLAN.md` hosted-MCP constraints; `scripts/adr-guardrails.ts` (`deprecated-mcp-capability` and session-state rules).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 42257,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 243,
+          "outputTokens": 92
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7822,
+          "outputTokens": 169
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7819,
+          "inputTokens": 14193,
+          "outputTokens": 112
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 14190,
+          "inputTokens": 20251,
+          "outputTokens": 76
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 20248,
+          "inputTokens": 22961,
+          "outputTokens": 227
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 65470,
+      "outputTokens": 676,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 14,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-mcp-contract",
+      "answer": "The repository's MCP host is pinned to protocol version **2026-07-28**, and it operates under a **stateless** model (no protocol/session state is permitted — e.g. `sessionId`/`protocolSession` fields are disallowed).\n\nThe forbidden (deprecated) MCP capabilities enforced by the guardrails (see `scripts/adr-guardrails.ts`, rule `deprecated-mcp-capability`, and confirmed in `tests/adr-guardrails.test.ts`) are:\n\n- **Sampling**\n- **Roots**\n- **Logging**\n\nAny import of these capability types from an MCP SDK, any `capabilities`/`serverCapabilities` object declaring `sampling`, `roots`, or `logging`, or any use of `sessionId`/`protocolSession` triggers a guardrail violation with the message pattern: \"MCP {capability} capability is forbidden; MCP 2026-07-28 is stateless.\" / \"Protocol session state is forbidden; MCP 2026-07-28 must remain stateless.\"</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 908,
+          "outputTokens": 120
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3346,
+          "outputTokens": 112
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6180,
+          "outputTokens": 483
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 10434,
+      "outputTokens": 715,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-mcp-contract",
+      "answer": "The repository (Alrescha) hosts its MCP server on the **MCP 2026-07-28 spec**, and it is explicitly **stateless only**.\n\n- Protocol version: `2026-07-28` (pinned; e.g. `PROTOCOL_VERSION = \"2026-07-28\"` in scripts/bench-mcp-request.ts, `versionNegotiation: { mode: { pin: \"2026-07-28\" } }`, and the legacy 2025-11-25 clients are rejected).\n- State model: **stateless** — no sessions/session state are kept across requests (per-request auth + version, no server-side session).\n- Forbidden capabilities: **Sampling, Roots, and Logging** (and, by extension, any session-based features) are disallowed — as stated in AGENTS.md (\"MCP 2026-07-28 stateless only — no Sampling/Roots/Logging/sessions.\") and enforced in scripts/adr-guardrails.ts (\"MCP … capability is forbidden; MCP 2026-07-28 is stateless.\" / \"Protocol session state is forbidden; MCP 2026-07-28 must remain stateless.\").</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 908,
+          "outputTokens": 140
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1114,
+          "outputTokens": 87
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3378,
+          "outputTokens": 199
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8014,
+          "outputTokens": 432
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 13414,
+      "outputTokens": 858,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-mcp-contract",
+      "answer": "{\"answer\":\"Hosted MCP uses protocol version `2026-07-28`, with a stateless state model. Forbidden capabilities are Sampling, Roots, Logging, and protocol session state/sessions.\"}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 37846,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2608,
+          "outputTokens": 56
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2605,
+          "inputTokens": 2704,
+          "outputTokens": 96
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2701,
+          "inputTokens": 6045,
+          "outputTokens": 98
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 6042,
+          "inputTokens": 10416,
+          "outputTokens": 120
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 10413,
+          "inputTokens": 13509,
+          "outputTokens": 60
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 13506,
+          "inputTokens": 15089,
+          "outputTokens": 44
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 50371,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 474,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 11,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-mcp-contract",
+      "answer": "Hosted MCP contract:\n\n- **Protocol version:** `2026-07-28`\n- **State model:** **stateless**; protocol session state/sessions are forbidden.\n- **Forbidden capabilities:** `Sampling`, `Roots`, and `Logging`.\n\nEvidence: `AGENTS.md` explicitly states “MCP 2026-07-28 stateless only — no Sampling/Roots/Logging/sessions.” The same contract is specified in `spec/BUILD_PLAN.md` (hosted MCP on the `2026-07-28` stateless spec), `spec/IMPLEMENTATION_GUIDE.md` (§6), and enforced by `tests/adr-guardrails.test.ts` / `scripts/adr-guardrails.ts`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 28365,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2605,
+          "inputTokens": 2608,
+          "outputTokens": 54
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2605,
+          "inputTokens": 2702,
+          "outputTokens": 108
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2699,
+          "inputTokens": 4429,
+          "outputTokens": 96
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4426,
+          "inputTokens": 6303,
+          "outputTokens": 109
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 6300,
+          "inputTokens": 9733,
+          "outputTokens": 132
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 9730,
+          "inputTokens": 14211,
+          "outputTokens": 213
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 39986,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 712,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 15,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "search_index",
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-mcp-contract",
+      "answer": "The repository's hosted MCP integration targets protocol version **2026-07-28**.\n\n- **State model:** stateless — the ADR guardrails (scripts/adr-guardrails.ts, enforced in tests/adr-guardrails.test.ts) explicitly forbid any protocol session state (e.g. `sessionId`/`protocolSession` fields), asserting \"Protocol session state is forbidden; MCP 2026-07-28 must remain stateless.\"\n\n- **Forbidden capabilities:** the deprecated/forbidden MCP capabilities are **Sampling**, **Roots**, and **Logging**. Any import of these from an `@modelcontextprotocol`/`mcp` package, or any `capabilities`/`serverCapabilities` object declaring `sampling:`, `roots:`, or `logging:`, is flagged by the `deprecated-mcp-capability` guardrail rule with the message: \"MCP {Sampling|Roots|Logging} capability is forbidden; MCP 2026-07-28 is stateless.\"\n\n(Source: `scripts/bench-mcp-request.ts` sends `\"io.modelcontextprotocol/protocolVersion\": PROTOCOL_VERSION` = 2026-07-28; the forbidden-capability/stateless rules are defined in `scripts/adr-guardrails.ts` and verified in `tests/adr-guardrails.test.ts`.)</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6303,
+          "outputTokens": 118
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6556,
+          "outputTokens": 121
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9791,
+          "outputTokens": 137
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12650,
+          "outputTokens": 575
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 35300,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 951,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-mcp-contract",
+      "answer": "The hosted MCP surface (see `scripts/adr-guardrails.ts`, enforced by `tests/adr-guardrails.test.ts`) pins:\n\n- **Protocol version:** MCP `2026-07-28`\n- **State model:** stateless — protocol/session state is forbidden. Any `sessionId`/`protocolSession` field, or persisted session state, trips the `deprecated-mcp-capability` guardrail with the message \"Protocol session state is forbidden; MCP 2026-07-28 must remain stateless.\"\n- **Forbidden capabilities:** the deprecated MCP capabilities **Sampling**, **Roots**, and **Logging** are forbidden (checked both as capability imports from a modelcontextprotocol/mcp package and as `capabilities`/`serverCapabilities` object keys `sampling`/`roots`/`logging`). Guardrail message: \"MCP {Sampling|Roots|Logging} capability is forbidden; MCP 2026-07-28 is stateless.\"</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6303,
+          "outputTokens": 134
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6572,
+          "outputTokens": 109
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12500,
+          "outputTokens": 84
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 15314,
+          "outputTokens": 168
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 18597,
+          "outputTokens": 90
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 21409,
+          "outputTokens": 456
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 80695,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 1041,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "search_index",
+        "search_index",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-job-queue-claim",
+      "answer": "SQL locking clause: `FOR UPDATE SKIP LOCKED`\nPostgres claim function: `public.claim_next_job`\nJob liveness/lease columns: `heartbeat_at` and `lease_expires_at`\n\nDefined in `supabase/migrations/202608170001_run_lifecycle.sql` (with the original queue definition in `supabase/migrations/202608100004_worker_credit_lifecycle.sql`).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 10843,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 274,
+          "outputTokens": 78
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 4038,
+          "outputTokens": 91
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4035,
+          "inputTokens": 6811,
+          "outputTokens": 99
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 6808,
+          "inputTokens": 8373,
+          "outputTokens": 261
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 19496,
+      "outputTokens": 529,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-job-queue-claim",
+      "answer": "SQL locking clause: `FOR UPDATE SKIP LOCKED`\nPostgres claim function: `public.claim_next_job`\nJob liveness/lease columns: `heartbeat_at` and `lease_expires_at`",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 27514,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 274,
+          "outputTokens": 78
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4035,
+          "inputTokens": 4038,
+          "outputTokens": 123
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4035,
+          "inputTokens": 8973,
+          "outputTokens": 97
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8970,
+          "inputTokens": 10477,
+          "outputTokens": 64
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 10474,
+          "inputTokens": 12004,
+          "outputTokens": 122
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 35766,
+      "outputTokens": 484,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 10,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-job-queue-claim",
+      "answer": "The job queue claims work with a `SELECT ... FOR UPDATE SKIP LOCKED` query, performed inside the Postgres function `public.claim_next_job(target_workspace_id, target_worker_id, lease_seconds)`. Worker liveness/lease tracking is done via the `jobs` table columns `heartbeat_at` (last heartbeat from the worker) and `lease_expires_at` (when the claimed lease expires).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 951,
+          "outputTokens": 82
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3407,
+          "outputTokens": 125
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5746,
+          "outputTokens": 203
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 10104,
+      "outputTokens": 410,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-job-queue-claim",
+      "answer": "The job queue claims the next job with a `SELECT ... FOR UPDATE SKIP LOCKED` clause (used inside the `candidate` CTE that selects the next queued job ordered by priority/created_at). This claim logic lives in the Postgres function `public.claim_next_job(target_workspace_id, target_worker_id, lease_seconds)` (defined in `supabase/migrations/202608170001_run_lifecycle.sql`, formerly in `202608100004_worker_credit_lifecycle.sql`). Worker liveness/lease expiry are tracked on the `jobs` table via the two columns `heartbeat_at` and `lease_expires_at`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 951,
+          "outputTokens": 81
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3406,
+          "outputTokens": 120
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5740,
+          "outputTokens": 279
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 10097,
+      "outputTokens": 480,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-job-queue-claim",
+      "answer": "SQL locking clause: `FOR UPDATE SKIP LOCKED`\nPostgres claim function: `public.claim_next_job`\nJob liveness/lease columns: `heartbeat_at` and `lease_expires_at`",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 30356,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2639,
+          "outputTokens": 57
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2636,
+          "inputTokens": 2738,
+          "outputTokens": 52
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2735,
+          "inputTokens": 4343,
+          "outputTokens": 106
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4340,
+          "inputTokens": 8310,
+          "outputTokens": 45
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8307,
+          "inputTokens": 9762,
+          "outputTokens": 49
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 9759,
+          "inputTokens": 11101,
+          "outputTokens": 124
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 38893,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 433,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "search_index",
+        "repo_map",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-job-queue-claim",
+      "answer": "SQL locking clause: `FOR UPDATE SKIP LOCKED`\nPostgres function: `public.claim_next_job`\nJob liveness/lease columns: `heartbeat_at` and `lease_expires_at`",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 25354,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2636,
+          "inputTokens": 2639,
+          "outputTokens": 53
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2636,
+          "inputTokens": 2732,
+          "outputTokens": 96
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2729,
+          "inputTokens": 7944,
+          "outputTokens": 64
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7941,
+          "inputTokens": 9415,
+          "outputTokens": 87
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 9412,
+          "inputTokens": 12139,
+          "outputTokens": 98
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 34869,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 398,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 10,
+      "toolNames": [
+        "search_index",
+        "repo_overview",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-job-queue-claim",
+      "answer": "The job queue claims work with the SQL locking clause `FOR UPDATE SKIP LOCKED` (used in a `SELECT ... FOR UPDATE SKIP LOCKED` on the jobs table). This claiming logic lives in the Postgres function `public.claim_next_job(workspace_id, worker_id, lease_seconds)` (defined/redefined in supabase/migrations/202608100004_worker_credit_lifecycle.sql and 202608170001_run_lifecycle.sql, and called from apps/worker/src/queue.ts as `select * from public.claim_next_job(${workspaceId}, ${workerId}, 30)`).\n\nWorker liveness and lease expiry are tracked via the two job columns: `heartbeat_at` and `lease_expires_at`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6346,
+          "outputTokens": 156
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9662,
+          "outputTokens": 145
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14311,
+          "outputTokens": 81
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 16534,
+          "outputTokens": 320
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 46853,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 702,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-job-queue-claim",
+      "answer": "The job queue claims its next job with a `SELECT ... FOR UPDATE SKIP LOCKED` query, executed inside the Postgres function `public.claim_next_job` (defined in supabase/migrations/202608100004_worker_credit_lifecycle.sql and re-defined in 202608170001_run_lifecycle.sql). Worker liveness and lease expiry are tracked via the `jobs` table columns `heartbeat_at` (worker liveness/heartbeat) and `lease_expires_at` (lease expiry).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6346,
+          "outputTokens": 146
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9661,
+          "outputTokens": 144
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14381,
+          "outputTokens": 107
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 16840,
+          "outputTokens": 75
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 18455,
+          "outputTokens": 241
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 65683,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 713,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-graph-renderer",
+      "answer": "graphology; d3-force; Pixi.js v8; Web Worker",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 8801,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 260,
+          "outputTokens": 92
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8804,
+          "outputTokens": 109
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8801,
+          "inputTokens": 12323,
+          "outputTokens": 143
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 21387,
+      "outputTokens": 344,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-graph-renderer",
+      "answer": "graphology; d3-force; Pixi.js v8; Web Worker",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 3935,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 260,
+          "outputTokens": 78
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3938,
+          "outputTokens": 145
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3935,
+          "inputTokens": 10352,
+          "outputTokens": 121
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 14550,
+      "outputTokens": 344,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-graph-renderer",
+      "answer": "The evidence graph (the \"brain map\") is built and rendered using three graph-related libraries declared in apps/web/package.json:\n\n1. **graphology** (v0.26.0) – the graph data-model/graph engine used to hold nodes/edges (imported in apps/web/lib/graph/force-simulation.ts as `import Graph from \"graphology\"`, plus the companion `graphology-communities-louvain` for clustering).\n2. **d3-force** (v3.0.0) – provides the force-directed layout simulation (with `d3-quadtree` used for its Barnes–Hut collision/charge quadtree).\n3. **pixi.js** (v8.19.0) – the WebGL rendering library used to actually draw/render the graph on the canvas (see apps/web/lib/graph/pixi-backend.ts).\n\nThe force simulation itself is executed off the main thread inside a **Web Worker** — specifically `apps/web/lib/graph/simulation.worker.ts`, described as \"Web Worker entry for the brain-map force simulation.\"\n\nSo the four exact names are:\n- graphology\n- d3-force\n- pixi.js\n- Web Worker",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 927,
+          "outputTokens": 121
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5333,
+          "outputTokens": 164
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9883,
+          "outputTokens": 209
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 17568,
+          "outputTokens": 546
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 33711,
+      "outputTokens": 1040,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "list_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-graph-renderer",
+      "answer": "The evidence graph (the single BrainMapStage renderer shared by the dashboard graph and the /graph evidence-detail view) is built on three graph libraries:\n\n1. graphology (graph data model, e.g. `import Graph from \"graphology\"` in apps/web/lib/graph/force-simulation.ts, \"graphology\": \"0.26.0\" in apps/web/package.json)\n2. d3-force (the force-directed layout algorithm, \"d3-force\": \"3.0.0\")\n3. Pixi.js (v8) (the WebGL rendering layer, apps/web/lib/graph/pixi-backend.ts, \"pixi.js\": \"8.19.0\")\n\nAnd the force simulation is run off the main thread inside a **Web Worker** — specifically `apps/web/lib/graph/simulation.worker.ts`, the dedicated Web Worker entry point for the brain-map/evidence graph's d3-force simulation, with positions streamed back to the main thread via a transferable Float32Array.\n\nSo the four exact names are: graphology, d3-force, Pixi.js (v8), and Web Worker.</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 927,
+          "outputTokens": 135
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5346,
+          "outputTokens": 173
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9639,
+          "outputTokens": 224
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 18259,
+          "outputTokens": 100
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 20714,
+          "outputTokens": 258
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 23428,
+          "outputTokens": 514
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 78313,
+      "outputTokens": 1404,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 10,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-graph-renderer",
+      "answer": "graphology; d3-force; Pixi.js v8; Web Worker",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 28710,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2625,
+          "outputTokens": 52
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2622,
+          "inputTokens": 2717,
+          "outputTokens": 116
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2714,
+          "inputTokens": 7186,
+          "outputTokens": 122
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7183,
+          "inputTokens": 13615,
+          "outputTokens": 143
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 13612,
+          "inputTokens": 16744,
+          "outputTokens": 63
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 42887,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 496,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 12,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "search_index",
+        "repo_overview",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-graph-renderer",
+      "answer": "graphology; d3-force; Pixi.js; Web Worker",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 20603,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2622,
+          "inputTokens": 2625,
+          "outputTokens": 55
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2622,
+          "inputTokens": 2722,
+          "outputTokens": 48
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2719,
+          "inputTokens": 4333,
+          "outputTokens": 117
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4330,
+          "inputTokens": 8313,
+          "outputTokens": 119
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8310,
+          "inputTokens": 12631,
+          "outputTokens": 78
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 30624,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 417,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-graph-renderer",
+      "answer": "The evidence graph is rendered with three libraries — **pixi.js** (WebGL/canvas rendering, `apps/web/lib/graph/pixi-backend.ts`), **d3-force** (force-directed layout physics, `apps/web/lib/graph/force-simulation.ts`), and **graphology** (the graph data model/structure that both the layout and clustering build on) — and the force simulation itself runs off the main thread inside a **Web Worker** (`apps/web/lib/graph/worker-runtime.ts`, the simulation worker body used by `createSimulationRuntime`).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6322,
+          "outputTokens": 136
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9622,
+          "outputTokens": 140
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12206,
+          "outputTokens": 113
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12763,
+          "outputTokens": 325
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 17073,
+          "outputTokens": 302
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 57986,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 1016,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-graph-renderer",
+      "answer": "The evidence graph is rendered with three libraries: **pixi.js** (v8.19.0, WebGL/canvas rendering backend in apps/web/lib/graph/pixi-backend.ts), **d3-force** (v3.0.0, used in apps/web/lib/graph/force-simulation.ts to compute the physics/force layout), and **d3-quadtree** (v3.0.1, used in apps/web/lib/graph/hit-test.ts for spatial indexing/hit-testing of nodes).\n\nThe force simulation itself runs off the main thread in a **Web Worker** (a dedicated `Worker`, instantiated via `new Worker(new URL(\"./simulation.worker.ts\", import.meta.url), { type: \"module\" })` in apps/web/app/ui/brain-map.tsx, wrapped by `wrapWorker` in apps/web/lib/graph/engine.ts, running apps/web/lib/graph/simulation.worker.ts).\n\nFour exact names: pixi.js, d3-force, d3-quadtree, Web Worker.</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6322,
+          "outputTokens": 133
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9618,
+          "outputTokens": 122
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12800,
+          "outputTokens": 94
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14540,
+          "outputTokens": 446
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 43280,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 795,
+      "quality": "PARTIAL",
+      "score": 0.75,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-receipt-statement",
+      "answer": "The two URI values are `_type`: “https://in-toto.io/Statement/v1” and `predicateType`: “https://arr-app-web.vercel.app/receipt/v1”. Re-verification recomputes the statement’s canonical SHA-256 digest (`actualDigest`) and compares it with the stored/expected digest to detect tampering.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 12754,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 263,
+          "outputTokens": 79
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3808,
+          "outputTokens": 122
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3805,
+          "inputTokens": 8952,
+          "outputTokens": 75
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8949,
+          "inputTokens": 10461,
+          "outputTokens": 139
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 23484,
+      "outputTokens": 415,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-receipt-statement",
+      "answer": "The two URI values are **\"https://in-toto.io/Statement/v1\"** (the assurance receipt statement) and **\"https://arr-app-web.vercel.app/receipt/v1\"** (its predicate type). Re-verification recomputes the statement’s **canonical SHA-256 digest** and compares it with the stored digest to detect tampering.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 11518,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 263,
+          "outputTokens": 80
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3803,
+          "outputTokens": 89
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3800,
+          "inputTokens": 7721,
+          "outputTokens": 93
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7718,
+          "inputTokens": 9248,
+          "outputTokens": 138
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 21035,
+      "outputTokens": 400,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-receipt-statement",
+      "answer": "In the receipt statement schema (`packages/core/src/assurance/receipts.ts`):\n\n- Statement type (`_type`) URI: `https://in-toto.io/Statement/v1`\n- Predicate type (`predicateType`) URI: `https://arr-app-web.vercel.app/receipt/v1`\n\nRe-verification (`verifyInTotoStatement`) detects tampering by recomputing the **canonical SHA-256 digest** of the stored statement (via `digestCanonical`, which canonicalizes the JSON and hashes it with SHA-256) and comparing it against the receipt's stored/expected digest — a mismatch yields a `\"tampered\"` verification state.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 931,
+          "outputTokens": 122
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5981,
+          "outputTokens": 161
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8631,
+          "outputTokens": 283
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 15543,
+      "outputTokens": 566,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-receipt-statement",
+      "answer": "The in-toto statement carries two URI-valued fields:\n\n- `_type` (the statement type): `\"https://in-toto.io/Statement/v1\"`\n- `predicateType` (the predicate identifier, pinned to `RECEIPT_PREDICATE_TYPE`): `\"https://arr-app-web.vercel.app/receipt/v1\"`\n\nRe-verification (see `verifyInTotoStatement` / `digestInTotoStatement` in `packages/core/src/assurance/receipts.ts`) recomputes the **SHA-256 digest of the canonicalized statement** (via `digestCanonical`, which JSON-canonicalizes the statement with sorted keys and hashes it with SHA-256) and compares it against the stored `expectedDigest` — a mismatch flags the receipt as `\"tampered\"`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 931,
+          "outputTokens": 122
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5981,
+          "outputTokens": 169
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8640,
+          "outputTokens": 330
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 15552,
+      "outputTokens": 621,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-receipt-statement",
+      "answer": "The two URI values are the statement type `https://in-toto.io/Statement/v1` and the receipt predicate type `https://arr-app-web.vercel.app/receipt/v1`. Re-verification recomputes the SHA-256 digest of the statement’s canonicalized representation to detect tampering.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 12264,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2628,
+          "outputTokens": 55
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2625,
+          "inputTokens": 2726,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2723,
+          "inputTokens": 4340,
+          "outputTokens": 90
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4337,
+          "inputTokens": 8432,
+          "outputTokens": 136
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 18126,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 327,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-receipt-statement",
+      "answer": "`https://in-toto.io/Statement/v1`; `https://arr-app-web.vercel.app/receipt/v1`; re-verification recomputes the SHA-256 digest of the statement’s canonicalized JSON (with recursively sorted object keys) and compares it with the stored/expected digest to detect tampering.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 12310,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2625,
+          "inputTokens": 2628,
+          "outputTokens": 55
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2625,
+          "inputTokens": 2726,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2723,
+          "inputTokens": 4340,
+          "outputTokens": 38
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4337,
+          "inputTokens": 5812,
+          "outputTokens": 151
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 15506,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 290,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-receipt-statement",
+      "answer": "The receipt is an in-toto Statement whose `_type` URI identifies the statement itself and whose `predicateType` URI identifies the receipt predicate:\n\n- Statement type: `https://in-toto.io/Statement/v1`\n- Predicate type: `https://arr-app-web.vercel.app/receipt/v1` (the `RECEIPT_PREDICATE_TYPE` constant in packages/core/src/assurance/receipts.ts)\n\nRe-verification (verifyInTotoStatement in that file) recomputes the canonical SHA-256 digest of the stored statement (via digestCanonical/canonicalize + SHA-256) and compares it against the receipt's stored expectedDigest — a mismatch yields a \"tampered\" result.</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6326,
+          "outputTokens": 100
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9147,
+          "outputTokens": 63
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 11700,
+          "outputTokens": 300
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 27173,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 463,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-receipt-statement",
+      "answer": "The in-toto statement's two URI fields are:\n- `_type`: `https://in-toto.io/Statement/v1`\n- `predicateType`: `https://arr-app-web.vercel.app/receipt/v1` (the `RECEIPT_PREDICATE_TYPE` constant, defined in `packages/core/src/assurance/receipts.ts`)\n\nRe-verification recomputes the SHA-256 digest of the canonicalized (deterministically key-sorted JSON) statement — via `digestCanonical`/`verifyInTotoStatement` — and compares it against the stored `expectedDigest`; a mismatch flags the receipt as `\"tampered\"`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6326,
+          "outputTokens": 88
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6464,
+          "outputTokens": 99
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6693,
+          "outputTokens": 104
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6932,
+          "outputTokens": 116
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 11987,
+          "outputTokens": 139
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14616,
+          "outputTokens": 279
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 53018,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 825,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "search_index",
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-credit-honesty",
+      "answer": "{\"answer\":\"Deterministic analysis—scans, parsing, and rules—consumes no credits. When a job fails instead of settling, the worker writes a `refund` ledger event. The request field that prevents a retry from charging twice is `target_idempotency_key` (stored on the job as `idempotency_key`).\"}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 73096,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 267,
+          "outputTokens": 74
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7750,
+          "outputTokens": 87
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7747,
+          "inputTokens": 11791,
+          "outputTokens": 164
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 11788,
+          "inputTokens": 16714,
+          "outputTokens": 89
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 16711,
+          "inputTokens": 17677,
+          "outputTokens": 95
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 17674,
+          "inputTokens": 19179,
+          "outputTokens": 123
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 19176,
+          "inputTokens": 20749,
+          "outputTokens": 74
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 94127,
+      "outputTokens": 706,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 12,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "read_file",
+        "grep_files"
+      ],
+      "turns": 7
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-credit-honesty",
+      "answer": "The zero-credit class is **deterministic scans**. On a failure that is rejected rather than settled, the worker writes the ledger event **`refund`** (via `reject_job`/the reservation-refund path). The request field that prevents a retry from charging twice is the exact **`idempotency_key`** field; terminal retries get a new generation such as `base_key:r1` via `next_retry_idempotency_key`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 106733,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 267,
+          "outputTokens": 90
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8961,
+          "outputTokens": 154
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8958,
+          "inputTokens": 14771,
+          "outputTokens": 33
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 14768,
+          "inputTokens": 16174,
+          "outputTokens": 174
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 16171,
+          "inputTokens": 20821,
+          "outputTokens": 70
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 20818,
+          "inputTokens": 22350,
+          "outputTokens": 39
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 22347,
+          "inputTokens": 23674,
+          "outputTokens": 111
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 23671,
+          "inputTokens": 25238,
+          "outputTokens": 195
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 132256,
+      "outputTokens": 866,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 18,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 8
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-credit-honesty",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 939,
+          "outputTokens": 111
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3250,
+          "outputTokens": 201
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 10846,
+          "outputTokens": 650
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14539,
+          "outputTokens": 271
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 25139,
+          "outputTokens": 91
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 33337,
+          "outputTokens": 159
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 35640,
+          "outputTokens": 387
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 38379,
+          "outputTokens": 146
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 39378,
+          "outputTokens": 284
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 41746,
+          "outputTokens": 587
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 243193,
+      "outputTokens": 2887,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 18,
+      "toolNames": [
+        "list_files",
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-credit-honesty",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 939,
+          "outputTokens": 67
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9693,
+          "outputTokens": 119
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14332,
+          "outputTokens": 137
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 24783,
+          "outputTokens": 106
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 27073,
+          "outputTokens": 347
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 31831,
+          "outputTokens": 141
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 34324,
+          "outputTokens": 340
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 38035,
+          "outputTokens": 266
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 40561,
+          "outputTokens": 521
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 42616,
+          "outputTokens": 247
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 264187,
+      "outputTokens": 2291,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 15,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "read_file",
+        "read_file"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-credit-honesty",
+      "answer": "answer: Deterministic analysis/scans consume no credits. On a failed job the worker records the `refund` ledger event (rather than `settle`). The request field that prevents a retry from charging twice is `idempotency_key` (with retries getting a new generation such as `:r1`, while repeated requests with the same key resolve to the existing job). Evidence: `AGENTS.md` (deterministic scans/no-charge rule), `supabase/migrations/202608100004_worker_credit_lifecycle.sql` (`refund` lifecycle), and `supabase/migrations/202609020001_retry_after_terminal_failure.sql` (`next_retry_idempotency_key`).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 67596,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2632,
+          "outputTokens": 51
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2629,
+          "inputTokens": 2722,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2719,
+          "inputTokens": 2800,
+          "outputTokens": 26
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2797,
+          "inputTokens": 4044,
+          "outputTokens": 79
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4041,
+          "inputTokens": 7826,
+          "outputTokens": 101
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7823,
+          "inputTokens": 11602,
+          "outputTokens": 100
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 11599,
+          "inputTokens": 14444,
+          "outputTokens": 137
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 14441,
+          "inputTokens": 18971,
+          "outputTokens": 85
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 18968,
+          "inputTokens": 20509,
+          "outputTokens": 216
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 85550,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 841,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 18,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "repo_overview",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 9
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-credit-honesty",
+      "answer": "answer: The no-credit class is **deterministic analysis** (the `scan`/`analyze` jobs). On failure, the worker writes a **`refund`** ledger event rather than `settle`. The request field that prevents a retry from charging twice is **`target_idempotency_key`** (stored on the job as `idempotency_key`).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 74791,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2629,
+          "inputTokens": 2632,
+          "outputTokens": 54
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2629,
+          "inputTokens": 2728,
+          "outputTokens": 41
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2725,
+          "inputTokens": 2800,
+          "outputTokens": 25
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2797,
+          "inputTokens": 4043,
+          "outputTokens": 95
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4040,
+          "inputTokens": 7875,
+          "outputTokens": 176
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7872,
+          "inputTokens": 14007,
+          "outputTokens": 110
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 14004,
+          "inputTokens": 18389,
+          "outputTokens": 45
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 18386,
+          "inputTokens": 19712,
+          "outputTokens": 111
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 19709,
+          "inputTokens": 24144,
+          "outputTokens": 164
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 96330,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 821,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 20,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "repo_overview",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 9
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-credit-honesty",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6334,
+          "outputTokens": 130
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6593,
+          "outputTokens": 116
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 11241,
+          "outputTokens": 124
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13513,
+          "outputTokens": 208
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 15916,
+          "outputTokens": 240
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 20896,
+          "outputTokens": 269
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 24274,
+          "outputTokens": 147
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 26773,
+          "outputTokens": 704
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 27518,
+          "outputTokens": 161
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 29823,
+          "outputTokens": 379
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 182881,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 2478,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 15,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "get_artifact",
+        "grep_files",
+        "get_artifact"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-credit-honesty",
+      "answer": "- **Class of analysis with zero credit cost:** Deterministic, non-AI analysis — the `scan`/`analyze` job kinds (parsing, rule checks, deterministic scans). The worker enforces this in `apps/worker/src/worker.ts` (`runWorkerOnce`): if `job.kind === \"scan\" || job.kind === \"analyze\"` and `job.creditCost !== 0`, it immediately fails the job with \"deterministic job requested credits\" — only `judge` (AI-judgment/coaching) jobs are ever billable, per WORK_SPEC.md §7 (\"결정론 분석(스캔·파싱·룰)은 크레딧 소모 0\").\n\n- **Ledger event written when a job fails instead of settling:** `refund`. When a judgment/coaching job throws a terminal, non-billable error (e.g. `isNonBillableAiError`, schema-invalid output) or hits a credit-unavailable condition, the worker calls `queue.reject(job.id, workerId, message)`, and the comment in `worker.ts` states: \"Schema-invalid AI output ... is terminal and never charged — `reject_job` settles the reservation as a refund.\" The `credit_ledger.event` enum in `packages/core/src/data/schemas.ts` is `[\"grant\", \"reserve\", \"settle\", \"refund\", \"topup\", \"adjust\"]`, and the `refund` row is what `reject_job` writes to close out a `reserve` without charging.\n\n- **Request field preventing double-charging on retry:** `idempotencyKey` (stored/columned as `idempotency_key`). It's a required, non-empty string field on the job/credit-ledger request schemas (`packages/core/src/data/schemas.ts`, e.g. `idempotencyKey: z.string().min(1)`), enforced by a DB unique constraint `credit_ledger_workspace_idempotency_unique unique (workspace_id, idempotency_key)` (and the analogous `jobs_workspace_idempotency_unique`). Any retry of the same job/charge reuses the same `idempotencyKey`, so the ledger insert conflicts/upserts instead of creating a second charge — \"재시도로 이중 과금 금지 (idempotency key)\" per WORK_SPEC.md.</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6334,
+          "outputTokens": 126
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9175,
+          "outputTokens": 188
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13896,
+          "outputTokens": 140
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 18646,
+          "outputTokens": 416
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 22997,
+          "outputTokens": 1059
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 71048,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 1929,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-index-pr-limits",
+      "answer": "The only write path is the advisory minimal-index pull-request proposal: `proposeMinimalIndexPullRequest` in `packages/core/src/context/index-pr-proposal.ts` (through its `github.writeProposalFile` port; it only proposes changes to `AGENTS.md` and optional `CLAUDE.md`). The exact begin marker is `<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->`. The managed section may contain at most **30 lines**.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 62104,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 262,
+          "outputTokens": 28
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5172,
+          "outputTokens": 97
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 5169,
+          "inputTokens": 9618,
+          "outputTokens": 125
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 9615,
+          "inputTokens": 13313,
+          "outputTokens": 119
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 13310,
+          "inputTokens": 16426,
+          "outputTokens": 42
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 16423,
+          "inputTokens": 17590,
+          "outputTokens": 26
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 17587,
+          "inputTokens": 18431,
+          "outputTokens": 183
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 80812,
+      "outputTokens": 620,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 15,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "read_file",
+        "read_file",
+        "list_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 7
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-index-pr-limits",
+      "answer": "{\"answer\":\"The only write path into a user’s repository is the advisory minimal-index PR proposal (`proposeMinimalIndexPullRequest`). The managed section begins with `<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->` and may contain at most 30 lines.\"}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 79466,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 262,
+          "outputTokens": 75
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6979,
+          "outputTokens": 99
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 6976,
+          "inputTokens": 8179,
+          "outputTokens": 122
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8176,
+          "inputTokens": 13333,
+          "outputTokens": 63
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 13330,
+          "inputTokens": 14805,
+          "outputTokens": 56
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 14802,
+          "inputTokens": 16270,
+          "outputTokens": 142
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 16267,
+          "inputTokens": 19918,
+          "outputTokens": 48
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 19915,
+          "inputTokens": 20781,
+          "outputTokens": 63
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 100527,
+      "outputTokens": 668,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 16,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file"
+      ],
+      "turns": 8
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-index-pr-limits",
+      "answer": "**Only write path into a user's repository**\n\nThe sole path that ever writes to a user's repo is the advisory PR‑proposal flow implemented in `packages/core/src/context/index-pr-proposal.ts` (`proposeMinimalIndexPullRequest`, using the injected `IndexPrProposalGitHub` port). It never pushes to the default branch or merges anything — it only:\n1. creates a new proposal branch from the current base SHA (`createProposalBranch`),\n2. writes the two allowed files, `AGENTS.md` and/or `CLAUDE.md`, on that branch (`writeProposalFile`), and\n3. opens a pull request for human review (`openProposalPullRequest`).\n\nThis is enforced repo‑wide by the `repo-write-outside-pr-proposal` guardrail in `scripts/adr-guardrails.ts`, which forbids `createCommit`/`createOrUpdateFileContents`/`createRef`/`deleteRef`/`updateRef`/`pulls.create`/`git push` everywhere except inside a path matching `pr-proposal`/`index-pr` (i.e., this module and its web wiring under `apps/web/lib/github/index-pr/`). A separate `direct-branch-mutation` rule additionally bans `pulls.merge`/branch-update/push helpers outright.\n\n**Managed section begin marker (exact text)**\n\n```\n<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->\n```\n\n(defined as `ALRESCHA_INDEX_BEGIN` in `packages/core/src/context/minimal-index.ts`, paired with the end marker `<!-- ALRESCHA:END -->`.)\n\n**Maximum size of that section**\n\n30 lines — enforced in `applyManagedIndex` (`packages/core/src/context/minimal-index.ts`): `if (section.split(\"\\n\").length > 30) { throw new RangeError(\"Alrescha managed index must not exceed 30 lines.\"); }`.</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 927,
+          "outputTokens": 137
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 4186,
+          "outputTokens": 161
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7296,
+          "outputTokens": 89
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9304,
+          "outputTokens": 248
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13935,
+          "outputTokens": 131
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 16788,
+          "outputTokens": 229
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 19999,
+          "outputTokens": 65
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 21376,
+          "outputTokens": 114
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 22900,
+          "outputTokens": 489
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 25137,
+          "outputTokens": 796
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 141848,
+      "outputTokens": 2459,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 14,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "list_files",
+        "list_files",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-index-pr-limits",
+      "answer": "The only write path into a user's repository is the advisory-only pull-request proposal flow: `proposeMinimalIndexPullRequest` (packages/core/src/context/index-pr-proposal.ts), invoked from the Settings → MCP server action `createMinimalIndexProposal` (apps/web/app/app/(shell)/settings/mcp/actions.ts). It never commits directly to the base branch; it only (a) creates a new branch `alrescha/minimal-index-<sha12>` from the base SHA, (b) writes only `AGENTS.md` and/or `CLAUDE.md` on that branch via `writeProposalFile` (enforced by validateInput, which throws if any other path is targeted), and (c) opens a pull request for the user to review/merge themselves — requiring `contents:write`/`pull_requests:write`-style \"proposal_write\" authorization, otherwise it returns `permission_required` and writes nothing.\n\nThe content written into AGENTS.md is a bounded \"managed section\" produced by `renderManagedIndex`/`applyManagedIndex` (packages/core/src/context/minimal-index.ts), delimited by:\n\n- Begin marker (exact text): `<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->`\n- End marker: `<!-- ALRESCHA:END -->`\n\n`applyManagedIndex` enforces a hard cap: the managed section (from BEGIN through END, inclusive) must not exceed **30 lines**, throwing a `RangeError` (\"Alrescha managed index must not exceed 30 lines.\") otherwise.</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 927,
+          "outputTokens": 140
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 4190,
+          "outputTokens": 119
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6227,
+          "outputTokens": 207
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8428,
+          "outputTokens": 139
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 11102,
+          "outputTokens": 177
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13337,
+          "outputTokens": 161
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 17077,
+          "outputTokens": 678
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 61288,
+      "outputTokens": 1621,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 11,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 7
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-index-pr-limits",
+      "answer": "{\n  \"answer\": \"The only write path into a user’s repository is `proposeMinimalIndexPullRequest` in `packages/core/src/context/index-pr-proposal.ts`, which writes only `AGENTS.md` and/or `CLAUDE.md` on a proposal branch and opens a pull request. The managed-section begin marker is exactly `<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->`. The section may contain at most 30 lines.\"\n}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 90662,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2627,
+          "outputTokens": 55
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2624,
+          "inputTokens": 2722,
+          "outputTokens": 105
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2719,
+          "inputTokens": 6923,
+          "outputTokens": 91
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 6920,
+          "inputTokens": 10499,
+          "outputTokens": 96
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 10496,
+          "inputTokens": 14424,
+          "outputTokens": 57
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 14421,
+          "inputTokens": 15518,
+          "outputTokens": 39
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 15515,
+          "inputTokens": 16970,
+          "outputTokens": 41
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 16967,
+          "inputTokens": 18424,
+          "outputTokens": 79
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 18421,
+          "inputTokens": 19318,
+          "outputTokens": 101
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 107425,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 664,
+      "quality": "PARTIAL",
+      "score": 0.3333333333333333,
+      "status": "succeeded",
+      "toolCalls": 14,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "search_index",
+        "repo_overview",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file"
+      ],
+      "turns": 9
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-index-pr-limits",
+      "answer": "The only write path is `proposeMinimalIndexPullRequest`: it writes the generated files to the branch `alrescha/minimal-index-${baseSha.slice(0, 12)}` via `writeProposalFile`, then opens an advisory pull request for normal review/merge (never writes directly to the default branch). The managed-section begin marker is exactly `<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->`. Its maximum size is 30 lines.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 33517,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2624,
+          "inputTokens": 2627,
+          "outputTokens": 55
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2719,
+          "inputTokens": 2722,
+          "outputTokens": 29
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2719,
+          "inputTokens": 3969,
+          "outputTokens": 97
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3966,
+          "inputTokens": 8849,
+          "outputTokens": 127
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8846,
+          "inputTokens": 12646,
+          "outputTokens": 130
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 12643,
+          "inputTokens": 14376,
+          "outputTokens": 193
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 45189,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 631,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 14,
+      "toolNames": [
+        "search_index",
+        "repo_overview",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-index-pr-limits",
+      "answer": "The only write path into a user's repository is the PR-proposal flow: `proposeMinimalIndexPullRequest` in `packages/core/src/context/index-pr-proposal.ts`. It never writes directly to the user's default branch/files — it requires `authorization: \"proposal_write\"` (else it returns `permission_required`), creates a new branch (`alrescha/minimal-index-<sha12>`) via `github.createProposalBranch`, writes only `AGENTS.md` and/or `CLAUDE.md` via `github.writeProposalFile` (validated to allow only those two paths), and opens a pull request via `github.openProposalPullRequest` titled \"docs(agent): add Alrescha minimal context index\" for the user to review/merge — it never commits straight to the repo.\n\nThe managed section is built by `renderManagedIndex`/`applyManagedIndex` in `packages/core/src/context/minimal-index.ts`. Its exact begin marker is:\n\n`<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->`\n\n(paired with end marker `<!-- ALRESCHA:END -->`).\n\nThe maximum size of that managed section is 30 lines — `applyManagedIndex` throws a `RangeError` (\"Alrescha managed index must not exceed 30 lines.\") if `section.split(\"\\n\").length > 30`.</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6322,
+          "outputTokens": 130
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9228,
+          "outputTokens": 132
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 10770,
+          "outputTokens": 142
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12831,
+          "outputTokens": 512
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 39151,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 916,
+      "quality": "PARTIAL",
+      "score": 0.3333333333333333,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-index-pr-limits",
+      "answer": "The only write path into a user's repository is the advisory-only pull-request proposal flow implemented in `packages/core/src/context/index-pr-proposal.ts` (`proposeMinimalIndexPullRequest`, backed by `IndexPrProposalGitHub.createProposalBranch` / `writeProposalFile` / `openProposalPullRequest`). It never commits directly: it opens a branch named `alrescha/minimal-index-<sha12>` off the base SHA, writes only `AGENTS.md` and/or `CLAUDE.md`, and opens a PR (\"docs(agent): add Alrescha minimal context index\") for the user to review/merge — and it requires `contents:write`/`pull_requests:write` authorization (`proposal_write`), otherwise it returns `permission_required` and writes nothing.\n\nThe managed section's exact begin marker (from `packages/core/src/context/minimal-index.ts`, `ALRESCHA_INDEX_BEGIN`) is:\n\n`<!-- ALRESCHA:BEGIN (managed — do not edit inside) -->`\n\n(paired with end marker `<!-- ALRESCHA:END -->`).\n\nThe maximum size of that managed section is 30 lines — `applyManagedIndex` throws a `RangeError` (\"Alrescha managed index must not exceed 30 lines.\") if `section.split(\"\\n\").length > 30`.</answer_end>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6322,
+          "outputTokens": 118
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 11307,
+          "outputTokens": 142
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13368,
+          "outputTokens": 117
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14895,
+          "outputTokens": 529
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 45892,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 906,
+      "quality": "PARTIAL",
+      "score": 0.6666666666666666,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "grep_files",
+        "search_index",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-evidence-grade-rule",
+      "answer": "- Execution evidence: `verified`\n- AI reasoning only: `inferred`\n- Severity ceiling without reaching `verified`: `medium`",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 39900,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 272,
+          "outputTokens": 28
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5182,
+          "outputTokens": 101
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 5179,
+          "inputTokens": 8919,
+          "outputTokens": 82
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8916,
+          "inputTokens": 12514,
+          "outputTokens": 36
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 12511,
+          "inputTokens": 13297,
+          "outputTokens": 74
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 13294,
+          "inputTokens": 14891,
+          "outputTokens": 31
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 55075,
+      "outputTokens": 352,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 10,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-evidence-grade-rule",
+      "answer": "- Execution evidence: `verified`\n- AI reasoning only: `inferred`\n- Severity ceiling for a chain that never reaches `verified`: `medium`\n\nThese exact values are specified in `spec/WORK_SPEC.md` §3, absolute principle 1, and reinforced by `AGENTS.md` (“`verified` only with execution evidence; AI reasoning is always `inferred`).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 10345,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 272,
+          "outputTokens": 78
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 2680,
+          "outputTokens": 98
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2677,
+          "inputTokens": 7671,
+          "outputTokens": 109
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7668,
+          "inputTokens": 13642,
+          "outputTokens": 162
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 24265,
+      "outputTokens": 447,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 12,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-evidence-grade-rule",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 950,
+          "outputTokens": 146
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3259,
+          "outputTokens": 228
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7345,
+          "outputTokens": 243
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8157,
+          "outputTokens": 290
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8543,
+          "outputTokens": 98
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12931,
+          "outputTokens": 94
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14811,
+          "outputTokens": 171
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 19482,
+          "outputTokens": 174
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 23724,
+          "outputTokens": 322
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 24142,
+          "outputTokens": 85
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 123344,
+      "outputTokens": 1851,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 20,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-evidence-grade-rule",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 950,
+          "outputTokens": 148
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3261,
+          "outputTokens": 178
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7092,
+          "outputTokens": 197
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9464,
+          "outputTokens": 313
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12678,
+          "outputTokens": 98
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 15255,
+          "outputTokens": 282
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 15633,
+          "outputTokens": 109
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 18315,
+          "outputTokens": 135
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 20116,
+          "outputTokens": 110
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 22676,
+          "outputTokens": 247
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 125440,
+      "outputTokens": 1817,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 18,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "real-answer-evidence-grade-rule",
+      "answer": "Execution evidence: `verified`. AI reasoning only: `inferred`. A chain that never reaches `verified` is capped at severity `medium` (high/critical requests are downgraded to `medium`). Sources: `AGENTS.md` and `packages/core/src/ai/judgment.ts` (`applyJudgment`).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 34796,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2637,
+          "outputTokens": 51
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2634,
+          "inputTokens": 2726,
+          "outputTokens": 43
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2723,
+          "inputTokens": 2801,
+          "outputTokens": 26
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2798,
+          "inputTokens": 4045,
+          "outputTokens": 94
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4042,
+          "inputTokens": 7704,
+          "outputTokens": 98
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 7701,
+          "inputTokens": 12322,
+          "outputTokens": 98
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 12319,
+          "inputTokens": 16087,
+          "outputTokens": 126
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 48322,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 536,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 15,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "repo_overview",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 7
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "real-answer-evidence-grade-rule",
+      "answer": "The labels are:\n- Execution evidence exists: `verified`\n- Only AI reasoning supports it: `inferred`\n- Severity ceiling when the chain never reaches `verified`: `medium`",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 23497,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2634,
+          "inputTokens": 2637,
+          "outputTokens": 50
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2634,
+          "inputTokens": 2725,
+          "outputTokens": 80
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2722,
+          "inputTokens": 5135,
+          "outputTokens": 99
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 5132,
+          "inputTokens": 10378,
+          "outputTokens": 42
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 10375,
+          "inputTokens": 11167,
+          "outputTokens": 74
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 32042,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 345,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 10,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "real-answer-evidence-grade-rule",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6345,
+          "outputTokens": 126
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6528,
+          "outputTokens": 114
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9432,
+          "outputTokens": 99
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 11981,
+          "outputTokens": 245
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14195,
+          "outputTokens": 138
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 15102,
+          "outputTokens": 53
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 17741,
+          "outputTokens": 174
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 22106,
+          "outputTokens": 148
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 24402,
+          "outputTokens": 116
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 25945,
+          "outputTokens": 150
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 153777,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 1363,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 15,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "search_index",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "get_artifact",
+        "grep_files"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "real-answer-evidence-grade-rule",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6345,
+          "outputTokens": 123
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6521,
+          "outputTokens": 103
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9415,
+          "outputTokens": 129
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9610,
+          "outputTokens": 101
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 11722,
+          "outputTokens": 192
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14917,
+          "outputTokens": 172
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 17236,
+          "outputTokens": 146
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 19832,
+          "outputTokens": 305
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 23809,
+          "outputTokens": 151
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 25884,
+          "outputTokens": 125
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 145291,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 1547,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 17,
+      "toolNames": [
+        "search_index",
+        "search_index",
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "search_index",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "get_artifact"
+      ],
+      "turns": 10
+    }
+  ],
+  "v3ManifestDigest": "7a317232cfb4f7c13db3e4c8c4f9bfd3f8eb26dd6f02dccc519b04ad77a9c2a7"
+}

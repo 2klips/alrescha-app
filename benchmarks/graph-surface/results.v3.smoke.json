@@ -1,0 +1,445 @@
+{
+  "corpusCommit": "c172b6bc5e690f32e3d550ff3290c52d90d4413a",
+  "corpusScans": {
+    "fixtures/drifted-demo": {
+      "artifactCount": 15,
+      "commitSha": "a50f2daf79d20917a278a192bc5bce1cc6cb051d",
+      "edgeCount": 5
+    }
+  },
+  "generatedAt": "2026-09-14T10:04:51.042Z",
+  "judgment": {
+    "baselineMeanTurns": 3,
+    "baselinePassRate": 1,
+    "graphMeanTurns": 3.5,
+    "graphPassRate": 1,
+    "passRateDelta": 0,
+    "primaryHypothesis": "turns-non-increasing",
+    "primaryMet": false,
+    "qualityNonInferior": true,
+    "turnsDelta": 0.5,
+    "turnsReduced": false,
+    "verdict": "NOT MET"
+  },
+  "mode": "real",
+  "preregistrationFile": "benchmarks/graph-surface/preregistration.v3.json",
+  "preregistrationSha256": "7ce54ebf6cae6794290a2e56b76ebff0c47aadce4f3bf014feebe191a146f34d",
+  "primaryHypothesis": "turns-non-increasing",
+  "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+  "render": {
+    "armNotes": [
+      "file-exploration: 체크아웃 툴 list_files, grep_files, read_file — MCP 없음.",
+      "graph-surface: 같은 체크아웃 툴 + 제품 tools/list 21툴(요약 전용 스토어 — 본문 0) + 설치 지시 블록.",
+      "프로덕션 스토어 스캔: fixtures/drifted-demo 15노드·5엣지 (scan a50f2daf79d2)."
+    ],
+    "corpusCommit": "c172b6bc5e690f32e3d550ff3290c52d90d4413a",
+    "generatedAt": "2026-09-14T10:04:51.042Z",
+    "mode": "real",
+    "models": [
+      "gpt-5.6-luna",
+      "claude-sonnet-5"
+    ],
+    "preregistrationFile": "benchmarks/graph-surface/preregistration.v3.json",
+    "preregistrationSha256": "7ce54ebf6cae6794290a2e56b76ebff0c47aadce4f3bf014feebe191a146f34d",
+    "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+    "title": "그래프 표면 v3 — 설치된 예산 · 프로덕션 형태 스토어 vs 체크아웃 탐색",
+    "v3ManifestDigest": "7a317232cfb4f7c13db3e4c8c4f9bfd3f8eb26dd6f02dccc519b04ad77a9c2a7"
+  },
+  "schemaVersion": "graph-surface-v3",
+  "trials": [
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is **30 minutes = 1,800,000 ms**, defined by `src/session.ts#SESSION_TIMEOUT_MS` (`30 * 60 * 1_000`). Expiration occurs at the exact boundary: `src/session.ts#isSessionExpired` returns true when `now - session.lastActivityAt >= SESSION_TIMEOUT_MS`—so exactly 30 minutes elapsed is expired (not only after it). This is also required by **REQ-AUTH-002** in `spec.md` and explicitly confirmed by ADR-001.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1716,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 248,
+          "outputTokens": 90
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1719,
+          "outputTokens": 114
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 1716,
+          "inputTokens": 2236,
+          "outputTokens": 157
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 4203,
+      "outputTokens": 361,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is **30 minutes (1,800,000 ms)**, defined by `src/session.ts#SESSION_TIMEOUT_MS` (`30 * 60 * 1_000`). Expiration occurs at the exact boundary: `src/session.ts#isSessionExpired` returns true when `now - session.lastActivityAt >= SESSION_TIMEOUT_MS` (so exactly 30 minutes is expired, while one millisecond less is not). This fulfills `REQ-AUTH-002`; ADR-001 explicitly requires that the exact 30-minute boundary counts as expired.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 248,
+          "outputTokens": 29
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 471,
+          "outputTokens": 92
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 966,
+          "outputTokens": 188
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 1685,
+      "outputTokens": 309,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout duration is 30 minutes, defined as `SESSION_TIMEOUT_MS = 30 * 60 * 1_000` (milliseconds) in `src/session.ts`.\n\nExpiration is determined by `isSessionExpired(session, now)`:\n```ts\nreturn now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n```\nThe comparison uses `>=` (greater-than-or-equal), meaning the boundary case where `now - lastActivityAt` is *exactly equal* to `SESSION_TIMEOUT_MS` (i.e., exactly 30 minutes elapsed) is already considered expired — not still valid. This inclusive boundary is confirmed by ADR-001 (\"Session timeout\"), which states: \"The boundary at exactly 30 minutes counts as expired,\" and satisfies requirement REQ-AUTH-002 (\"enforce the 30-minute session timeout\") from TODO.md. It's also verified by the test in `tests/session.test.ts`, which checks that at `lastActivityAt + SESSION_TIMEOUT_MS - 1` the session is not expired, but at `lastActivityAt + SESSION_TIMEOUT_MS` it is expired (`true`).</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 918,
+          "outputTokens": 124
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1429,
+          "outputTokens": 114
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1826,
+          "outputTokens": 462
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 4173,
+      "outputTokens": 700,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is 30 minutes, defined by the constant `SESSION_TIMEOUT_MS = 30 * 60 * 1_000` (i.e., 1,800,000 ms) in `src/session.ts`.\n\nExpiration is determined by the function `isSessionExpired(session, now)` in that same file:\n\n```ts\nreturn now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n```\n\nThe comparison boundary uses `>=` (greater-than-or-equal), meaning a session is considered expired the instant the elapsed time since `lastActivityAt` reaches exactly `SESSION_TIMEOUT_MS` (30 minutes) — it does not need to exceed it. This is confirmed by `docs/adr/ADR-001-session-timeout.md`, which states: \"The boundary at exactly 30 minutes counts as expired and requires an executable test,\" and by `tests/session.test.ts`, which verifies that `now = lastActivityAt + SESSION_TIMEOUT_MS - 1` is NOT expired, while `now = lastActivityAt + SESSION_TIMEOUT_MS` IS expired. This corresponds to requirement REQ-AUTH-002 (\"enforce the 30-minute session timeout\") in `TODO.md`.</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 918,
+          "outputTokens": 124
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1429,
+          "outputTokens": 114
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1826,
+          "outputTokens": 484
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 4173,
+      "outputTokens": 722,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is **30 minutes**, defined by `src/session.ts#SESSION_TIMEOUT_MS` as `30 * 60 * 1_000` milliseconds (1,800,000 ms). Expiration occurs at the inclusive boundary: `src/session.ts#isSessionExpired` returns true when `now - session.lastActivityAt >= SESSION_TIMEOUT_MS`. Thus, exactly 30 minutes elapsed is expired; one millisecond before is not. This is also stated by requirement `REQ-AUTH-002` in `spec.md` and confirmed by `tests/session.test.ts` / ADR-001.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 8845,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 2613,
+          "outputTokens": 50
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2610,
+          "inputTokens": 2700,
+          "outputTokens": 29
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2697,
+          "inputTokens": 3541,
+          "outputTokens": 132
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3538,
+          "inputTokens": 4076,
+          "outputTokens": 151
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 12930,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 362,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is **30 minutes (1,800,000 ms)**, defined by `src/session.ts#SESSION_TIMEOUT_MS` as `30 * 60 * 1_000`. Expiration occurs at the **inclusive boundary**: `src/session.ts#isSessionExpired` returns true when `now - session.lastActivityAt >= SESSION_TIMEOUT_MS`. Thus, exactly 30 minutes elapsed is expired; one millisecond before is not. This is also required by **REQ-AUTH-002** in `spec.md` and confirmed by the exact-boundary test in `tests/session.test.ts`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 11884,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2610,
+          "inputTokens": 2613,
+          "outputTokens": 50
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2610,
+          "inputTokens": 2698,
+          "outputTokens": 85
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2695,
+          "inputTokens": 3972,
+          "outputTokens": 108
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3969,
+          "inputTokens": 4483,
+          "outputTokens": 151
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 13766,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 394,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is 30 minutes, defined by `SESSION_TIMEOUT_MS = 30 * 60 * 1_000` (30 * 60 * 1000 ms) in `src/session.ts`.\n\nExpiration is determined by `isSessionExpired(session, now)`, which returns `now - session.lastActivityAt >= SESSION_TIMEOUT_MS`. So the comparison boundary is inclusive (`>=`): a session is considered expired exactly at the 30-minute mark, not only after it. This matches ADR-001 (docs/adr/ADR-001-session-timeout.md), which states \"Sessions expire when 30 minutes have elapsed since `lastActivityAt`\" and explicitly notes \"The boundary at exactly 30 minutes counts as expired and requires an executable test\" (see tests/session.test.ts for the corresponding boundary test).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6313,
+          "outputTokens": 66
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7133,
+          "outputTokens": 165
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7581,
+          "outputTokens": 399
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 21027,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 630,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "fixture-answer-session-policy",
+      "answer": "The session timeout is 30 minutes, defined as `SESSION_TIMEOUT_MS = 30 * 60 * 1_000` (ms) in `src/session.ts`.\n\nExpiration is checked in `isSessionExpired(session, now)`:\n```\nreturn now - session.lastActivityAt >= SESSION_TIMEOUT_MS;\n```\nThe comparison boundary is inclusive (`>=`), meaning that at exactly 30 minutes elapsed since `lastActivityAt`, the session is already considered expired (elapsed == SESSION_TIMEOUT_MS returns true). This matches ADR-001 (`docs/adr/ADR-001-session-timeout.md`), which states: \"Sessions expire when 30 minutes have elapsed since `lastActivityAt`... The boundary at exactly 30 minutes counts as expired,\" implemented in `src/session.ts#isSessionExpired`.</answer>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6313,
+          "outputTokens": 66
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7133,
+          "outputTokens": 161
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7577,
+          "outputTokens": 383
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 21023,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 610,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    }
+  ],
+  "v3ManifestDigest": "7a317232cfb4f7c13db3e4c8c4f9bfd3f8eb26dd6f02dccc519b04ad77a9c2a7"
+}

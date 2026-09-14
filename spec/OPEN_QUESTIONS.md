@@ -592,3 +592,19 @@
 - 임시 결정: 스냅샷 유지. 폐기의 서버 측 효과(호출 거부)가 실효 필터이고, 페이지를 다시 열면 집합이 갱신된다. 브리지에 `mcp_tokens` 변경 구독을 얹으면 `postgres_changes`가 필요해 채널이 하나 더 생기고, 그 채널의 인가 정책도 하나 더 필요하다 — 시그니처 경험이 요구한 것은 발광이지 폐기 반영 지연 0이 아니다.
 - 필요한 결정: ⑴ 현행 유지(기본 후보) ⑵ 브리지가 N분마다 `/app/map` 로더의 revoked 집합만 다시 읽는다(추가 채널 없음, 지연 N분) ⑶ `mcp_tokens` 폐기를 같은 private 채널에 별도 이벤트로 서버가 브로드캐스트한다(서버 폐기 경로에 발행 1건 추가, 인가 정책 재사용).
 - 상태: open. 기본 후보 ⑴.
+
+## OQ-070 — 동결 질문 세트의 정답 문자열이 제품 개명 뒤 코퍼스에 없다
+
+- 발견: Phase 4 Wave E todo 25(2026-09-14) / `benchmarks/databrain/tasks.v3.json`(`real-answer-receipt-statement` 사실 2 `https://arr.dev/receipt/v1`, `real-answer-index-pr-limits` 사실 2 `ARR:BEGIN`), `benchmarks/graph-surface/results.v3.json`(두 문항 전 시행 score 2/3), `.omo/evidence/phase4/todo-25.md`
+- 내용: graph-surface v1·v2·v3는 동결 v3 매니페스트(다이제스트 `7a317232…`)의 answer-manifest 12문항을 바이트 동일하게 쓴다. 그 사이 제품이 Arr → Alrescha로 개명되면서(2026-09-01 F5 naming migration) 두 문항의 정답 문자열이 소스에서 사라졌다 — 지금은 개명 기록 문서와 receipts 테스트에만 남아 있다. v3에서 두 문항은 양 군 모두 최대 2/3(PARTIAL)로 상한이 걸렸다. 쌍대 비교는 그대로 유효하지만 절대 PASS율은 v2(베이스라인 0.875)와 비교할 수 없고(v3 0.688), 향후 실행은 매 회 같은 상한을 안고 간다. databrain v3 릴리스(600시행, 2026-08-25)는 개명 전 코퍼스에서 돌았으므로 영향 없다.
+- 임시 결정: 동결 유지. v3 리포트·근거에 상한을 명시했다. 매니페스트를 고치는 것은 사전등록 변경이므로 이 todo에서 하지 않는다.
+- 필요한 결정: ⑴ v4 매니페스트 개정(두 문항의 별칭에 개명 후 문자열을 **추가** — 기존 별칭 삭제 없음, 새 다이제스트, graph-surface 다음 실행부터) ⑵ 두 문항을 다음 사전등록에서 제외하고 10문항 그리드로 ⑶ 현행 유지(상한을 안고 비교만 본다).
+- 상태: open. 기본 후보 ⑴ — 다음 graph-surface 실행 전에.
+
+## OQ-071 — 지시 블록의 강제 첫 호출은 grep이 한 홉에 답하는 질문에서 턴 하나이고, 본문 없는 포인터는 파일 읽기로 끝난다
+
+- 발견: Phase 4 Wave E todo 25(2026-09-14) / `benchmarks/graph-surface/results.v3.json`(그래프군 툴 호출: `search_index` 97 = 시행당 ~2, `grep_files` 139, `read_file` 104, `get_neighbors`·`trace_path`·`impact_of` 0), `packages/core/src/context/agent-instructions.ts`(`AGENT_FLOW_STEPS` 첫 단계 forced), `packages/mcp/src/local-workspace.ts:162`(`content: ""`), `.omo/evidence/phase4/todo-25.md`
+- 내용: 설치된 예산을 프로덕션 형태 스토어 위에서 재면 턴이 +0.375/시행 늘고 품질은 같다. 늘어난 몫은 대체로 블록이 강제하는 첫 `search_index`다: 답은 id·경로와 `excerpt: ""`(enrich 전 상태)라 에이전트는 어차피 파일을 읽고, grep이 한 홉에 답하는 질문(관계형 세트의 importers 문항: 베이스라인 2턴 → 그래프군 3.25턴)에서는 순수 오버헤드다. 색인이 먼저 맞는 파일을 가리킨 문항에서는 그래프군이 빨랐다(github-permissions 4.5 → 3.5, index-pr-limits 8 → 5.75). 관계형 툴은 한 번도 불리지 않았다 — 블록은 "관계형 질문에만"이라 했고 모델들은 그 판단을 grep 쪽으로 내렸다. 모델별로 부호가 갈린다(sonnet −0.29, luna +1.04).
+- 임시 결정: 블록·카탈로그 현행 유지. 수치는 리포트로만 인용하고 사이트 문구는 손대지 않는다(ADR-012). 이 측정은 질문형 시행이라 코딩 세션의 `log_progress`·`impact_of` 가치는 재지 않았다(채택 0/48은 그 한계의 수치다).
+- 필요한 결정: ⑴ 첫 단계의 `forced`를 풀고 "경로를 모를 때만"으로(블록 문안 변경 — todo 22 ⑵의 예산 안에서, `AGENT_FORCED_CALL_CEILING` 2 → 1) ⑵ OQ-039 ⑴ 결정론 발췌(헤딩·체크박스·심볼명)를 먼저 서빙해 포인터가 홉이 아니게 만든 뒤 v4 재측정 ⑶ 현행 유지 — 설치 비용 +0.375턴을 문서에 적고 판매 논리에서 "턴 절감"을 뺀다(R5 §4.6 빼는 것 목록과 일치).
+- 상태: open. 기본 후보 ⑵ 뒤 ⑴ 재판정. ⑶은 그 전까지의 기본 상태.

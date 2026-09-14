@@ -1,4 +1,4 @@
-import { buildRiskMap, type RiskEntry } from "@alrescha/core";
+import { buildRiskMap, type RiskEntry, type RiskMap } from "@alrescha/core";
 
 import type { McpWorkspaceData } from "./store";
 
@@ -10,10 +10,13 @@ import type { McpWorkspaceData } from "./store";
  * signals, the missing one is named in `coverage.unanswered` — two answers
  * to one question is the failure this codebase keeps repairing, and saying
  * which signals each answer used is how the two stay comparable.
+ *
+ * `workspaceRiskMap` is the whole answer, `unmeasured` included; the
+ * graph-surface v3 precision labelling (todo 25) reads that half too, and a
+ * second copy of this mapping there would be the divergence the comment
+ * above is about.
  */
-export function workspaceRiskEntries(
-  workspace: McpWorkspaceData,
-): Map<string, RiskEntry> {
+export function workspaceRiskMap(workspace: McpWorkspaceData): RiskMap {
   const artifacts = workspace.repositories.flatMap((repository) =>
     repository.artifacts.map((artifact) => ({
       classification: artifact.kind,
@@ -32,7 +35,7 @@ export function workspaceRiskEntries(
         return path ? [path] : [];
       }),
   );
-  const map = buildRiskMap({
+  return buildRiskMap({
     artifacts,
     coverage: measured.length === 0 ? null : measured,
     edges: workspace.repositories.flatMap((repository) =>
@@ -56,5 +59,11 @@ export function workspaceRiskEntries(
       })),
     ),
   });
+}
+
+export function workspaceRiskEntries(
+  workspace: McpWorkspaceData,
+): Map<string, RiskEntry> {
+  const map = workspaceRiskMap(workspace);
   return new Map(map.entries.map((entry) => [entry.nodeId, entry]));
 }

@@ -1,0 +1,1906 @@
+{
+  "corpusCommit": "c172b6bc5e690f32e3d550ff3290c52d90d4413a",
+  "corpusScans": {
+    ".": {
+      "artifactCount": 759,
+      "commitSha": "3fdc7d15160e4ec7a4cd7b71096f6bfe4ec1d335",
+      "edgeCount": 4687
+    }
+  },
+  "generatedAt": "2026-09-14T10:19:46.638Z",
+  "judgment": {
+    "baselineMeanTurns": 4.563,
+    "baselinePassRate": 0.875,
+    "graphMeanTurns": 4.938,
+    "graphPassRate": 0.938,
+    "passRateDelta": 0.063,
+    "primaryHypothesis": "turns-non-increasing",
+    "primaryMet": false,
+    "qualityNonInferior": true,
+    "turnsDelta": 0.375,
+    "turnsReduced": false,
+    "verdict": "NOT MET"
+  },
+  "mode": "real",
+  "preregistrationFile": "benchmarks/graph-surface/preregistration.v3-relational.json",
+  "preregistrationSha256": "34b8fa8730ae47d5d25f62a28225175656506f5c7d82cc668fc760ed4bfd5f14",
+  "primaryHypothesis": "turns-non-increasing",
+  "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+  "render": {
+    "armNotes": [
+      "file-exploration: 체크아웃 툴 list_files, grep_files, read_file — MCP 없음.",
+      "graph-surface: 같은 체크아웃 툴 + 제품 tools/list 21툴(요약 전용 스토어 — 본문 0) + 설치 지시 블록.",
+      "프로덕션 스토어 스캔: . 759노드·4687엣지 (scan 3fdc7d15160e)."
+    ],
+    "corpusCommit": "c172b6bc5e690f32e3d550ff3290c52d90d4413a",
+    "generatedAt": "2026-09-14T10:19:46.638Z",
+    "mode": "real",
+    "models": [
+      "gpt-5.6-luna",
+      "claude-sonnet-5"
+    ],
+    "preregistrationFile": "benchmarks/graph-surface/preregistration.v3-relational.json",
+    "preregistrationSha256": "34b8fa8730ae47d5d25f62a28225175656506f5c7d82cc668fc760ed4bfd5f14",
+    "productCatalogSha256": "a3d56907414a85b97c3838c55766ab6c6adb310133239ba6c2ce6d85e411f0ac",
+    "questionSourceLine": "- 질문 출처: 사전등록 파일 내 인라인 answer-manifest 4과제 (파일 다이제스트가 잠금)",
+    "title": "그래프 표면 v3 — 관계형 질문 4개 세트 (부속 실험 ④)",
+    "v3ManifestDigest": null
+  },
+  "schemaVersion": "graph-surface-v3",
+  "trials": [
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts\npackages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 258,
+          "outputTokens": 32
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1034,
+          "outputTokens": 59
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 1292,
+      "outputTokens": 91,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts\npackages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 1031,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 258,
+          "outputTokens": 32
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 1031,
+          "inputTokens": 1034,
+          "outputTokens": 61
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 1292,
+      "outputTokens": 93,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "The non-test source files in packages/mcp/src that import \"./local-workspace\" are:\n\n1. packages/mcp/src/index.ts\n2. packages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 922,
+          "outputTokens": 53
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 2301,
+          "outputTokens": 131
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 3223,
+      "outputTokens": 184,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts\npackages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 922,
+          "outputTokens": 53
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 2301,
+          "outputTokens": 90
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 3223,
+      "outputTokens": 143,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 2,
+      "toolNames": [
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts\npackages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 9360,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2623,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2620,
+          "inputTokens": 4164,
+          "outputTokens": 51
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4161,
+          "inputTokens": 4959,
+          "outputTokens": 66
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 11746,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 163,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "packages/mcp/src/index.ts\npackages/mcp/src/local-serve.ts",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 9401,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2620,
+          "inputTokens": 2623,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2620,
+          "inputTokens": 4164,
+          "outputTokens": 44
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4161,
+          "inputTokens": 4952,
+          "outputTokens": 46
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 11739,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 136,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "Two non-test source files in packages/mcp/src import `./local-workspace`:\n\n1. `packages/mcp/src/index.ts` (imports several members, e.g. `... } from \"./local-workspace\";` and `export type { LocalWorkspaceInput } from \"./local-workspace\";`)\n2. `packages/mcp/src/local-serve.ts` (`import { LOCAL_USER_ID, LOCAL_WORKSPACE_ID } from \"./local-workspace\";`)</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6317,
+          "outputTokens": 124
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7824,
+          "outputTokens": 224
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 14141,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 348,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 2
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-importers-local-workspace",
+      "answer": "Two non-test source files in packages/mcp/src import ./local-workspace:\n\n- packages/mcp/src/index.ts (re-exports LOCAL_USER_ID, LOCAL_WORKSPACE_ID, buildLocalWorkspace, localRepositoryId, and the LocalWorkspaceInput type from \"./local-workspace\")\n- packages/mcp/src/local-serve.ts (imports LOCAL_USER_ID, LOCAL_WORKSPACE_ID from \"./local-workspace\")\n\n(local-workspace.test.ts / local-serve.test.ts also reference the string \"local-workspace\" but are test files and don't import the module, so they're excluded.)",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6317,
+          "outputTokens": 73
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6398,
+          "outputTokens": 52
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8666,
+          "outputTokens": 102
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 15312,
+          "outputTokens": 172
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 18696,
+          "outputTokens": 333
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 55389,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 732,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "{\n  \"answer\": {\n    \"file\": \"apps/web/app/api/mcp/route.ts\",\n    \"function\": \"handleHostedMcpRequest\",\n    \"module\": \"apps/web/lib/mcp/endpoint.ts\"\n  }\n}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 8336,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 273,
+          "outputTokens": 78
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8339,
+          "outputTokens": 96
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8336,
+          "inputTokens": 8501,
+          "outputTokens": 53
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 17113,
+      "outputTokens": 227,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "read_file"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "{\"answer\":\"File: `apps/web/app/api/mcp/route.ts`; imported function: `handleHostedMcpRequest`; module: `apps/web/lib/mcp/endpoint`.\"}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 6988,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 273,
+          "outputTokens": 40
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 2091,
+          "outputTokens": 37
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2088,
+          "inputTokens": 4903,
+          "outputTokens": 26
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4900,
+          "inputTokens": 4995,
+          "outputTokens": 43
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 12262,
+      "outputTokens": 146,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "grep_files",
+        "list_files",
+        "read_file"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "The route is defined in `apps/web/app/api/mcp/route.ts`. Its `POST` handler simply calls `handleHostedMcpRequest(request)`, which it imports from `apps/web/lib/mcp/endpoint.ts` (imported via the relative path `../../../lib/mcp/endpoint`).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 942,
+          "outputTokens": 65
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3998,
+          "outputTokens": 74
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 4544,
+          "outputTokens": 89
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 4738,
+          "outputTokens": 155
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 14222,
+      "outputTokens": 383,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "grep_files",
+        "list_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "In the web app, POST requests to the hosted MCP HTTP route `/api/mcp` are handled by:\n\n- File: `apps/web/app/api/mcp/route.ts` — it exports the `POST` handler for the route, which simply calls `handleHostedMcpRequest(request)`.\n- Imported function: `handleHostedMcpRequest`\n- Source module: `apps/web/lib/mcp/endpoint.ts` (imported via the relative path `../../../lib/mcp/endpoint` in `route.ts`)\n\n(That `handleHostedMcpRequest` function in turn builds/uses a `HostedMcpEndpoint` created by `createHostedMcpEndpoint` from the `@alrescha/mcp` package and calls its `.fetch(request)`.)</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 942,
+          "outputTokens": 117
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13115,
+          "outputTokens": 121
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13708,
+          "outputTokens": 100
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13913,
+          "outputTokens": 65
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14380,
+          "outputTokens": 311
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 56058,
+      "outputTokens": 714,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "grep_files",
+        "list_files",
+        "list_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "{\n  \"answer\": {\n    \"file\": \"apps/web/app/api/mcp/route.ts\",\n    \"function\": \"handleHostedMcpRequest\",\n    \"module\": \"apps/web/lib/mcp/endpoint.ts\"\n  }\n}",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 9364,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2638,
+          "outputTokens": 47
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2635,
+          "inputTokens": 4153,
+          "outputTokens": 92
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4150,
+          "inputTokens": 4551,
+          "outputTokens": 53
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 11342,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 192,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 3,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "read_file"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "answer: `apps/web/app/api/mcp/route.ts`; it imports `handleHostedMcpRequest`; that function comes from `apps/web/lib/mcp/endpoint.ts` (imported as `../../../lib/mcp/endpoint`).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 9419,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2635,
+          "inputTokens": 2638,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2635,
+          "inputTokens": 4152,
+          "outputTokens": 83
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4149,
+          "inputTokens": 4541,
+          "outputTokens": 122
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 11331,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 251,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "The route file `apps/web/app/api/mcp/route.ts` exports the `POST` handler for the hosted MCP HTTP route `/api/mcp`. That handler simply calls the imported function `handleHostedMcpRequest`, which it imports from the module `apps/web/lib/mcp/endpoint.ts` (via the relative import `\"../../../lib/mcp/endpoint\"`).\n\nSummary:\n- File handling POST for `/api/mcp`: `apps/web/app/api/mcp/route.ts`\n- Imported function used to handle the request: `handleHostedMcpRequest`\n- Module it comes from: `apps/web/lib/mcp/endpoint.ts`</answer>\n</invoke>\n",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6337,
+          "outputTokens": 52
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9199,
+          "outputTokens": 63
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9367,
+          "outputTokens": 269
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 10038,
+          "outputTokens": 284
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 34941,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 668,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-mcp-route-handler",
+      "answer": "The POST route for `/api/mcp` is handled by `apps/web/app/api/mcp/route.ts`. Its `POST` handler imports the function `handleHostedMcpRequest`, which it delegates to. That function is defined in (and imported from) the module `apps/web/lib/mcp/endpoint.ts`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6337,
+          "outputTokens": 52
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9199,
+          "outputTokens": 63
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9367,
+          "outputTokens": 96
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 11411,
+          "outputTokens": 195
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 36314,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 406,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "read_file",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-access-events-migrations",
+      "answer": "The `access_events` table is first created by `supabase/migrations/202608100002_evidence_graph_domain.sql`. The later migration is `supabase/migrations/202608300002_access_events_occurred_idx.sql`, which creates the `access_events_workspace_occurred_idx` index on `(workspace_id, occurred_at DESC)`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 8036,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 269,
+          "outputTokens": 79
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8039,
+          "outputTokens": 153
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8036,
+          "inputTokens": 10179,
+          "outputTokens": 123
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 18487,
+      "outputTokens": 355,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 3
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-access-events-migrations",
+      "answer": "The `access_events` table is first created in `supabase/migrations/202608100002_evidence_graph_domain.sql`. The later access-events-named migration is `supabase/migrations/202608300002_access_events_occurred_idx.sql`, which creates the index `access_events_workspace_occurred_idx` on `(workspace_id, occurred_at DESC)`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 22942,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 269,
+          "outputTokens": 28
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6414,
+          "outputTokens": 33
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 6411,
+          "inputTokens": 8010,
+          "outputTokens": 51
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8007,
+          "inputTokens": 8527,
+          "outputTokens": 76
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8524,
+          "inputTokens": 10114,
+          "outputTokens": 121
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 33334,
+      "outputTokens": 309,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "list_files",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-access-events-migrations",
+      "answer": "- The `access_events` table is first created in **`202608100002_evidence_graph_domain.sql`** (it defines `create table public.access_events (...)`).\n- The later migration whose name references access events, **`202608300002_access_events_occurred_idx.sql`**, adds an index on that table — specifically it creates the index **`access_events_workspace_occurred_idx`** (`on public.access_events (workspace_id, occurred_at desc)`), to speed up workspace-scoped history queries that order by `occurred_at` without filtering by `token_id`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 931,
+          "outputTokens": 67
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3623,
+          "outputTokens": 54
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13021,
+          "outputTokens": 243
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13546,
+          "outputTokens": 95
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 15788,
+          "outputTokens": 238
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 46909,
+      "outputTokens": 697,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "grep_files",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-access-events-migrations",
+      "answer": "- The `access_events` table is first created in **`supabase/migrations/202608100002_evidence_graph_domain.sql`** (it defines `create table public.access_events (...)`).\n- The later migration whose name mentions access events is **`supabase/migrations/202608300002_access_events_occurred_idx.sql`**, which adds the index **`access_events_workspace_occurred_idx`** — created as `create index access_events_workspace_occurred_idx on public.access_events (workspace_id, occurred_at desc);` (to support workspace-scoped queries that order by `occurred_at` without a `token_id` predicate, complementing the pre-existing 3-column `(workspace_id, token_id, occurred_at desc)` index from the original table-creation migration).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 931,
+          "outputTokens": 67
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3623,
+          "outputTokens": 50
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13017,
+          "outputTokens": 188
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13487,
+          "outputTokens": 97
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13593,
+          "outputTokens": 209
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 18355,
+          "outputTokens": 413
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 63006,
+      "outputTokens": 1024,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "grep_files",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-access-events-migrations",
+      "answer": "The `access_events` table is first created in `supabase/migrations/202608100002_evidence_graph_domain.sql`. The later access-events-named migration is `supabase/migrations/202608300002_access_events_occurred_idx.sql`, which creates the index `access_events_workspace_occurred_idx` on `(workspace_id, occurred_at DESC)`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 21186,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2634,
+          "outputTokens": 44
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2631,
+          "inputTokens": 4195,
+          "outputTokens": 101
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4192,
+          "inputTokens": 11787,
+          "outputTokens": 43
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 11784,
+          "inputTokens": 13193,
+          "outputTokens": 184
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 31809,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 372,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 6,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "read_file",
+        "list_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-access-events-migrations",
+      "answer": "The `access_events` table is first created by `supabase/migrations/202608100002_evidence_graph_domain.sql`. The later migration is `supabase/migrations/202608300002_access_events_occurred_idx.sql`, which creates the index `access_events_workspace_occurred_idx` on `(workspace_id, occurred_at DESC)`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 34961,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2631,
+          "inputTokens": 2634,
+          "outputTokens": 44
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4192,
+          "inputTokens": 4195,
+          "outputTokens": 74
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 4192,
+          "inputTokens": 10391,
+          "outputTokens": 100
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 10388,
+          "inputTokens": 13561,
+          "outputTokens": 52
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 13558,
+          "inputTokens": 14976,
+          "outputTokens": 103
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 45757,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 373,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 8,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-access-events-migrations",
+      "answer": "The `access_events` table is first created in `supabase/migrations/202608100002_evidence_graph_domain.sql`.\n\nThe later migration whose name mentions access events, `supabase/migrations/202608300002_access_events_occurred_idx.sql`, adds an index on that table: `access_events_workspace_occurred_idx` (a two-column index on `(workspace_id, occurred_at desc)`, added alongside the existing three-column `(workspace_id, token_id, occurred_at desc)` index created back in the original 202608100002 migration).",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6326,
+          "outputTokens": 63
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9181,
+          "outputTokens": 198
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9661,
+          "outputTokens": 97
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12383,
+          "outputTokens": 135
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 14876,
+          "outputTokens": 96
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 16766,
+          "outputTokens": 311
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 69193,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 900,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 7,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 6
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-access-events-migrations",
+      "answer": "- The `access_events` table is first created in `supabase/migrations/202608100002_evidence_graph_domain.sql` (line ~294, `create table public.access_events (...)`), which also creates an initial 3-column index on `(workspace_id, token_id, occurred_at desc)`.\n- The later migration whose name mentions access events, `supabase/migrations/202608300002_access_events_occurred_idx.sql`, adds a new two-column index named `access_events_workspace_occurred_idx` on `public.access_events (workspace_id, occurred_at desc)` — added because workspace-history readers filter/order by `workspace_id, occurred_at` without a `token_id` predicate, so the original 3-column index couldn't be used efficiently for that query shape.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6326,
+          "outputTokens": 62
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9179,
+          "outputTokens": 212
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 9672,
+          "outputTokens": 104
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 10476,
+          "outputTokens": 388
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 35653,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 766,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 5,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-oq-069-references",
+      "answer": "The heading for `OQ-069` is declared in `spec/OPEN_QUESTIONS.md`, and the handoff report referring to it is `docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 34309,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 260,
+          "outputTokens": 78
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8182,
+          "outputTokens": 171
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8179,
+          "inputTokens": 13010,
+          "outputTokens": 88
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 13007,
+          "inputTokens": 13126,
+          "outputTokens": 103
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 13123,
+          "inputTokens": 15188,
+          "outputTokens": 150
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 49766,
+      "outputTokens": 590,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 11,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-oq-069-references",
+      "answer": "The heading for `OQ-069` is declared in `spec/OPEN_QUESTIONS.md`. The handoff report referring to it is `docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 24352,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 260,
+          "outputTokens": 62
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6853,
+          "outputTokens": 120
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 6850,
+          "inputTokens": 8679,
+          "outputTokens": 47
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8676,
+          "inputTokens": 8829,
+          "outputTokens": 120
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 8826,
+          "inputTokens": 14919,
+          "outputTokens": 176
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 39540,
+      "outputTokens": 525,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 9,
+      "toolNames": [
+        "grep_files",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "list_files",
+        "read_file",
+        "read_file",
+        "submit_answer"
+      ],
+      "turns": 5
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-oq-069-references",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 924,
+          "outputTokens": 66
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1853,
+          "outputTokens": 86
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 2802,
+          "outputTokens": 97
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3061,
+          "outputTokens": 104
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 3174,
+          "outputTokens": 84
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8085,
+          "outputTokens": 104
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8198,
+          "outputTokens": 218
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8425,
+          "outputTokens": 188
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8775,
+          "outputTokens": 97
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 18038,
+          "outputTokens": 135
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 63335,
+      "outputTokens": 1179,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 10,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "list_files",
+        "list_files"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "file-exploration",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-oq-069-references",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 924,
+          "outputTokens": 66
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 1853,
+          "outputTokens": 89
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 2805,
+          "outputTokens": 115
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 5548,
+          "outputTokens": 90
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6501,
+          "outputTokens": 132
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7496,
+          "outputTokens": 128
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7786,
+          "outputTokens": 140
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7935,
+          "outputTokens": 83
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 12845,
+          "outputTokens": 245
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13099,
+          "outputTokens": 190
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 66792,
+      "outputTokens": 1278,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 10,
+      "toolNames": [
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "grep_files",
+        "read_file"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 1,
+      "taskId": "relational-oq-069-references",
+      "answer": "The heading for `OQ-069` is declared in `spec/OPEN_QUESTIONS.md`. The handoff report under `docs/reports` that refers to it is `docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 91721,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2579,
+          "inputTokens": 2625,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2622,
+          "inputTokens": 2705,
+          "outputTokens": 33
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2702,
+          "inputTokens": 3288,
+          "outputTokens": 107
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 3285,
+          "inputTokens": 5088,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 5085,
+          "inputTokens": 5237,
+          "outputTokens": 191
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 5234,
+          "inputTokens": 17366,
+          "outputTokens": 68
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 17363,
+          "inputTokens": 17518,
+          "outputTokens": 66
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 17515,
+          "inputTokens": 17599,
+          "outputTokens": 91
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 17596,
+          "inputTokens": 17743,
+          "outputTokens": 75
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 17740,
+          "inputTokens": 17849,
+          "outputTokens": 189
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 107018,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 912,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 14,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "read_file",
+        "read_file",
+        "list_files",
+        "read_file",
+        "read_file",
+        "read_file",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "get_artifact",
+        "submit_answer"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "graph-surface",
+      "model": "gpt-5.6-luna",
+      "repeat": 2,
+      "taskId": "relational-oq-069-references",
+      "answer": "The heading for `OQ-069` is declared in `spec/OPEN_QUESTIONS.md`. The handoff report under `docs/reports` that refers to it is `docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 85214,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2622,
+          "inputTokens": 2625,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2702,
+          "inputTokens": 2705,
+          "outputTokens": 64
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 2702,
+          "inputTokens": 9300,
+          "outputTokens": 98
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 9297,
+          "inputTokens": 11091,
+          "outputTokens": 44
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 11088,
+          "inputTokens": 11238,
+          "outputTokens": 116
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 11235,
+          "inputTokens": 14353,
+          "outputTokens": 46
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 14350,
+          "inputTokens": 14949,
+          "outputTokens": 73
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 14946,
+          "inputTokens": 16275,
+          "outputTokens": 85
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 16272,
+          "inputTokens": 16397,
+          "outputTokens": 111
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 98933,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 683,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 12,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "list_files",
+        "read_file",
+        "read_file",
+        "list_files",
+        "read_file",
+        "grep_files",
+        "grep_files",
+        "grep_files",
+        "search_index",
+        "submit_answer"
+      ],
+      "turns": 9
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 1,
+      "taskId": "relational-oq-069-references",
+      "answer": null,
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6319,
+          "outputTokens": 65
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6426,
+          "outputTokens": 67
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7355,
+          "outputTokens": 191
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8409,
+          "outputTokens": 168
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8603,
+          "outputTokens": 59
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8824,
+          "outputTokens": 111
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8944,
+          "outputTokens": 84
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 13855,
+          "outputTokens": 249
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 23270,
+          "outputTokens": 115
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 23547,
+          "outputTokens": 663
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 115552,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 1772,
+      "quality": "FAIL",
+      "score": 0,
+      "status": "succeeded",
+      "toolCalls": 10,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "read_file",
+        "list_files",
+        "grep_files",
+        "read_file",
+        "list_files",
+        "list_files",
+        "grep_files"
+      ],
+      "turns": 10
+    },
+    {
+      "arm": "graph-surface",
+      "model": "claude-sonnet-5",
+      "repeat": 2,
+      "taskId": "relational-oq-069-references",
+      "answer": "The heading for OQ-069 is declared in `spec/OPEN_QUESTIONS.md`, and it is referenced in the handoff report `docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-live-glow.md`.",
+      "cacheCreationTokens": 0,
+      "cacheReadTokens": 0,
+      "calls": [
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6319,
+          "outputTokens": 65
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 6425,
+          "outputTokens": 67
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 7354,
+          "outputTokens": 87
+        },
+        {
+          "cacheCreationTokens": 0,
+          "cacheReadTokens": 0,
+          "inputTokens": 8304,
+          "outputTokens": 238
+        }
+      ],
+      "errorMessage": null,
+      "inputTokens": 28402,
+      "observations": {
+        "progressMatched": {},
+        "todosCreated": 0,
+        "todosDuplicated": 0
+      },
+      "outputTokens": 457,
+      "quality": "PASS",
+      "score": 1,
+      "status": "succeeded",
+      "toolCalls": 4,
+      "toolNames": [
+        "search_index",
+        "grep_files",
+        "grep_files",
+        "submit_answer"
+      ],
+      "turns": 4
+    }
+  ],
+  "v3ManifestDigest": null
+}

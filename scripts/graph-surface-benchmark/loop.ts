@@ -4,12 +4,18 @@
  * pre-registered turn cap is reached. Turns (model invocations) are the
  * primary metric; token accounting is the provider's own reported usage,
  * summed across the trial's calls — never a local estimate.
+ *
+ * v3 (todo 25) records the cache halves of that usage too —
+ * `cache_creation_input_tokens` / `cache_read_input_tokens` on Anthropic,
+ * `input_tokens_details.cached_tokens` on OpenAI — per call and summed, and
+ * the sequence of tool names a trial called, so the auxiliary experiments
+ * (adoption, tokens per call) read the same trials rather than re-running.
  */
 
-import type { ToolDefinition, ToolExecutor } from "./tools";
+import type { AgentToolExecutor, ToolDefinition } from "./tools";
 
 export interface AgentTrialInput {
-  readonly executor: ToolExecutor;
+  readonly executor: AgentToolExecutor;
   readonly model: string;
   readonly prompt: string;
   /** Mock-only scripted answer so the dry run proves the whole pipeline. */
@@ -19,11 +25,25 @@ export interface AgentTrialInput {
   readonly turnCap: number;
 }
 
+/** One model invocation's usage, as the provider reported it. */
+export interface ModelCallUsage {
+  readonly cacheCreationTokens: number;
+  readonly cacheReadTokens: number;
+  readonly inputTokens: number;
+  readonly outputTokens: number;
+}
+
 export interface AgentTrialOutcome {
   readonly answer: string | null;
+  readonly cacheCreationTokens: number;
+  readonly cacheReadTokens: number;
+  /** Per-call usage, in call order. `calls.length === turns`. */
+  readonly calls: readonly ModelCallUsage[];
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly toolCalls: number;
+  /** Every tool the model called, in order — `submit_answer` included. */
+  readonly toolNames: readonly string[];
   readonly turns: number;
 }
 
@@ -98,6 +118,46 @@ function parseArguments(raw: unknown): Record<string, unknown> {
   }
 }
 
+/** A usage integer the provider may omit: absent is 0, anything else is a defect. */
+function optionalCount(value: unknown, field: string): number {
+  if (value === undefined || value === null) return 0;
+  if (!Number.isInteger(value) || (value as number) < 0) {
+    throw new TypeError(`Provider reported a non-integer ${field}.`);
+  }
+  return value as number;
+}
+
+class UsageLedger {
+  readonly calls: ModelCallUsage[] = [];
+
+  add(call: ModelCallUsage): void {
+    this.calls.push(call);
+  }
+
+  sum(key: keyof ModelCallUsage): number {
+    return this.calls.reduce((total, call) => total + call[key], 0);
+  }
+
+  outcome(input: {
+    answer: string | null;
+    toolCalls: number;
+    toolNames: readonly string[];
+    turns: number;
+  }): AgentTrialOutcome {
+    return {
+      answer: input.answer,
+      cacheCreationTokens: this.sum("cacheCreationTokens"),
+      cacheReadTokens: this.sum("cacheReadTokens"),
+      calls: [...this.calls],
+      inputTokens: this.sum("inputTokens"),
+      outputTokens: this.sum("outputTokens"),
+      toolCalls: input.toolCalls,
+      toolNames: [...input.toolNames],
+      turns: input.turns,
+    };
+  }
+}
+
 /**
  * Anthropic Messages multi-turn loop: assistant tool_use blocks are answered
  * with user tool_result blocks until submit_answer or the cap.
@@ -118,8 +178,8 @@ export function createAnthropicAgentModel(
         name: tool.name,
       }));
       const messages: unknown[] = [{ content: input.prompt, role: "user" }];
-      let inputTokens = 0;
-      let outputTokens = 0;
+      const ledger = new UsageLedger();
+      const toolNames: string[] = [];
       let toolCalls = 0;
       for (let turn = 1; turn <= input.turnCap; turn += 1) {
         const body = await postWithRetry({
@@ -141,15 +201,31 @@ export function createAnthropicAgentModel(
           url: "https://api.anthropic.com/v1/messages",
         });
         const usage = body.usage as
-          { input_tokens?: number; output_tokens?: number } | undefined;
+          | {
+              cache_creation_input_tokens?: number;
+              cache_read_input_tokens?: number;
+              input_tokens?: number;
+              output_tokens?: number;
+            }
+          | undefined;
         if (
           !Number.isInteger(usage?.input_tokens) ||
           !Number.isInteger(usage?.output_tokens)
         ) {
           throw new TypeError("Anthropic omitted authoritative token usage.");
         }
-        inputTokens += usage!.input_tokens!;
-        outputTokens += usage!.output_tokens!;
+        ledger.add({
+          cacheCreationTokens: optionalCount(
+            usage!.cache_creation_input_tokens,
+            "cache_creation_input_tokens",
+          ),
+          cacheReadTokens: optionalCount(
+            usage!.cache_read_input_tokens,
+            "cache_read_input_tokens",
+          ),
+          inputTokens: usage!.input_tokens!,
+          outputTokens: usage!.output_tokens!,
+        });
         const content = (body.content ?? []) as Array<{
           id?: string;
           input?: unknown;
@@ -158,16 +234,16 @@ export function createAnthropicAgentModel(
           type?: string;
         }>;
         const toolUses = content.filter((block) => block.type === "tool_use");
+        toolNames.push(...toolUses.map((block) => block.name ?? ""));
         const submit = toolUses.find((block) => block.name === "submit_answer");
         if (submit) {
           const args = parseArguments(submit.input);
-          return {
+          return ledger.outcome({
             answer: typeof args.answer === "string" ? args.answer : "",
-            inputTokens,
-            outputTokens,
             toolCalls: toolCalls + toolUses.length,
+            toolNames,
             turns: turn,
-          };
+          });
         }
         if (toolUses.length === 0) {
           const text = content
@@ -175,35 +251,34 @@ export function createAnthropicAgentModel(
             .map((block) => block.text ?? "")
             .join("\n")
             .trim();
-          return {
+          return ledger.outcome({
             answer: text.length > 0 ? text : null,
-            inputTokens,
-            outputTokens,
             toolCalls,
+            toolNames,
             turns: turn,
-          };
+          });
         }
         toolCalls += toolUses.length;
         messages.push({ content, role: "assistant" });
-        messages.push({
-          content: toolUses.map((block) => ({
-            content: input.executor.execute(
+        const results: unknown[] = [];
+        for (const block of toolUses) {
+          results.push({
+            content: await input.executor.execute(
               block.name ?? "",
               parseArguments(block.input),
             ),
             tool_use_id: block.id ?? "",
             type: "tool_result",
-          })),
-          role: "user",
-        });
+          });
+        }
+        messages.push({ content: results, role: "user" });
       }
-      return {
+      return ledger.outcome({
         answer: null,
-        inputTokens,
-        outputTokens,
         toolCalls,
+        toolNames,
         turns: input.turnCap,
-      };
+      });
     },
   };
 }
@@ -235,8 +310,8 @@ export function createOpenAiAgentModel(
         { content: input.prompt, role: "user" },
       ];
       let previousResponseId: string | null = null;
-      let inputTokens = 0;
-      let outputTokens = 0;
+      const ledger = new UsageLedger();
+      const toolNames: string[] = [];
       let toolCalls = 0;
       for (let turn = 1; turn <= input.turnCap; turn += 1) {
         const body = await postWithRetry({
@@ -261,7 +336,12 @@ export function createOpenAiAgentModel(
           url: "https://api.openai.com/v1/responses",
         });
         const usage = body.usage as
-          { input_tokens?: number; output_tokens?: number } | undefined;
+          | {
+              input_tokens?: number;
+              input_tokens_details?: { cached_tokens?: number };
+              output_tokens?: number;
+            }
+          | undefined;
         if (
           typeof body.id !== "string" ||
           !Number.isInteger(usage?.input_tokens) ||
@@ -270,8 +350,16 @@ export function createOpenAiAgentModel(
           throw new TypeError("OpenAI omitted id or authoritative usage.");
         }
         previousResponseId = body.id;
-        inputTokens += usage!.input_tokens!;
-        outputTokens += usage!.output_tokens!;
+        ledger.add({
+          // OpenAI has no creation half: a cache hit is reported, a write is not.
+          cacheCreationTokens: 0,
+          cacheReadTokens: optionalCount(
+            usage!.input_tokens_details?.cached_tokens,
+            "input_tokens_details.cached_tokens",
+          ),
+          inputTokens: usage!.input_tokens!,
+          outputTokens: usage!.output_tokens!,
+        });
         const output = (body.output ?? []) as Array<{
           arguments?: string;
           call_id?: string;
@@ -282,18 +370,18 @@ export function createOpenAiAgentModel(
         const functionCalls = output.filter(
           (item) => item.type === "function_call",
         );
+        toolNames.push(...functionCalls.map((item) => item.name ?? ""));
         const submit = functionCalls.find(
           (item) => item.name === "submit_answer",
         );
         if (submit) {
           const args = parseArguments(submit.arguments);
-          return {
+          return ledger.outcome({
             answer: typeof args.answer === "string" ? args.answer : "",
-            inputTokens,
-            outputTokens,
             toolCalls: toolCalls + functionCalls.length,
+            toolNames,
             turns: turn,
-          };
+          });
         }
         if (functionCalls.length === 0) {
           const text = output
@@ -302,31 +390,33 @@ export function createOpenAiAgentModel(
             .map((block) => block.text ?? "")
             .join("\n")
             .trim();
-          return {
+          return ledger.outcome({
             answer: text.length > 0 ? text : null,
-            inputTokens,
-            outputTokens,
             toolCalls,
+            toolNames,
             turns: turn,
-          };
+          });
         }
         toolCalls += functionCalls.length;
-        requestInput = functionCalls.map((item) => ({
-          call_id: item.call_id ?? "",
-          output: input.executor.execute(
-            item.name ?? "",
-            parseArguments(item.arguments),
-          ),
-          type: "function_call_output",
-        }));
+        const outputs: unknown[] = [];
+        for (const item of functionCalls) {
+          outputs.push({
+            call_id: item.call_id ?? "",
+            output: await input.executor.execute(
+              item.name ?? "",
+              parseArguments(item.arguments),
+            ),
+            type: "function_call_output",
+          });
+        }
+        requestInput = outputs;
       }
-      return {
+      return ledger.outcome({
         answer: null,
-        inputTokens,
-        outputTokens,
         toolCalls,
+        toolNames,
         turns: input.turnCap,
-      };
+      });
     },
   };
 }
@@ -340,14 +430,28 @@ export function createMockAgentModel(): AgentModel {
   return {
     async runTrial(input) {
       const firstTool = input.tools[0];
-      if (firstTool && firstTool.name !== "submit_answer") {
-        input.executor.execute(firstTool.name, {});
+      const explores =
+        firstTool !== undefined && firstTool.name !== "submit_answer";
+      if (explores) {
+        await input.executor.execute(firstTool.name, {});
       }
-      return {
-        answer: input.scriptedAnswer ?? "",
+      const zero: ModelCallUsage = {
+        cacheCreationTokens: 0,
+        cacheReadTokens: 0,
         inputTokens: 0,
         outputTokens: 0,
-        toolCalls: firstTool && firstTool.name !== "submit_answer" ? 2 : 1,
+      };
+      return {
+        answer: input.scriptedAnswer ?? "",
+        cacheCreationTokens: 0,
+        cacheReadTokens: 0,
+        calls: [zero, zero],
+        inputTokens: 0,
+        outputTokens: 0,
+        toolCalls: explores ? 2 : 1,
+        toolNames: explores
+          ? [firstTool.name, "submit_answer"]
+          : ["submit_answer"],
         turns: 2,
       };
     },
