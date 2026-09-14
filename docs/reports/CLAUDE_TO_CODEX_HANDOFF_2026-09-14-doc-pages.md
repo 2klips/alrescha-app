@@ -55,7 +55,7 @@ core·SQL·의존성 무변경.
 
 ## PR
 
-- (머지 보류 중 — PR 번호는 생성 뒤 기입)
+- https://github.com/2klips/alrescha-app/pull/21 — base `phase4/wave-d-todo-19`. 커밋 3건: `feat(worker): docskeleton job assembles doc pages from stored rows and analyze chains it`(`0262d6e`), `feat(app): /app/docs list and page — prose only under its digest, old addresses redirect`(`9be3cdc`), 문서(`83ab830`). PR #19 → #20 다음에 머지.
 
 ## 게이트 수치
 
