@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: todo 13 남은 다섯 항목 — 레이아웃 워밍·`/app/map` 힘 패널·Obsidian 옵션·도메인 앵커·style/config 레이어
 
 작성: 2026-09-13 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **배포 대기 — 웹 머지만.** 마이그레이션·워커·환경변수 무변경.
+상태: **배포·검증 완료 (2026-09-14)** — PR #17 merge `4c54097`, Vercel 성공. 검색 좌표·7개 레이어·패널·핀·warm-start·데모 프리셋 확인. 최초 새로고침 HTTP 500(`timeout`, digest `3952576280`) 1회 후 Reload로 복구되어 지속성 항목은 재시도 후 통과; 상세 원인은 미확정. Fly v20 유지, 큐 0·새 실패 0·기존 15 WARN. [프로덕션 기록](../frontend/logs/2026-09-13-pr17-production-verification.md). 마이그레이션·워커·환경변수 무변경.
 브랜치: `phase4/wave-b-todo-13` (`main@c0d8aea` 기준) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/todo-13.md`](../../.omo/evidence/phase4/todo-13.md) ("Completed — 2026-09-13" 절), 프론트 로그 [`docs/frontend/logs/2026-09-13-map-panel-parity.md`](../frontend/logs/2026-09-13-map-panel-parity.md).
 
@@ -57,4 +57,4 @@ core·워커·MCP·SQL·의존성 무변경.
 
 ## PR
 
-- https://github.com/2klips/alrescha-app/pull/17 — 커밋 1건(`ff622d8`): `feat(map): visibility filters, persisted layout, deterministic collapse, layer toggles, and Obsidian option parity`. 머지만 필요하다(§4).
+- https://github.com/2klips/alrescha-app/pull/17 — 커밋 2건(`ff622d8` 구현, `56233a4` 인계 문서)을 유지한 merge commit `4c54097`로 머지 완료(2026-09-14).
