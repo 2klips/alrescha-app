@@ -55,4 +55,4 @@ core·워커·SQL·의존성 무변경. MCP 어휘 확장은 `packages/mcp`이�
 
 ## PR
 
-- TBD_PR_URL — 커밋 2건: `feat(app): render the progress digest and attention list, finding detail, and a finding dismissal with its board`(`a22dc94`), `feat(app): inspector cards on the map and the concept layer through the MCP tools`(`956aca8`). PR #19 다음에 머지.
+- https://github.com/2klips/alrescha-app/pull/20 — 커밋 2건: `feat(app): render the progress digest and attention list, finding detail, and a finding dismissal with its board`(`a22dc94`), `feat(app): inspector cards on the map and the concept layer through the MCP tools`(`956aca8`). PR #19 다음에 머지.
