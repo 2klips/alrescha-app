@@ -735,6 +735,10 @@ export function buildLocalWorkspace(
               title: `${input.repositoryFullName} indexed context`,
             },
           ],
+    // Concepts are written by the enrich synthesis, a server job that has
+    // never run for a local repository — the same empty answer the hosted
+    // reader gives before enrich (todo 19 ⑴).
+    concepts: [],
     dbObjects: schema.dbObjects,
     defaultBranch,
     edgeOmissions,

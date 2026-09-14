@@ -59,7 +59,32 @@ workspace.
   the session report.
 - `pnpm lint`, `pnpm typecheck`, `git diff --check`.
 
+## Second commit — ⑴ the inspector's cards and the concept layer
+
+- `app/ui/inspector-card.tsx` (new) — fetched on selection from
+  `app/api/map/inspect/route.ts` (new, reads as the signed-in member): the
+  shared artifact card (kind · unit · domain chips, export names, summary
+  under the inferred badge or the sentence for its absence), the module card
+  (cluster name, member count, ready / stale / pending by the same member
+  digest `explain_module` compares), the concept card (kind, summary under
+  the inferred badge, member files). Rendered under the path in
+  `map-screen.tsx`'s inspector; every sentence in
+  `WORKSPACE_MAP.inspector.card`.
+- `lib/map/inspect-card.ts` (new) — the pure builders the route feeds.
+- `app/ui/brain-map-stage.tsx` — hit targets carry `data-node-path`.
+- `styles/screens/map-hud.css` — `.arr-card*`.
+- MCP: `concept` node type and the six synthesis relations in the vocabulary
+  (`packages/mcp`, `lib/mcp/supabase-store.ts`), so the layer the map draws
+  is reachable through `query_brain`, `get_neighbors`, `trace_path` and
+  `get_artifact`. Catalogue ratchet 3,076 → 3,131 tokens, recorded.
+
+Verification: `tests/e2e/map-inspector-cards.spec.ts` (live scan, both
+themes audited with the card open, violations 0), `map-panel` · `brain-map`
+· `a11y-keyboard` regression green, `inspect-card.test.ts` 7, MCP
+`concepts.test.ts` 6. Todo 19 closed.
+
 ## Left open
 
-Todo 19 ⑴ (concept summary, module card, concept MCP exposure) — next
-commit on this branch. Details in `.omo/evidence/phase4/todo-19.md`.
+The concept search-index entry type, a button to enqueue a module summary
+from the card, and the graph-surface v4 pre-registration that pins the
+moved catalogue (OQ-071). Details in `.omo/evidence/phase4/todo-19.md`.

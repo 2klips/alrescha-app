@@ -277,3 +277,140 @@ trace. The reason is checked before any client is created.
 - The dismiss form is on the live page only. The demo route shows the board
   and the detail but cannot write, which is the correct shape for a fixture.
 - `touch_screen_view` still stamps during the page load (unchanged).
+
+
+---
+
+## 2026-09-14 — ⑴ the concept layer reaches the tools, and the inspector gets its cards
+
+**Scope:** `packages/mcp/src/{store,graph-tools,data-brain,local-workspace}.ts`,
+`packages/mcp/src/concepts.test.ts` (new), `packages/mcp/src/hosted.test.ts`
+(catalogue ratchet), `apps/web/lib/mcp/supabase-store.ts` (+test),
+`apps/web/lib/map/inspect-card.ts` (new, +test),
+`apps/web/app/api/map/inspect/route.ts` (new),
+`apps/web/app/ui/inspector-card.tsx` (new), `apps/web/app/ui/brain-map-stage.tsx`
+(`data-node-path`), `apps/web/app/app/(shell)/map/map-screen.tsx`,
+`apps/web/lib/strings/map.ts`, `apps/web/app/styles/screens/map-hud.css`,
+`tests/e2e/map-inspector-cards.spec.ts` (new), `tests/korean-strings.test.ts`,
+`scripts/graph-surface-benchmark/product-surface.ts`,
+`scripts/bench-graph-surface.ts`, `tests/graph-surface-v3.test.ts`.
+
+The last numbered item. v1 todo 13 asked for the inspector's file summary,
+a concept summary, a module card, and the concept layer exposed through
+MCP. The first was on `/app/inspection` since S5 and never on the map's own
+inspector; the other three did not exist.
+
+### Concepts, through the tools
+
+The concept layer has been on the map since Wave C todo 7 — `graph_nodes`
+of kind `concept`, edges from them with the synthesis vocabulary — and no
+tool could name it. `concept` was outside `MCP_NODE_TYPES`, and every one of
+`part_of`, `uses`, `depends_on`, `produces`, `configures` and `validates`
+was outside `MCP_EDGE_RELATIONS`, so the Supabase decoder reported each
+concept edge as "outside the MCP vocabulary" and dropped it. A layer the
+screen drew that the agent could not see.
+
+Both vocabularies grew, in the three places the 협업 규약 names at once —
+`store.ts`, the hosted zod enums (built from the arrays, so they follow),
+`graph-tools.ts` — and the contract test that pins the enums to the arrays
+passed unchanged. What the tools do now:
+
+- `query_brain(types: ["concept"])` lists concepts, `status: "synthesized"`
+  (a concept has no lifecycle; its status names what it is), anchored to
+  their first member path like the map anchors them; a relation filter
+  reaches the synthesis vocabulary by name.
+- `get_neighbors` walks `part_of` and `depends_on` to and from a concept,
+  and reports **no omission** for them; `trace_path` crosses a concept
+  between two files it groups.
+- `get_artifact(id)` on a concept id falls through to the node reader and
+  answers the summary with **`contentGrade: "inferred"`** — a field a file's
+  content never carries, because a file's content is not prose.
+- `assert_link` and `memory_write` accept a concept as an anchor.
+- The hosted store reads `concepts` in the semantic band, kind-checked
+  against the `concepts_kind` CHECK; the local projection carries
+  `concepts: []`, the same empty answer the hosted reader gives before
+  enrich.
+
+**The catalogue ratchet moved and said so.** `hosted.test.ts` holds the
+`tools/list` token cap just above the measured value (OQ-059). One node
+type and six relations, paid once per input schema that carries the
+relation enum, took it 3,076 → **3,131**; the cap is 3,150 now and the
+comment lists this rise beside the previous four. Growth is not forbidden;
+it is made to say its price.
+
+**And the graph-surface v3 lock did its job.** `preregistration.v3.json`
+pins the product catalogue digest `a3d56907…`; the catalogue that ships now
+is `c76b6a5c…`. `tests/graph-surface-v3.test.ts` used to assert the live
+digest equals the pin; it now asserts the opposite together with the
+refusal — the same tool names in the same order, a different digest, and
+`assertCatalogPinned` (the runner's check, now a named rule) throwing. The
+published v3 report still audits against its own pin (`verify-benchmark-report.ts`
+PASS, all four releases); a new run is a new pre-registration, which is
+OQ-071's decision and not this todo's.
+
+### The inspector's cards
+
+Selecting a node on `/app/map` now fetches `/api/map/inspect?node=<id>`
+and renders a card under the path. The route reads as the signed-in member
+through the session client, so row security is the boundary, as it is for
+the map loader; a node the policy hides is `not_found`, as it is on the map.
+Fetched on selection rather than shipped with the map, because a summary
+per node would multiply the map payload by the prose for a card the viewer
+opens one at a time.
+
+Three cards, each a rule that already existed, reused rather than restated:
+
+- **A file** gets the shared artifact card — `inspectionArtifactCard`, the
+  builder `get_artifact` and `/app/inspection` share — with its kind, unit
+  and domain chips, its exported **names** (never a signature), a summary
+  under the `inferred` badge when one was written for the blob the scan
+  last saw, and otherwise the sentence for its state (missing · stale ·
+  unknown), never an empty line. Under it, the **module** card: the
+  import/call cluster the file sits in, from the same `deriveModuleClusters`
+  and the same member digest `explain_module` compares, so the state is the
+  one the tool would report — `ready`, `stale` (prose shown, and said to be
+  from an older member set) or `pending` (nothing cached; the MCP tool
+  generates it). A file in no cluster of two says so; that is a fact about
+  the file, not a missing card.
+- **A concept** gets its kind, its summary under the `inferred` badge, and
+  its member files with the count.
+- Any other node kind says it has no card.
+
+`WORKSPACE_MAP.inspector.card` carries every sentence, in Korean; the
+component is on the Korean-first sweep's list. The hit layer gained
+`data-node-path` so a spec can name a file by path.
+
+### Verification
+
+- `packages/mcp/src/concepts.test.ts` (6): vocabulary, `query_brain`,
+  `get_neighbors` with and without a relation filter and with no omission,
+  `trace_path` through a concept, the node reader's `inferred` grade and
+  its absence on a file, the write tools' anchors.
+  `supabase-store.test.ts`: the concept row reaches its own field,
+  kind-checked.
+- `apps/web/lib/map/inspect-card.test.ts` (7): a file outside every cluster
+  is null; pending / ready / stale by digest; the shared card's sorted
+  exports and summary states; the concept card.
+- `tests/e2e/map-inspector-cards.spec.ts`, live over the drifted-demo scan:
+  `src/session.ts` shows `data-summary-state="missing"` with the missing
+  sentence, its three export names and no `=`, and a **pending** module of
+  two members (the file and its test — the first draft assumed the fixture
+  had no cluster, and the card corrected it); a seeded concept shows its
+  summary under exactly one `inferred` badge and both member files. Both
+  themes audited with the card open, violations 0:
+  [`todo-19/axe-contrast-map-inspector-card-{dark,light}.json`](todo-19/),
+  screenshots [`todo-19/map-inspector-card-{dark,light}.png`](todo-19/).
+- `map-panel.spec.ts`, `brain-map.spec.ts`, `a11y-keyboard.spec.ts`
+  regression green after the hit-layer attribute; Korean-first and
+  legacy-palette sweeps green; full vitest, lint, typecheck, scope
+  boundaries, `git diff --check` — numbers in the session report.
+
+### Closed, and what is left beside it
+
+Todo 19 is complete: ⑴ here, ⑵⑶⑷⑸⑹ on 2026-09-06 with their screens on
+2026-09-14. Not done, and not claimed: the concept search index entry type
+(`index_entries` keeps its six-value CHECK, so `search_index` cannot rank a
+concept — `query_brain` and the neighbours can reach it); the module card
+reads `module_summaries` but offers no button to enqueue one (that is
+`explain_module`'s job and the copy says so); the graph-surface v4
+pre-registration that pins the new catalogue (OQ-071).

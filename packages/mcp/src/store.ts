@@ -26,12 +26,17 @@ export type McpScope = (typeof MCP_SCOPES)[number];
  *   Reading todos is a filter on `query_brain`, not a tool of its own: an
  *   agent that already knows how to ask this graph a question should not
  *   have to learn a second way to ask about work.
+ * - `concept` — an AI-synthesised concept (Wave C todo 7): a named idea
+ *   over member files, with a summary that is always `inferred`. It sat in
+ *   `graph_nodes` and on the map since Phase 3 and no tool could name it
+ *   (Phase 4 Wave D todo 19 ⑴).
  *
- * None of the four is an `index_entries.entry_type`: the search index keeps
+ * None of the five is an `index_entries.entry_type`: the search index keeps
  * its own six-value vocabulary until a migration widens that CHECK.
  */
 export const MCP_NODE_TYPES = [
   "artifact",
+  "concept",
   "context_pack",
   "db_object",
   "evidence",
@@ -54,6 +59,14 @@ export type McpNodeType = (typeof MCP_NODE_TYPES)[number];
  * that declares an object, the one that alters it, and the code that names
  * one in a query literal.
  *
+ * `part_of`, `uses`, `depends_on`, `produces`, `configures` and
+ * `validates` are the concept vocabulary (Wave C todo 7, the same closed
+ * set `assert_link` accepts): edges the synthesis wrote from a concept to
+ * its members and between concepts, stored with tier `inferred`. Until
+ * todo 19 ⑴ the decoder reported every one of them as "outside the MCP
+ * vocabulary", so the concept layer was on the map and invisible to the
+ * tools.
+ *
  * **`contains` is deliberately absent.** The directory hierarchy would bury
  * every `get_neighbors` answer it appeared in, and the flag that would make
  * it safe is todo 22's. Absent is not the same as hidden: the decoder
@@ -62,18 +75,24 @@ export type McpNodeType = (typeof MCP_NODE_TYPES)[number];
  */
 export const MCP_EDGE_RELATIONS = [
   "calls",
+  "configures",
   "contradicts",
   "defines",
+  "depends_on",
   "handles",
   "implements",
   "imports",
   "modifies",
+  "part_of",
+  "produces",
   "queries",
   "references",
   "requires",
   "supersedes",
   "supports",
   "tests",
+  "uses",
+  "validates",
 ] as const;
 
 export type McpEdgeRelation = (typeof MCP_EDGE_RELATIONS)[number];
@@ -302,6 +321,22 @@ export interface McpDbObjectData {
   sourcePath: string;
 }
 
+/**
+ * An AI-synthesised concept (Wave C todo 7), as workspace data (todo 19 ⑴).
+ *
+ * The summary is prose a model wrote over the member files' stored
+ * summaries; it is `inferred` by construction and every reader says so.
+ * Members are paths, because that is what the synthesis was given.
+ */
+export interface McpConceptData {
+  readonly id: string;
+  readonly kind: "api" | "concept" | "system";
+  readonly memberPaths: readonly string[];
+  readonly name: string;
+  readonly slug: string;
+  readonly summary: string;
+}
+
 /** A URL this repository serves, and the verbs it answers to. */
 export interface McpRouteData {
   /** Empty for a Next.js page; a decorator states its own. */
@@ -394,6 +429,8 @@ export interface McpRepositoryData {
   /** Lazy module-summary cache; absent = nothing cached yet. */
   moduleSummaries?: McpModuleSummaryData[];
   contextPacks: McpContextPackData[];
+  /** Concepts the enrich synthesis wrote; absent before todo 19 ⑴. */
+  concepts?: McpConceptData[];
   /** Absent on a workspace scanned before Wave A′ todo 7. */
   dbObjects?: McpDbObjectData[];
   defaultBranch: string;
@@ -1045,6 +1082,7 @@ export class InMemoryMcpStore implements McpStore {
         ids.add(requirement.id);
       for (const evidence of repository.evidence) ids.add(evidence.id);
       for (const finding of repository.findings) ids.add(finding.id);
+      for (const concept of repository.concepts ?? []) ids.add(concept.id);
     }
     return ids;
   }

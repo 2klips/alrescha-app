@@ -443,12 +443,14 @@ describe("hosted MCP contract", () => {
      * 2,704 → 2,890 when `report_session_usage` arrived (todo 23) → 2,914
      * when `memory_read` gained its cap (todo 22 ⑴) → 3,009 when
      * `query_brain` took the domain, unit and family filters (todo 21) →
-     * 3,076 when `log_progress` took its three attribution fields. Each
+     * 3,076 when `log_progress` took its three attribution fields → 3,131
+     * when the concept vocabulary joined (todo 19 ⑴: one node type and six
+     * relations, paid once per schema that carries the relation enum). Each
      * rise was caught here first, which is the whole point of a ratchet: it
      * does not forbid growth, it makes growth say its price.
      */
     expect(estimateTokens(JSON.stringify(listed.tools))).toBeLessThanOrEqual(
-      3_100,
+      3_150,
     );
     expect(listed.tools).toHaveLength(21);
     expect(

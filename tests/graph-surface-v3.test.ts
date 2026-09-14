@@ -31,6 +31,7 @@ import {
 } from "../scripts/graph-surface-benchmark/manifest";
 import {
   assertBodilessWorkspace,
+  assertCatalogPinned,
   buildProductionWorkspace,
   createProductExecutor,
   openProductSurface,
@@ -249,11 +250,28 @@ describe("graph-surface v3 production surface", () => {
     ).toThrow(/carries a body/);
   });
 
-  it("takes its tool definitions from the product's tools/list and matches the pinned digest", () => {
+  it("takes its tool definitions from the product's tools/list; the v3 pin now refuses, because the catalogue moved", () => {
+    // Same tools, same order — nothing was added or renamed.
     expect(surface.catalog.tools.map(({ name }) => name)).toEqual([
       ...pinned.productTools,
     ]);
-    expect(surface.catalog.sha256).toBe(pinned.productCatalogSha256);
+    // But not the same definitions: todo 19 ⑴ put `concept` and the six
+    // synthesis relations into the enums the input schemas carry, so the
+    // digest the v3 run pinned (`a3d56907…`) names a catalogue that no
+    // longer ships. The published v3 report still audits against its own
+    // pin; a new run needs a new pre-registration, and the lock says so
+    // instead of measuring the new surface under the old name.
+    expect(surface.catalog.sha256).not.toBe(pinned.productCatalogSha256);
+    expect(() => assertCatalogPinned(surface.catalog, pinned)).toThrow(
+      /does not match the pre-registered/,
+    );
+    expect(() =>
+      assertCatalogPinned(surface.catalog, {
+        productCatalogSha256: surface.catalog.sha256,
+        productTools: pinned.productTools,
+      }),
+    ).not.toThrow();
+    // The digest is a set digest: order does not change it.
     expect(productCatalogSha256([...surface.catalog.entries].reverse())).toBe(
       surface.catalog.sha256,
     );

@@ -153,6 +153,32 @@ export interface ProductToolCatalog {
   readonly tools: readonly ToolDefinition[];
 }
 
+/**
+ * The lock: the live catalogue must be the one the pre-registration pinned,
+ * by digest and by name order. A definition edited after the lock — a new
+ * tool, a new enum value in an input schema — is a different experiment,
+ * and the runner refuses rather than measuring it under the old name.
+ */
+export function assertCatalogPinned(
+  catalog: ProductToolCatalog,
+  pinned: {
+    readonly productCatalogSha256: string;
+    readonly productTools: readonly string[];
+  },
+): void {
+  if (catalog.sha256 !== pinned.productCatalogSha256) {
+    throw new Error(
+      `The product tools/list catalogue digest ${catalog.sha256} does not match the pre-registered ${pinned.productCatalogSha256}; refusing to run.`,
+    );
+  }
+  const liveNames = catalog.tools.map(({ name }) => name);
+  if (JSON.stringify(liveNames) !== JSON.stringify(pinned.productTools)) {
+    throw new Error(
+      `The product tools/list names [${liveNames.join(", ")}] differ from the pre-registered [${pinned.productTools.join(", ")}]; refusing to run.`,
+    );
+  }
+}
+
 export interface ProductSurface {
   callTool(name: string, args: Record<string, unknown>): Promise<string>;
   readonly catalog: ProductToolCatalog;

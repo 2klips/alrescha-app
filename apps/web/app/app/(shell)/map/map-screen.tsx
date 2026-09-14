@@ -49,6 +49,7 @@ import {
   useGraphPanelSettings,
 } from "../../../ui/graph-force-panel";
 import { GraphLayerToggles } from "../../../ui/graph-layer-toggles";
+import { InspectorCard } from "../../../ui/inspector-card";
 import { useLayoutWarmup } from "../../../ui/layout-warmup";
 import {
   createBrowserWorkspaceRealtimeSource,
@@ -1073,6 +1074,7 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
                   )}
                 </span>
               ) : null}
+              <InspectorCard nodeId={selectedNode.id} />
               <section
                 className="arr-chain"
                 aria-labelledby="map-neighbors-title"

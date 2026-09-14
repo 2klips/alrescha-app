@@ -100,6 +100,17 @@ function nullableString(value: unknown): string | null {
  * moved under us. `table` is the safe read of an unknown object rather than a
  * thrown request — the tool answer is still true about the edges.
  */
+/**
+ * A concept's kind, as the synthesis wrote it (`concepts_kind` CHECK).
+ * A row outside the three is a defect, not a fourth kind.
+ */
+function conceptKind(value: unknown): "api" | "concept" | "system" {
+  if (value === "api" || value === "concept" || value === "system") {
+    return value;
+  }
+  throw new Error(`Malformed database row: concept kind ${String(value)}`);
+}
+
 function dbObjectKind(value: unknown): McpDbObjectData["kind"] {
   return value === "function" || value === "view" ? value : "table";
 }
@@ -804,6 +815,7 @@ export class SupabaseMcpStore implements McpStore {
       routes,
       dbObjects,
       sections,
+      concepts,
     ] = await Promise.all([
       this.client
         .from("repositories")
@@ -907,6 +919,14 @@ export class SupabaseMcpStore implements McpStore {
         .eq("workspace_id", workspaceId)
         .order("id", { ascending: true })
         .limit(MCP_WORKSPACE_READ_LIMIT + 1),
+      // The concept layer (todo 19 ⑴): a semantic band row like a module
+      // summary, and read like one — it is prose a model wrote.
+      this.client
+        .from("concepts")
+        .select("id, repository_id, slug, name, kind, summary, member_paths")
+        .eq("workspace_id", workspaceId)
+        .order("id", { ascending: true })
+        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
     ]);
     for (const [label, result] of [
       ["repositories", repositories],
@@ -924,6 +944,7 @@ export class SupabaseMcpStore implements McpStore {
       ["routes", routes],
       ["database objects", dbObjects],
       ["sections", sections],
+      ["concepts", concepts],
     ] as const)
       queryError(`MCP ${label} query failed`, result.error);
 
@@ -981,6 +1002,7 @@ export class SupabaseMcpStore implements McpStore {
     const routeRows = kept("routes", routes.data);
     const dbObjectRows = kept("db_objects", dbObjects.data);
     const sectionRows = kept("sections", sections.data);
+    const conceptRows = kept("concepts", concepts.data);
 
     const artifactPathById = new Map(
       artifactRows.map((row) => [
@@ -1002,7 +1024,12 @@ export class SupabaseMcpStore implements McpStore {
       database: ["db_objects"],
       evidence: ["requirements", "evidence", "findings", "receipts", "todos"],
       route: ["routes"],
-      semantic: ["sections", "module_summaries", "memory_block_entries"],
+      semantic: [
+        "sections",
+        "module_summaries",
+        "memory_block_entries",
+        "concepts",
+      ],
       structure: ["repositories", "graph_nodes", "artifacts", "index_entries"],
     };
     const bands: McpBandRead[] = [...requested].sort().map((band) => {
@@ -1250,6 +1277,16 @@ export class SupabaseMcpStore implements McpStore {
               nodeId: requiredString(row, "id"),
               sourcePath: requiredString(row, "source_path"),
               token: requiredString(row, "token"),
+            })),
+          concepts: conceptRows
+            .filter((row) => row.repository_id === repositoryId)
+            .map((row) => ({
+              id: requiredString(row, "id"),
+              kind: conceptKind(row.kind),
+              memberPaths: strings(row.member_paths),
+              name: requiredString(row, "name"),
+              slug: requiredString(row, "slug"),
+              summary: requiredString(row, "summary"),
             })),
         };
       }),

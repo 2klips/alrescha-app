@@ -507,6 +507,17 @@ function repositoryNodes(workspace: McpWorkspaceData): BrainNode[] {
         status: "available",
         type: "context_pack" as const,
       })),
+      // A concept has no lifecycle of its own; its status names what it is —
+      // synthesised — so a status filter cannot mistake it for a stored fact.
+      ...(repository.concepts ?? []).map((concept) => ({
+        id: concept.id,
+        label: concept.name,
+        path: concept.memberPaths[0],
+        relations: [] as McpEdgeRelation[],
+        repositoryId: repository.id,
+        status: "synthesized",
+        type: "concept" as const,
+      })),
     ];
     const byId = new Map(nodes.map((node) => [node.id, node]));
     for (const edge of repository.edges) {
