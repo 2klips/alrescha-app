@@ -1,0 +1,17 @@
+2026-09-15T14:29:41.181729957Z   analyze @3866daa 337 bodies (archive: 1,325 files, 22,814 KiB)
+2026-09-15T14:30:24.928224599Z   scan @3ed4139 incremental → 18 rows
+2026-09-15T14:30:27.522655659Z   analyze @3ed4139 337 bodies (archive: 1,323 files, 22,801 KiB)
+2026-09-15T14:30:57.100762463Z   ci evidence: 1 report(s) failed to parse (vitest-junit) — no evidence recorded for 3ed4139321da5d51a0c32010dba40b20423d099e
+2026-09-15T14:31:06.498781766Z   scan @3ed4139 incremental → 0 rows
+2026-09-15T14:31:08.292506703Z   analyze @3ed4139 337 bodies (archive: 1,323 files, 22,801 KiB)
+2026-09-15T14:31:37.757138064Z   ci evidence: 1 report(s) failed to parse (vitest-junit) — no evidence recorded for 3ed4139321da5d51a0c32010dba40b20423d099e
+2026-09-15T14:31:50.204898948Z   local-635-0 job → succeeded
+2026-09-15T14:37:49.351652633Z   scan @3866daa incremental → 18 rows
+2026-09-15T14:37:51.625583539Z   analyze @3866daa 337 bodies (archive: 1,325 files, 22,814 KiB)
+2026-09-15T14:38:44.983721194Z   ci evidence 203 row(s), 203 supporting, 0 removed
+2026-09-15T14:38:54.312753939Z   scan @3866daa incremental → 0 rows
+2026-09-15T14:38:56.111540517Z   analyze @3866daa 337 bodies (archive: 1,325 files, 22,814 KiB)
+2026-09-15T14:39:48.463212572Z   ci evidence 203 row(s), 203 supporting, 0 removed
+2026-09-15T14:40:34.890821461Z   scan @3866daa incremental → 0 rows
+2026-09-15T14:40:36.469898788Z   analyze @3866daa 337 bodies (archive: 1,325 files, 22,814 KiB)
+2026-09-15T14:41:28.728934836Z   ci evidence 203 row(s), 203 supporting, 0 removed

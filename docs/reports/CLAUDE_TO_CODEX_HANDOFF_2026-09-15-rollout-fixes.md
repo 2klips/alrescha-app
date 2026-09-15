@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: PR #19–#22 롤아웃의 프로덕션 차단 2건 수정 — docskeleton 슬러그 충돌, CI 아티팩트 ZIP 415
 
 작성: 2026-09-15 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **배포 대기 — 마이그레이션 1건 적용 + 웹 머지 + 워커 재배포 + 다시 스캔 1회.** 환경변수 변경 없음. 웹 화면 변경 없음(core 변경은 워커·SQL이 호출).
+상태: **2026-09-15 프로덕션 배포·검증 완료 — 202609150001 적용, merge 3866daa, Vercel Ready, Fly v22, main CI 성공 뒤 다시 스캔 정확히 1회(attempt 1·0크레딧). 문서 173개·CI supports 203건·테스트 노드 verified 확인.** 큐 0·새 실패 0. 기존 docskeleton 실패는 실제로 3건(배포 전 추가 2건), analyze 5건·7일 WARN 18건 유지. 새 SHA의 docskeleton은 base 키로 성공; 옛 SHA의 :r1 실행은 강제하지 않았으며 키 계산만 읽기 전용 확인. [Codex 기록](../../.omo/evidence/phase4/pr23-production-rollout-2026-09-15.md). 환경변수 변경 없음.
 브랜치: `phase4/rollout-fixes-doc-slug-ci-zip` (base `origin/main` `e53b36b`) · PR: 본문 하단 "PR" 항목.
 근거 문서: Codex 롤아웃 기록 [`pr19-22-production-rollout-2026-09-15.md`](../../.omo/evidence/phase4/pr19-22-production-rollout-2026-09-15.md), [`todo-20.md`](../../.omo/evidence/phase4/todo-20.md) "2026-09-15" 절, [`todo-18.md`](../../.omo/evidence/phase4/todo-18.md) "2026-09-15" 절, [OQ-072 추기](../../spec/OPEN_QUESTIONS.md).
 
