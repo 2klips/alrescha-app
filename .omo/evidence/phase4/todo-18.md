@@ -338,3 +338,68 @@ analyze collects `vitest-junit` for that sha → the worker log's
 `verified` and every source file `inferred`. The checkbox closes on that
 log line and a map screenshot, both recorded by whoever runs it
 (`docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-ci-evidence.md`).
+
+---
+
+## 2026-09-15 — the live-fire ran, and failed on the artifact download
+
+**Scope:** `apps/worker/src/github-ci-evidence-source.ts`,
+`apps/worker/src/analysis-job.ts`, `tests/ci-evidence.test.ts`,
+`apps/worker/src/analysis-job.test.ts`, `tests/scanner-extensions.test.ts`.
+Rollout record: [`pr19-22-production-rollout-2026-09-15.md`](./pr19-22-production-rollout-2026-09-15.md);
+the failed observation itself: [`todo-18/2026-09-15-production-ci-inferred.png`](./todo-18/2026-09-15-production-ci-inferred.png),
+[`todo-18/2026-09-15-production-worker.log`](./todo-18/2026-09-15-production-worker.log).
+
+### What happened
+
+Everything upstream worked: main CI passed (attempt 2, 1,875 tests, the
+`vitest-junit` artifact uploaded), the worker was v21, the one authorised
+rescan's scan and analyze both succeeded at attempt 1, cost 0. Stored
+evidence: **0**. No `ci evidence` line in the worker log. The test file
+`apps/worker/src/analysis-job.test.ts` was `inferred`. The requested
+positive acceptance failed.
+
+Codex's read-only diagnostic with the deployed collector: artifact list
+200, check runs 200, artifact ZIP **415** — for every artifact. The same
+request with the API media type instead of `application/octet-stream`:
+200, both ZIPs, 1 check run and 2 reports collected.
+
+### Two defects, not one
+
+- **The download.** `downloadReports` asked for `application/octet-stream`.
+  The archive endpoint accepts only the API media type and answers a 302
+  to the archive's storage URL, which `fetch` follows. The recorded-fixture
+  test never saw this because its stub ignored the header. It pins the
+  header now.
+- **The silence.** `collectedCiEvidence` caught the error and returned no
+  evidence, which is the right outcome for a job (a throttled API is not a
+  defect in the repository) and the wrong one for an operator: an analysis
+  that succeeded, zero rows, and no line saying why. The catch now logs
+  `ci evidence collection failed: <message> — no evidence recorded for
+  <sha>` — the endpoint class and status, never a body or a token — and a
+  report that fails to parse is logged by artifact name. Asserted in
+  `analysis-job.test.ts` through a `console.warn` spy.
+
+### The re-run history
+
+Main CI's first attempt failed on a 5.09s test against a 5s timeout and was
+re-run; both JUnit artifacts remain under the same name. Read as before,
+the failed attempt's report would have marked every file "did not pass"
+and the AND across reports would have left all 203 files `unknown` for a
+commit whose re-run passed. `collect` now keeps the **latest artifact per
+name** for the analysed commit (the highest id), which is the re-run's
+upload; the failed attempt's report is not graded. Pinned in
+`tests/ci-evidence.test.ts` with two same-name artifacts and a third from
+another commit. OQ-072's verdict is unchanged — this is which artifact is
+the run's report, not what a report proves — and it is recorded there as
+an addendum.
+
+The 5.09s test (`scanner-extensions`, a real-migration PGlite case) now
+states its bound, as yesterday's two did.
+
+### Still owed
+
+The live-fire, again, after the worker redeploys: one rescan at a head CI
+has passed for → `ci evidence 203 row(s), 203 supporting` at the current
+head (the number moves with the suite) → the test files `verified` on
+`/app/map`. The checkbox stays open until that line and screenshot exist.

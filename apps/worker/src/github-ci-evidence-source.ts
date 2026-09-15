@@ -228,9 +228,12 @@ export class GitHubCiEvidenceSource {
   }
 
   private async downloadReports(descriptor: GitHubArtifactDescriptor) {
+    // The artifact endpoint answers a 302 to the archive's storage URL, and
+    // it accepts only the API media type: `application/octet-stream` is a
+    // 415 (production, 2026-09-15 — every artifact download failed, and the
+    // analysis recorded no evidence). `fetch` follows the redirect.
     const response = await this.request(
       `${this.repositoryPath()}/actions/artifacts/${descriptor.id}/zip`,
-      "application/octet-stream",
     );
     return archiveContents(
       descriptor,
@@ -243,8 +246,21 @@ export class GitHubCiEvidenceSource {
       this.listArtifacts(),
       this.listCheckRuns(analyzedCommitSha),
     ]);
-    const candidates = artifacts.filter(
-      ({ expired, headSha }) => !expired && headSha === analyzedCommitSha,
+    // A re-run of a workflow leaves the earlier attempt's artifact beside
+    // the new one under the same name (the pilot's first main run failed on
+    // a timeout and was re-run). The latest upload per name is the run's
+    // report; grading the failed attempt's report alongside it would leave
+    // every file `unknown` for a commit whose re-run passed.
+    const latestByName = new Map<string, GitHubArtifactDescriptor>();
+    for (const artifact of artifacts) {
+      if (artifact.expired || artifact.headSha !== analyzedCommitSha) continue;
+      const current = latestByName.get(artifact.name);
+      if (!current || artifact.id > current.id) {
+        latestByName.set(artifact.name, artifact);
+      }
+    }
+    const candidates = [...latestByName.values()].sort(
+      (left, right) => left.id - right.id,
     );
     if (candidates.length > 20) {
       throw new Error(

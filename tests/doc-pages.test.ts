@@ -56,6 +56,22 @@ describe("the doc page slug", () => {
     );
   });
 
+  /**
+   * The production failure of 2026-09-15: two modules over the same
+   * directory set (`scripts/` + `tests/`) hashed to one slug and the first
+   * skeleton pass died on the unique constraint. The identity is in the
+   * hash now; the directories still are, so the rules above still hold.
+   */
+  it("gives two modules over the same directories two addresses", () => {
+    const members = ["scripts/adr-guardrails.ts", "tests/adr-guardrails.test.ts"];
+    const others = ["scripts/verify-plan-coverage.ts", "tests/plan-compliance.test.ts"];
+    expect(
+      docPageSlug({ identityKey: "module:scripts/adr-guardrails.ts", memberPaths: members, scope: "module" }),
+    ).not.toBe(
+      docPageSlug({ identityKey: "module:scripts/verify-plan-coverage.ts", memberPaths: others, scope: "module" }),
+    );
+  });
+
   it("tells a root-level page from one over a directory", () => {
     // The empty directory is a real distinction, not a missing value.
     expect(moduleSlug(["README.md"])).not.toBe(moduleSlug(["src/a.ts"]));
@@ -394,6 +410,28 @@ describe("doc pages in the database", () => {
     expect(after).toHaveLength(1);
     expect(after[0]?.slug).not.toBe(before);
     expect(after[0]?.previous_slugs).toEqual([before]);
+  });
+
+  it("stores two module pages over the same directory set — the pilot's collision", async () => {
+    const page = (identityKey: string, memberPaths: string[]) => ({
+      ...modulePage(memberPaths),
+      identityKey,
+      title: identityKey.replace(/^module:/, ""),
+    });
+    const written = await applySkeletons([
+      page("module:scripts/adr-guardrails.ts", [
+        "scripts/adr-guardrails.ts",
+        "tests/adr-guardrails.test.ts",
+      ]),
+      page("module:scripts/verify-plan-coverage.ts", [
+        "scripts/verify-plan-coverage.ts",
+        "tests/plan-compliance.test.ts",
+      ]),
+    ]);
+    expect(written).toEqual({ renamed: 0, written: 2 });
+    const stored = await pages();
+    expect(stored).toHaveLength(2);
+    expect(new Set(stored.map(({ slug }) => slug)).size).toBe(2);
   });
 
   it("gives a module page a graph node and an attached page none", async () => {

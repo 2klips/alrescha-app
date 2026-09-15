@@ -472,7 +472,17 @@ async function collectedCiEvidence(input: {
       repositoryId: input.scope.repositoryId,
       workspaceId: input.scope.workspaceId,
     });
-  } catch {
+  } catch (error) {
+    // Still not a job failure — but not silent either. The production
+    // rollout of 2026-09-15 ran with every artifact download refused (415)
+    // and nothing said so; the analysis succeeded with zero evidence and
+    // the only trace was a grade that never appeared. The message names the
+    // endpoint class and status, never a body or a token.
+    console.warn(
+      `  ci evidence collection failed: ${
+        error instanceof Error ? error.message : String(error)
+      } — no evidence recorded for ${input.analyzedCommitSha}`,
+    );
     return empty;
   }
   if (!collected) return empty;
@@ -482,6 +492,15 @@ async function collectedCiEvidence(input: {
     checkRuns: collected.checkRuns,
     reports: collected.reports,
   });
+  if (ingestion.diagnostics.length > 0) {
+    // A report that would not parse discards the whole run's evidence
+    // (`tests/ci-evidence.test.ts`); say which artifact, not what was in it.
+    console.warn(
+      `  ci evidence: ${ingestion.diagnostics.length} report(s) failed to parse (${ingestion.diagnostics
+        .map(({ artifactName }) => artifactName)
+        .join(", ")}) — no evidence recorded for ${input.analyzedCommitSha}`,
+    );
+  }
   return {
     ...empty,
     measured: ingestCoverageReports(collected.coverage).measured,

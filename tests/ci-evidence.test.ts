@@ -316,10 +316,14 @@ describe("GitHub CI evidence source", () => {
       verdict: "supports",
     });
     expect(fetchImplementation).toHaveBeenCalledTimes(4);
-    for (const [, options] of fetchImplementation.mock.calls) {
-      expect((options?.headers as Record<string, string>).authorization).toBe(
-        "Bearer installation-token",
-      );
+    for (const [input, options] of fetchImplementation.mock.calls) {
+      const headers = options?.headers as Record<string, string>;
+      expect(headers.authorization).toBe("Bearer installation-token");
+      // The archive endpoint refuses `application/octet-stream` with a 415
+      // (production, 2026-09-15); every request carries the API media type.
+      if (String(input).endsWith("/zip")) {
+        expect(headers.accept).toBe("application/vnd.github+json");
+      }
     }
   });
 });
@@ -405,6 +409,62 @@ describe("classifying an artifact archive", () => {
         reports: collected.reports,
       }).diagnostics,
     ).toEqual([]);
+  });
+
+  /**
+   * A re-run leaves the failed attempt's artifact beside the passing one
+   * under the same name (main CI, 2026-09-15). The latest upload per name
+   * is the run's report; grading both would leave every file `unknown` for
+   * a commit whose re-run passed.
+   */
+  it("reads only the latest artifact per name when a run was re-run", async () => {
+    const passing = `<testsuites tests="1" failures="0" errors="0"><testsuite name="tests/a.test.ts" tests="1" failures="0" errors="0"><testcase classname="tests/a.test.ts" name="a passes"></testcase></testsuite></testsuites>`;
+    const failed = `<testsuites tests="1" failures="1" errors="0"><testsuite name="tests/a.test.ts" tests="1" failures="1" errors="0"><testcase classname="tests/a.test.ts" name="a passes"><failure>timed out</failure></testcase></testsuite></testsuites>`;
+    const artifacts = JSON.stringify({
+      artifacts: [
+        { expired: false, id: 8001, name: "vitest-junit", workflow_run: { head_sha: COMMIT } },
+        { expired: false, id: 8002, name: "vitest-junit", workflow_run: { head_sha: COMMIT } },
+        // Another commit's upload is not this commit's evidence.
+        { expired: false, id: 8003, name: "vitest-junit", workflow_run: { head_sha: "2".repeat(40) } },
+      ],
+    });
+    const requested: string[] = [];
+    const source = new GitHubCiEvidenceSource(
+      "alrescha",
+      "drifted-demo",
+      "installation-token",
+      vi.fn<typeof fetch>(async (input) => {
+        const url = String(input);
+        requested.push(url);
+        if (url.includes("/actions/artifacts?")) {
+          return new Response(artifacts, { status: 200 });
+        }
+        if (url.includes("/check-runs?")) {
+          return new Response(
+            JSON.stringify({ check_runs: [{ ...passingCheck(COMMIT), name: "gate" }] }),
+            { status: 200 },
+          );
+        }
+        const body = url.endsWith("/8001/zip") ? failed : passing;
+        return new Response(zipSync({ "reports/vitest-junit.xml": strToU8(body) }), {
+          status: 200,
+        });
+      }),
+    );
+    const collected = await source.collect(COMMIT);
+
+    expect(requested.filter((url) => url.endsWith("/zip"))).toEqual([
+      "https://api.github.com/repos/alrescha/drifted-demo/actions/artifacts/8002/zip",
+    ]);
+    expect(collected.reports.map(({ artifactId }) => artifactId)).toEqual([8002]);
+    const { testFiles } = ingestCiTestReports({
+      analyzedCommitSha: COMMIT,
+      checkRuns: collected.checkRuns,
+      reports: collected.reports,
+    });
+    expect(testFiles).toEqual([
+      expect.objectContaining({ grade: "verified", testFile: "tests/a.test.ts" }),
+    ]);
   });
 
   it("still reads a plain test archive as reports", async () => {

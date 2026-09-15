@@ -256,4 +256,53 @@ describe("docskeleton on real PostgreSQL", () => {
       payload: { commitSha: SHA, reason: "analyze" },
     });
   });
+
+  /**
+   * The pilot's first pass failed for good (attempt 3) and the rescan after
+   * the fix was handed the same dead row (2026-09-15). A terminal failure
+   * now yields the key's next generation on the next analysis; a live or
+   * succeeded pass is still returned as is.
+   */
+  it("asks for the skeleton again after a terminal failure, and only then", async () => {
+    const enqueue = () =>
+      store.enqueueDocSkeleton({
+        commitSha: SHA,
+        repositoryId: REPOSITORY,
+        runId: RUN,
+        workspaceId: workspace,
+      });
+    const keys = async () =>
+      (
+        await database.query<{ idempotency_key: string; status: string }>(
+          "select idempotency_key, status from public.jobs where workspace_id = $1 and kind = 'docskeleton' order by created_at",
+          [workspace],
+        )
+      ).rows;
+
+    await enqueue();
+    await database.query(
+      "update public.jobs set status = 'failed', last_error = 'duplicate key value violates unique constraint \"doc_pages_workspace_repository_slug_unique\"' where workspace_id = $1 and kind = 'docskeleton'",
+      [workspace],
+    );
+    await enqueue();
+    expect(await keys()).toEqual([
+      { idempotency_key: `docskeleton:${REPOSITORY}:${SHA}`, status: "failed" },
+      { idempotency_key: `docskeleton:${REPOSITORY}:${SHA}:r1`, status: "queued" },
+    ]);
+
+    // The live retry is what a repeat resolves to — not a third row.
+    await enqueue();
+    expect(await keys()).toHaveLength(2);
+
+    // And a pass that succeeded is never silently redone.
+    await database.query(
+      "update public.jobs set status = 'succeeded' where workspace_id = $1 and idempotency_key = $2",
+      [workspace, `docskeleton:${REPOSITORY}:${SHA}:r1`],
+    );
+    await enqueue();
+    expect((await keys()).map(({ status }) => status)).toEqual([
+      "failed",
+      "succeeded",
+    ]);
+  });
 });

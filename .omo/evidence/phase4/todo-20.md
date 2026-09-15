@@ -255,3 +255,88 @@ name of the thing.
   `run-local.ts`; until Fly ships it, an analysis that enqueues a
   `docskeleton` job leaves it queued (cost 0), which the drain loop will
   pick up once the new worker is live.
+
+---
+
+# 2026-09-15 — the first production skeleton pass collided on its own slug
+
+**Scope:** `supabase/migrations/202609150001_doc_page_slug_identity.sql`
+(new), `packages/core/src/docs/doc-page.ts`,
+`apps/worker/src/postgres-doc-store.ts`, `tests/doc-pages.test.ts`,
+`tests/doc-skeleton-store.test.ts`, `tests/helpers/database.ts`. Rollout
+record: [`pr19-22-production-rollout-2026-09-15.md`](./pr19-22-production-rollout-2026-09-15.md).
+
+## What happened
+
+PR #21 shipped, the worker redeployed, and the first `docskeleton` job on
+the pilot (`01M2JN34NV8ZWMFJN2XQFPNHHX`, 2026-09-15T13:46Z) failed at
+attempt 3, cost 0:
+
+```
+duplicate key value violates unique constraint "doc_pages_workspace_repository_slug_unique"
+```
+
+Codex's read-only reproduction over production metadata: 173 pages (repo 1,
+module 21, directory 151) and one duplicate group — the modules
+`scripts/adr-guardrails.ts` (6 members) and
+`scripts/verify-plan-coverage.ts` (3 members), both spanning exactly
+`scripts/` and `tests/`, both slug `100afb35…`. `/app/docs` stayed at the
+empty state; the acceptance for the list and page could not run.
+
+## Why
+
+The 2026-09-06 address rule hashed a node-scoped page from its member
+**directories** alone, on purpose: adding a file must not rename the page.
+The 2026-09-06 note already found that rule collides for attached scopes
+(two files in one directory) and moved those to their identity. It did not
+see that it collides for modules too: two clusters over the same directory
+set is ordinary — every `scripts/x.ts` + `tests/x.test.ts` pair is one —
+and nothing in the fixtures had two of them. The identity key was already
+what told the rows apart (`doc_pages_workspace_repository_identity_unique`);
+it simply was not in the address.
+
+## The fix
+
+The identity joins the hash for the three node scopes
+(`scope\nidentityKey\ndirectories`); attached scopes are unchanged (their
+identity was the whole address). The directories stay in, so the rules the
+tests pin still hold: a module that gains a file in a directory it spans
+keeps its address, a module that spans a new directory gets a new one and
+keeps the old in `previous_slugs`. Both implementations changed together —
+the SQL in the migration, the TypeScript in `doc-page.ts` — and the
+equivalence test still pins them against each other over the same member
+sets. New pins: two modules over one directory set are two addresses
+(TypeScript), and `apply_doc_page_skeletons` stores both without touching
+the unique constraint (real PostgreSQL, the pilot's exact shape).
+
+The migration also re-addresses any page stored under the old rule and
+appends its old slug to `previous_slugs`. Production holds none — the pass
+that would have written them is the one that failed — so on production the
+statement is a no-op; a local database may carry a few.
+
+## Asking for the pass again
+
+`enqueue_job` returns the existing row for a repeated key whatever its
+status, so after the terminal failure the rescan Codex ran after the
+deploy was handed the same dead job back, and would have been forever.
+`enqueueDocSkeleton` now mints the key through `next_retry_idempotency_key`
+— the 2026-09-02 rule judgments and coaching already follow: a terminal
+failure yields `…:r1` on the next analysis, a queued/running/succeeded pass
+is returned as is, and the failed rows stay what they are and still count
+in `ops:health`. Recovery is therefore one more rescan after the worker
+redeploys, with no manual change to the failed job.
+
+## Verification
+
+`tests/doc-pages.test.ts` (25): the two new pins above, the SQL/TypeScript
+equivalence, slug kept on a new file, renamed on a new directory, both
+anchor shapes, the conditional prose write. `tests/doc-skeleton-store.test.ts`
+(4): the retry generation after a terminal failure, a live retry returned
+rather than a third row, a succeeded pass never redone. The migration
+applied to the local Supabase (PostgreSQL 17) and the two pilot module
+shapes hash differently there; `tests/e2e/docs-pages.spec.ts` re-run
+against it. Full gates in the handoff.
+
+The checkbox stays open for the same reasons as before (G3, the MCP tools,
+`feature`, the far-collapse label) plus the production acceptance that is
+now a second rescan away.

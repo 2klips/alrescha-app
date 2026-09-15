@@ -3,7 +3,7 @@ import {
   verifyInTotoStatement,
   type InTotoStatement,
 } from "@alrescha/core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   createAnalysisJobHandler,
@@ -494,16 +494,28 @@ describe("analyze job — CI evidence", () => {
    * defect in the repository being analysed, and failing the job over one
    * would replace a missing grade with a missing analysis.
    */
-  it("analyses anyway when collection throws", async () => {
-    const recorded = await run({
-      collectCiEvidence: async () => {
-        throw new Error("GitHub CI evidence request failed: 403");
-      },
-    });
+  it("analyses anyway when collection throws, and says so in the log", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const recorded = await run({
+        collectCiEvidence: async () => {
+          throw new Error("GitHub CI evidence request failed: 403");
+        },
+      });
 
-    expect(recorded.ciEvidence).toEqual([]);
-    expect(recorded.statement).not.toBeNull();
-    expect(recorded.findings.length).toBeGreaterThan(0);
+      expect(recorded.ciEvidence).toEqual([]);
+      expect(recorded.statement).not.toBeNull();
+      expect(recorded.findings.length).toBeGreaterThan(0);
+      // Not silent: the rollout of 2026-09-15 ran with every download
+      // refused and the only trace was a grade that never appeared.
+      expect(warn.mock.calls.map(([line]: unknown[]) => String(line))).toEqual([
+        expect.stringContaining(
+          "ci evidence collection failed: GitHub CI evidence request failed: 403",
+        ),
+      ]);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("grades the test file that ran and the requirement it names", async () => {
