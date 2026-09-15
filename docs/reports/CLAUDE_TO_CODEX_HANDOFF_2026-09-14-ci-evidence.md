@@ -25,7 +25,7 @@ SQL·웹·의존성 무변경. 녹화 픽스처의 행·엣지 수는 종전과 
 
 - `pnpm lint` clean · `pnpm typecheck` clean(root + 6 workspaces) · `pnpm test` 203 files / 1,874 passed / 1 skipped · `scripts/verify-scope-boundaries.ts` PASS · `git diff --check` clean.
 - Playwright: `map-verified.spec.ts` 1/1(라이브 — 증거 전 verified 0, 증거 후 정확히 두 노드).
-- **이 브랜치의 첫 push가 새 워크플로를 처음 돌린다.** GitHub Actions 탭에서 `CI / gate`의 결론과 `vitest-junit` 아티팩트를 확인한다. 실패하면(러너 환경 차이) 그 자체가 정보다 — 머지 전에 Claude Code로 돌려보낸다.
+- **GitHub Actions 첫 실행(2026-09-15):** 첫 런(`32186c3`)은 러너 속도에 묶인 단언 2개로 실패했고(`github-read-throttle`의 5초 고정 여유, `markdown-parser` 대형 문서의 5초 타임아웃 — 둘 다 측정 시간 기준으로 고쳤다, 주장 불변), 아티팩트는 그래도 올라갔다(`if: always()` 확인). 재실행 run `34967653890`(`855aac7`) **success** — `gate` check run completed/success, `vitest-junit` 73,719 bytes. 그 아티팩트를 내려받아 새 파서로 로컬 드라이런: diagnostics 0, **203 files / 203 verified / 0 unknown**, 경로 전부 레포 상대라 `resolveReportedPath` 자기 해석 203/203.
 
 ## 4. 배포 필요 사항
 
@@ -36,7 +36,7 @@ SQL·웹·의존성 무변경. 녹화 픽스처의 행·엣지 수는 종전과 
 머지 자체가 `main`에 push이므로 CI가 돌고 `workflow_run` 웹훅이 analyze를 큐잉하는데, 그 시점의 워커는 **옛 규칙**이라 `ci evidence` 줄이 안 찍히는 게 정상이다. 재배포 뒤:
 
 1. `/app`(또는 MCP `request_rescan`)에서 `2klips/alrescha-app` **다시 스캔 1회** — CI가 이미 돈 head에서. incremental이면 충분하다(증거 수집은 mode와 무관).
-2. 워커 로그: `ci evidence N row(s), M supporting` — N은 스위트의 테스트 파일 수 근처(200 안팎), M은 skip이 있는 파일 하나를 뺀 수. `ci evidence`가 아예 없으면 아티팩트를 못 찾은 것 — Actions 탭에서 그 sha의 `vitest-junit`이 있는지, 만료(90일) 안인지 본다.
+2. 워커 로그: `ci evidence 203 row(s), 203 supporting` — 2026-09-15 CI 아티팩트의 드라이런 값이며, 그 head에 그대로면 이 숫자다(스위트가 늘면 그만큼 는다; 로컬의 1 skipped는 `skipIf(win32)`라 Linux 러너에서는 돈다). `ci evidence`가 아예 없으면 아티팩트를 못 찾은 것 — Actions 탭에서 그 sha의 `vitest-junit`이 있는지, 만료(90일) 안인지 본다. 스캔 head와 CI가 돈 sha가 같아야 한다(둘 다 `main` 팁이면 같다).
 3. `/app/map`: 테스트 파일 노드들이 `verified`(인스펙터 배지), `src/` 파일은 전부 `inferred`(ADR-001 — import된 코드는 승격 안 됨). 스크린샷 1장과 로그 줄을 `.omo/evidence/phase4/todo-18/`·evidence 노트에 남기면 todo 18 체크박스가 닫힌다(그 갱신은 Claude Code 인계로).
 4. `pnpm ops:health`: analyze failed 증가 없음.
 
@@ -56,4 +56,4 @@ SQL·웹·의존성 무변경. 녹화 픽스처의 행·엣지 수는 종전과 
 
 ## 게이트 수치
 
-- `pnpm test` 203 files / 1,874 passed / 1 skipped (브랜치 팁, 2026-09-14).
+- `pnpm test` 203 files / 1,874 passed / 1 skipped (로컬, 2026-09-14) · GitHub Actions run 34967653890 (`855aac7`, 2026-09-15): 1,875 passed / 0 failed, 946s, `vitest-junit` 업로드 — 위 §3 드라이런.

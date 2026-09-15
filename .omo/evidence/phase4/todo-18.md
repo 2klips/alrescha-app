@@ -311,6 +311,23 @@ split, a plain archive, this repository's own artifact),
 `verified` nodes (the evidence node and the test file), the code under the
 test `inferred`.
 
+### The workflow's first runs (2026-09-15)
+
+The first run on the branch head (`32186c3`) failed two tests that pass
+locally — a deferral margin that assumed under five seconds of real elapsed
+time (the runner took nine) and a large-document parser check against the
+5s default timeout — and still uploaded the artifact, which is the
+`if: always()` behaving. Both assertions now bound by measured time
+rather than a local machine's speed; the claims are unchanged. The rerun
+(run `34967653890`, `855aac7`) passed: `gate` check run
+completed/success, `vitest-junit` 73,719 bytes, 1,875 cases in 946s.
+
+That artifact, downloaded and fed to the new parser with the run's check:
+0 diagnostics, **203 files, 203 verified, 0 unknown**, every path
+repository-relative and self-resolving. The one locally skipped case is
+`skipIf(win32)` and runs on Linux, so the live-fire's expected log line at
+that head is `ci evidence 203 row(s), 203 supporting`.
+
 ### Still owed: the pilot live-fire, now a procedure
 
 Production's worker runs the previous rule, so until it is redeployed this
