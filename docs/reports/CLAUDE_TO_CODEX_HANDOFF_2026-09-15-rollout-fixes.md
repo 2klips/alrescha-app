@@ -59,7 +59,7 @@ PR #19–#22 롤아웃에서 두 수용이 실패했다. ⑴ 첫 `docskeleton` �
 
 ## PR
 
-- (생성 뒤 기입)
+- https://github.com/2klips/alrescha-app/pull/23 — base `main`. 커밋 3건: `fix(docs): put the page identity in the module slug and retry a skeleton pass after a terminal failure`(`32b7ca7`), `fix(worker): request CI artifacts with the API media type, read the latest artifact per name, and say when collection fails`(`48f4a3c`), 문서(`b075e42`).
 
 ## 게이트 수치
 
