@@ -146,6 +146,15 @@ export class PostgresDocSkeletonStore implements DocSkeletonStore {
    * Queue the skeleton pass behind an analysis (todo 20). Idempotent per
    * repository and commit, and free by the same CHECK the scan and analyze
    * kinds are under — `enqueue_job` refuses a cost on it.
+   *
+   * A pass that failed for good is asked for again the way a judgment is
+   * (`next_retry_idempotency_key`, 2026-09-02): the next analysis of the
+   * same commit mints the key's next generation (`…:r1`) rather than being
+   * handed the dead row back. The pilot's first pass died on a slug
+   * collision at attempt 3, and the rescan that followed the fix would
+   * otherwise have returned that failure forever. Queued, running and
+   * succeeded passes keep returning as before; the failed rows stay what
+   * they are and still count in `ops:health`.
    */
   async enqueueDocSkeleton(input: {
     commitSha: string;
@@ -159,7 +168,10 @@ export class PostgresDocSkeletonStore implements DocSkeletonStore {
         ${input.repositoryId},
         ${input.runId},
         'docskeleton',
-        ${`docskeleton:${input.repositoryId}:${input.commitSha}`},
+        public.next_retry_idempotency_key(
+          ${input.workspaceId},
+          ${`docskeleton:${input.repositoryId}:${input.commitSha}`}
+        ),
         ${this.sql.json({ commitSha: input.commitSha, reason: "analyze" })}::jsonb,
         0,
         3

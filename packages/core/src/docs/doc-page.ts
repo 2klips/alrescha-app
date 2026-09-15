@@ -78,8 +78,13 @@ export function docPageSlug(input: {
   readonly memberPaths?: readonly string[] | undefined;
   readonly scope: DocPageScope;
 }): string {
+  // The identity joins the node-scope hash (2026-09-15): two modules that
+  // span the same directories are two pages, and on the pilot repository
+  // they were — the first production skeleton pass collided on the slug's
+  // unique constraint. The directories stay in the hash so the address
+  // still moves only when the shape does.
   const addressable = docPageNeedsNode(input.scope)
-    ? memberDirectories(input.memberPaths ?? []).join("\n")
+    ? `${input.identityKey}\n${memberDirectories(input.memberPaths ?? []).join("\n")}`
     : input.identityKey;
   return createHash("md5")
     .update(`${input.scope}\n${addressable}`)
