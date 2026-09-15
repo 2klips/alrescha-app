@@ -142,6 +142,7 @@ export async function auditGraphSurfaceRelease(input: {
   const raw = await readFile(preregistrationPath, "utf8");
   const { preregistration, tasks } = await loadGraphSurfaceBenchmark({
     preregistrationPath,
+    repositoryRoot: resolve(benchmarkDirectory, "../.."),
     v3ManifestPath: input.v3ManifestPath,
   });
   const report = JSON.parse(
@@ -415,7 +416,11 @@ export async function auditGraphSurfaceReleases(
       null;
     if (!hasReport) {
       // Loading proves the pre-registration is valid even before its run.
-      await loadGraphSurfaceBenchmark({ preregistrationPath, v3ManifestPath });
+      await loadGraphSurfaceBenchmark({
+        preregistrationPath,
+        repositoryRoot: rootDir,
+        v3ManifestPath,
+      });
       pendingReleases.push(spec.id);
       continue;
     }

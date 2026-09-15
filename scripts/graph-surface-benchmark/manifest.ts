@@ -16,6 +16,7 @@
 
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { basename, resolve } from "node:path";
 
 import {
   benchmarkManifestDigest,
@@ -115,6 +116,13 @@ export interface GraphSurfaceV3Contract {
 }
 
 export interface GraphSurfaceQuestionSource {
+  /**
+   * Repository-relative path of the frozen manifest the digest pins, or null
+   * when the questions are inline. Absent on the v1/v2 files, which predate
+   * the field and mean `tasks.v3.json`; a v4 question set names its own
+   * file (OQ-070 ⑴) and the loader reads that one.
+   */
+  readonly manifest: string | null;
   /** Pinned digest of the frozen manifest, or null when questions are inline. */
   readonly manifestDigest: string | null;
   readonly taskIds: readonly string[];
@@ -347,6 +355,7 @@ function parsePreregistration(raw: unknown): ParsedPreregistration {
     schemaVersion === "graph-surface-v3" ? parseV3Contract(root.v3) : null;
   let inlineTasks: BenchmarkTask[] | null = null;
   let manifestDigest: string | null = null;
+  let manifest: string | null = null;
   if (Array.isArray(questionSourceRaw.tasks)) {
     // Inline questions are a v3 affordance (the relational set); a v1 file
     // carrying them would be a question set nobody froze.
@@ -358,6 +367,15 @@ function parsePreregistration(raw: unknown): ParsedPreregistration {
       questionSourceRaw.manifestDigest,
       "questionSource.manifestDigest",
     );
+    if (questionSourceRaw.manifest !== undefined) {
+      manifest = asString(
+        questionSourceRaw.manifest,
+        "questionSource.manifest",
+      );
+      if (!manifest.startsWith("benchmarks/databrain/tasks.")) {
+        invalid("questionSource.manifest");
+      }
+    }
   }
   const taskIds = inlineTasks
     ? inlineTasks.map(({ id }) => id)
@@ -430,7 +448,7 @@ function parsePreregistration(raw: unknown): ParsedPreregistration {
       models,
       name,
       protocol,
-      questionSource: { manifestDigest, taskIds },
+      questionSource: { manifest, manifestDigest, taskIds },
       resultsBasename:
         root.resultsBasename === undefined
           ? "results.v1"
@@ -447,12 +465,35 @@ export interface LoadedGraphSurfaceBenchmark {
   readonly tasks: readonly BenchmarkTask[];
 }
 
+function resolveManifestPath(
+  named: string | null,
+  input: { repositoryRoot?: string; v3ManifestPath: string },
+): string {
+  if (named === null) return input.v3ManifestPath;
+  if (input.repositoryRoot !== undefined) {
+    return resolve(input.repositoryRoot, named);
+  }
+  if (basename(named) === basename(input.v3ManifestPath)) {
+    return input.v3ManifestPath;
+  }
+  throw new Error(
+    `The pre-registration names ${named} but no repository root was given to resolve it; refusing to run.`,
+  );
+}
+
 export function preregistrationSha256(raw: string): string {
   return createHash("sha256").update(raw, "utf8").digest("hex");
 }
 
 export async function loadGraphSurfaceBenchmark(input: {
   preregistrationPath: string;
+  /**
+   * Where a named `questionSource.manifest` resolves. Without it a
+   * pre-registration that names a manifest other than the fallback refuses
+   * to load, rather than silently reading the wrong question set.
+   */
+  repositoryRoot?: string;
+  /** The manifest read when the pre-registration names none (v1/v2 files). */
   v3ManifestPath: string;
 }): Promise<LoadedGraphSurfaceBenchmark> {
   const raw = await readFile(input.preregistrationPath, "utf8");
@@ -465,7 +506,11 @@ export async function loadGraphSurfaceBenchmark(input: {
   if (inlineTasks) {
     tasks = [...inlineTasks];
   } else {
-    const v3 = await loadBenchmarkManifest(input.v3ManifestPath);
+    const manifestPath = resolveManifestPath(
+      preregistration.questionSource.manifest,
+      input,
+    );
+    const v3 = await loadBenchmarkManifest(manifestPath);
     const v3Digest = benchmarkManifestDigest(v3);
     if (v3Digest !== preregistration.questionSource.manifestDigest) {
       throw new Error(

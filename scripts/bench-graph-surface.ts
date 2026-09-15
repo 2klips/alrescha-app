@@ -223,6 +223,7 @@ async function main(): Promise<void> {
     preregistrationOption ?? "benchmarks/graph-surface/preregistration.v1.json";
   const loaded = await loadGraphSurfaceBenchmark({
     preregistrationPath: resolve(repositoryRoot, preregistrationFile),
+    repositoryRoot,
     v3ManifestPath: resolve(
       repositoryRoot,
       "benchmarks/databrain/tasks.v3.json",
