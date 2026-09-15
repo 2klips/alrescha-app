@@ -265,7 +265,10 @@ Body remains available.
     );
   });
 
-  it("parses a large document without losing element spans", () => {
+  // The assertion is about spans, not speed: `expectExactSpan` is the
+  // deliberately quadratic reference algorithm (see below), and 4,000
+  // elements of it take ~9s on a GitHub-hosted runner against ~1s here.
+  it("parses a large document without losing element spans", { timeout: 60_000 }, () => {
     const sectionCount = 1_000;
     const source = [
       "# 대형 명세",

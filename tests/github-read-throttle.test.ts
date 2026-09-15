@@ -325,7 +325,14 @@ describe("the backfill pair under a GitHub rate limit", () => {
     const analyze = (await jobs()).find(({ kind }) => kind === "analyze")!;
     expect(analyze.status).toBe("queued");
     expect(analyze.attempt_count).toBe(1);
-    expect(analyze.seconds).toBeGreaterThan(1795);
+    // The source's clock is frozen at T0 while the worker dates the deferral
+    // against the real one, so the wait is the reset window minus however
+    // long this file has been running — under a second here, nine on a
+    // GitHub-hosted runner. Bound it by the measured elapsed time, not a
+    // guessed margin; the claim is still "deferred to the reset, not to the
+    // default backoff".
+    const elapsedSeconds = (Date.now() - T0) / 1000;
+    expect(analyze.seconds).toBeGreaterThan(1800 - elapsedSeconds - 2);
     expect(analyze.seconds).toBeLessThanOrEqual(1801);
     expect(analyze.last_error).toMatch(
       /^GitHub repository request failed: 403 primary-rate-limit; retry after 1800s; rate limit 0\/5000 core, resets in 1800s \(\/repos\/alrescha\/throttled\/contents\//,
