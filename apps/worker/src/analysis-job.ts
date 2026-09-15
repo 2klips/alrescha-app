@@ -460,7 +460,7 @@ async function collectedCiEvidence(input: {
     nodeByPath: input.nodeByPath,
     requirementNodesByCode: input.requirementNodesByCode,
     scope: input.scope,
-    testEvidence: [],
+    testFiles: [],
   } satisfies CiEvidenceInput;
   if (!input.collect) return empty;
 
@@ -485,7 +485,7 @@ async function collectedCiEvidence(input: {
   return {
     ...empty,
     measured: ingestCoverageReports(collected.coverage).measured,
-    testEvidence: ingestion.evidence,
+    testFiles: ingestion.testFiles,
   };
 }
 

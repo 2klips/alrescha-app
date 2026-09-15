@@ -540,6 +540,48 @@ describe("analyze job — CI evidence", () => {
     ).toBe(requirementNodeId);
   });
 
+  it("grades the test file that ran when its names carry no requirement code", async () => {
+    const recorded = await run({
+      collectCiEvidence: async () => ({
+        ...passingRun,
+        reports: [
+          {
+            ...passingRun.reports[0]!,
+            content: JSON.stringify({
+              success: true,
+              testResults: [
+                {
+                  assertionResults: [
+                    {
+                      fullName: "rotates tokens",
+                      status: "passed",
+                      title: "rotates tokens",
+                    },
+                  ],
+                  name: "/home/runner/work/app/app/tests/auth.test.ts",
+                  status: "passed",
+                },
+              ],
+            }),
+          },
+        ],
+      }),
+    });
+
+    // The file is the evidence; the requirement code was never the gate.
+    expect(recorded.ciEvidence).toHaveLength(1);
+    expect(recorded.ciEvidence[0]).toMatchObject({
+      kind: "test",
+      sourceArtifactId: "node-test",
+      verdict: "supports",
+    });
+    expect(recorded.ciEvidence[0]?.metadata).toMatchObject({
+      grade: "verified",
+      requirementCodes: [],
+    });
+    expect(recorded.ciEdges.map(({ relation }) => relation)).toEqual(["tests"]);
+  });
+
   /**
    * ADR-001, stated as an edge that is not written. The scan derives
    * file→file `tests` edges from imports; they say a test file imports a

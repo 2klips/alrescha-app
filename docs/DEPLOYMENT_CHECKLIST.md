@@ -14,7 +14,9 @@ Unticked boxes are genuinely open, and each one says what is missing.
       Node `>=22` engine against worker `v22.23.2`, `pnpm@9.0.0`, committed
       `pnpm-lock.yaml`, Supabase `major_version = 17` against production
       PostgreSQL `17.6`, Fly image `deployment-01M1H7G6E1AY8DNRX26JVD44HA`.
-      No CI enforces `--frozen-lockfile`; the gate is run by hand (see OQ-026).
+      `.github/workflows/ci.yml` runs `pnpm install --frozen-lockfile`, lint,
+      typecheck and the unit suite on every push (2026-09-14, OQ-026); `main`
+      has no required-check rule yet, so the gate reports but does not block.
 - [ ] Back up the database and test restoration in a non-production project.
       **Open.** Neither the backup schedule nor a restore rehearsal is verifiable
       without the Supabase dashboard, and no restore has been rehearsed. This is
@@ -156,4 +158,8 @@ pnpm test:e2e
 - **No platform AI judgment without keys.** Deterministic scans cost zero
   credits; judgment requires platform credits, and a failed provider response is
   refunded rather than charged (verified in production on 2026-09-02).
-- **No CI.** The automated gate runs on the operator's machine.
+- **CI reports, but does not block.** `.github/workflows/ci.yml` runs the
+  install, lint, typecheck and unit-test steps of the gate on every push and
+  uploads the JUnit report as the `vitest-junit` artifact (the CI evidence the
+  analysis reads); `pnpm build` and `pnpm test:e2e` still run on the operator's
+  machine, and `main` has no required-check rule (OQ-026).

@@ -27,11 +27,25 @@ export interface CiEvidenceSource {
   readonly testName: string;
 }
 
-export interface CiRequirementEvidence {
+/**
+ * One test file a CI run executed, and what that run says about it.
+ *
+ * The file is the unit of evidence (Phase 4 Wave C todo 18, 2026-09-14):
+ * "this file ran and passed at the analysed commit" is the claim a report
+ * makes directly, and it does not depend on the test's name. The
+ * requirement codes the names carry are a property of that claim — they
+ * become `supports` edges out of the same row — rather than the gate for
+ * it, so a repository whose tests name no requirement can still reach the
+ * `verified` grade for the files its CI actually ran.
+ */
+export interface CiTestFileEvidence {
   readonly grade: "inferred" | "verified";
   readonly reason: string;
-  readonly requirementId: string;
+  /** `REQ-…` codes found in this file's test names, sorted, deduplicated. */
+  readonly requirementIds: readonly string[];
   readonly sources: readonly CiEvidenceSource[];
+  /** The file as the report named it — often a CI machine's absolute path. */
+  readonly testFile: string;
   readonly verdict: "supports" | "unknown";
 }
 
@@ -55,18 +69,21 @@ export interface IngestCiTestReportsInput {
 
 export interface CiTestReportIngestionResult {
   readonly diagnostics: readonly CiReportDiagnostic[];
-  readonly evidence: readonly CiRequirementEvidence[];
   readonly guidance: CiEvidenceGuidance | null;
+  readonly testFiles: readonly CiTestFileEvidence[];
 }
 
+type ParsedTestStatus = "failed" | "passed" | "skipped";
+
 interface ParsedTestCase {
-  readonly passed: boolean;
+  readonly status: ParsedTestStatus;
   readonly testFile: string;
   readonly testName: string;
 }
 
 interface ParsedReport {
   readonly artifact: CiReportArtifact;
+  /** No failure and no error anywhere in the report. A skip is neither. */
   readonly passed: boolean;
   readonly tests: readonly ParsedTestCase[];
 }
@@ -88,19 +105,32 @@ const jsonReportSchema = z.object({
   ),
 });
 
+/** Jest and Vitest spell "did not run" four ways between them. */
+const JSON_SKIPPED_STATUSES = new Set(["disabled", "pending", "skipped", "todo"]);
+
+function jsonStatus(
+  reportSucceeded: boolean,
+  fileStatus: string,
+  testStatus: string,
+): ParsedTestStatus {
+  if (JSON_SKIPPED_STATUSES.has(testStatus)) return "skipped";
+  return reportSucceeded && fileStatus === "passed" && testStatus === "passed"
+    ? "passed"
+    : "failed";
+}
+
 function parseJsonReport(artifact: CiReportArtifact): ParsedReport {
   const parsed = jsonReportSchema.parse(JSON.parse(artifact.content));
   const tests = parsed.testResults.flatMap((file) =>
     file.assertionResults.map((test) => ({
-      passed:
-        parsed.success && file.status === "passed" && test.status === "passed",
+      status: jsonStatus(parsed.success, file.status, test.status),
       testFile: file.name,
       testName: test.fullName ?? test.title,
     })),
   );
   return {
     artifact,
-    passed: parsed.success && tests.every(({ passed }) => passed),
+    passed: parsed.success && tests.every(({ status }) => status !== "failed"),
     tests,
   };
 }
@@ -128,6 +158,13 @@ function numericAttribute(
 ): number {
   const parsed = Number(stringAttribute(value, name));
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function junitStatus(testCase: Record<string, unknown>): ParsedTestStatus {
+  if (testCase.failure !== undefined || testCase.error !== undefined) {
+    return "failed";
+  }
+  return testCase.skipped !== undefined ? "skipped" : "passed";
 }
 
 function parseJunitReport(artifact: CiReportArtifact): ParsedReport {
@@ -161,20 +198,20 @@ function parseJunitReport(artifact: CiReportArtifact): ParsedReport {
         continue;
       }
       tests.push({
-        passed:
-          testCase.failure === undefined &&
-          testCase.error === undefined &&
-          testCase.skipped === undefined,
+        status: junitStatus(testCase),
         testFile: stringAttribute(testCase, "classname") || suiteName,
         testName: stringAttribute(testCase, "name"),
       });
     }
   }
+  // A skipped case is not a failure. The previous rule counted it as one at
+  // the report level, which made a single `it.skip` anywhere un-verify every
+  // file in the run; the skip now costs only the file it is in.
   const reportPassed =
     numericAttribute(suitesRoot, "failures") === 0 &&
     numericAttribute(suitesRoot, "errors") === 0 &&
     tests.length > 0 &&
-    tests.every(({ passed }) => passed);
+    tests.every(({ status }) => status !== "failed");
   return { artifact, passed: reportPassed, tests };
 }
 
@@ -221,6 +258,25 @@ const guidance: CiEvidenceGuidance = {
     "Connect passing CI test reports for the analyzed commit to verify test evidence.",
 };
 
+const VERIFIED_REASON =
+  "Passing parsed reports and checks match the analyzed commit.";
+
+interface FileAccumulator {
+  readonly reasons: Set<string>;
+  readonly requirementIds: Set<string>;
+  readonly sources: CiEvidenceSource[];
+  verified: boolean;
+}
+
+/**
+ * Parse a commit's CI reports into per-file evidence.
+ *
+ * A file is `verified` when every report that names it matched the
+ * analysed commit, passed as a whole, sat under a successful check run, and
+ * every one of its cases passed — a skipped case leaves its file `unknown`
+ * with that reason and touches no other file. A report that fails to parse
+ * discards the whole run's evidence rather than half of it.
+ */
 export function ingestCiTestReports({
   analyzedCommitSha,
   checkRuns,
@@ -236,14 +292,11 @@ export function ingestCiTestReports({
     }
   }
   if (diagnostics.length > 0) {
-    return { diagnostics, evidence: [], guidance };
+    return { diagnostics, guidance, testFiles: [] };
   }
 
   const passingCheck = hasPassingCheck(checkRuns, analyzedCommitSha);
-  const byRequirement = new Map<
-    string,
-    { reasons: Set<string>; sources: CiEvidenceSource[]; verified: boolean }
-  >();
+  const byFile = new Map<string, FileAccumulator>();
   for (const report of parsedReports) {
     const reportVerified =
       report.artifact.headSha === analyzedCommitSha &&
@@ -256,52 +309,61 @@ export function ingestCiTestReports({
           ? "Parsed test report did not pass."
           : "No successful check run matches the analyzed commit.";
     for (const test of report.tests) {
+      // A case the report could not attribute to a file anchors nothing.
+      if (test.testFile.length === 0) continue;
+      const current = byFile.get(test.testFile) ?? {
+        reasons: new Set<string>(),
+        requirementIds: new Set<string>(),
+        sources: [],
+        verified: true,
+      };
+      current.sources.push({
+        artifactId: report.artifact.artifactId,
+        artifactName: report.artifact.artifactName,
+        format: report.artifact.format,
+        headSha: report.artifact.headSha,
+        testFile: test.testFile,
+        testName: test.testName,
+      });
       for (const requirementId of requirementIds(test.testName)) {
-        const current = byRequirement.get(requirementId) ?? {
-          reasons: new Set<string>(),
-          sources: [],
-          verified: false,
-        };
-        current.sources.push({
-          artifactId: report.artifact.artifactId,
-          artifactName: report.artifact.artifactName,
-          format: report.artifact.format,
-          headSha: report.artifact.headSha,
-          testFile: test.testFile,
-          testName: test.testName,
-        });
-        current.verified ||= reportVerified && test.passed;
-        if (!reportVerified || !test.passed) {
-          current.reasons.add(
-            test.passed ? inferredReason : "Mapped test case did not pass.",
-          );
-        }
-        byRequirement.set(requirementId, current);
+        current.requirementIds.add(requirementId);
       }
+      if (!reportVerified || test.status !== "passed") {
+        current.verified = false;
+        current.reasons.add(
+          test.status === "failed"
+            ? "Mapped test case did not pass."
+            : test.status === "skipped"
+              ? "Mapped test case was skipped."
+              : inferredReason,
+        );
+      }
+      byFile.set(test.testFile, current);
     }
   }
 
-  const evidence = [...byRequirement.entries()]
-    .map(([requirementId, mapped]): CiRequirementEvidence => ({
-      grade: mapped.verified ? "verified" : "inferred",
-      reason: mapped.verified
-        ? "Passing parsed reports and checks match the analyzed commit."
-        : ([...mapped.reasons][0] ?? "No verified test evidence was produced."),
-      requirementId,
-      sources: mapped.sources.sort(
-        (left, right) => left.artifactId - right.artifactId,
-      ),
-      verdict: mapped.verified ? "supports" : "unknown",
-    }))
-    .sort((left, right) =>
-      left.requirementId.localeCompare(right.requirementId),
-    );
-  const hasVerifiedEvidence = evidence.some(
+  const testFiles = [...byFile.entries()]
+    .map(
+      ([testFile, mapped]): CiTestFileEvidence => ({
+        grade: mapped.verified ? "verified" : "inferred",
+        reason: mapped.verified
+          ? VERIFIED_REASON
+          : ([...mapped.reasons][0] ?? "No verified test evidence was produced."),
+        requirementIds: [...mapped.requirementIds].sort(),
+        sources: mapped.sources.sort(
+          (left, right) => left.artifactId - right.artifactId,
+        ),
+        testFile,
+        verdict: mapped.verified ? "supports" : "unknown",
+      }),
+    )
+    .sort((left, right) => left.testFile.localeCompare(right.testFile));
+  const hasVerifiedEvidence = testFiles.some(
     ({ grade }) => grade === "verified",
   );
   return {
     diagnostics: [],
-    evidence,
     guidance: hasVerifiedEvidence ? null : guidance,
+    testFiles,
   };
 }

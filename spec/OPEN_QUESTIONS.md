@@ -237,6 +237,7 @@
 - 임시 결정: 현행 유지. 게이트는 커밋마다 로컬에서 돌리고 수치를 커밋 메시지에 남긴다(기존 관행). 체크리스트 항목은 실측된 핀 값으로 체크하되 "No CI enforces `--frozen-lockfile`"를 항목과 알려진 한계에 명시했다.
 - 필요한 결정: ⑴ **GitHub Actions에 게이트 워크플로 추가** — 자격증명 불필요(단위 테스트는 PGlite, e2e는 별도 판단). `main` 보호 규칙과 함께 도입해야 실효가 있다. ⑵ Vercel의 Ignored Build Step으로 게이트 실패 시 배포 차단 — Vercel 빌드 안에서 테스트를 돌리는 형태, 빌드 시간·한도 영향. ⑶ 현행 유지 — 운영자 1명 규모에서는 로컬 게이트가 실질적으로 동등하다는 판단.
 - 상태: open. e2e가 로컬 Supabase·Docker에 의존하므로 ⑴을 하더라도 단위·lint·typecheck만 CI로 올리고 e2e는 로컬에 남기는 분할이 현실적 후보.
+- 추기(2026-09-14, todo 18): ⑴의 그 분할이 들어갔다 — `.github/workflows/ci.yml`이 push·pull_request마다 `pnpm install --frozen-lockfile` → lint → typecheck → 단위 테스트(JUnit 리포트를 `vitest-junit` 아티팩트로 업로드, OQ-072)를 돈다. build·e2e는 여전히 로컬. **`main` 보호 규칙(필수 체크)은 GitHub 설정이라 사용자 결정으로 남는다** — 그 전까지 ⑵의 문제(게이트 실패와 무관한 Vercel 배포)는 그대로다.
 
 ## OQ-027 — BYOK가 체크리스트에서는 필수, 런북에서는 선택이다
 
@@ -544,6 +545,7 @@
   - **⑵ 매처가 어휘의 3분의 1만 본다.** 심볼 표기법은 camelCase 541 · PascalCase 899 · UPPER_SNAKE 262인데 `explicitImplementationSymbols`는 camelCase만 찾았다. 이번에 PascalCase(2혹 이상)·UPPER_SNAKE까지 넓혔다 — **다만 이 레포에서 순증은 0이다(1 → 1)**. 넓히자마자 오탐이 하나 나왔고(제목 "Theme toggle and persistence"가 export 타입 `Theme`에 붙었다) 2혹 규칙으로 막았다. 백틱은 신호로 못 쓴다: 마크다운 파싱이 인라인 코드를 평문으로 만들어, 99개 중 백틱이 남은 statement가 1개(그나마 짝이 안 맞는다)다.
   - **⑶ 진짜 원인.** 99개 중 **60개가 한국어 산문**이고 camelCase 토큰이 하나라도 있는 건 11개뿐이다. 그리고 출처를 보면 `BUILD_PLAN.md` 29 · `PHASE2B` 15 · `PHASE3` 15 · `PHASE2C` 11 · `PHASE2A_UI` 10 · `PHASE2D_UI` 6 · `IMPLEMENTATION_GUIDE` 8 — **94개가 계획서·가이드에서 나왔고 정작 규범 스펙인 `WORK_SPEC.md`에서는 2개**다. `spec/` 아래 16개 파일이 전부 `classification='spec'`이라(연구 메모·리뷰·OPEN_QUESTIONS 포함) 추출기가 **작업 항목을 요구사항으로 캔다**. 남은 그 1개 엣지조차 "5. 실기 파일럿: install → push → 카드 → receipt (2026-08-31 완료 …)"라는 **체크박스 항목**이다 — 즉 의미 있는 커버리지는 1/99가 아니라 **0/99**다.
   - `REQ-…` 코드가 붙은 statement는 **0개**라, `requirementIdsInTests`(테스트 파일에서 `REQ-…`를 찾는 경로)도 이 코퍼스에서는 영원히 안 켜진다.
+  - 추기(2026-09-14): CI 증거의 파일 등급은 더 이상 `REQ-` 코드를 조건으로 하지 않는다(OQ-072). 코드가 없으면 `supports` 엣지가 없을 뿐, 파일의 `tests` 엣지와 `verified`는 생긴다.
 - 임시 결정: 매처는 넓힌 채로 둔다(어휘 3분의 2를 못 보는 건 코퍼스와 무관한 결함이고, 2혹 가드로 오탐을 막았다). **순증 0을 그대로 보고한다** — 이 레포에서 이득을 못 보였다는 사실이 측정이다. 분류 변경은 하지 않았다: Wave A의 `classifyArtifactPath`와 밀도 픽스처에 파급이 있어 단독 판단할 일이 아니다.
 - 필요한 결정: ⑴ `spec/` 안에서 **규범 문서와 계획 문서를 분리**한다 — `BUILD_PLAN*`·`RESEARCH_*`·`REVIEW_*`·`OPEN_QUESTIONS`를 `todo_progress`나 `doc`으로 내리고 요구사항 추출은 `WORK_SPEC`·`DECISIONS-ADR` 급에서만(기본 후보, 밀도 픽스처 재측정 필요) ⑵ 요구사항→코드 링크의 신호를 이름 매칭에서 바꾼다 — 이미 있는 재료로는 **출처 문서가 코드를 `references` 하는 요구사항이 34/99**(문서 4개가 코드로 13개 참조)이고, 문서 단위라 statement 단위보다 약하지만 0보다는 많다 ⑶ G3 enrich의 의미 매칭에 맡긴다(비용 발생, ADR-001상 여전히 `inferred`) ⑷ 커버리지 지표를 **"요구사항 문서가 아직 코드를 지목하지 않았다"** 로 다시 쓰고 퍼센트를 안 보여준다.
 - 상태: open. ⑴과 ⑷는 서로 독립이고 둘 다 사용자 결정(OQ-041과 같은 결)이다. 그 전까지 어떤 화면도 이 커버리지를 퍼센트로 그리지 않는다.
@@ -611,3 +613,12 @@
 - 필요한 결정: ⑴ 첫 단계의 `forced`를 풀고 "경로를 모를 때만"으로(블록 문안 변경 — todo 22 ⑵의 예산 안에서, `AGENT_FORCED_CALL_CEILING` 2 → 1) ⑵ OQ-039 ⑴ 결정론 발췌(헤딩·체크박스·심볼명)를 먼저 서빙해 포인터가 홉이 아니게 만든 뒤 v4 재측정 ⑶ 현행 유지 — 설치 비용 +0.375턴을 문서에 적고 판매 논리에서 "턴 절감"을 뺀다(R5 §4.6 빼는 것 목록과 일치).
 - 추기(2026-09-14, todo 19 ⑴): 출하 카탈로그가 바뀌었다(concept 어휘) — `tools/list` 다이제스트 `a3d56907…` → `c76b6a5c12865dae83603aaa2e7dfe920eed2d09c0eb642b2dc7c49a9673c475`. v3 사전등록의 핀은 그대로이고 러너는 거부한다(설계대로). ⑴·⑵ 어느 쪽을 고르든 다음 실행은 새 다이제스트를 핀한 v4 사전등록이다; `print-catalog.ts`가 값을 낸다.
 - 상태: open. 기본 후보 ⑵ 뒤 ⑴ 재판정. ⑶은 그 전까지의 기본 상태.
+
+## OQ-072 — CI 증거의 단위는 테스트 파일이고, 요구사항 코드는 그 파일이 지지하는 것이지 증거의 조건이 아니다
+
+- 발견: Phase 4 Wave C todo 18 마감 시도(2026-09-14) / `packages/core/src/evidence/ci-reports.ts`(`ingestCiTestReports`가 `REQ-…`가 붙은 테스트 이름만 증거로 묶었다), `apps/worker/src/ci-evidence.ts`(행이 (요구사항, 테스트 파일) 단위), `.omo/evidence/phase4/todo-18.md` "Only requirement-tagged tests produce evidence", OQ-064(이 레포의 statement에 `REQ-` 코드 0개)
+- 내용: 2026-09-06 노트가 "등급을 지는 주장은 둘"이라고 적었다 — **테스트 파일이 돌아 통과했다**(`tests` 엣지)와 **테스트 이름이 부르는 요구사항**(`supports` 엣지). 그런데 구현은 첫 번째 주장을 두 번째 주장의 부산물로만 기록했다: 이름에 `REQ-` 코드가 없는 테스트는 파일이 돌아 통과했어도 행이 생기지 않았다. 그 결과 파일럿 두 레포 모두(`alrescha-app`은 코드 0개, OQ-064) CI 아티팩트를 올려도 `verified`가 영원히 0이었고, todo 18의 "파일럿 실기 1회"는 아티팩트 부재와 별개로 이 규칙에 막혀 있었다. 같은 파서의 두 번째 결함: JUnit의 `<skipped/>` 케이스를 **리포트 실패**로 세어 `it.skip` 하나가 런 전체를 `inferred`로 만들었다(이 레포 스위트는 1 skipped).
+- 임시 결정(기본값 채택): **행의 단위를 테스트 파일로** 바꿨다 — commit당 파일당 `test` 행 하나, `tests` 엣지는 파일로, 이름에서 찾은 `REQ-` 코드들은 같은 행에서 나가는 `supports` 엣지(이 분석이 그 코드의 노드를 썼을 때만, 종전과 같음). 파일은 그 파일을 이름 부른 **모든** 리포트가 commit 일치·리포트 통과·check run 성공이고 **그 파일의 케이스가 전부 통과**했을 때만 `verified`; skipped 케이스는 **그 파일만** `unknown`("Mapped test case was skipped.")으로 남기고 다른 파일에 번지지 않는다. 리포트 통과는 failure·error 0(skip은 실패가 아님). ADR-001은 유지된다 — 실행된 것은 테스트 파일이고, import된 코드는 여전히 승격하지 않는다. 녹화 픽스처(요구사항 1·파일 1)에서는 행·엣지 수가 그대로라 기존 단언이 전부 유지되고, 코드를 지운 같은 런은 `tests` 엣지만 가진 행 하나가 된다(`tests/ci-evidence-persistence.test.ts`). 행 id 파생이 바뀌었으나(`ci-test|sha|path`) 재분석이 옛 행을 통째로 치우므로 마이그레이션 없음.
+- 같이 한 것: 이 레포에 `.github/workflows/ci.yml`(OQ-026 ⑴의 단위·lint·typecheck 부분 — build·e2e는 로컬에 남김)을 두고 vitest JUnit 리포트를 `vitest-junit` 아티팩트로 올린다(실패해도 올림 — 등급을 막는 건 check run의 conclusion이다). `tests/ci-workflow.test.ts`가 그 형태를 핀한다.
+- 필요한 결정: ⑴ 이대로 둔다(기본값) ⑵ 파일 등급을 요구사항 코드 있는 파일로 되돌린다(2026-09-06 계약) — 그러면 파일럿 실기는 `REQ-` 이름 규칙을 도입한 레포에서만 가능 ⑶ skipped 케이스도 통과로 본다(더 느슨) — 채택하지 않았다: 안 돈 케이스는 실행 증거가 아니다.
+- 상태: open — ⑴ 기본값으로 진행. 파일럿 실기 1회(워커 재배포 → 다시 스캔 → `ci evidence N row(s), M supporting` 로그·`/app/map`의 verified 테스트 파일)가 todo 18의 마지막 항목이며 Codex 인수인계에 절차가 있다.

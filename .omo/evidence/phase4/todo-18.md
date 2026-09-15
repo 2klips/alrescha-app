@@ -208,3 +208,133 @@ The checkbox stays open on that item alone. Everything else the acceptance
 lists is met: the database-level path (2026-09-06), the map snapshot (today),
 and the standing assertion that nothing is `verified` without execution
 evidence — now held on the live canvas as well as in the model.
+
+---
+
+## 2026-09-14 — the file is the evidence; the repository has a CI to be read
+
+**Scope:** `packages/core/src/evidence/ci-reports.ts`,
+`packages/core/src/index.ts`, `apps/worker/src/ci-evidence.ts`,
+`apps/worker/src/analysis-job.ts`, `.github/workflows/ci.yml` (new),
+`.gitignore`, `tests/ci-evidence.test.ts`, `tests/ci-workflow.test.ts` (new),
+`tests/ci-evidence-persistence.test.ts`, `apps/worker/src/analysis-job.test.ts`,
+`tests/e2e/map-verified.spec.ts`. No migration.
+
+### What was actually blocking the live-fire
+
+The 2026-09-12 note listed two conditions outside this tree: a pilot CI
+step that uploads a report, and `REQ-` codes in test names. Reading the
+parser again, the second was not a property of the pilot repositories but
+of the code: `ingestCiTestReports` keyed everything by the requirement code
+it found in a test name, so a file with no code in any name produced no
+`CiRequirementEvidence`, no row, no `tests` edge — however many times CI
+ran it. The first claim the 2026-09-06 note named ("the test file ran and
+passed") was only ever recorded as a by-product of the second.
+
+A third thing was checked and is not a blocker: the push webhook's analyze
+runs before CI has uploaded anything and sees zero artifacts, but the
+`workflow_run` completed webhook (`normalizeGitHubWebhook`,
+`ingest_github_webhook_event`) enqueues another analyze for the same head
+sha, and by then the artifacts exist. The App's pinned permissions already
+include `actions: read`, `checks: read` and the `workflow_run` event.
+
+### The unit of evidence is a test file (OQ-072)
+
+`ingestCiTestReports` now returns `testFiles`: one entry per file the run
+executed, as the report named it, with the requirement codes its names
+carry as a **property** (`requirementIds`) rather than as the key. A file
+is `verified` when every report that names it matched the analysed commit,
+passed as a whole, sat under a successful check run, and every one of its
+cases passed. `ciEvidenceRecords` writes one `test` row per resolved
+repository path per commit (id `ci-test|sha|path`), the `tests` edge onto
+the file, and a `supports` edge per code onto the requirement nodes this
+analysis wrote — exactly the two claims, now independent.
+
+Two reports that spell the same file two ways (JUnit's repository path,
+Vitest JSON's runner path) resolve to one row with both artifacts as
+sources, verified only if both agree.
+
+For the recorded fixture (one requirement, one file) the row and edge
+counts are unchanged, so every existing assertion — persistence, the
+analyze job, the map snapshot — still holds as written. The same run with
+`REQ-AUTH-002` stripped from every name now yields one row with a `tests`
+edge only: the test file `verified`, the requirement `inferred`, the code
+under the test `inferred` (`tests/ci-evidence-persistence.test.ts`,
+`apps/worker/src/analysis-job.test.ts`).
+
+**A skipped case is not a failure.** The JUnit parser counted `<skipped/>`
+as a non-pass at the report level, which made a single `it.skip` anywhere
+un-verify every file in the run — this repository's suite has exactly one.
+A skip now leaves its own file `unknown` with the reason "Mapped test case
+was skipped." and touches no other file. Vitest and Jest's four spellings
+of "did not run" (`skipped`, `pending`, `todo`, `disabled`) are read the
+same way. This is more conservative than passing a skipped case (a case
+that did not run is not execution evidence) and less blunt than failing the
+run over it.
+
+The row's metadata carries `requirementCodes` (plural) and the union of
+test names; the id derivation changed, and the wholesale reconcile removes
+the previous shape's rows on the next analysis, so no migration.
+
+### The repository's own CI
+
+`.github/workflows/ci.yml` — the checklist's automated gate minus `build`
+and `e2e` (OQ-026 ⑴, the split that note already called realistic):
+frozen-lockfile install, lint, typecheck, the unit suite with Vitest's JUnit
+reporter, and `actions/upload-artifact` of `reports/vitest-junit.xml` as
+`vitest-junit`, `if: always()` — a failing run's report is evidence of what
+did not pass, and the check run's conclusion is what withholds the grade.
+`permissions: contents: read`; no secrets.
+
+Vitest's JUnit `classname` is the repository-relative path, so
+`resolveReportedPath` matches it without a runner prefix.
+`tests/ci-evidence.test.ts` builds that exact archive shape, collects it
+through `GitHubCiEvidenceSource` with a stubbed fetch, and grades the file
+`verified` with `requirementIds: []`; `tests/ci-workflow.test.ts` pins the
+workflow's report path, reporter flags, `if: always()`, the frozen
+lockfile, the read-only permission, and the ignore rule.
+
+Branch protection (a required check on `main`) is a GitHub setting and
+stays a user decision; without it the gate reports but does not block.
+
+### Verification
+
+`pnpm lint` clean · `pnpm typecheck` clean (root + 6) ·
+`verify-scope-boundaries.ts` PASS · `git diff --check` clean · `pnpm test`
+203 files / 1,874 passed / 1 skipped. `tests/ci-evidence.test.ts` (9: the recorded
+run as one file with two sources, a file with no code, a skip confined to
+its file, stale commit, malformed report, the REST source, the coverage
+split, a plain archive, this repository's own artifact),
+`tests/ci-evidence-persistence.test.ts` (6, PGlite),
+`apps/worker/src/analysis-job.test.ts` (+1), `tests/ci-workflow.test.ts`
+(5). `tests/e2e/map-verified.spec.ts` 1/1 live: still exactly two
+`verified` nodes (the evidence node and the test file), the code under the
+test `inferred`.
+
+### The workflow's first runs (2026-09-15)
+
+The first run on the branch head (`32186c3`) failed two tests that pass
+locally — a deferral margin that assumed under five seconds of real elapsed
+time (the runner took nine) and a large-document parser check against the
+5s default timeout — and still uploaded the artifact, which is the
+`if: always()` behaving. Both assertions now bound by measured time
+rather than a local machine's speed; the claims are unchanged. The rerun
+(run `34967653890`, `855aac7`) passed: `gate` check run
+completed/success, `vitest-junit` 73,719 bytes, 1,875 cases in 946s.
+
+That artifact, downloaded and fed to the new parser with the run's check:
+0 diagnostics, **203 files, 203 verified, 0 unknown**, every path
+repository-relative and self-resolving. The one locally skipped case is
+`skipIf(win32)` and runs on Linux, so the live-fire's expected log line at
+that head is `ci evidence 203 row(s), 203 supporting`.
+
+### Still owed: the pilot live-fire, now a procedure
+
+Production's worker runs the previous rule, so until it is redeployed this
+repository's artifact correctly yields zero rows. After the redeploy: one
+`다시 스캔` (or `request_rescan`) at the head CI has already run for →
+analyze collects `vitest-junit` for that sha → the worker log's
+`ci evidence N row(s), M supporting` line → `/app/map` shows the test files
+`verified` and every source file `inferred`. The checkbox closes on that
+log line and a map screenshot, both recorded by whoever runs it
+(`docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-ci-evidence.md`).

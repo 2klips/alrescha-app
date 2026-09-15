@@ -326,7 +326,7 @@ export type {
   CiReportArtifact,
   CiReportDiagnostic,
   CiReportFormat,
-  CiRequirementEvidence,
+  CiTestFileEvidence,
   CiTestReportIngestionResult,
   IngestCiTestReportsInput,
 } from "./evidence/ci-reports";
