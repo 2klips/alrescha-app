@@ -248,7 +248,10 @@ describe("rationale nodes and handoff todos reach the database and dashboard", (
     database = null;
   });
 
-  it("persists rationale as a first-class node with a provenance edge, and handoff todos flow to the progress board", async () => {
+  // A real-migration PGlite case: 5.09s on a GitHub-hosted runner against the
+  // 5s default (main CI attempt 1, 2026-09-15). The bound is stated, not the
+  // assertion loosened.
+  it("persists rationale as a first-class node with a provenance edge, and handoff todos flow to the progress board", { timeout: 60_000 }, async () => {
     database = await createTestDatabase([
       AUTH_TENANCY_MIGRATION,
       EVIDENCE_GRAPH_MIGRATION,
