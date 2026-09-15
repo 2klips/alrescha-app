@@ -213,6 +213,8 @@ describe("the backfill pair under a GitHub rate limit", () => {
         store: new PostgresAnalysisStore(sql),
       }),
       coach: unreachable,
+      docpage: unreachable,
+      docskeleton: unreachable,
       enrich: unreachable,
       judge: unreachable,
       pack: unreachable,

@@ -258,6 +258,19 @@ export interface AnalysisJobDependencies {
   readonly store: AnalysisJobStore;
   /** Clock for the receipt's analyzedAt; injectable for deterministic tests. */
   readonly now?: () => Date;
+  /**
+   * Queue the doc-page skeleton pass once the analysis is published (todo
+   * 20). After, not before: the skeleton's citation candidates are the
+   * edges that touch a member, and `implements` and `tests` edges are this
+   * job's. Omitted, no pass is queued — the local runner and the tests
+   * that do not care about pages leave it out.
+   */
+  readonly enqueueDocSkeleton?: (input: {
+    commitSha: string;
+    repositoryId: string;
+    runId: string;
+    workspaceId: string;
+  }) => Promise<void>;
 }
 
 /**
@@ -639,5 +652,13 @@ export function createAnalysisJobHandler(
     // Last, so a reader that sees `analysis: current` at this commit can
     // rely on every row above being there.
     await store.publishAnalyzedCommit({ commitSha, repositoryId, workspaceId });
+    // And the pages, from the rows that now exist. Idempotent per commit,
+    // so a retried analysis queues the same pass once.
+    await dependencies.enqueueDocSkeleton?.({
+      commitSha,
+      repositoryId,
+      runId: job.runId ?? job.id,
+      workspaceId,
+    });
   };
 }

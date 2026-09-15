@@ -15,6 +15,7 @@
 @import "./styles/shell.css";
 @import "./styles/screens/assurance.css";
 @import "./styles/screens/commits.css";
+@import "./styles/screens/docs.css";
 @import "./styles/screens/graph.css";
 @import "./styles/screens/harness-library.css";
 @import "./styles/screens/home.css";

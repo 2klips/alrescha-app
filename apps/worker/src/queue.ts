@@ -1,7 +1,14 @@
 import type postgres from "postgres";
 
 export type JobKind =
-  "analyze" | "coach" | "enrich" | "judge" | "pack" | "scan";
+  | "analyze"
+  | "coach"
+  | "docpage"
+  | "docskeleton"
+  | "enrich"
+  | "judge"
+  | "pack"
+  | "scan";
 
 export interface ClaimedJob {
   readonly attemptCount: number;

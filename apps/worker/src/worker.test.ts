@@ -64,6 +64,8 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        docpage: handler,
+        docskeleton: handler,
         enrich: handler,
         judge: handler,
         pack: handler,
@@ -88,6 +90,8 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        docpage: handler,
+        docskeleton: handler,
         enrich: handler,
         judge: handler,
         pack: handler,
@@ -121,6 +125,8 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        docpage: handler,
+        docskeleton: handler,
         enrich: handler,
         judge: handler,
         pack: handler,
@@ -154,6 +160,8 @@ describe("background worker orchestration", () => {
         handlers: {
           analyze: handler,
           coach: handler,
+          docpage: handler,
+          docskeleton: handler,
           enrich: handler,
           judge: handler,
           pack: handler,
@@ -193,6 +201,8 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        docpage: handler,
+        docskeleton: handler,
         enrich: handler,
         judge: handler,
         pack: handler,
@@ -228,6 +238,8 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        docpage: handler,
+        docskeleton: handler,
         enrich: handler,
         judge: handler,
         pack: handler,
@@ -265,6 +277,8 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        docpage: handler,
+        docskeleton: handler,
         enrich: handler,
         judge: handler,
         pack: handler,
@@ -294,6 +308,8 @@ describe("background worker orchestration", () => {
       handlers: {
         analyze: handler,
         coach: handler,
+        docpage: handler,
+        docskeleton: handler,
         enrich: handler,
         judge: handler,
         pack: handler,

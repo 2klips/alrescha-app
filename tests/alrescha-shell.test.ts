@@ -5,7 +5,11 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
 import { BRAND } from "../apps/web/lib/strings/common";
-import { isShellNavActive, shellTabs } from "../apps/web/app/ui/shell-nav-data";
+import {
+  isShellNavActive,
+  shellNavGroups,
+  shellTabs,
+} from "../apps/web/app/ui/shell-nav-data";
 
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
 
@@ -39,6 +43,12 @@ describe("Alrescha F2 repository shell", () => {
     expect(shellTabs("workspace").map(({ href }) => href)).toContain(
       "/app/settings",
     );
+    // Phase 4 Wave D todo 20: the doc pages sit with the records.
+    expect(
+      shellNavGroups("workspace")
+        .find(({ key }) => key === "records")
+        ?.items.map(({ href }) => href),
+    ).toContain("/app/docs");
     expect(
       isShellNavActive("/app/settings/ai", "/app/settings", "workspace"),
     ).toBe(true);

@@ -97,6 +97,8 @@ export const CONVENTIONAL_ENGLISH_TERMS = [
   "BYOK",
   // Phase 3 Wave E — structure-edge vocabulary shown verbatim on the home.
   "import",
+  // Phase 4 Wave D todo 20 — the doc pages list a file's export names.
+  "export",
   "API",
   "JSON",
   "PR",
