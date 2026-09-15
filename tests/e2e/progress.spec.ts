@@ -24,6 +24,21 @@ test("shows sourced metrics, four todo states, and newest-first work", async ({
       page.getByRole("heading", { name: heading, exact: true }),
     ).toBeVisible();
   }
+  // The digest (todo 19 ⑵): the demo has no visit record, so the third
+  // window is a sentence, not a zero.
+  const digest = page.getByTestId("progress-digest");
+  await expect(
+    digest.locator("[data-window='sinceLastVisit']"),
+  ).toHaveAttribute("data-total", "never-visited");
+  await expect(digest).toContainText(PROGRESS.digest.neverVisited);
+  // One blocked todo in the fixture, with the reason its event stated.
+  const attention = page.getByTestId("progress-attention");
+  await expect(attention).toHaveAttribute("data-blocked", "1");
+  await expect(attention).toContainText("Verify provider-backed deployment");
+  await expect(attention).toContainText(
+    "Provider verification needs configured deployment.",
+  );
+
   const timelineItems = page.locator(".progress-timeline > li");
   await expect(timelineItems).toHaveCount(5);
   await expect(timelineItems.first()).toContainText(

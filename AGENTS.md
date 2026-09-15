@@ -55,6 +55,7 @@ Phase 4 todo 15·24(라이브 발광 브리지 + HUD 실데이터, todo 24 브�
 Phase 4 todo 13 남은 다섯(레이아웃 워밍·`/app/map` 힘 패널·Obsidian 옵션·도메인 앵커·style/config 레이어)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-13-map-panel.md)로 넘어가 있다: 웹 머지만, `/app/map`에서 필터·패널·핀·warm 마운트로 검증, 롤백 지점.
 Phase 4 todo 25(graph-surface v3 — 프로덕션 형태 스토어 위 설치된 예산 벤치, 판정 NOT MET 게시)는 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-graph-surface-v3.md)로 넘어가 있다: 머지만(배포·검증·사이트 문구 없음), `verify-benchmark-report.ts` PASS 1회로 확인, 벤치 재실행 금지.
 OQ-070 ⑴(동결 질문 세트 v4 — `tasks.v4.json`, 개명 후 별칭 추가, 벤치 실행 없음)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-tasks-v4.md)로 넘어가 있다: 머지만, `print-manifest-digest.ts`로 v3·v4 다이제스트 확인, 벤치 실행 금지.
+Phase 4 todo 19 마감(진행 다이제스트·finding 상세·제외 보드·`/app/map` 인스펙터 카드·concept MCP 노출)은 [별도 인수인계](docs/reports/CLAUDE_TO_CODEX_HANDOFF_2026-09-14-todo-19-screens.md)로 넘어가 있다: PR #19 다음에 웹 머지만, `/app/progress`·`/app/inspection`·`/app/map`에서 검증, 롤백 지점.
 
 ### 사용자 보고 선호 (2026-09-12)
 

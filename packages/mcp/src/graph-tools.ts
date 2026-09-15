@@ -135,6 +135,16 @@ function buildGraphView(workspace: McpWorkspaceData): GraphView {
         type: "db_object",
       });
     }
+    for (const concept of repository.concepts ?? []) {
+      nodes.set(concept.id, {
+        id: concept.id,
+        // Anchored to its first member, as the map anchors it: a concept is
+        // an idea over files, and the first file is where a reader starts.
+        path: concept.memberPaths[0] ?? null,
+        repositoryId: repository.id,
+        type: "concept",
+      });
+    }
     for (const receipt of repository.receipts) {
       nodes.set(receipt.id, {
         id: receipt.id,
@@ -829,6 +839,12 @@ export function impactOf(
 
 export interface NodeContent {
   readonly content: string;
+  /**
+   * Stated only when the content is a model's prose (a concept summary):
+   * `inferred` travels with the text so no reader can mistake it for a
+   * stored fact (ADR-001).
+   */
+  readonly contentGrade?: "inferred";
   readonly id: string;
   readonly kind: string;
   readonly path: string | null;
@@ -920,6 +936,18 @@ export function getNodeContent(
         path: pack.paths[0] ?? null,
         repositoryId: repository.id,
         type: "context_pack",
+      };
+    }
+    const concept = (repository.concepts ?? []).find(({ id }) => id === nodeId);
+    if (concept) {
+      return {
+        content: concept.summary,
+        contentGrade: "inferred",
+        id: concept.id,
+        kind: concept.kind,
+        path: concept.memberPaths[0] ?? null,
+        repositoryId: repository.id,
+        type: "concept",
       };
     }
   }

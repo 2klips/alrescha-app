@@ -320,6 +320,7 @@ export function BrainMapStage({
               className="brain-map-hit"
               data-grade={node.grade}
               data-node-id={node.id}
+              data-node-path={node.path}
               data-pinned={pins?.has(node.id) ? "true" : undefined}
               key={node.id}
               onClick={() => onNodeSelect?.(node)}

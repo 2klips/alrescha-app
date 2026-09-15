@@ -29,6 +29,43 @@ export const INSPECTION = {
     title: "열린 문제",
     /** `<n>건` */
     count: (count: number) => `${count}건`,
+    /**
+     * What the analysis stored about one finding (Phase 4 Wave D todo 19 ⑶):
+     * the spans it read, its confidence and grade, the rule's reason, the
+     * suggested action and the evidence nodes it pointed at. Rendered only
+     * from stored provenance — a finding without it shows nothing extra.
+     */
+    detail: {
+      spanLabel: "위치",
+      reasonLabel: "근거",
+      actionLabel: "권장 조치",
+      evidenceLabel: "증거 노드",
+      /** `확신 <pct>%` — the rule's own confidence, never a verdict. */
+      confidence: (percent: number) => `확신 ${percent}%`,
+    },
+  },
+
+  /** Findings a person took off the board, and why (todo 19 ⑷). */
+  dismissed: {
+    title: "제외한 문제",
+    note: "사람이 사유와 함께 보드에서 뺀 발견입니다. 재분석이 되돌리지 않고, 해소된 발견은 제외할 수 없습니다.",
+    empty: "제외한 발견 없음",
+    /** `<n>건` */
+    count: (count: number) => `${count}건`,
+    reasonLabel: "제외 사유",
+  },
+
+  /** The action that writes a dismissal — live workspaces only. */
+  dismiss: {
+    action: "제외",
+    reasonLabel: "제외 사유",
+    reasonPlaceholder: "예: 설계상 의도된 차이",
+    done: "발견을 제외했습니다 — '제외한 문제'에 사유와 함께 남습니다.",
+    needsReason: "제외하려면 사유가 필요합니다.",
+    alreadyResolved:
+      "이미 해소된 발견은 제외할 수 없습니다 — 룰이 더는 재현하지 않습니다.",
+    notFound: "그 발견을 찾을 수 없습니다.",
+    failed: "제외하지 못했습니다.",
   },
 
   documents: {

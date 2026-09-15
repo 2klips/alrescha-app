@@ -68,6 +68,50 @@ export const WORKSPACE_MAP = {
     neighborsEmpty: "연결된 노드가 없습니다.",
     /** `미해소 Findings <n>건` */
     findingCount: (count: number) => `미해소 Findings ${count}건`,
+    /**
+     * The card under the path (todo 19 ⑴): the shared artifact card, the
+     * module's cached prose, or a concept's synthesised summary. Prose is
+     * always under the inferred badge; an absence is a sentence for its
+     * state, never an empty line.
+     */
+    card: {
+      kicker: "파일 카드",
+      loading: "카드를 불러오는 중",
+      error: "카드를 불러오지 못했습니다.",
+      none: "이 노드 종류에는 카드가 없습니다.",
+      tested: "테스트 있음",
+      /** `열린 todo <n>건` */
+      openTodos: (count: number) => `열린 todo ${count}건`,
+      /** `export <n>개` */
+      exports: (count: number) => `export ${count}개`,
+      /** Why there is no summary — one sentence per stored state. */
+      absence: {
+        missing: "요약 없음 — 아직 설명이 생성되지 않았습니다.",
+        stale: "요약이 이전 버전 파일 기준이라 현재 것으로 싣지 않습니다.",
+        unknown: "요약이 어느 버전 기준인지 확인할 수 없어 싣지 않습니다.",
+      },
+      module: {
+        kicker: "모듈",
+        none: "모듈 없음 — import·호출 군집에 속하지 않습니다.",
+        /** `멤버 <n>개` */
+        members: (count: number) => `멤버 ${count}개`,
+        states: {
+          pending: "요약 없음 — MCP 툴이 생성합니다",
+          ready: "요약 현행",
+          stale: "멤버가 바뀐 뒤의 요약",
+        },
+      },
+      concept: {
+        kicker: "개념 — AI 합성",
+        kinds: {
+          api: "API",
+          concept: "개념",
+          system: "시스템",
+        },
+        /** `멤버 파일 <n>개` */
+        members: (count: number) => `멤버 파일 ${count}개`,
+      },
+    },
   },
 
   activity: {

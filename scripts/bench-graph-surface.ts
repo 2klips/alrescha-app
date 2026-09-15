@@ -44,6 +44,7 @@ import {
 } from "./graph-surface-benchmark/manifest";
 import {
   assertBodilessWorkspace,
+  assertCatalogPinned,
   buildProductionWorkspace,
   createProductExecutor,
   openProductSurface,
@@ -187,17 +188,7 @@ async function prepareProductionArm(input: {
   });
   const catalog = probe.catalog;
   await probe.close();
-  if (catalog.sha256 !== v3.productCatalogSha256) {
-    throw new Error(
-      `The product tools/list catalogue digest ${catalog.sha256} does not match the pre-registered ${v3.productCatalogSha256}; refusing to run.`,
-    );
-  }
-  const liveNames = catalog.tools.map(({ name }) => name);
-  if (JSON.stringify(liveNames) !== JSON.stringify(v3.productTools)) {
-    throw new Error(
-      `The product tools/list names [${liveNames.join(", ")}] differ from the pre-registered [${v3.productTools.join(", ")}]; refusing to run.`,
-    );
-  }
+  assertCatalogPinned(catalog, v3);
   return {
     catalog,
     graphTools: [

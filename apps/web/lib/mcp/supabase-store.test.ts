@@ -1153,6 +1153,20 @@ describe("SupabaseMcpStore.loadWorkspace — every answer reaches its own field"
 
   it("does not hand one table's rows to another table's decoder", async () => {
     const fake = new FakeSupabaseClient({
+      concepts: {
+        data: [
+          {
+            id: "01K287J3D18V7A1MZG9E8D1YD0",
+            kind: "system",
+            member_paths: ["apps/worker/src/queue.ts"],
+            name: "Job queue",
+            repository_id: REPOSITORY_ID,
+            slug: "job-queue",
+            summary: "Postgres-backed job queue with lease-based claiming.",
+          },
+        ],
+        error: null,
+      },
       db_objects: {
         data: [
           {
@@ -1256,6 +1270,17 @@ describe("SupabaseMcpStore.loadWorkspace — every answer reaches its own field"
     expect(repository?.dbObjects?.map(({ name }) => name)).toEqual(["todos"]);
     expect(repository?.sections?.map(({ token }) => token)).toEqual([
       "ADR-013",
+    ]);
+    // The concept layer arrives as its own field, kind-checked (todo 19 ⑴).
+    expect(repository?.concepts).toEqual([
+      {
+        id: "01K287J3D18V7A1MZG9E8D1YD0",
+        kind: "system",
+        memberPaths: ["apps/worker/src/queue.ts"],
+        name: "Job queue",
+        slug: "job-queue",
+        summary: "Postgres-backed job queue with lease-based claiming.",
+      },
     ]);
   });
 });

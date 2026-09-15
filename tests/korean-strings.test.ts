@@ -72,6 +72,8 @@ const CONVERTED_SCREENS = [
   "apps/web/app/ui/overview-screen.tsx",
   // Phase 3 Wave A
   "apps/web/app/app/(shell)/map/map-screen.tsx",
+  // Phase 4 Wave D todo 19 ⑴
+  "apps/web/app/ui/inspector-card.tsx",
   // Phase 3 Wave D
   "apps/web/app/app/(shell)/settings/mcp/instruction-blocks.tsx",
   // Phase 3 Wave E

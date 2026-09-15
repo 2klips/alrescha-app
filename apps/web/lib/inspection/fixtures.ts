@@ -245,6 +245,25 @@ export function buildDemoInspectionDashboard(
         status: "resolved",
         title: "연결이 끊겼던 설계 메모 — 해소됨",
       },
+      {
+        // A decision somebody made, kept where it can be looked at again
+        // (todo 19 ⑷): the reason travels with the finding, and the demo
+        // shows the widget the live screen fills from `dismiss_finding`.
+        detail: {
+          confidence: 0.62,
+          evidenceGrade: "inferred",
+          evidenceLinks: ["artifact-runbook"],
+          reason: "deterministic orphan-doc rule",
+          spans: [{ endLine: 1, path: "docs/runbook.md", startLine: 1 }],
+          suggestedAction: "문서를 연결하거나 보관 폴더로 옮기세요.",
+        },
+        dismissedReason: "운영 런북은 코드와 링크하지 않기로 했습니다",
+        id: "finding-dismissed",
+        kind: "orphan-doc",
+        severity: "low",
+        status: "dismissed",
+        title: "docs/runbook.md가 어떤 노드와도 연결되지 않았습니다",
+      },
     ],
     headCommitSha: HEAD,
     riskMap: demoRiskMap(AUDIT),

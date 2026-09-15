@@ -64,6 +64,10 @@ export const PROGRESS = {
     /** `진행 <p> · commit <c> · 해소 <f>` */
     counts: (progress: number, commits: number, findings: number) =>
       `진행 ${progress} · commit ${commits} · 해소 ${findings}`,
+    /** `<n>건` — the window's total, the number the eye lands on first. */
+    total: (count: number) => `${count}건`,
+    /** `외 <n>개` — refs the window named beyond the ones shown. */
+    moreRefs: (count: number) => `외 ${count}개`,
   },
 
   /** 오래 멈춰 있거나 막힌 항목 (todo 19 ⑵). */
@@ -75,6 +79,10 @@ export const PROGRESS = {
     blockedLabel: "blocked",
     /** 아무도 사유를 적지 않은 blocked — 숨기지 않고 그대로 말한다. */
     noBlocker: "사유가 기록되지 않았습니다",
+    /** `<n>건` — 헤더 합계 접미사 */
+    countSuffix: "건",
+    /** `마지막 변경 <date>` */
+    sinceLabel: "마지막 변경",
   },
 
   todoBoard: {

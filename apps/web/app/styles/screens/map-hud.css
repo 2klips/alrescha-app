@@ -1752,3 +1752,91 @@
   cursor: default;
   opacity: 0.45;
 }
+
+/* ---- Inspector card: artifact, module, concept (Phase 4 Wave D todo 19 ⑴) ---- */
+
+.arr-card {
+  border-top: 1px solid var(--border-muted);
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+}
+
+.arr-card-line {
+  color: var(--fg-muted);
+  font-size: var(--text-body-sm);
+  margin: var(--space-3) 0 0;
+}
+
+.arr-card-facets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.arr-card-facets span {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-muted);
+  border-radius: var(--radius-full);
+  color: var(--fg-muted);
+  font-size: var(--text-body-sm);
+  padding: 0 var(--space-2);
+}
+
+.arr-card-summary {
+  align-items: baseline;
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.arr-card-summary span:last-child {
+  color: var(--fg-default);
+  font-size: var(--text-body-sm);
+  line-height: var(--line-body-lg);
+}
+
+.arr-card-absence {
+  color: var(--fg-muted);
+  font-size: var(--text-body-sm);
+  margin: 0;
+}
+
+.arr-card-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.arr-card-list code {
+  color: var(--fg-muted);
+  font-size: var(--text-code);
+  overflow-wrap: anywhere;
+}
+
+.arr-card-module,
+.arr-card-concept {
+  border-top: 1px dashed var(--border-muted);
+  display: grid;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+}
+
+.arr-card-module strong {
+  color: var(--fg-default);
+  font-size: var(--text-body-sm);
+}
+
+.arr-card-module small,
+.arr-card-concept small {
+  color: var(--fg-muted);
+  font-size: var(--text-body-sm);
+}
+
+.arr-card-module[data-module="stale"] small {
+  color: var(--attention-fg);
+}
