@@ -1,7 +1,7 @@
 # Claude → Codex 인수인계: OQ-070 ⑴ — 동결 질문 세트 v4(`tasks.v4.json`, 개명 후 별칭 추가)
 
 작성: 2026-09-14 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **머지만 — 배포·검증·벤치 실행 없음.** 매니페스트 파일 1개 신규, 벤치 로더 배선, 테스트, 문서. 웹 화면·워커·마이그레이션·환경변수·사이트 문구 무변경. 크레딧 소모 0.
+상태: **2026-09-15 머지 완료** — PR #19 merge `62c92e8`; v3/v4 digest와 게시 리포트 감사 PASS. 벤치 실행 없음. [프로덕션 기록](../../.omo/evidence/phase4/pr19-22-production-rollout-2026-09-15.md).
 브랜치: `phase4/oq-070-tasks-v4` (`main@19d789c` 기준) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/oq-070-v4-manifest-2026-09-14.md`](../../.omo/evidence/phase4/oq-070-v4-manifest-2026-09-14.md), [`spec/OPEN_QUESTIONS.md` OQ-070](../../spec/OPEN_QUESTIONS.md).
 

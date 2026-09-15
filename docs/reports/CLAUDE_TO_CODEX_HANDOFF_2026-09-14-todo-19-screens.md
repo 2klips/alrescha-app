@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: todo 19 마감 — 진행 다이제스트·finding 상세·제외 보드·인스펙터 카드·concept MCP 노출
 
 작성: 2026-09-14 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **배포 대기 — 웹 머지만.** 마이그레이션·워커·환경변수 무변경. 사용자 지시로 머지·배포는 보류 중이며, 이 문서는 그 뒤에 쓰는 절차다.
+상태: **2026-09-15 배포·화면 검증 완료** — PR #20 merge `bc6b5ea`, 최종 Vercel main `e53b36b` Ready. 다이제스트·제품 경로 제외 1건·파일 카드 PASS. [프로덕션 기록](../../.omo/evidence/phase4/pr19-22-production-rollout-2026-09-15.md).
 브랜치: `phase4/wave-d-todo-19` (`phase4/oq-070-tasks-v4` 위에 쌓임 → PR #19가 먼저 머지되어야 한다) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/todo-19.md`](../../.omo/evidence/phase4/todo-19.md) ("2026-09-14" 두 절), 프론트 로그 [`docs/frontend/logs/2026-09-14-inspection-dismiss-progress-digest.md`](../frontend/logs/2026-09-14-inspection-dismiss-progress-digest.md).
 

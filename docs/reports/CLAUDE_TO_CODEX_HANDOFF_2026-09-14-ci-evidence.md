@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: todo 18 파일럿 실기 — CI 증거의 단위를 테스트 파일로, 이 레포의 CI 워크플로
 
 작성: 2026-09-14 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **배포 대기 — 워커 재배포 + 실기 1회.** 마이그레이션·환경변수·웹 변경 없음(core 변경은 워커만 호출). 사용자 지시로 머지·배포는 보류 중이며, 이 문서는 그 뒤에 쓰는 절차다.
+상태: **2026-09-15 배포 완료·실기 수용 기준 실패** — PR #22 merge `e53b36b`, Vercel Ready·Fly v21·main CI 재실행 PASS. 다시 스캔 정확히 1회 성공, CI ZIP 415로 증거 0건·테스트 inferred. docskeleton 실패 1건 증가. Claude 수정 인계. [프로덕션 기록](../../.omo/evidence/phase4/pr19-22-production-rollout-2026-09-15.md).
 브랜치: `phase4/wave-c-todo-18-live` (`phase4/wave-d-todo-20` 위에 쌓임 → PR #19 → #20 → #21 순으로 먼저 머지되어야 한다) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/todo-18.md`](../../.omo/evidence/phase4/todo-18.md) ("2026-09-14" 절), [OQ-072](../../spec/OPEN_QUESTIONS.md).
 

@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: todo 20 결정론 나머지 — `docskeleton` 워커 잡·analyze 연쇄·`/app/docs`·옛 주소 리다이렉트
 
 작성: 2026-09-14 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **배포 대기 — 웹 머지 + 워커 재배포.** 마이그레이션·환경변수 무변경(`202609060010_doc_pages.sql`은 이미 적용됨). 사용자 지시로 머지·배포는 보류 중이며, 이 문서는 그 뒤에 쓰는 절차다.
+상태: **2026-09-15 배포 완료·프로덕션 검증 실패** — PR #21 merge `b650670`, Fly v21. docskeleton이 `doc_pages_workspace_repository_slug_unique` 충돌로 attempt 3 failed(cost 0); `/app/docs` 빈 상태. 데이터 변경 없이 Claude 수정 인계. [프로덕션 기록](../../.omo/evidence/phase4/pr19-22-production-rollout-2026-09-15.md).
 브랜치: `phase4/wave-d-todo-20` (`phase4/wave-d-todo-19` 위에 쌓임 → PR #19 → PR #20 순으로 먼저 머지되어야 한다) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`.omo/evidence/phase4/todo-20.md`](../../.omo/evidence/phase4/todo-20.md) ("2026-09-14" 절), 프론트 로그 [`docs/frontend/logs/2026-09-14-doc-pages.md`](../frontend/logs/2026-09-14-doc-pages.md).
 
