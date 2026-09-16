@@ -403,3 +403,83 @@ The live-fire, again, after the worker redeploys: one rescan at a head CI
 has passed for → `ci evidence 203 row(s), 203 supporting` at the current
 head (the number moves with the suite) → the test files `verified` on
 `/app/map`. The checkbox stays open until that line and screenshot exist.
+
+---
+
+## 2026-09-15, later — the live-fire passed; the checkbox closes
+
+**Scope:** nothing in this tree. This section records the production
+observation the plan's last acceptance item asked for. Codex's records:
+[`pr23-production-rollout-2026-09-15.md`](./pr23-production-rollout-2026-09-15.md),
+[`docs/frontend/logs/2026-09-15-pr23-production-verification.md`](../../../docs/frontend/logs/2026-09-15-pr23-production-verification.md);
+the observation itself:
+[`todo-18/2026-09-15-pr23-production-ci-verified.png`](./todo-18/2026-09-15-pr23-production-ci-verified.png),
+[`todo-18/2026-09-15-pr23-production-worker.log`](./todo-18/2026-09-15-pr23-production-worker.log).
+
+### What happened
+
+PR #23 merged as `3866daa` (14:28:26Z), Vercel Ready, Fly `arr-worker`
+v22 from the fast-forwarded root checkout. Main CI for that head
+([run 34981877954](https://github.com/2klips/alrescha-app/actions/runs/34981877954))
+passed at attempt 1: 203 files, 1,879 tests (the win32 skip runs on Linux),
+one unexpired `vitest-junit` artifact of 74,131 bytes. After it completed,
+Codex clicked `다시 스캔` exactly once (run `01M2JR6CABMQ2EMKQSFCSF953F`,
+14:40:33Z). Scan and analyze both succeeded at attempt 1, credit cost 0,
+`last_error` null. The worker line at 14:41:28Z:
+
+```text
+ci evidence 203 row(s), 203 supporting, 0 removed
+```
+
+Read back from the database: 203 `test` rows, 203 distinct targets, every
+target a test path (a test directory or a `.test`/`.spec` name), 0 other
+targets. On `/app/map` at that head `apps/worker/src/analysis-job.test.ts`
+carries `data-grade="verified"` and the badge; `apps/worker/src/analysis-job.ts`
+and `apps/web/lib/graph/engine.ts` stay `inferred`. That is the acceptance
+as written on 2026-09-06 and refined on 2026-09-14: the file that ran is
+verified, the code it imports is not.
+
+Yesterday's two fixes behaved. The ZIP download returned the archive — no
+`ci evidence collection failed` line anywhere in the manual pass window
+(14:40:33Z–14:41:37Z) — and no `403 primary-rate-limit` line either. The
+suite has grown by four cases since the dry run at `855aac7` (1,875 →
+1,879); the file count is the same 203, so the expected line and the
+observed line match.
+
+### Two things the log shows that the acceptance did not ask for
+
+- **The automatic path ran first.** Ten seconds after the run completed,
+  the `workflow_run` completed webhook had already re-enqueued analyze for
+  `3866daa` (14:37:49Z), and that pass collected the same 203 rows at
+  14:38:44Z; a second automatic pass did so again at 14:39:48Z. The
+  operator's rescan therefore re-derived evidence that already existed and
+  removed 0 — the wholesale reconciliation converging on one row per file,
+  observed on production for the first time. The webhook timing argued on
+  2026-09-14 held without anyone waiting for it.
+- **A parse failure was logged by artifact name.** The superseded head
+  `3ed4139` — Codex's record commit, pushed to main eighteen seconds before
+  the merge — got a CI run that the workflow's `cancel-in-progress`
+  cancelled when `3866daa` landed on the same ref (run `34981840372`:
+  install, lint and typecheck passed, the unit-test step cancelled at
+  14:29:44Z). `if: always()` then uploaded what existed: a **0-byte**
+  `vitest-junit.xml` (artifact 148 bytes). The worker read it for both
+  analyses of that head and said
+  `ci evidence: 1 report(s) failed to parse (vitest-junit) — no evidence recorded for 3ed4139…`
+  (14:30:57Z, 14:31:37Z). That is the right outcome — a cancelled run
+  proves nothing, and the parser refusing an empty file is what keeps it
+  from proving something — and, for the first time, the right log line.
+  Checked read-only today by listing the run, its steps and the artifact;
+  nothing was retried. A collector that skipped the artifacts of
+  non-successful runs would change only the wording of that line, not the
+  grade, and is not opened as work.
+
+### The checkbox closes
+
+Every acceptance item now has its evidence: the real-DB fixture path
+(2026-09-06), the "no verified without execution" assertions (unchanged
+throughout), the map snapshot (2026-09-12), and the pilot live-fire (this
+section). Recorded as outside the acceptance and unchanged: the receipt
+predicate still does not count CI evidence (2026-09-06 "Not verified
+here"); coverage rows still have no producer in this repository's CI; and
+OQ-072's verdict remains a user decision — the file-unit rule shipped as
+the default and the live-fire ran under it.

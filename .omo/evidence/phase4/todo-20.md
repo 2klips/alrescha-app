@@ -340,3 +340,72 @@ against it. Full gates in the handoff.
 The checkbox stays open for the same reasons as before (G3, the MCP tools,
 `feature`, the far-collapse label) plus the production acceptance that is
 now a second rescan away.
+
+---
+
+# 2026-09-15, later — the migration applied, and the pages exist on production
+
+**Scope:** nothing in this tree. This section records the production
+observation of the acceptance items the morning's section left "a second
+rescan away". Codex's records:
+[`pr23-production-rollout-2026-09-15.md`](./pr23-production-rollout-2026-09-15.md),
+[`docs/frontend/logs/2026-09-15-pr23-production-verification.md`](../../../docs/frontend/logs/2026-09-15-pr23-production-verification.md).
+
+## The migration
+
+Ledger before: 66 applied, latest `202609130001`, every applied checksum
+matching the checkout, `202609150001_doc_page_slug_identity.sql` the only
+pending file. `doc_pages` before: **0 rows**, so the re-addressing UPDATE
+touched nothing, as predicted. `Applied: 202609150001_doc_page_slug_identity.sql`,
+exit 0, ledger timestamp 14:27:43Z, with the nested-transaction warnings the
+handoff described. Read-only postcheck: two module identities over the same
+directory set now hash to two slugs.
+
+## The skeleton pass
+
+PR #23 merged as `3866daa` at 14:28:26Z; Fly v22 started 14:29:07Z. The
+first `docskeleton` job on the merged head — key
+`docskeleton:<repo>:3866daa…`, created 14:30:19Z — **succeeded at attempt 1,
+cost 0**, completed 14:31:50Z. The base key, not `:r1`: the merged head had
+no prior failure to retry, so the retry generation was never asked for.
+Codex checked read-only that `next_retry_idempotency_key` for the old failed
+head `e53b36b` returns its `:r1` key and did not enqueue it — that head is
+superseded, and a pass for it would prove nothing
+`tests/doc-skeleton-store.test.ts` does not already pin. The `…:r1`
+execution on production is therefore not an observed event, and this note
+does not claim it.
+
+The operator's one rescan at 14:40Z (after main CI) re-ran analyze on the
+same head and was handed the succeeded skeleton row back — one job per
+commit, as designed; no second skeleton was needed.
+
+## The pages
+
+`/app/docs`: **173** rows — repo 1, module 21, directory 151 — the census
+the failed pass had computed that morning; every row `data-prose="missing"`
+and `산문 없음`, zero `verified` badges. The formerly colliding module
+`scripts/adr-guardrails.ts` opens: 6 members, 15 export names, commit
+`3866daa`, references 65 · calls 5 · imports 5 · tests 3, no prose, no
+badge. A made-up address answers `404 · 알 수 없는 경로`. Read-only check at
+14:35:01Z: all 173 pages reference the merged head, none has prose or a
+verified grade. The collision does not reproduce.
+
+## What the count in `ops:health` actually was
+
+The handoff expected `docskeleton failed 1` to remain. It is **3**: two more
+skeleton passes had failed the same way on PR #23's own branch heads
+(`b075e42` at 14:18Z, `5e6c8ea` at 14:21Z) — the v21 worker ran the old slug
+function on every pushed head while the fix was in review. All three predate
+the migration (14:27:43Z), all three stay as they are, and the 7-day WARN
+went from the morning's 16 to 18 for exactly those two. Zero jobs failed
+after the migration. The prediction was wrong about the count, not about
+the rule: failed rows are not repaired, and they count.
+
+## Still open (the checkbox stays open)
+
+The production acceptance for the deterministic half is met: skeleton job at
+0 credits, list, page, redirect rule, 404. The reasons of 2026-09-14 remain
+— G3 is closed, so the `docpage` producer and the live prose run (repo 1 +
+module 5 + feature 3) are at zero; the three MCP tools are unregistered
+(todo 22's budget); `feature` has no producer; the far-collapse label is
+unchanged. None of them moved today.
