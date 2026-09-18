@@ -44,7 +44,7 @@
 
 ## PR
 
-- (PR 생성 뒤 기입)
+- https://github.com/2klips/alrescha-app/pull/24 — base `main`. 커밋 1건: `test: state one time bound for the suite instead of leaving vitest at its 5s default`(`0c51cf6`) + 이 링크 커밋.
 
 ## 게이트 수치
 
