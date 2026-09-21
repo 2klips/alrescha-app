@@ -1,7 +1,7 @@
 # Claude → Codex 배포 인수인계: 테스트 스위트의 시간 상한 명시 — 머지만
 
 작성: 2026-09-18 · 대상: Alrescha 배포를 담당하는 Codex
-상태: **머지 대기.** 배포·마이그레이션·환경변수 변경 없음. 머지 시 Vercel·CI·파일럿 자동 스캔은 평소대로 돈다(화면 변화 없음, 0크레딧).
+상태: **2026-09-21 머지·검증 완료 — merge `e470abd`(22:04 KST), Vercel Production 성공, main CI run 35603279080 attempt 1 success(재실행 없음, 204파일·1,881테스트, 테스트 단계 389s), 자동 scan 3·analyze 3·docskeleton 1 전부 attempt 1·0크레딧, 워커 로그 `ci evidence 204 row(s), 204 supporting, 0 removed`, 큐 0·새 실패 0.** Fly v22 유지, 워커 재배포·수동 스캔·마이그레이션·환경변수 변경 없음. Codex 보고 2026-09-21.
 브랜치: `phase4/test-time-bound` (base `main` `683a0d6`) · PR: 본문 하단 "PR" 항목.
 근거 문서: [`test-time-bound.md`](../../.omo/evidence/phase4/test-time-bound.md).
 

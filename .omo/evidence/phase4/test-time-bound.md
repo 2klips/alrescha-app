@@ -80,6 +80,11 @@ config fails the pin; so does a return to the defaults by any other route.
   / 38 passed locally.
 - Full suite under the stated bound: 204 files / 1,880 passed / 1 skipped,
   119s on this machine (the new file is the +1; its two cases the +2).
+- On `main` after the merge (`e470abd`, 2026-09-21, Codex): CI run
+  35603279080 succeeded at attempt 1 with no re-run — 204 files, 1,881
+  cases, test step 389s. The pilot re-analysed the head at 0 credits and
+  the worker logged `ci evidence 204 row(s), 204 supporting, 0 removed`:
+  the new pin file is the 204th verified file.
 
 ## Not done, on purpose
 
