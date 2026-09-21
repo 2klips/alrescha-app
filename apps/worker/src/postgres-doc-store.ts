@@ -86,6 +86,9 @@ export class PostgresDocSkeletonStore implements DocSkeletonStore {
           select id, kind, label from public.graph_nodes
           where workspace_id = ${input.workspaceId}
             and repository_id = ${input.repositoryId}
+            -- Labels for edge endpoints; the symbol layer has no edge in
+            -- \`edges\` and so no endpoint here (todo 26).
+            and kind <> 'symbol'
           order by id
         `,
       ]);

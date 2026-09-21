@@ -275,10 +275,13 @@ export async function createPixiBackend(
   const edgeLayer = new Graphics();
   const glowLayer = new Container();
   const nodeLayer = new Container();
+  // The symbol halo (todo 26) sits over the nodes and under the rings:
+  // small shapes around one file, in world space so they pan and zoom with it.
+  const haloLayer = new Container();
   const overlayLayer = new Graphics();
   const labelLayer = new Container();
   glowLayer.blendMode = "add";
-  world.addChild(edgeLayer, glowLayer, nodeLayer, overlayLayer);
+  world.addChild(edgeLayer, glowLayer, nodeLayer, haloLayer, overlayLayer);
   application.stage.addChild(world);
   // Outside `world`: labels are screen-space chrome, and the frame plan gives
   // their positions in screen pixels for exactly that reason.
@@ -293,6 +296,7 @@ export async function createPixiBackend(
   };
   const glowSprites: Sprite[] = [];
   const nodeSprites: Sprite[] = [];
+  const haloSprites: Sprite[] = [];
   // Keyed by node id, not array index: label order shifts frame to frame as
   // the LOD grid re-selects which nodes get a label, so an index-keyed pool
   // would reassign `.text` on every Text object from the first reordering
@@ -333,6 +337,16 @@ export async function createPixiBackend(
     sprite.anchor.set(0.5);
     nodeSprites.push(sprite);
     nodeLayer.addChild(sprite);
+    return sprite;
+  }
+
+  function haloSpriteAt(index: number): Sprite {
+    const existing = haloSprites[index];
+    if (existing) return existing;
+    const sprite = new Sprite(shapeTextures.circle);
+    sprite.anchor.set(0.5);
+    haloSprites.push(sprite);
+    haloLayer.addChild(sprite);
     return sprite;
   }
 
@@ -608,6 +622,25 @@ export async function createPixiBackend(
         }
         for (let index = glowIndex; index < glowSprites.length; index += 1) {
           (glowSprites[index] as Sprite).visible = false;
+        }
+
+        // The symbol halo (todo 26): placed by the frame, drawn in the
+        // owner's colour with the four-shape grammar. Nothing here is hit-
+        // tested or simulated; it is the file, opened a little.
+        let haloIndex = 0;
+        for (const item of frame.halo?.items ?? []) {
+          const sprite = haloSpriteAt(haloIndex);
+          haloIndex += 1;
+          sprite.visible = true;
+          sprite.texture = shapeTextures[item.shape];
+          sprite.tint = item.color;
+          sprite.alpha = 0.92;
+          sprite.position.set(item.x, item.y);
+          sprite.width = item.radius * 2;
+          sprite.height = item.radius * 2;
+        }
+        for (let index = haloIndex; index < haloSprites.length; index += 1) {
+          (haloSprites[index] as Sprite).visible = false;
         }
       }
 

@@ -89,16 +89,19 @@ const RULES: readonly PatternRule[] = [
   },
   {
     rule: "raw-code-persistence",
+    // A symbol row holds a name, a kind, a span and an engine (Phase 4 Wave
+    // F todo 26); a column for what the declaration says — its signature or
+    // its docstring — is a source body under another name.
     pattern:
-      /\b(?:raw_source|source_code|code_body|raw_code)\b\s+(?:jsonb|text|varchar)\b/gi,
+      /\b(?:raw_source|source_code|code_body|raw_code|symbol_signature|signature_text|docstring|doc_string|symbol_body|symbol_text|symbol_source)\b\s+(?:jsonb|text|varchar)\b/gi,
     when: (file) => !isTransientPath(file),
     message: () =>
-      "Raw source-code persistence is forbidden outside an allowlisted transient path.",
+      "Raw source-code persistence is forbidden outside an allowlisted transient path (a symbol's signature or docstring included).",
   },
   {
     rule: "raw-code-persistence",
     pattern:
-      /\b(?:insert|persist|save|update|upsert)\w*\s*\([^;]{0,240}\b(?:rawCode|rawSource|sourceCode|codeBody)\b/gi,
+      /\b(?:insert|persist|save|update|upsert)\w*\s*\([^;]{0,240}\b(?:rawCode|rawSource|sourceCode|codeBody|symbolSignature|signatureText|docstring|docString|symbolBody|symbolText|symbolSource)\b/gi,
     when: (file) => !isTransientPath(file),
     message: () =>
       "Raw source-code persistence is forbidden outside an allowlisted transient path.",

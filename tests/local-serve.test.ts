@@ -324,6 +324,126 @@ describe("serving a local repository", () => {
         })),
       );
     });
+
+    /**
+     * The symbol layer, both transports (Wave F todo 26): the rows the SQL
+     * derives from `exported_symbols` and the edges it writes to
+     * `symbol_edges`, against what the projection builds from the same plan.
+     * Ids differ by design (a ULID there, `symbol:<key>` here), so both sides
+     * are compared by the identity the two implementations share.
+     */
+    it(`derives the same symbol layer as the scan SQL on ${name}`, async () => {
+      const fullName = `local/${name}`;
+      const plan = await applyPlan(fixture, fullName);
+      const repository = buildLocalWorkspace({
+        plan,
+        repositoryFullName: fullName,
+      }).repositories[0];
+      if (!repository) throw new Error("the projection produced no repository");
+
+      const stored = await database.query<{
+        end_line: number;
+        engine: string | null;
+        id: string;
+        kind: string;
+        name: string;
+        path: string;
+        stable_key: string;
+        start_line: number;
+      }>(
+        `select id, path, name, kind, stable_key, start_line, end_line, engine
+         from public.symbols where workspace_id = $1
+         order by path, start_line, name`,
+        [workspaceId],
+      );
+      // Not a tautology: a fixture without exports would agree on nothing.
+      expect(stored.rows.length).toBeGreaterThan(0);
+      const byPath = <
+        T extends { path: string; startLine: number; name: string },
+      >(
+        rows: readonly T[],
+      ): T[] =>
+        [...rows].sort(
+          (left, right) =>
+            (left.path < right.path ? -1 : left.path > right.path ? 1 : 0) ||
+            left.startLine - right.startLine ||
+            (left.name < right.name ? -1 : left.name > right.name ? 1 : 0),
+        );
+      expect(
+        byPath(
+          (repository.symbols ?? []).map((symbol) => ({
+            endLine: symbol.endLine,
+            engine: symbol.engine,
+            kind: symbol.kind,
+            name: symbol.name,
+            nodeId: symbol.nodeId,
+            path: symbol.path,
+            stableKey: symbol.stableKey,
+            startLine: symbol.startLine,
+          })),
+        ),
+      ).toEqual(
+        byPath(
+          stored.rows.map((row) => ({
+            endLine: row.end_line,
+            engine: row.engine,
+            kind: row.kind,
+            name: row.name,
+            nodeId: `symbol:${row.stable_key}`,
+            path: row.path,
+            stableKey: row.stable_key,
+            startLine: row.start_line,
+          })),
+        ),
+      );
+
+      const localIdOf = new Map<string, string>(
+        stored.rows.map((row) => [row.id, `symbol:${row.stable_key}`]),
+      );
+      const artifacts = await database.query<{ id: string; path: string }>(
+        "select id, path from public.artifacts where workspace_id = $1",
+        [workspaceId],
+      );
+      for (const row of artifacts.rows) {
+        localIdOf.set(row.id, `artifact:${row.path}`);
+      }
+      const storedEdges = await database.query<{
+        family: string | null;
+        provenance: { tier?: string } | null;
+        relation: string;
+        source_node_id: string;
+        target_node_id: string;
+      }>(
+        `select relation, family, provenance, source_node_id, target_node_id
+         from public.symbol_edges where workspace_id = $1`,
+        [workspaceId],
+      );
+      expect(
+        sortedEdges(
+          (repository.symbolEdges ?? []).map((edge) => ({
+            family: edge.family,
+            relation: edge.relation,
+            source: edge.sourceNodeId,
+            target: edge.targetNodeId,
+            tier: edge.tier,
+          })),
+        ),
+      ).toEqual(
+        sortedEdges(
+          storedEdges.rows.map((row) => ({
+            family: row.family,
+            relation: row.relation,
+            source: localIdOf.get(row.source_node_id) ?? row.source_node_id,
+            target: localIdOf.get(row.target_node_id) ?? row.target_node_id,
+            tier: row.provenance?.tier ?? null,
+          })),
+        ),
+      );
+      // And the layer is not in the base graph on either side.
+      expect(
+        repository.edges.some((edge) => edge.relation === "declares"),
+      ).toBe(false);
+    });
   }
 
   /**

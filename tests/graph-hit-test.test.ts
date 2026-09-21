@@ -51,6 +51,7 @@ function frameOf(nodes: RenderNode[], camera: Camera): RenderFrame {
     driftColor: 0,
     edges: [],
     geometryRevision: 1,
+    halo: null,
     labelColor: 0,
     labels: [],
     lod: "near",

@@ -34,6 +34,8 @@ export {
   bandUnsupportedReason,
   edgeOmissionReason,
   hashAccessToken,
+  selectSymbolNeighborhood,
+  withSymbolNeighborhood,
 } from "./store";
 export {
   LOCAL_USER_ID,
@@ -70,6 +72,9 @@ export {
   MCP_EDGE_PAGE_ROWS,
   MCP_WORKSPACE_READ_LIMIT,
   MEMORY_BLOCK_NAMES,
+  SYMBOL_EDGE_RELATIONS,
+  SYMBOL_LAYER_LIMITS,
+  SYMBOL_NODE_TYPE,
 } from "./store";
 export type {
   AgentAssertionRelation,
@@ -114,6 +119,8 @@ export type {
   McpSessionUsageInput,
   McpSessionUsageResult,
   McpSourceSpan,
+  McpSymbolData,
+  McpSymbolNeighborhood,
   McpStore,
   McpTokenRecord,
   McpTodo,

@@ -28,6 +28,7 @@
 
 import {
   nextRouteFile,
+  symbolStableKey,
   type CodeLink,
   type DocLink,
   type RepositoryScanPlan,
@@ -50,6 +51,7 @@ import {
   type McpRouteData,
   type McpSectionData,
   type McpSourceSpan,
+  type McpSymbolData,
   type McpWorkspaceData,
 } from "./store";
 
@@ -86,6 +88,7 @@ const rationaleNodeId = (sourceKey: string): string => `rationale:${sourceKey}`;
 const routeNodeId = (url: string): string => `route:${url}`;
 const dbObjectNodeId = (name: string): string => `db_object:${name}`;
 const sectionNodeId = (token: string): string => `section:${token}`;
+const symbolNodeId = (stableKey: string): string => `symbol:${stableKey}`;
 
 /**
  * `distinct on (key) … order by …` — the first row per key wins, after the
@@ -602,6 +605,151 @@ function isVocabularyRelation(value: string): value is McpEdgeRelation {
  * `contains` being the live case. Reporting the count is what separates
  * "this file is in no folder" from "this view does not carry folders".
  */
+
+interface SymbolProjection {
+  readonly edges: McpEdgeData[];
+  readonly symbols: McpSymbolData[];
+}
+
+/**
+ * The symbol layer (Wave F todo 26), as the SQL derives it: one symbol per
+ * distinct identity in a file's `exportedSymbols`, one `declares` from the
+ * file, and an `extends` for every plan link whose two ends are symbols
+ * that exist. Kept off `edges` here as it is kept off `public.edges` there,
+ * so the default read is the same on both transports: no symbol at all.
+ */
+function symbolProjection(
+  plan: RepositoryScanPlan,
+  artifacts: readonly ScannedArtifact[],
+  repositoryId: string,
+): SymbolProjection {
+  const symbols: McpSymbolData[] = [];
+  const byPathAndName = new Map<string, McpSymbolData[]>();
+  for (const artifact of artifacts) {
+    // `distinct on (stable_key) … order by start_line, start_column`: an
+    // overloaded function is declared twice and is one symbol.
+    const declared = distinctOn(
+      artifact.exportedSymbols.filter(
+        (symbol) =>
+          symbol.name.length > 0 &&
+          symbol.kind.length > 0 &&
+          symbol.startLine >= 1 &&
+          symbol.endLine >= symbol.startLine,
+      ),
+      (symbol) =>
+        symbolStableKey({
+          container: null,
+          kind: symbol.kind,
+          name: symbol.name,
+          path: artifact.path,
+        }),
+      (left, right) =>
+        compare(left.startLine, right.startLine) ||
+        compare(left.startColumn, right.startColumn),
+    );
+    for (const symbol of declared) {
+      const stableKey = symbolStableKey({
+        container: null,
+        kind: symbol.kind,
+        name: symbol.name,
+        path: artifact.path,
+      });
+      const data: McpSymbolData = {
+        artifactNodeId: artifactNodeId(artifact.path),
+        container: null,
+        endLine: symbol.endLine,
+        engine: artifact.symbolEngine,
+        kind: symbol.kind,
+        name: symbol.name,
+        nodeId: symbolNodeId(stableKey),
+        path: artifact.path,
+        repositoryId,
+        stableKey,
+        startLine: symbol.startLine,
+      };
+      symbols.push(data);
+      const key = `${artifact.path}\u0000${symbol.name}`;
+      byPathAndName.set(key, [...(byPathAndName.get(key) ?? []), data]);
+    }
+  }
+
+  const edges: McpEdgeData[] = symbols.map((symbol) => ({
+    confidence: 1,
+    family: "hierarchy",
+    id: `declares:${symbol.artifactNodeId}->${symbol.nodeId}`,
+    provenance: {
+      method: symbol.engine ?? "declaration",
+      reason: null,
+      span: {
+        endLine: symbol.endLine,
+        path: symbol.path,
+        startLine: symbol.startLine,
+      },
+    },
+    relation: "declares",
+    sourceNodeId: symbol.artifactNodeId,
+    targetNodeId: symbol.nodeId,
+    tier: "resolved",
+  }));
+
+  const links = distinctOn(
+    plan.symbolLinks,
+    (link) =>
+      [link.sourcePath, link.sourceName, link.targetPath, link.targetName].join(
+        "\u0000",
+      ),
+    (left, right) =>
+      compare(left.sourcePath, right.sourcePath) ||
+      compare(left.sourceName, right.sourceName) ||
+      compare(left.targetPath, right.targetPath) ||
+      compare(left.targetName, right.targetName) ||
+      compare(left.span.startLine, right.span.startLine),
+  );
+  for (const link of links) {
+    // The source names its kind, so a merged `interface Foo` + `class Foo`
+    // stays two sources; the target is looked up by name alone, as in SQL.
+    const sources = (
+      byPathAndName.get(`${link.sourcePath}\u0000${link.sourceName}`) ?? []
+    ).filter((symbol) => symbol.kind === link.sourceKind);
+    const targets =
+      byPathAndName.get(`${link.targetPath}\u0000${link.targetName}`) ?? [];
+    for (const source of sources) {
+      for (const target of targets) {
+        if (source.nodeId === target.nodeId) continue;
+        edges.push({
+          confidence: confidenceOf(link.tier),
+          family: "structure",
+          id: `extends:${source.nodeId}->${target.nodeId}`,
+          provenance: {
+            method: link.method,
+            reason: null,
+            span: spanOf(link.sourcePath, link.span),
+          },
+          relation: "extends",
+          sourceNodeId: source.nodeId,
+          targetNodeId: target.nodeId,
+          tier: tierOf(link.tier),
+        });
+      }
+    }
+  }
+
+  return {
+    edges: [...new Map(edges.map((edge) => [edge.id, edge])).values()].sort(
+      (left, right) =>
+        compare(left.relation, right.relation) ||
+        compare(left.sourceNodeId, right.sourceNodeId) ||
+        compare(left.targetNodeId, right.targetNodeId),
+    ),
+    symbols: symbols.sort(
+      (left, right) =>
+        compare(left.path, right.path) ||
+        compare(left.startLine, right.startLine) ||
+        compare(left.name, right.name),
+    ),
+  };
+}
+
 function partitionEdges(derived: readonly DerivedEdge[]): {
   edgeOmissions: McpEdgeOmission[];
   edges: McpEdgeData[];
@@ -705,6 +853,7 @@ export function buildLocalWorkspace(
   });
 
   const repositoryId = localRepositoryId(input.repositoryFullName);
+  const symbolLayer = symbolProjection(plan, artifacts, repositoryId);
   const defaultBranch = input.defaultBranch ?? "local";
   const repository: McpRepositoryData = {
     artifacts: artifacts.map(artifactRecord),
@@ -756,6 +905,8 @@ export function buildLocalWorkspace(
     requirements: [],
     routes: routes.routes,
     sections: sections.sections,
+    symbolEdges: symbolLayer.edges,
+    symbols: symbolLayer.symbols,
   };
 
   return {

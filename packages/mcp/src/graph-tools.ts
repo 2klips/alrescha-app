@@ -162,7 +162,24 @@ function buildGraphView(workspace: McpWorkspaceData): GraphView {
       });
     }
 
+    // The symbol layer, present only when a tool call named a symbol and the
+    // store handed back its neighbourhood (todo 26). A symbol's path is its
+    // file: an agent asking about a class wants that file opened at the span.
+    for (const symbol of repository.symbols ?? []) {
+      nodes.set(symbol.nodeId, {
+        id: symbol.nodeId,
+        path: symbol.path,
+        repositoryId: repository.id,
+        type: "symbol",
+      });
+    }
+
     for (const edge of repository.edges) {
+      if (nodes.has(edge.sourceNodeId) && nodes.has(edge.targetNodeId)) {
+        edges.push({ ...edge, derived: false });
+      }
+    }
+    for (const edge of repository.symbolEdges ?? []) {
       if (nodes.has(edge.sourceNodeId) && nodes.has(edge.targetNodeId)) {
         edges.push({ ...edge, derived: false });
       }
@@ -411,7 +428,18 @@ export const IMPACT_MAX_DISTANCE = 10;
  * README naming it and a statistical co-change are all real edges, and none
  * of them means "editing this breaks that" (REMEDY §7.1).
  */
-const DEPENDENCY_RELATIONS = new Set<McpEdgeRelation>(["calls", "imports"]);
+/**
+ * `declares` and `extends` join the walk for a symbol (todo 26): the file
+ * that declares a symbol depends on it, and so does what extends it. Neither
+ * appears in a view unless a symbol was named, so a file's answer is what it
+ * was.
+ */
+const DEPENDENCY_RELATIONS = new Set<McpEdgeRelation>([
+  "calls",
+  "declares",
+  "extends",
+  "imports",
+]);
 
 export interface ImpactCandidate {
   /** Hops from the changed node. 1 is a direct consumer. */
@@ -986,4 +1014,16 @@ export function searchWorkspaceNodes(
     score: result.score,
     type: result.type,
   }));
+}
+
+/**
+ * Whether the loaded workspace already carries this node, in any of the
+ * collections the graph view reads. An id it does not carry may be a symbol
+ * the caller is asking the layer for (todo 26) — or nothing at all.
+ */
+export function hasWorkspaceNode(
+  workspace: McpWorkspaceData,
+  nodeId: string,
+): boolean {
+  return buildGraphView(workspace).nodes.has(nodeId);
 }

@@ -37,6 +37,7 @@ import {
 } from "../../../../lib/graph/glow";
 import { displaySettingsOf } from "../../../../lib/graph/graph-panel-settings";
 import type { LodLevel } from "../../../../lib/graph/lod";
+import type { SymbolHalo } from "../../../../lib/graph/symbol-halo";
 import {
   edgeHiddenByLayers,
   hiddenByDisplay,
@@ -51,6 +52,7 @@ import {
 import { GraphLayerToggles } from "../../../ui/graph-layer-toggles";
 import { InspectorCard } from "../../../ui/inspector-card";
 import { useLayoutWarmup } from "../../../ui/layout-warmup";
+import { useSymbolHalo } from "../../../ui/symbol-halo-loader";
 import {
   createBrowserWorkspaceRealtimeSource,
   createRealtimeGraphState,
@@ -318,6 +320,7 @@ interface GraphStageSurfaceProps {
   /** The connected repository, for the empty state's "scanning" reading. */
   repoFullName: string | null;
   selectedNodeId: string | null;
+  symbolHalo: SymbolHalo | null;
   settings: PanelSettings;
   /** Storage has answered (or timed out): the stage may mount (todo 13 ⓐ). */
   warm: boolean;
@@ -351,6 +354,7 @@ function GraphStageSurface({
   repoFullName,
   selectedNodeId,
   settings,
+  symbolHalo,
   visibleGraph,
   visibleNodeIds,
   warm,
@@ -400,6 +404,7 @@ function GraphStageSurface({
           selectedNodeId={selectedNodeId}
           settings={settings}
           showForcePanel={false}
+          symbolHalo={symbolHalo}
           {...(visibleNodeIds ? { visibleNodeIds } : {})}
         />
       ) : (
@@ -518,6 +523,13 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
     null,
   );
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
+  // The selected file's symbol layer (todo 26): one request per file,
+  // cached per commit, drawn as a halo at Near zoom.
+  const symbolHalo = useSymbolHalo({
+    commitSha: model.lastScannedCommitSha,
+    node: selectedNode,
+    workspaceId: model.workspaceId,
+  });
   const [panelSettings, updatePanelSettings] = useGraphPanelSettings();
   const [hudLod, setHudLod] = useState<{ labels: number; level: LodLevel }>({
     labels: 0,
@@ -1028,6 +1040,7 @@ export function WorkspaceMapScreen({ model }: { model: WorkspaceMapModel }) {
             repoFullName={model.repoFullName}
             selectedNodeId={selectedNode?.id ?? null}
             settings={panelSettings}
+            symbolHalo={symbolHalo}
             visibleGraph={visibleGraph}
             visibleNodeIds={visibleNodeIds}
             warm={warmup.ready}

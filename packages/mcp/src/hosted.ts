@@ -23,6 +23,7 @@ import {
 } from "./data-brain";
 import {
   collectNeighbors,
+  hasWorkspaceNode,
   getNodeContent,
   impactOf,
   tracePath,
@@ -42,6 +43,7 @@ import {
   MCP_EDGE_TIERS,
   MCP_DEFAULT_READ_BANDS,
   MCP_NODE_TYPES,
+  withSymbolNeighborhood,
   MCP_READ_BANDS,
   MEMORY_BLOCK_NAMES,
   MODEL_IDENTIFIER_PATTERN,
@@ -49,6 +51,7 @@ import {
   type McpAccessEvent,
   type McpPackMeasurement,
   type McpReadBand,
+  type McpWorkspaceData,
   type McpPrincipal,
   type McpStore,
 } from "./store";
@@ -75,6 +78,20 @@ const WRITE_METADATA_TOOL = {
  * `packages/mcp/src/hosted.test.ts` pins them against the source arrays so a
  * new value fails a test instead of a request.
  */
+/**
+ * A symbol a search hit matched (todo 26). `span` is `path:startLine-endLine`
+ * — where to open the file — and `nodeId` is what `impact_of` and
+ * `get_neighbors` take. Capped per file so a hit on a barrel does not carry
+ * its whole export list.
+ */
+interface SymbolHit {
+  readonly kind: string;
+  readonly name: string;
+  readonly nodeId: string;
+  readonly span: string;
+}
+const SYMBOL_HITS_PER_FILE = 8;
+
 export const NODE_TYPE_SCHEMA = z.enum(MCP_NODE_TYPES);
 export const RELATION_SCHEMA = z.enum(MCP_EDGE_RELATIONS);
 const EDGE_FAMILY_SCHEMA = z.enum(MCP_EDGE_FAMILIES);
@@ -596,6 +613,72 @@ function createServer(
     requireScope("mcp:read");
     return store.loadWorkspace(principal, bands ? { bands } : {});
   };
+  /**
+   * The symbol layer, on request only (todo 26). A default read carries no
+   * symbol; naming one is how a caller asks, and what arrives is that
+   * symbol's file, its declaration and its `extends` neighbours — never the
+   * workspace's symbols. An id the read already knows asks for nothing.
+   */
+  const withSymbolLayer = async (
+    workspace: McpWorkspaceData,
+    nodeIds: readonly string[],
+  ): Promise<McpWorkspaceData> => {
+    const unknown = nodeIds.filter((id) => !hasWorkspaceNode(workspace, id));
+    if (unknown.length === 0) return workspace;
+    const neighborhood = await store.loadSymbolNeighborhood(principal, {
+      nodeIds: unknown,
+    });
+    return withSymbolNeighborhood(workspace, neighborhood);
+  };
+  /**
+   * The symbols a search hit matched, with where they are (todo 26, R5
+   * §2.9 ⑹). The index ranks a file by its symbol names; this reads the
+   * hit files' layer — by neighbourhood, never whole — and pairs each
+   * matched name with its node id and `path:startLine-endLine`, so the
+   * caller can open the file at the span or ask `impact_of` about the
+   * symbol without another lookup.
+   */
+  const symbolHitsFor = async (
+    workspace: McpWorkspaceData,
+    hits: readonly { nodeId: string; type: string }[],
+    query: string,
+  ): Promise<Map<string, SymbolHit[]>> => {
+    const tokens = query
+      .toLowerCase()
+      .split(/[^\p{L}\p{N}_]+/u)
+      .filter((token) => token.length > 0);
+    const byNode = new Map<string, string[]>();
+    for (const repository of workspace.repositories) {
+      for (const entry of repository.indexEntries) {
+        const matched = entry.symbols.filter((name) =>
+          tokens.some((token) => name.toLowerCase().includes(token)),
+        );
+        if (matched.length > 0) byNode.set(entry.nodeId, matched);
+      }
+    }
+    const fileIds = hits
+      .filter((hit) => hit.type === "artifact" && byNode.has(hit.nodeId))
+      .map((hit) => hit.nodeId);
+    const result = new Map<string, SymbolHit[]>();
+    if (tokens.length === 0 || fileIds.length === 0) return result;
+    const layer = await store.loadSymbolNeighborhood(principal, {
+      nodeIds: fileIds,
+    });
+    for (const symbol of layer.symbols) {
+      const matched = byNode.get(symbol.artifactNodeId);
+      if (!matched?.includes(symbol.name)) continue;
+      const list = result.get(symbol.artifactNodeId) ?? [];
+      if (list.length >= SYMBOL_HITS_PER_FILE) continue;
+      list.push({
+        kind: symbol.kind,
+        name: symbol.name,
+        nodeId: symbol.nodeId,
+        span: `${symbol.path}:${symbol.startLine}-${symbol.endLine}`,
+      });
+      result.set(symbol.artifactNodeId, list);
+    }
+    return result;
+  };
   /** Every band, for the answers that are a census rather than a lookup. */
   const ALL_BANDS = [...MCP_READ_BANDS];
   /**
@@ -951,7 +1034,10 @@ function createServer(
       // Naming a band is asking for it (todo 22 ⑹): a `families` filter for
       // a band the default read does not carry would otherwise answer
       // "none", which is what an ignored filter looks like.
-      const workspace = await readWorkspace(bandsFor(families));
+      const workspace = await withSymbolLayer(
+        await readWorkspace(bandsFor(families)),
+        [node_id],
+      );
       const result = collectNeighbors(
         workspace,
         node_id,
@@ -989,7 +1075,12 @@ function createServer(
         "database",
         "route",
       ]);
-      const impact = impactOf(workspace, node_id, depth ?? 2, mode);
+      const impact = impactOf(
+        await withSymbolLayer(workspace, [node_id]),
+        node_id,
+        depth ?? 2,
+        mode,
+      );
       const sized = emitAccessEvent(
         store,
         principal,
@@ -1399,6 +1490,11 @@ function createServer(
                 title,
               },
         );
+      const symbolHits = await symbolHitsFor(workspace, kept, query);
+      const results = kept.map((result) => {
+        const symbols = symbolHits.get(result.nodeId);
+        return symbols && symbols.length > 0 ? { ...result, symbols } : result;
+      });
       const sized = emitAccessEvent(
         store,
         principal,
@@ -1408,7 +1504,7 @@ function createServer(
       return toolResult(
         {
           query,
-          results: kept,
+          results,
           // What the cap left out, so a caller narrows the query rather than
           // reading the page it got as the whole answer.
           truncated: Math.max(0, filtered.length - kept.length),
@@ -1423,7 +1519,10 @@ function createServer(
     "trace_path",
     TRACE_PATH_TOOL,
     async ({ from_node_id, max_depth, to_node_id }) => {
-      const workspace = await readWorkspace();
+      const workspace = await withSymbolLayer(await readWorkspace(), [
+        from_node_id,
+        to_node_id,
+      ]);
       const path = tracePath(
         workspace,
         from_node_id,

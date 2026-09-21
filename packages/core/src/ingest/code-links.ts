@@ -102,8 +102,28 @@ interface RawCall {
   readonly span: CodeLinkSpan;
 }
 
+/** A base as written: `Base` → binding, or `ns.Base` → binding + member. */
+export interface RawHeritageTarget {
+  readonly binding: string;
+  readonly member: string | null;
+}
+
+/**
+ * `class A extends B` / `interface I extends J, K` on an exported
+ * declaration (Phase 4 Wave F todo 26). `implements` is not here: it is a
+ * different claim and the plan asks for `extends` only.
+ */
+export interface RawHeritage {
+  readonly kind: "class" | "interface";
+  readonly name: string;
+  readonly span: CodeLinkSpan;
+  readonly targets: readonly RawHeritageTarget[];
+}
+
 export interface ParsedFileLinks {
   readonly calls: readonly RawCall[];
+  /** Exported classes and interfaces, and what they extend. */
+  readonly heritage: readonly RawHeritage[];
   readonly imports: readonly RawImport[];
   /** Names declared in this file — a bare call to one is not a cross-file link. */
   readonly localNames: ReadonlySet<string>;
@@ -119,6 +139,42 @@ const TS_EXTENSIONS = [
   ".mjs",
   ".cjs",
 ];
+
+function isExported(node: ts.Node): boolean {
+  return (
+    ts.canHaveModifiers(node) &&
+    Boolean(
+      ts
+        .getModifiers(node)
+        ?.some(({ kind }) => kind === ts.SyntaxKind.ExportKeyword),
+    )
+  );
+}
+
+/** The `extends` clause's bases, as identifiers or one-level member accesses. */
+function heritageTargets(
+  declaration: ts.ClassDeclaration | ts.InterfaceDeclaration,
+): RawHeritageTarget[] {
+  const targets: RawHeritageTarget[] = [];
+  for (const clause of declaration.heritageClauses ?? []) {
+    if (clause.token !== ts.SyntaxKind.ExtendsKeyword) continue;
+    for (const type of clause.types) {
+      const expression = type.expression;
+      if (ts.isIdentifier(expression)) {
+        targets.push({ binding: expression.text, member: null });
+      } else if (
+        ts.isPropertyAccessExpression(expression) &&
+        ts.isIdentifier(expression.expression)
+      ) {
+        targets.push({
+          binding: expression.expression.text,
+          member: expression.name.text,
+        });
+      }
+    }
+  }
+  return targets;
+}
 
 function lineSpan(sourceFile: ts.SourceFile, node: ts.Node): CodeLinkSpan {
   const start = sourceFile.getLineAndCharacterOfPosition(
@@ -147,6 +203,7 @@ export function parseTypeScriptLinks(
   const imports: RawImport[] = [];
   const calls: RawCall[] = [];
   const localNames = new Set<string>();
+  const heritage: RawHeritage[] = [];
 
   for (const statement of sourceFile.statements) {
     if (
@@ -228,6 +285,25 @@ export function parseTypeScriptLinks(
           localNames.add(declaration.name.text);
       }
     }
+    // Only exported declarations become symbol nodes, so only their bases
+    // are worth recording: an `extends` from a private class has no source
+    // node to hang from.
+    if (
+      (ts.isClassDeclaration(statement) ||
+        ts.isInterfaceDeclaration(statement)) &&
+      statement.name &&
+      isExported(statement)
+    ) {
+      const targets = heritageTargets(statement);
+      if (targets.length > 0) {
+        heritage.push({
+          kind: ts.isClassDeclaration(statement) ? "class" : "interface",
+          name: statement.name.text,
+          span: lineSpan(sourceFile, statement),
+          targets,
+        });
+      }
+    }
   }
 
   const visit = (node: ts.Node): void => {
@@ -268,14 +344,56 @@ export function parseTypeScriptLinks(
   };
   visit(sourceFile);
 
-  return { calls, imports, localNames };
+  return { calls, heritage, imports, localNames };
 }
 
 /** Python `import a.b` / `from a.b import c` — imports only, structural tier. */
 export function parsePythonLinks(source: string): ParsedFileLinks {
   const imports: RawImport[] = [];
+  const heritage: RawHeritage[] = [];
   source.split(/\r?\n/).forEach((line, index) => {
     const span = { endLine: index + 1, startLine: index + 1 };
+    // `class User(Model):` — the bases, structurally (ADR-014: a line, not
+    // an AST). Keyword arguments (`metaclass=`), `object` and anything the
+    // one-line reading cannot name are left out rather than guessed.
+    const classDefinition = /^class\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*:/.exec(
+      line,
+    );
+    if (
+      classDefinition?.[1] &&
+      classDefinition[2] &&
+      !classDefinition[1].startsWith("_")
+    ) {
+      const targets = classDefinition[2]
+        .split(",")
+        .flatMap((part): RawHeritageTarget[] => {
+          const base = part.trim().replace(/\[.*$/, "");
+          if (base.length === 0 || base.includes("=") || base === "object") {
+            return [];
+          }
+          const segments = base.split(".");
+          if (segments.some((segment) => !/^[A-Za-z_]\w*$/.test(segment))) {
+            return [];
+          }
+          const [first, second] = segments;
+          if (segments.length === 1 && first) {
+            return [{ binding: first, member: null }];
+          }
+          if (segments.length === 2 && first && second) {
+            return [{ binding: first, member: second }];
+          }
+          return [];
+        });
+      if (targets.length > 0) {
+        heritage.push({
+          kind: "class",
+          name: classDefinition[1],
+          span,
+          targets,
+        });
+      }
+      return;
+    }
     const plain = /^\s*import\s+([\w.]+(?:\s*,\s*[\w.]+)*)/.exec(line);
     if (plain?.[1]) {
       for (const module of plain[1].split(",")) {
@@ -307,7 +425,7 @@ export function parsePythonLinks(source: string): ParsedFileLinks {
       });
     }
   });
-  return { calls: [], imports, localNames: new Set() };
+  return { calls: [], heritage, imports, localNames: new Set() };
 }
 
 /** Extension and index probing for a repo-relative module path. */
@@ -824,4 +942,230 @@ export function resolveCodeLinks(input: ResolveCodeLinksInput): CodeLink[] {
         left.targetPath.localeCompare(right.targetPath) ||
         left.kind.localeCompare(right.kind),
     );
+}
+
+/** How a base was attributed to the file that declares it. */
+export type SymbolLinkMethod = CodeLinkMethod | "local-declaration";
+
+/**
+ * A symbol-to-symbol link (Phase 4 Wave F todo 26): an exported class or
+ * interface and the exported symbol it extends. Both ends are named by
+ * (path, name) — the identity `symbolStableKey` reads — and the SQL joins
+ * them to the symbol rows it derived from `exported_symbols`, so a base
+ * that is not an exported symbol anywhere in the tree yields no edge rather
+ * than a dangling one.
+ */
+export interface SymbolLink {
+  readonly kind: "extends";
+  readonly method: SymbolLinkMethod;
+  readonly sourceKind: "class" | "interface";
+  readonly sourceName: string;
+  readonly sourcePath: string;
+  readonly span: CodeLinkSpan;
+  readonly targetName: string;
+  readonly targetPath: string;
+  readonly tier: CodeLinkTier;
+}
+
+interface BaseBinding {
+  readonly method: SymbolLinkMethod;
+  /** The exported name on the target, or null for a whole-module binding. */
+  readonly symbol: string | null;
+  readonly target: string;
+  readonly tier: CodeLinkTier;
+}
+
+interface AttributedBase {
+  readonly method: SymbolLinkMethod;
+  readonly targetName: string;
+  readonly targetPath: string;
+  readonly tier: CodeLinkTier;
+}
+
+/**
+ * Where one base lives. A local declaration is this file — and shadows an
+ * import of the same name, as it does at run time. A named binding is the
+ * module the import pass attributed it to; a member of a whole-module
+ * binding (`ns.Base`, `models.Model`) is that name in that module. Either
+ * way the target has to be an exported symbol the tree knows, because that
+ * is the only kind of symbol that has a node.
+ */
+function attributeBase(
+  base: RawHeritageTarget,
+  path: string,
+  parsed: ParsedFileLinks,
+  bindings: ReadonlyMap<string, BaseBinding>,
+  exported: (targetPath: string, name: string) => boolean,
+  python: boolean,
+): AttributedBase | null {
+  const bound = bindings.get(base.binding);
+  if (base.member !== null) {
+    if (!bound || bound.symbol !== null) return null;
+    return exported(bound.target, base.member)
+      ? {
+          method: bound.method,
+          targetName: base.member,
+          targetPath: bound.target,
+          tier: bound.tier,
+        }
+      : null;
+  }
+  const declaredHere = python
+    ? exported(path, base.binding)
+    : parsed.localNames.has(base.binding);
+  if (declaredHere) {
+    return exported(path, base.binding)
+      ? {
+          method: "local-declaration",
+          targetName: base.binding,
+          targetPath: path,
+          tier: python ? "reference" : "resolved",
+        }
+      : null;
+  }
+  if (!bound || bound.symbol === null) return null;
+  return exported(bound.target, bound.symbol)
+    ? {
+        method: bound.method,
+        targetName: bound.symbol,
+        targetPath: bound.target,
+        tier: bound.tier,
+      }
+    : null;
+}
+
+/**
+ * Resolve every `extends` the parse recorded to the file and name that
+ * declares the base. The attribution rules are the import pass's own: a
+ * local name is this file, an imported binding is its module (followed
+ * through a barrel when the barrel re-exports it), a member of a
+ * whole-module binding is that name in that module. Python bases resolve
+ * through `from x import B` and `import x` + `x.B` at the `reference` tier,
+ * as its imports do. Anything else — a base from a package outside the
+ * tree, a chained member access — is not a link.
+ */
+export function resolveSymbolLinks(input: ResolveCodeLinksInput): SymbolLink[] {
+  const resolution = input.resolution ?? EMPTY_MODULE_RESOLUTION;
+  const barrels = buildBarrelTables(input.files);
+  const barrelContext = {
+    barrels,
+    exportsByPath: input.exportsByPath,
+    knownPaths: input.knownPaths,
+    resolution,
+  };
+  const exported = (targetPath: string, name: string): boolean =>
+    input.exportsByPath.get(targetPath)?.has(name) ?? false;
+  const links = new Map<string, SymbolLink>();
+
+  for (const [path, parsed] of input.files) {
+    if (parsed.heritage.length === 0) continue;
+    const python = isPython(path);
+    const bindings = new Map<string, BaseBinding>();
+
+    for (const rawImport of parsed.imports) {
+      if (rawImport.isReExport) continue;
+      if (python) {
+        const target = resolvePythonModule(
+          rawImport.specifier,
+          path,
+          input.knownPaths,
+          resolution.pythonRoots,
+        );
+        if (!target) continue;
+        if (rawImport.names.length === 1 && rawImport.names[0] === "*") {
+          // `import a.models` binds `models`; `models.Model` reads through it.
+          const binding = rawImport.specifier.split(".").pop();
+          if (binding) {
+            bindings.set(binding, {
+              method: "module-resolution",
+              symbol: null,
+              target,
+              tier: "reference",
+            });
+          }
+          continue;
+        }
+        for (const name of rawImport.names) {
+          if (name === "*") continue;
+          bindings.set(name, {
+            method: "module-resolution",
+            symbol: name,
+            target,
+            tier: "reference",
+          });
+        }
+        continue;
+      }
+
+      const resolved = resolveModuleSpecifier(
+        rawImport.specifier,
+        path,
+        input.knownPaths,
+        resolution,
+      );
+      if (!resolved) continue;
+      for (const binding of rawImport.bindings) {
+        const owner =
+          binding.symbol !== null && barrels.has(resolved.targetPath)
+            ? resolveThroughBarrel(
+                resolved.targetPath,
+                binding.symbol,
+                barrelContext,
+              )
+            : null;
+        bindings.set(binding.local, {
+          method: owner !== null ? "barrel-resolution" : resolved.method,
+          symbol: binding.symbol,
+          target: owner ?? resolved.targetPath,
+          tier: resolved.tier,
+        });
+      }
+    }
+
+    for (const declaration of parsed.heritage) {
+      for (const base of declaration.targets) {
+        const attributed = attributeBase(
+          base,
+          path,
+          parsed,
+          bindings,
+          exported,
+          python,
+        );
+        if (!attributed) continue;
+        if (
+          attributed.targetPath === path &&
+          attributed.targetName === declaration.name
+        ) {
+          continue;
+        }
+        const key = [
+          path,
+          declaration.name,
+          attributed.targetPath,
+          attributed.targetName,
+        ].join("\u0000");
+        if (links.has(key)) continue;
+        links.set(key, {
+          kind: "extends",
+          method: attributed.method,
+          sourceKind: declaration.kind,
+          sourceName: declaration.name,
+          sourcePath: path,
+          span: declaration.span,
+          targetName: attributed.targetName,
+          targetPath: attributed.targetPath,
+          tier: attributed.tier,
+        });
+      }
+    }
+  }
+
+  return [...links.values()].sort(
+    (left, right) =>
+      left.sourcePath.localeCompare(right.sourcePath) ||
+      left.sourceName.localeCompare(right.sourceName) ||
+      left.targetPath.localeCompare(right.targetPath) ||
+      left.targetName.localeCompare(right.targetName),
+  );
 }

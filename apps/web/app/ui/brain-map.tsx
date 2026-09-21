@@ -35,6 +35,7 @@ import type {
   GraphLayer,
   RenderFrame,
 } from "../../lib/graph/render-frame";
+import type { SymbolHalo } from "../../lib/graph/symbol-halo";
 import type {
   ForceConfig,
   Position,
@@ -93,6 +94,8 @@ export interface BrainMapProps {
   onPinsChange?: (pins: ReadonlyMap<string, Position>) => void;
   seed?: number;
   selectedNodeId?: string | null;
+  /** The selected file's symbol layer (todo 26); drawn as a halo at Near. */
+  symbolHalo?: SymbolHalo | null;
   textFadeThreshold?: number;
   /** The element the canvas is mounted into and gestures are bound to. */
   viewport: RefObject<HTMLDivElement | null>;
@@ -155,6 +158,7 @@ export function BrainMap({
   pins,
   seed,
   selectedNodeId,
+  symbolHalo,
   textFadeThreshold,
   hiddenLayers,
   viewport: viewportRef,
@@ -644,6 +648,10 @@ export function BrainMap({
   useEffect(() => {
     engineRef.current?.setSelectedNode(selectedNodeId ?? null);
   }, [selectedNodeId]);
+
+  useEffect(() => {
+    engineRef.current?.setSymbolHalo(symbolHalo ?? null);
+  }, [symbolHalo]);
 
   useEffect(() => {
     engineRef.current?.setDirectionalFocus(directionalFocus ?? false);

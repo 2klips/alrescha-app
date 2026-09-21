@@ -41,6 +41,7 @@ const PLAN: RepositoryScanPlan = {
   sectionLinks: [],
   sections: [],
   skipped: [],
+  symbolLinks: [],
   touchedRows: 370,
   treeSha: "b".repeat(40),
   unchangedPaths: [],

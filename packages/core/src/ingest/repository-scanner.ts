@@ -14,8 +14,10 @@ import {
   parseTypeScriptLinks,
   resolveCodeLinks,
   resolveModuleSpecifier,
+  resolveSymbolLinks,
   type CodeLink,
   type ParsedFileLinks,
+  type SymbolLink,
 } from "./code-links";
 import { NULL_GIT_SHA, isScannableCommitSha } from "./commit-sha";
 import { clampConcurrency, mapWithConcurrency } from "./concurrency";
@@ -214,6 +216,13 @@ export interface RepositoryScanPlan {
   readonly schemaObjects: readonly DbObject[];
   readonly sectionLinks: readonly SectionLink[];
   readonly sections: readonly DocumentSection[];
+  /**
+   * `extends` between exported symbols (Phase 4 Wave F todo 26), scoped
+   * exactly like `codeLinks`: an incremental pass speaks for the files it
+   * re-read. The symbols themselves are not here — they are already in each
+   * artifact's `exportedSymbols`, and the SQL derives the nodes from those.
+   */
+  readonly symbolLinks: readonly SymbolLink[];
   /** Resolver generation that produced `codeLinks` (see LINK_SCHEMA_VERSION). */
   readonly linkSchemaVersion: number;
   readonly linkScope: LinkScope;
@@ -878,6 +887,7 @@ export async function scanRepository(input: {
       schemaObjects: [],
       sectionLinks: [],
       sections: [],
+      symbolLinks: [],
       linkScope,
       removedPaths: [],
       skipped: [],
@@ -1362,6 +1372,15 @@ export async function scanRepository(input: {
     knownPaths: knownCodePaths,
     resolution,
   });
+  // Symbol-to-symbol links resolve against the same export index, so a base
+  // in a file this pass did not re-read still attributes to its declaring
+  // file — the previous scan's symbols are in `exportsByPath` for that.
+  const symbolLinks = resolveSymbolLinks({
+    exportsByPath,
+    files: parsedLinks,
+    knownPaths: knownCodePaths,
+    resolution,
+  });
 
   // Documents resolve against every artifact path in the tree, not only the
   // ones this pass re-read: a spec that did not change still points at a file
@@ -1391,6 +1410,7 @@ export async function scanRepository(input: {
       sections,
     }),
     sections,
+    symbolLinks,
     linkScope,
     removedPaths,
     skipped,

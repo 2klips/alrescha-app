@@ -96,6 +96,18 @@ describe("machine-checkable guardrails", () => {
       source: 'const migration = "raw_source text";',
       rule: "raw-code-persistence",
     },
+    // The symbol layer's two tempting columns (Wave F todo 26): what a
+    // declaration says is a body, whatever the column is called.
+    {
+      file: "supabase/migrations/202609210001_symbol_nodes.sql.ts",
+      source: 'const ddl = "docstring text";',
+      rule: "raw-code-persistence",
+    },
+    {
+      file: "apps/worker/src/symbol-store.ts",
+      source: "await store.insertSymbol({ name, symbolSignature });",
+      rule: "raw-code-persistence",
+    },
     {
       file: "packages/context/src/minimal-index.ts",
       source: "const template = `${document.body}`;",

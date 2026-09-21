@@ -33,6 +33,7 @@ import {
   type GraphPanelSettings,
 } from "../../lib/graph/graph-panel-settings";
 import type { LodLevel } from "../../lib/graph/lod";
+import type { SymbolHalo } from "../../lib/graph/symbol-halo";
 import {
   edgeHiddenByLayers,
   hiddenByDisplay,
@@ -72,6 +73,8 @@ export interface BrainMapStageProps {
   onSettingsChange?: (patch: Partial<GraphPanelSettings>) => void;
   seed?: number;
   selectedNodeId?: string | null;
+  /** The selected file's symbol layer (todo 26). */
+  symbolHalo?: SymbolHalo | null;
   settings?: GraphPanelSettings;
   /** Set false when a surrounding HUD supplies its own controls. */
   showForcePanel?: boolean;
@@ -111,6 +114,7 @@ export function BrainMapStage({
   onSettingsChange,
   seed,
   selectedNodeId,
+  symbolHalo,
   settings: externalSettings,
   hiddenLayers,
   initialPositions,
@@ -242,6 +246,10 @@ export function BrainMapStage({
       // until todo 9 nobody could see it. A browser test waits on this
       // instead of sleeping and hoping.
       data-settled={settled}
+      // The symbol halo's owner and size (todo 26), so a browser test can
+      // state that selecting a file loaded its layer without reading WebGL.
+      data-symbol-halo={symbolHalo?.ownerId ?? ""}
+      data-symbol-count={symbolHalo?.symbols.length ?? 0}
       data-testid="brain-map-stage"
       role="group"
     >
@@ -276,6 +284,7 @@ export function BrainMapStage({
           onSettledChange={setSettled}
           {...(seed === undefined ? {} : { seed })}
           selectedNodeId={selectedNodeId ?? null}
+          symbolHalo={symbolHalo ?? null}
           textFadeThreshold={settings.textFadeThreshold}
           viewport={viewportRef}
           {...(visibleNodeIds ? { visibleNodeIds } : {})}
