@@ -61,7 +61,7 @@
 
 ## PR
 
-- (PR 생성 뒤 기입)
+- https://github.com/2klips/alrescha-app/pull/25 — base `main`. 커밋: `feat(ingest): promote symbols to graph nodes behind hierarchical loading`(`fb9f44e`) + 이 링크 커밋.
 
 ## 게이트 수치
 
