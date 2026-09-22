@@ -351,12 +351,111 @@ function connectivityBonus(
   return bonus;
 }
 
-export function searchWorkspaceIndex(
+/**
+ * Rows one search answers with when the caller names no limit (RE-02 ⑶).
+ *
+ * The number is unchanged; what changed is that it is now a *page* size and
+ * not a ceiling. It used to be applied inside this function before any
+ * filter ran, which made the tool's own `limit: 1–100` unreachable above 20.
+ */
+export const SEARCH_INDEX_DEFAULT_LIMIT = 20;
+
+/**
+ * The tables this ranking is built from. A workspace read that stopped short
+ * on one of them cannot say the page is every match; one that stopped short
+ * on `routes` has nothing to do with this answer.
+ */
+const SEARCH_INDEX_TABLES: ReadonlySet<string> = new Set([
+  "artifacts",
+  "graph_nodes",
+  "index_entries",
+  "memory_block_entries",
+]);
+
+export interface SearchIndexInput {
+  /**
+   * Which area of the repository a hit sits in — the same
+   * `deriveArtifactFacets` domain the map's chips and `query_brain` use.
+   *
+   * Applied to the candidates, *before* the limit. `hosted.ts` used to apply
+   * it to the page this function had already cut to 20, so a workspace whose
+   * first twenty `auth` matches were all frontend answered "no backend file
+   * matches auth" — a false negative indistinguishable from a true one
+   * (research 2026-09-21).
+   */
+  readonly domain?: FacetDomain | undefined;
+  /** Rows to answer with; `SEARCH_INDEX_DEFAULT_LIMIT` when unnamed. */
+  readonly limit?: number | undefined;
+  readonly query: string;
+  readonly typeFilter?: McpNodeType | undefined;
+}
+
+/**
+ * What the rows behind a search page were worth.
+ *
+ * `omitted: 0` on a capped read would say "this is every match in the
+ * repository", which a read that stopped at its row budget cannot know.
+ */
+export interface SearchIndexCoverage {
+  /** Which budgets were hit, when any were; null when the read was whole. */
+  readonly reason: string | null;
+  readonly result: "complete" | "partial";
+}
+
+export interface SearchIndexPage {
+  readonly coverage: SearchIndexCoverage;
+  /**
+   * Candidates *this read reached* that passed the query, the type and the
+   * domain — never a claim about the repository beyond what `coverage` says
+   * the read carried.
+   */
+  readonly eligible: number;
+  /** Eligible candidates the limit left out of `results`. */
+  readonly omitted: number;
+  readonly results: SearchIndexResult[];
+}
+
+function searchCoverage(workspace: McpWorkspaceData): SearchIndexCoverage {
+  const capped = (workspace.coverage?.truncated ?? []).filter(({ table }) =>
+    SEARCH_INDEX_TABLES.has(table),
+  );
+  return capped.length === 0
+    ? { reason: null, result: "complete" }
+    : {
+        reason: capped
+          .map(({ limit, table }) => `${table} stopped at ${limit} rows`)
+          .join("; "),
+        result: "partial",
+      };
+}
+
+/**
+ * The deterministic ranking, as one page with its own omission count
+ * (RE-02).
+ *
+ * Query, type and domain all narrow the *candidates*; the limit is the last
+ * thing that happens. That order is the whole fix: every filter that runs
+ * after a cap turns rows the cap happened to drop into rows that do not
+ * exist.
+ */
+export function searchWorkspaceIndexPage(
   workspace: McpWorkspaceData,
-  input: { query: string; typeFilter?: McpNodeType },
-): SearchIndexResult[] {
+  input: SearchIndexInput,
+): SearchIndexPage {
+  const coverage = searchCoverage(workspace);
   const query = normalizeSearchText(input.query);
   const tokens = queryTokens(input.query);
+  /**
+   * A conjunction over no terms is true of everything (RE-02 ⑵). `!!!`
+   * normalises to no searchable term, and `tokens.every(...)` on an empty
+   * list answered `true` for every title in the workspace — so punctuation
+   * returned the first twenty files as though they were hits. A query with
+   * nothing to search for has no matches, and saying so is the only answer
+   * that is not a lie about the repository.
+   */
+  if (tokens.length === 0) {
+    return { coverage, eligible: 0, omitted: 0, results: [] };
+  }
   const entries: WorkspaceIndexEntry[] = workspace.repositories.flatMap(
     (repository) =>
       repository.indexEntries.map((entry) => ({
@@ -435,14 +534,50 @@ export function searchWorkspaceIndex(
     },
   );
 
-  return [...entryResults, ...memoryResults]
+  /**
+   * The domain narrows the candidates, and it is derived from the path the
+   * same way the map's chips are — one definition of `backend`, so a filter
+   * here and a chip on the graph cannot disagree.
+   *
+   * `code_metadata` is passed as the classification because that is what
+   * `hosted.ts` passed when it ran this filter: only a `schema` row would
+   * read differently, and changing that is a facet decision, not this one.
+   */
+  const eligible = [...entryResults, ...memoryResults]
+    .filter(
+      (result) =>
+        input.domain === undefined ||
+        deriveArtifactFacets(result.path, "code_metadata").domain ===
+          input.domain,
+    )
     .sort(
       (left, right) =>
         right.score - left.score ||
         left.path.localeCompare(right.path) ||
         left.id.localeCompare(right.id),
-    )
-    .slice(0, 20);
+    );
+  const limit = Math.max(0, input.limit ?? SEARCH_INDEX_DEFAULT_LIMIT);
+  const results = eligible.slice(0, limit);
+  return {
+    coverage,
+    eligible: eligible.length,
+    omitted: eligible.length - results.length,
+    results,
+  };
+}
+
+/**
+ * The same ranking as an array, capped at the default page.
+ *
+ * Kept because `searchWorkspaceNodes`, both benchmarks and four test files
+ * index the array this has always returned. They get exactly what they got
+ * before: the first `SEARCH_INDEX_DEFAULT_LIMIT` hits.
+ */
+export function searchWorkspaceIndex(
+  workspace: McpWorkspaceData,
+  input: { query: string; typeFilter?: McpNodeType },
+): SearchIndexResult[] {
+  return searchWorkspaceIndexPage(workspace, input).results;
 }
 
 function repositoryNodes(workspace: McpWorkspaceData): BrainNode[] {
