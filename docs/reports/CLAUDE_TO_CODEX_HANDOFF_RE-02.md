@@ -2,7 +2,7 @@
 
 작성 2026-09-22 KST · 카드 [RE-02](RESEARCH_EXECUTION_PLAN_2026-09-22.md#re-02--search_index-검색-누락빈-질의상한-정합성) · 보드 [RESEARCH_WORKBOARD.md](RESEARCH_WORKBOARD.md)
 
-**상태: LOCAL_VERIFIED.** 로컬 격리 worktree에서 완료 조건 통과. 커밋 CI·운영 검증은 아직 없다.
+**상태: REVIEW.** 로컬 완료 조건 통과 + head `6c1b262`의 커밋 CI 전건 SUCCESS. [PR #26](https://github.com/2klips/alrescha-app/pull/26) 열림, 미머지. 운영 검증은 아직 없다.
 
 ## 1. SHA와 작업 공간
 
@@ -12,9 +12,13 @@
 | 구현 SHA    | `2ba9c18`                                                                |
 | 브랜치      | `research/re-02-search-accuracy`                                         |
 | worktree    | `C:/Users/axz14/Desktop/Project/Arr/re-02-search`                        |
-| 푸시 여부   | **없음.** 로컬 커밋만. PR 미생성                                         |
+| 인계 문서   | `6c1b262`                                                                |
+| PR          | [#26](https://github.com/2klips/alrescha-app/pull/26) OPEN · base `phase4/todo-26-symbol-nodes` · head `6c1b262` |
+| 커밋 CI     | head `6c1b262`: gate 2건·Vercel 2건 **모두 SUCCESS** (2026-09-22 11:44–11:52Z) |
 
 착수 시 PR #25의 head `5d0c709` 체크는 gate 2건·Vercel 2건 모두 SUCCESS였다. 그 head는 종료 시에도 동일했다. 이 카드는 **PR #25 브랜치에 아무것도 추가하지 않았다.**
+
+**PR #26은 PR #25 위에 쌓은 스택 PR이다.** base가 `phase4/todo-26-symbol-nodes`라 diff는 이 카드의 7개 파일뿐이다. main을 base로 잡으면 #25의 커밋 2개가 diff에 중복으로 딸려 온다. #25가 머지되면 GitHub가 base를 `main`으로 자동 전환한다. 그래서 머지 순서는 **#25 다음에 #26**이다. `mergeStateStatus`가 `UNSTABLE`로 보이는 것은 base가 아직 열려 있기 때문이며 체크 실패가 아니다(`mergeable: MERGEABLE`).
 
 이 문서 자체는 `research/re-02-search-accuracy` 브랜치에 있다. 공유 루트에서 읽으려면:
 
@@ -32,8 +36,9 @@ git show research/re-02-search-accuracy:docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-
 | `tests/search-accuracy.test.ts`                   | 신규 | `e9e5c176a2eb8790bcc22728086fd36dda7437e8` |
 | `docs/reports/research-2026-09-21.probe.re-02.mjs`| 신규 | `2174a2fce10e168ebc46b3490f59c3c0e7e5cc41` |
 | `.omo/evidence/research-re-02.md`                 | 신규 | `ba9f40a6965275d53fe0040e0ebbb696a0259e3f` |
+| `docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-02.md`   | 신규 | 이 문서 (`6c1b262`에서 추가, 이후 CI 결과로 갱신) |
 
-합계 6 파일, +1,263 / −27.
+구현 커밋 `2ba9c18` 6 파일 +1,263 / −27, 인계 커밋 `6c1b262`가 이 문서. PR #26의 diff는 합계 7 파일이다.
 
 **다른 담당이 계속 보유한 것 (이 커밋에 없음):** Codex의 홈/overview UI 9개 파일과 그 테스트 2개, `docs/brand/**`, `.claude/launch.json`, `.omo/evidence/research-2026-09-21.json`, `.omo/evidence/research-execution-plan-2026-09-22.json`, 연구 문서 5종. 공유 루트의 미커밋 상태는 그대로다. `git add .`를 쓰지 않았고 공유 루트에서 checkout/reset/stash/clean을 하지 않았다.
 
@@ -85,7 +90,26 @@ git show research/re-02-search-accuracy:docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-
 | `pnpm test`                                                           | **208 files / 1,934 passed / 1 skipped** |
 | `node --import tsx scripts/verify-scope-boundaries.ts`                | **PASS** — 12 boundaries, 388 files, 0 forbidden |
 
-**수치 구분이 중요하다.** 208 = `5d0c709`의 테스트 파일 207개 + 이 카드의 1개. 기존 207개는 전부 그대로 통과했다. 이것은 **격리 worktree의 작업트리 실행**이며, `2ba9c18` 커밋의 CI 결과가 아니고, 공유 루트의 미커밋 UI 테스트 2개를 포함하지 않는다. 심볼 인계에 적힌 209 files / 1,920 passed는 그 UI 파일이 포함된 **공유 트리** 수치이므로 위 숫자와 직접 비교하면 안 된다.
+**수치 구분이 중요하다.** 208 = `5d0c709`의 테스트 파일 207개 + 이 카드의 1개. 기존 207개는 전부 그대로 통과했다. 위 표는 **격리 worktree의 작업트리 실행**이며, 공유 루트의 미커밋 UI 테스트 2개를 포함하지 않는다. 심볼 인계에 적힌 209 files / 1,920 passed는 그 UI 파일이 포함된 **공유 트리** 수치이므로 위 숫자와 직접 비교하면 안 된다.
+
+### 커밋 CI (작업트리 실행과 별개)
+
+PR #26 head `6c1b262` — 구현 `2ba9c18`과 인계 `6c1b262`를 모두 포함한 커밋 — 의 체크:
+
+| check                   | 결과    | 완료                   |
+| ----------------------- | ------- | ---------------------- |
+| gate                    | SUCCESS | 2026-09-22T11:49:55Z   |
+| gate                    | SUCCESS | 2026-09-22T11:52:07Z   |
+| Vercel                  | SUCCESS | —                      |
+| Vercel Preview Comments | SUCCESS | 2026-09-22T11:44:47Z   |
+
+`gh run list --branch research/re-02-search-accuracy`로도 head `6c1b262`의 CI run 2건이 `completed success`다. 오래된 커밋의 성공으로 대체하지 않았다. 확인 명령:
+
+```bash
+gh pr view 26 --json headRefOid,statusCheckRollup
+```
+
+이 문서의 CI 갱신 자체가 그다음 문서 커밋이 되므로, **이 줄을 읽는 시점의 최신 head는 위 SHA보다 앞서 있을 수 있다.** 머지 전에 최신 head의 체크를 다시 조회한다.
 
 증거 문서: `.omo/evidence/research-re-02.md`.
 
@@ -117,8 +141,7 @@ git show research/re-02-search-accuracy:docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-
 
 ## 7. 남은 문제와 미검증 범위
 
-- **프로덕션 검증 없음.** 실제 워크스페이스·재스캔·배포된 hosted 엔드포인트에서 확인하지 않았다. 모든 수치는 합성 fixture와 in-memory store다.
-- **커밋 CI 없음.** `2ba9c18`은 푸시되지 않았다.
+- **프로덕션 검증 없음.** 실제 워크스페이스·재스캔·배포된 hosted 엔드포인트에서 확인하지 않았다. 모든 수치는 합성 fixture와 in-memory store다. 커밋 CI 통과는 게이트 통과이지 운영 검증이 아니다.
 - **성능 미측정.** domain 필터가 이제 전체 적격 후보에 대해 `deriveArtifactFacets`를 돈다(이전엔 ≤20). 경로 접두사 비교라 비용은 작을 것으로 보지만 **재지 않았다.** cold/warm 계측은 RE-04 범위다.
 - `coverage`는 `workspace.coverage.truncated`가 정확하다는 전제에 선다. Supabase store가 그 값을 채우는 경로는 이 카드에서 다시 검증하지 않았다(`supabase-store.test.ts`의 기존 테스트에 의존).
 - 구두점만으로 이루어진 제목(예: 파일 제목이 정확히 `!!!`)은 이제 검색으로 도달할 수 없다. 의도된 선택이며 위 테스트에 기록돼 있다.
@@ -134,6 +157,12 @@ git show research/re-02-search-accuracy:docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-
 PR #25(todo 26)의 운영 절차 — `202609210001` → 웹 머지 → 워커 재배포 → full 재스캔 — 는 이 카드와 **독립**이며 그대로 남아 있다.
 
 ## 9. Codex가 다음에 실행할 첫 명령
+
+```bash
+gh pr view 26 --repo 2klips/alrescha-app --json number,state,baseRefName,headRefOid,statusCheckRollup,url
+```
+
+로컬에서 변경을 보려면:
 
 ```bash
 git -C C:/Users/axz14/Desktop/Project/Arr/re-02-search log --stat -1 2ba9c18

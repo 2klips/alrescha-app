@@ -78,9 +78,27 @@ Run in the worktree, 2026-09-22:
 | `node --import tsx scripts/verify-scope-boundaries.ts`          | PASS, 12 boundaries, 388 files      |
 
 208 = the 207 test files at `5d0c709` plus this card's one. Every pre-existing
-file passed unchanged. This is a working-tree run in an isolated worktree, not
-a CI result for a commit, and it does not include the uncommitted UI test files
-in the shared checkout.
+file passed unchanged. The table above is a working-tree run in an isolated
+worktree, and it does not include the uncommitted UI test files in the shared
+checkout.
+
+### Commit CI
+
+[PR #26](https://github.com/2klips/alrescha-app/pull/26), head `6c1b262`
+(implementation `2ba9c18` plus the handoff commit), base
+`phase4/todo-26-symbol-nodes` — stacked on the open PR #25 so the diff is this
+card's seven files:
+
+| check                   | result  | completed            |
+| ----------------------- | ------- | -------------------- |
+| gate                    | SUCCESS | 2026-09-22T11:49:55Z |
+| gate                    | SUCCESS | 2026-09-22T11:52:07Z |
+| Vercel                  | SUCCESS | —                    |
+| Vercel Preview Comments | SUCCESS | 2026-09-22T11:44:47Z |
+
+Both CI runs on that head report `completed success`; no older commit's result
+stands in for it. A later docs-only commit moves the head, so re-read the
+checks before merging.
 
 ## Contract held
 
