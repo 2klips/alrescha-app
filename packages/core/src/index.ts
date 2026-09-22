@@ -56,6 +56,7 @@ export {
   resolveCodeLinks,
   resolveModuleSpecifier,
   resolvePythonModule,
+  resolveSymbolLinks,
   resolveTypeScriptSpecifier,
 } from "./ingest/code-links";
 export type {
@@ -63,7 +64,13 @@ export type {
   CodeLinkKind,
   CodeLinkMethod,
   CodeLinkTier,
+  ParsedFileLinks,
+  RawHeritage,
+  RawHeritageTarget,
+  SymbolLink,
+  SymbolLinkMethod,
 } from "./ingest/code-links";
+export { symbolStableKey } from "./ingest/symbol-identity";
 
 export {
   MAX_DOC_LINKS_PER_DOCUMENT,

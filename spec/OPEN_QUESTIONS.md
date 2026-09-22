@@ -277,7 +277,7 @@
 - 내용: 심볼은 `artifacts.exported_symbols`·`index_entries.symbols`에만 있고 `graph_nodes` 행이 아니다. 따라서 "함수↔함수" 엣지는 원리적으로 불가능하고 call 엣지는 파일↔파일로 집계되어 `utils.ts`류 허브가 헤어볼을 만든다. 심볼을 노드로 승격하면 파일럿 370파일 레포에서 노드가 수천 개로 늘어 읽기 상한(2,000)과 클러스터 임계(600)를 즉시 넘고, 현재 `clusterGraph`는 `type:grade` 15개 슈퍼노드를 인접 인덱스 사슬로 잇는 임의 구조다(`graph-model.ts:433-467`).
 - 임시 결정: Wave A~E는 파일·폴더·문서·요구사항·개념 계층만으로 진행(심볼 노드 없음). 파일↔파일 `calls` provenance의 심볼 목록(≤8)은 인스펙터에 표시.
 - 필요한 결정: ⑴ **계층 LOD 로딩** — 기본 로드는 파일 레벨(폴더 접힘 포함 ≤ 2,000), 포커스·확대 시 해당 파일의 심볼과 `declares`·심볼 `calls`를 `get_neighbors`형 부분 쿼리로 로드, 슈퍼노드는 폴더/모듈 기반으로 교체 ⑵ 심볼을 노드로 두되 맵은 파일 레벨만 렌더하고 MCP만 심볼 레벨 노출 ⑶ 현행 유지(심볼은 메타데이터).
-- 상태: open. 기본 후보 ⑴ — Wave F todo 18의 전제. 다언어 심볼 정밀도는 OQ-019와 결합.
+- 상태: **resolved(⑴) 2026-09-21** — Wave F todo 26. 심볼은 `graph_nodes(kind='symbol')` + `symbols` 행이고, `declares`/`extends`는 `symbol_edges` 별도 테이블이라 `edges`의 어떤 독자도 기본 로드에 심볼을 싣지 않는다(읽기 상한 2,000·클러스터 임계와의 충돌이 구조로 사라진다). 맵은 선택한 파일의 층만 `/api/map/symbols`로 받아 Near에서 헤일로로 그리고, MCP는 `loadSymbolNeighborhood`로 이름 붙인 id의 이웃만 읽는다. 문제 제기의 "함수↔함수 엣지"는 `extends`까지만 — 심볼 단위 `calls`는 호출 지점이 어느 심볼 안에 있는지 파서가 기록하지 않아 이 todo 밖이다. 다언어 정밀도는 OQ-019 그대로.
 
 ## OQ-032 — 지시 블록은 id-first를 강제하지만 기법 실측은 id-first를 off로 권고했다
 

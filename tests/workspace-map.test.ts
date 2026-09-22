@@ -672,7 +672,10 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
         id: string;
         kind: string;
         label: string;
-      }>("select id, kind, label from public.graph_nodes");
+      }>(
+        // The loader excludes the symbol layer (todo 26); the mirror does too.
+        "select id, kind, label from public.graph_nodes where kind <> 'symbol'",
+      );
       const artifacts = await tx.query<{
         classification: string;
         id: string;
@@ -778,6 +781,16 @@ describe("workspace map rows are tenant-scoped (Phase 3 Wave A todo 1)", () => {
       tokens: [],
     });
     expect(model.graph.nodes.length).toBe(seenByA.graphNodes.length);
+    // The symbol layer is in the database and not on the map (todo 26): the
+    // loader excludes the kind, and the model drops a row that slips past.
+    const symbolRows = await asAuthenticatedUser(database, USER_A, (tx) =>
+      tx.query<{ id: string }>(
+        "select id from public.graph_nodes where kind = 'symbol'",
+      ),
+    );
+    expect(symbolRows.rows.length).toBeGreaterThan(0);
+    const drawn = new Set(model.graph.nodes.map((node) => node.id));
+    expect(symbolRows.rows.some((row) => drawn.has(row.id))).toBe(false);
     expect(model.repoFullName).toBe("local/map-demo");
     expect(model.lastScannedCommitSha).toBe(commitSha);
     // A scan alone proves nothing was executed — nothing may render verified.

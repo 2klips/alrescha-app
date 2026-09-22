@@ -698,6 +698,11 @@ export function buildWorkspaceMapModel(
   for (const row of rows.graphNodes) {
     // Findings surface as counts on their source node, not as nodes.
     if (row.kind === "finding") continue;
+    // The symbol layer is not in the base galaxy (Wave F todo 26, R5 §2.4):
+    // a file's symbols arrive as a halo through `/api/map/symbols` when the
+    // file is looked at, never as nodes of this model — a row that reached
+    // here through a reader that did not filter is dropped, not drawn.
+    if (row.kind === "symbol") continue;
 
     let type: GraphNodeType;
     let label = row.label;
@@ -1165,6 +1170,9 @@ export async function loadWorkspaceMap(
       .from("graph_nodes")
       .select("id,kind,label")
       .eq("workspace_id", workspaceId)
+      // Symbols would otherwise spend the node budget on a layer the map
+      // loads by file (todo 26).
+      .neq("kind", "symbol")
       .order("created_at", { ascending: true })
       .order("id", { ascending: true })
       .limit(NODE_LIMIT),

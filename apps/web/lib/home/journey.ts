@@ -276,7 +276,10 @@ export async function loadWorkspaceJourney(
       client
         .from("graph_nodes")
         .select("id", { count: "exact", head: true })
-        .eq("workspace_id", workspaceId),
+        .eq("workspace_id", workspaceId)
+        // The count the map shows: the base galaxy, not the symbol layer
+        // behind it (todo 26).
+        .neq("kind", "symbol"),
       client
         .from("edges")
         .select("id", { count: "exact", head: true })

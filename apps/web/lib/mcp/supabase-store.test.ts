@@ -63,6 +63,14 @@ class FakeQueryBuilder<T = unknown> {
     return this.#record("in", args);
   }
 
+  neq(...args: unknown[]) {
+    return this.#record("neq", args);
+  }
+
+  or(...args: unknown[]) {
+    return this.#record("or", args);
+  }
+
   async insert(...args: unknown[]) {
     this.#record("insert", args);
     return this.response;

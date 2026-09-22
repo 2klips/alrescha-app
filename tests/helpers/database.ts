@@ -159,6 +159,8 @@ export const FIRST_SCAN_RETRY_MIGRATION =
   "supabase/migrations/202609120004_first_scan_retry.sql";
 export const ACCESS_EVENTS_CHANNEL_POLICY_MIGRATION =
   "supabase/migrations/202609130001_access_events_channel_policy.sql";
+export const SYMBOL_NODES_MIGRATION =
+  "supabase/migrations/202609210001_symbol_nodes.sql";
 export const DOC_PAGE_SLUG_IDENTITY_MIGRATION =
   "supabase/migrations/202609150001_doc_page_slug_identity.sql";
 
@@ -231,6 +233,7 @@ export const ALL_MIGRATIONS = [
   FIRST_SCAN_RETRY_MIGRATION,
   ACCESS_EVENTS_CHANNEL_POLICY_MIGRATION,
   DOC_PAGE_SLUG_IDENTITY_MIGRATION,
+  SYMBOL_NODES_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(

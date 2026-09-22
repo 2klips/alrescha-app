@@ -118,6 +118,34 @@ const codeLinkSchema = z.strictObject({
 });
 
 /**
+ * `extends` between exported symbols (Phase 4 Wave F todo 26). Names and a
+ * line span only: the base clause itself is a source body and stays in the
+ * file.
+ */
+const symbolLinkSchema = z.strictObject({
+  kind: z.literal("extends"),
+  method: z.enum([
+    "alias-resolution",
+    "barrel-resolution",
+    "import-binding",
+    "local-declaration",
+    "module-resolution",
+    "name-match",
+    "test-import",
+  ]),
+  sourceKind: z.enum(["class", "interface"]),
+  sourceName: z.string().min(1).max(400),
+  sourcePath: z.string().min(1).max(1000),
+  span: z.strictObject({
+    endLine: z.number().int().positive(),
+    startLine: z.number().int().positive(),
+  }),
+  targetName: z.string().min(1).max(400),
+  targetPath: z.string().min(1).max(1000),
+  tier: z.enum(["reference", "resolved"]),
+});
+
+/**
  * Document `references` links (Phase 4 Wave A todo 2). Strict like the rest:
  * the matched token never travels, so a payload carrying one is rejected
  * rather than quietly stored (WORK_SPEC §3-3).
@@ -260,6 +288,10 @@ export const repositoryScanPlanSchema = z.strictObject({
   schemaObjects: z.array(dbObjectSchema).max(20_000).default([]),
   sectionLinks: z.array(sectionLinkSchema).max(100_000).default([]),
   sections: z.array(sectionSchema).max(20_000).default([]),
+  // Defaulted like the fields beside it: a CLI built before Wave F uploads
+  // a plan that states no symbol links, and its symbols still become nodes
+  // because those travel inside `exportedSymbols`.
+  symbolLinks: z.array(symbolLinkSchema).max(100_000).default([]),
   skipped: z
     .array(
       z.strictObject({

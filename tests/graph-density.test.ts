@@ -66,6 +66,7 @@ const NODE_KINDS = [
   "rationale",
   "route",
   "section",
+  "symbol",
 ];
 const EDGE_FAMILIES = [
   "database",
@@ -91,6 +92,8 @@ interface Density {
   readonly impactEdges: number;
   readonly nodes: number;
   readonly nodesByKind: Record<string, number>;
+  /** Symbol rows the map model drew — the layer is loaded by file, so 0. */
+  readonly symbolsOnMap: number;
   readonly orphanShare: number;
   readonly orphans: number;
   readonly relationsRelabelled: number;
@@ -250,7 +253,11 @@ describe("graph density gate", () => {
     }
 
     const nodes = model.graph.nodes.length;
+    const drawn = new Set(model.graph.nodes.map((node) => node.id));
     return {
+      symbolsOnMap: rows.graphNodes.filter(
+        (row) => row.kind === "symbol" && drawn.has(row.id),
+      ).length,
       averageDegree: nodes === 0 ? 0 : (model.graph.edges.length * 2) / nodes,
       displayEdges: model.graph.edges.length,
       edgesByFamily: tally(
@@ -277,6 +284,12 @@ describe("graph density gate", () => {
     expect(missing(density.nodesByKind, NODE_KINDS)).toEqual([]);
     expect(missing(density.edgesByFamily, EDGE_FAMILIES)).toEqual([]);
 
+    // The symbol layer exists (Wave F todo 26: this repository exports about
+    // 1,300 symbols) and none of it is on the map by default — it is loaded
+    // per file, as a halo, and the numbers below are the galaxy without it.
+    expect(density.nodesByKind["symbol"]).toBeGreaterThanOrEqual(1_000);
+    expect(density.symbolsOnMap).toBe(0);
+
     // The plan's target for Wave A′: ~1,260 nodes, ~4,000 edges, average
     // degree ~6.3, orphans ~7%. Measured on 2026-09-06: 1,253 / 5,213 / 8.32
     // / 4.2%, triangles 2,533.
@@ -299,6 +312,8 @@ describe("graph density gate", () => {
 
     // Two ADR files, two ID-token headings, two section nodes.
     expect(density.nodesByKind["section"]).toBe(2);
+    expect(density.nodesByKind["symbol"]).toBeGreaterThan(0);
+    expect(density.symbolsOnMap).toBe(0);
     expect(density.nodesByKind["directory"]).toBeGreaterThan(0);
     // The families a 15-file TypeScript repository with ADRs and a test
     // implies. Each is an extractor; a zero here is a regression. It has no
@@ -331,6 +346,8 @@ describe("graph density gate", () => {
     expect(density.nodesByKind["section"]).toBeUndefined();
     expect(density.nodesByKind["route"]).toBeGreaterThan(0);
     expect(density.nodesByKind["db_object"]).toBe(2);
+    expect(density.nodesByKind["symbol"]).toBeGreaterThan(0);
+    expect(density.symbolsOnMap).toBe(0);
     expect(missing(density.edgesByFamily, EDGE_FAMILIES)).toEqual([]);
 
     // Measured 2026-09-06: 34 nodes, 47 edges, degree 2.76, 6 of 22

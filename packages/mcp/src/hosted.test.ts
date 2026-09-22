@@ -22,6 +22,7 @@ import type {
   McpEdgeTier,
   McpFindingData,
   McpScope,
+  McpSymbolData,
   McpWorkspaceData,
 } from "./index";
 
@@ -2284,5 +2285,274 @@ describe("impact confidence and the banded read", () => {
 
     // An answer shorter than the store is only honest if it says so.
     expect(answer.structuredContent).toMatchObject({ truncated: 0 });
+  });
+});
+
+/**
+ * The symbol layer (Phase 4 Wave F todo 26, OQ-031 ⑴).
+ *
+ * A default read carries no symbol. Naming one is how a caller asks, and
+ * what arrives is that symbol's file, its declaration and its `extends`
+ * neighbours — one hop, both directions — merged into the same workspace
+ * the other tools read. The catalogue does not change: the layer is not a
+ * search type, not a relation filter, not a band. It is a node id.
+ */
+describe("the symbol layer", () => {
+  const FILE = "01K287J3D18V7A1MZG9E8D1Y12";
+  const REQUIREMENT = "01K287J3D18V7A1MZG9E8D1Y21";
+  const INGEST = "01K287J3D18V7A1MZG9E8D1Y81";
+  const PARSER = "01K287J3D18V7A1MZG9E8D1Y82";
+  const BASE = "01K287J3D18V7A1MZG9E8D1Y83";
+  const PATH = "packages/core/src/evidence/ci-reports.ts";
+  const clients: Client[] = [];
+
+  afterEach(async () => {
+    for (const client of clients.splice(0)) await client.close();
+  });
+
+  function symbol(
+    nodeId: string,
+    name: string,
+    kind: string,
+    startLine: number,
+    endLine: number,
+  ): McpSymbolData {
+    return {
+      artifactNodeId: FILE,
+      container: null,
+      endLine,
+      engine: "typescript-ast",
+      kind,
+      name,
+      nodeId,
+      path: PATH,
+      repositoryId: REPOSITORY_ID,
+      stableKey: `k-${name}`,
+      startLine,
+    };
+  }
+
+  /** The fixture with one file's layer: two classes, one extending the other. */
+  function layered(): McpWorkspaceData {
+    const workspace = workspaceFixture();
+    const repository = workspace.repositories[0];
+    if (!repository) throw new Error("fixture has no repository");
+    return {
+      ...workspace,
+      repositories: [
+        {
+          ...repository,
+          indexEntries: [
+            ...repository.indexEntries,
+            {
+              headings: [],
+              id: "01K287J3D18V7A1MZG9E8D1Y63",
+              neighborIds: [],
+              nodeId: FILE,
+              path: PATH,
+              searchKey:
+                "packages/core/src/evidence/ci-reports.ts ci-reports.ts code_metadata ingestcitestreports reportparser baseparser",
+              symbols: ["ingestCiTestReports", "ReportParser", "BaseParser"],
+              tags: ["code_metadata", "code_metadata"],
+              title: "ci-reports.ts",
+              type: "artifact",
+            },
+          ],
+          symbolEdges: [
+            edge({
+              family: "hierarchy",
+              id: `declares:${FILE}->${INGEST}`,
+              relation: "declares",
+              sourceNodeId: FILE,
+              targetNodeId: INGEST,
+              tier: "resolved",
+            }),
+            edge({
+              family: "hierarchy",
+              id: `declares:${FILE}->${PARSER}`,
+              relation: "declares",
+              sourceNodeId: FILE,
+              targetNodeId: PARSER,
+              tier: "resolved",
+            }),
+            edge({
+              family: "hierarchy",
+              id: `declares:${FILE}->${BASE}`,
+              relation: "declares",
+              sourceNodeId: FILE,
+              targetNodeId: BASE,
+              tier: "resolved",
+            }),
+            edge({
+              family: "structure",
+              id: `extends:${PARSER}->${BASE}`,
+              relation: "extends",
+              sourceNodeId: PARSER,
+              targetNodeId: BASE,
+              tier: "resolved",
+            }),
+          ],
+          symbols: [
+            symbol(INGEST, "ingestCiTestReports", "function", 1, 40),
+            symbol(PARSER, "ReportParser", "class", 42, 60),
+            symbol(BASE, "BaseParser", "class", 62, 70),
+          ],
+        },
+      ],
+    };
+  }
+
+  async function connected() {
+    const store = new InMemoryMcpStore({ workspaces: [layered()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Symbols",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const endpoint = createHostedMcpEndpoint({ store });
+    const { client, transport } = createSdkClient(
+      endpoint.fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+    return client;
+  }
+
+  it("stays out of a default read", async () => {
+    const client = await connected();
+    const answer = await client.callTool({
+      arguments: { node_id: FILE },
+      name: "get_neighbors",
+    });
+    const result = answer.structuredContent as {
+      edges: { relation: string }[];
+      found: boolean;
+      nodes: { id: string; type: string }[];
+    };
+    expect(result.found).toBe(true);
+    // The file's neighbourhood is what it was: no symbol, no `declares`.
+    expect(result.nodes.some((node) => node.type === "symbol")).toBe(false);
+    expect(result.edges.some((e) => e.relation === "declares")).toBe(false);
+  });
+
+  it("arrives when a symbol is named, one hop and no further", async () => {
+    const client = await connected();
+    const answer = await client.callTool({
+      arguments: { node_id: PARSER },
+      name: "get_neighbors",
+    });
+    const result = answer.structuredContent as {
+      edges: { relation: string; sourceNodeId: string; targetNodeId: string }[];
+      found: boolean;
+      nodes: { id: string; path: string | null; type: string }[];
+    };
+    expect(result.found).toBe(true);
+    // The file that declares it, the base it extends — and not the sibling
+    // function nobody asked about.
+    expect(result.nodes.map(({ id }) => id).sort()).toEqual(
+      [FILE, PARSER, BASE].sort(),
+    );
+    expect(result.nodes.find(({ id }) => id === PARSER)).toMatchObject({
+      path: PATH,
+      type: "symbol",
+    });
+    expect(
+      result.edges
+        .map((e) => `${e.relation} ${e.sourceNodeId} -> ${e.targetNodeId}`)
+        .sort(),
+    ).toEqual(
+      [`declares ${FILE} -> ${PARSER}`, `extends ${PARSER} -> ${BASE}`].sort(),
+    );
+  });
+
+  it("answers impact for a base class with what extends it and what declares it", async () => {
+    const client = await connected();
+    const related = await client.callTool({
+      arguments: { node_id: BASE },
+      name: "impact_of",
+    });
+    expect(related.structuredContent).toMatchObject({
+      found: true,
+      impact: { dependents: { nodeIds: [FILE, PARSER].sort() } },
+    });
+
+    const directional = await client.callTool({
+      arguments: { mode: "dependency-impact", node_id: BASE },
+      name: "impact_of",
+    });
+    const report = (
+      directional.structuredContent as {
+        impact: { dependencyImpact: { candidates: { nodeId: string }[] } };
+      }
+    ).impact.dependencyImpact;
+    // The subclass depends on the base; so does the file that declares it.
+    expect(report.candidates.map(({ nodeId }) => nodeId).sort()).toEqual(
+      [FILE, PARSER].sort(),
+    );
+  });
+
+  it("traces a path from a symbol into the file graph", async () => {
+    const client = await connected();
+    const answer = await client.callTool({
+      arguments: { from_node_id: PARSER, to_node_id: REQUIREMENT },
+      name: "trace_path",
+    });
+    expect(answer.structuredContent).toMatchObject({
+      found: true,
+      path: {
+        explain: [
+          `${FILE} -declares-> ${PARSER}`,
+          `${REQUIREMENT} -implements-> ${FILE}`,
+        ],
+        hops: 2,
+        nodeIds: [PARSER, FILE, REQUIREMENT],
+      },
+    });
+  });
+
+  it("carries a symbol hit's span and node id on the search result", async () => {
+    const client = await connected();
+    const answer = await client.callTool({
+      arguments: { query: "ReportParser" },
+      name: "search_index",
+    });
+    const result = answer.structuredContent as {
+      results: { nodeId: string; symbols?: unknown }[];
+    };
+    const hit = result.results.find(({ nodeId }) => nodeId === FILE);
+    expect(hit?.symbols).toEqual([
+      {
+        kind: "class",
+        name: "ReportParser",
+        nodeId: PARSER,
+        span: `${PATH}:42-60`,
+      },
+    ]);
+    // A hit that matched nothing symbol-shaped carries no such field.
+    const spec = result.results.find(
+      ({ nodeId }) => nodeId === "01K287J3D18V7A1MZG9E8D1Y11",
+    );
+    expect(spec === undefined || spec.symbols === undefined).toBe(true);
+  });
+
+  it("does not find an id that names neither a file nor a symbol", async () => {
+    const client = await connected();
+    const answer = await client.callTool({
+      arguments: { node_id: "01K287J3D18V7A1MZG9E8D1Y99" },
+      name: "get_neighbors",
+    });
+    expect(answer.structuredContent).toMatchObject({ found: false });
+  });
+
+  it("changes nothing in the catalogue", async () => {
+    const client = await connected();
+    const listed = await client.listTools();
+    expect(listed.tools).toHaveLength(21);
+    // Not a search type, not a relation filter: the layer is reached by id.
+    expect(NODE_TYPE_SCHEMA.options).not.toContain("symbol");
+    expect(RELATION_SCHEMA.options).not.toContain("declares");
+    expect(RELATION_SCHEMA.options).not.toContain("extends");
   });
 });

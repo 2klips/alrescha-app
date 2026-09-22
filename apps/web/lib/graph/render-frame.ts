@@ -32,6 +32,12 @@ import {
   type LabelCandidate,
   type LodLevel,
 } from "./lod";
+import {
+  HALO_LABEL_LIMIT,
+  haloFor,
+  type RenderHalo,
+  type SymbolHalo,
+} from "./symbol-halo";
 import type { Position } from "./simulation-protocol";
 
 /** `readRendererPalette()` output: token → `0xRRGGBB`. */
@@ -382,6 +388,8 @@ export interface RenderFrame {
   /** Ring/dash colour for drift overlays — resolved once per frame. */
   driftColor: number;
   edges: RenderEdge[];
+  /** The symbol halo, or null below Near zoom / with nothing loaded (todo 26). */
+  halo: RenderHalo | null;
   labelColor: number;
   labels: RenderLabel[];
   lod: LodLevel;
@@ -688,6 +696,8 @@ export interface FrameInput {
   palette: GraphPalette;
   positions: ReadonlyMap<string, Position>;
   selectedNodeId?: string | null;
+  /** The selected file's symbol layer, drawn as a halo at Near (todo 26). */
+  symbolHalo?: SymbolHalo | null;
   /** 0…1 label fade slider. */
   textFadeThreshold?: number;
   viewport?: Viewport;
@@ -988,11 +998,48 @@ export function buildRenderFrame(input: FrameInput): RenderFrame {
     });
   }
 
+  // The symbol halo (todo 26): the loaded layer placed around its owner,
+  // Near only, and only while the owner is on this frame. Its names go in
+  // the screen-space label layer like a node's, beside each item.
+  const ownerNode = input.symbolHalo
+    ? nodes.find((node) => node.id === input.symbolHalo?.ownerId)
+    : undefined;
+  const halo = haloFor({
+    halo: input.symbolHalo,
+    lod,
+    owner: ownerNode
+      ? {
+          color: ownerNode.color,
+          radius: ownerNode.radius,
+          x: ownerNode.x,
+          y: ownerNode.y,
+        }
+      : undefined,
+  });
+  if (halo) {
+    for (const item of halo.items
+      .filter((entry) => entry.labelled)
+      .slice(0, HALO_LABEL_LIMIT)) {
+      labels.push({
+        alpha: 0.85,
+        id: `halo:${item.id}`,
+        text: item.name,
+        x:
+          viewport.width / 2 +
+          camera.x +
+          item.x * camera.scale +
+          (item.radius * camera.scale + 3),
+        y: viewport.height / 2 + camera.y + item.y * camera.scale,
+      });
+    }
+  }
+
   return {
     camera,
     driftColor: resolveColor(input.palette, "danger"),
     geometryRevision: input.geometryRevision ?? 0,
     edges,
+    halo,
     labelColor: resolveColor(input.palette, "text"),
     labels,
     lod,

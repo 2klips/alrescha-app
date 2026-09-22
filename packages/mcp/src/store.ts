@@ -49,7 +49,17 @@ export const MCP_NODE_TYPES = [
   "todo",
 ] as const;
 
-export type McpNodeType = (typeof MCP_NODE_TYPES)[number];
+/**
+ * The symbol layer's node type (Phase 4 Wave F todo 26). Not in
+ * `MCP_NODE_TYPES`: that array feeds the catalogue's enums and describes the
+ * default read, and the layer is in neither — a symbol reaches a caller
+ * only by being named. The type is widened so a loaded symbol is a node
+ * like any other.
+ */
+export const SYMBOL_NODE_TYPE = "symbol" as const;
+
+export type McpNodeType =
+  (typeof MCP_NODE_TYPES)[number] | typeof SYMBOL_NODE_TYPE;
 
 /**
  * The relation vocabulary, as one array, for the reason `MCP_NODE_TYPES` is.
@@ -95,7 +105,16 @@ export const MCP_EDGE_RELATIONS = [
   "validates",
 ] as const;
 
-export type McpEdgeRelation = (typeof MCP_EDGE_RELATIONS)[number];
+/**
+ * The symbol layer's relations (todo 26): a file `declares` a symbol, a
+ * symbol `extends` another. Kept out of the catalogue enum for the reason
+ * `SYMBOL_NODE_TYPE` is, which also means a `relations` filter cannot name
+ * them — a neighbourhood that was asked for carries both.
+ */
+export const SYMBOL_EDGE_RELATIONS = ["declares", "extends"] as const;
+
+export type McpEdgeRelation =
+  (typeof MCP_EDGE_RELATIONS)[number] | (typeof SYMBOL_EDGE_RELATIONS)[number];
 
 /** Read limits, force strength and traversal policy are decided per family. */
 export const MCP_EDGE_FAMILIES = [
@@ -338,6 +357,201 @@ export interface McpConceptData {
 }
 
 /** A URL this repository serves, and the verbs it answers to. */
+/**
+ * One exported symbol, as the symbol layer serves it (Phase 4 Wave F todo
+ * 26). A name, a kind, a span and the engine that read it — the row holds
+ * nothing else, by schema and by scope scanner. `repositoryId` is here
+ * because a neighbourhood is merged back into the workspace per repository.
+ */
+export interface McpSymbolData {
+  artifactNodeId: string;
+  /** Reserved for members (`Class.method`); null for every top-level export. */
+  container: string | null;
+  endLine: number;
+  engine: string | null;
+  kind: string;
+  name: string;
+  nodeId: string;
+  path: string;
+  repositoryId: string;
+  stableKey: string;
+  startLine: number;
+}
+
+/**
+ * How much of the symbol layer one request may carry (todo 26). Files are
+ * the ids a caller named that are artifacts; symbols and edges are what the
+ * lookup found for them plus one `extends` hop. The caps are the map's
+ * `/api/map/symbols` caps, stated once.
+ */
+export const SYMBOL_LAYER_LIMITS = {
+  edges: 20_000,
+  files: 200,
+  symbols: 5_000,
+} as const;
+
+/**
+ * What `loadSymbolNeighborhood` answers: the symbols of the files named,
+ * the symbols named, their `declares` and `extends` edges, and the symbols
+ * one `extends` hop away — never the workspace's symbols. `unknownNodeIds`
+ * are the ids that named neither a file nor a symbol, so a caller can tell
+ * "no symbols" from "not a thing".
+ */
+export interface McpSymbolNeighborhood {
+  edges: McpEdgeData[];
+  symbols: McpSymbolData[];
+  truncated: McpReadTruncation[];
+  unknownNodeIds: string[];
+}
+
+/**
+ * The neighbourhood rule, over whatever pool the store handed it: the
+ * in-memory store passes a repository's whole layer, the hosted one passes
+ * the rows it fetched by id. Same caps, same hop, so a tool answers the same
+ * on either transport (the todo 17 equivalence, extended).
+ */
+export function selectSymbolNeighborhood(
+  pool: {
+    readonly artifactIds: ReadonlySet<string>;
+    readonly edges: readonly McpEdgeData[];
+    readonly symbols: readonly McpSymbolData[];
+  },
+  nodeIds: readonly string[],
+): McpSymbolNeighborhood {
+  const byId = new Map(pool.symbols.map((symbol) => [symbol.nodeId, symbol]));
+  const truncated: McpReadTruncation[] = [];
+  const unknownNodeIds: string[] = [];
+  const fileIds: string[] = [];
+  const seeds = new Set<string>();
+  for (const id of [...new Set(nodeIds)].sort()) {
+    if (pool.artifactIds.has(id)) {
+      if (fileIds.length < SYMBOL_LAYER_LIMITS.files) fileIds.push(id);
+      else if (!truncated.some(({ table }) => table === "files")) {
+        truncated.push({ limit: SYMBOL_LAYER_LIMITS.files, table: "files" });
+      }
+    } else if (byId.has(id)) {
+      seeds.add(id);
+    } else {
+      unknownNodeIds.push(id);
+    }
+  }
+  const files = new Set(fileIds);
+  for (const symbol of pool.symbols) {
+    if (files.has(symbol.artifactNodeId)) seeds.add(symbol.nodeId);
+  }
+
+  // One `extends` hop out of the seeds, both directions, so "what extends
+  // this" and "what does this extend" are both in the answer.
+  const reached = new Set(seeds);
+  const edges: McpEdgeData[] = [];
+  for (const edge of pool.edges) {
+    const touchesSeed =
+      seeds.has(edge.sourceNodeId) || seeds.has(edge.targetNodeId);
+    if (!touchesSeed) continue;
+    if (edge.relation === "extends") {
+      reached.add(edge.sourceNodeId);
+      reached.add(edge.targetNodeId);
+    }
+    edges.push(edge);
+  }
+  // A reached symbol's own declaration edge comes along: a symbol without
+  // its file is a node with no anchor.
+  for (const edge of pool.edges) {
+    if (
+      edge.relation === "declares" &&
+      reached.has(edge.targetNodeId) &&
+      !seeds.has(edge.targetNodeId)
+    ) {
+      edges.push(edge);
+    }
+  }
+
+  const symbols = [...reached]
+    .map((id) => byId.get(id))
+    .filter((symbol): symbol is McpSymbolData => symbol !== undefined)
+    .sort(
+      (left, right) =>
+        left.path.localeCompare(right.path) ||
+        left.startLine - right.startLine ||
+        left.name.localeCompare(right.name),
+    );
+  const keptSymbols =
+    symbols.length > SYMBOL_LAYER_LIMITS.symbols
+      ? symbols.slice(0, SYMBOL_LAYER_LIMITS.symbols)
+      : symbols;
+  if (keptSymbols.length < symbols.length) {
+    truncated.push({ limit: SYMBOL_LAYER_LIMITS.symbols, table: "symbols" });
+  }
+  const keptIds = new Set(keptSymbols.map(({ nodeId }) => nodeId));
+  const distinctEdges = [
+    ...new Map(edges.map((edge) => [edge.id, edge])).values(),
+  ]
+    .filter(
+      (edge) =>
+        (keptIds.has(edge.sourceNodeId) ||
+          files.has(edge.sourceNodeId) ||
+          pool.artifactIds.has(edge.sourceNodeId)) &&
+        keptIds.has(edge.targetNodeId),
+    )
+    .sort(
+      (left, right) =>
+        left.relation.localeCompare(right.relation) ||
+        left.sourceNodeId.localeCompare(right.sourceNodeId) ||
+        left.targetNodeId.localeCompare(right.targetNodeId),
+    );
+  const keptEdges =
+    distinctEdges.length > SYMBOL_LAYER_LIMITS.edges
+      ? distinctEdges.slice(0, SYMBOL_LAYER_LIMITS.edges)
+      : distinctEdges;
+  if (keptEdges.length < distinctEdges.length) {
+    truncated.push({ limit: SYMBOL_LAYER_LIMITS.edges, table: "symbol_edges" });
+  }
+
+  return { edges: keptEdges, symbols: keptSymbols, truncated, unknownNodeIds };
+}
+
+/**
+ * A workspace with a symbol neighbourhood merged in, per repository. The
+ * default read never carries the layer; this is how a tool call that named
+ * a symbol gets to see it, and only it.
+ */
+export function withSymbolNeighborhood(
+  workspace: McpWorkspaceData,
+  neighborhood: McpSymbolNeighborhood,
+): McpWorkspaceData {
+  if (neighborhood.symbols.length === 0) return workspace;
+  const symbolRepository = new Map(
+    neighborhood.symbols.map((symbol) => [symbol.nodeId, symbol.repositoryId]),
+  );
+  return {
+    ...workspace,
+    repositories: workspace.repositories.map((repository) => {
+      const symbols = neighborhood.symbols.filter(
+        (symbol) => symbol.repositoryId === repository.id,
+      );
+      if (symbols.length === 0) return repository;
+      const edges = neighborhood.edges.filter(
+        (edge) => symbolRepository.get(edge.targetNodeId) === repository.id,
+      );
+      const known = new Set((repository.symbols ?? []).map((s) => s.nodeId));
+      const knownEdges = new Set(
+        (repository.symbolEdges ?? []).map((e) => e.id),
+      );
+      return {
+        ...repository,
+        symbolEdges: [
+          ...(repository.symbolEdges ?? []),
+          ...edges.filter((edge) => !knownEdges.has(edge.id)),
+        ],
+        symbols: [
+          ...(repository.symbols ?? []),
+          ...symbols.filter((symbol) => !known.has(symbol.nodeId)),
+        ],
+      };
+    }),
+  };
+}
+
 export interface McpRouteData {
   /** Empty for a Next.js page; a decorator states its own. */
   methods: string[];
@@ -451,6 +665,14 @@ export interface McpRepositoryData {
   routes?: McpRouteData[];
   /** Absent on a workspace scanned before Wave A′ todo 8. */
   sections?: McpSectionData[];
+  /**
+   * The symbol layer (todo 26). Absent on every default read. The in-memory
+   * store holds a repository's whole layer here and serves it by
+   * neighbourhood; a tool call that named a symbol gets that neighbourhood
+   * merged back in through `withSymbolNeighborhood`.
+   */
+  symbolEdges?: McpEdgeData[];
+  symbols?: McpSymbolData[];
 }
 
 /** How many rows one workspace read carries per table before it truncates. */
@@ -859,6 +1081,16 @@ export interface McpStore {
     principal: McpPrincipal,
     options?: { bands?: readonly McpReadBand[] },
   ): Promise<McpWorkspaceData>;
+  /**
+   * The symbol layer for the ids named, and nothing more (todo 26): a file
+   * id yields its symbols, a symbol id itself, plus `declares` and one
+   * `extends` hop. Never the workspace's symbols — that is the rule the
+   * default read keeps by not carrying the layer at all.
+   */
+  loadSymbolNeighborhood(
+    principal: McpPrincipal,
+    input: { nodeIds: readonly string[] },
+  ): Promise<McpSymbolNeighborhood>;
   publishAccessEvent(channel: string, event: McpAccessEvent): Promise<void>;
   /**
    * Record one prompt for the authenticated member (ADR-011). The store is
@@ -1584,12 +1816,49 @@ export class InMemoryMcpStore implements McpStore {
         ...(workspace.todos ?? []),
         ...this.#todos.filter((todo) => todo.workspaceId === workspace.id),
       ],
-      repositories: workspace.repositories.map((repository) => ({
-        ...repository,
-        ...(requested.has("database") ? {} : { dbObjects: [] }),
-        ...(requested.has("route") ? {} : { routes: [] }),
-      })),
+      // The symbol layer stays in the store: a read carries none of it
+      // (todo 26), and `loadSymbolNeighborhood` is how a caller asks.
+      repositories: workspace.repositories.map((repository) => {
+        const { symbolEdges: layerEdges, symbols: layer, ...rest } = repository;
+        void layerEdges;
+        void layer;
+        return {
+          ...rest,
+          ...(requested.has("database") ? {} : { dbObjects: [] }),
+          ...(requested.has("route") ? {} : { routes: [] }),
+        };
+      }),
     };
+  }
+
+  /**
+   * The symbol layer, by neighbourhood (todo 26). The store holds each
+   * repository's whole layer and hands out only what the ids reach.
+   */
+  async loadSymbolNeighborhood(
+    principal: McpPrincipal,
+    input: { nodeIds: readonly string[] },
+  ): Promise<McpSymbolNeighborhood> {
+    const workspace = this.#workspaces.get(principal.workspaceId);
+    if (!workspace || workspace.ownerUserId !== principal.userId) {
+      throw new Error("Workspace access denied");
+    }
+    return selectSymbolNeighborhood(
+      {
+        artifactIds: new Set(
+          workspace.repositories.flatMap((repository) =>
+            repository.artifacts.map(({ id }) => id),
+          ),
+        ),
+        edges: workspace.repositories.flatMap(
+          (repository) => repository.symbolEdges ?? [],
+        ),
+        symbols: workspace.repositories.flatMap(
+          (repository) => repository.symbols ?? [],
+        ),
+      },
+      input.nodeIds,
+    );
   }
 
   async listAccessTokens(input: {

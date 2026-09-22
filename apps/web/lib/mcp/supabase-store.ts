@@ -11,7 +11,10 @@ import {
   MCP_DEFAULT_READ_BANDS,
   MCP_SCOPES,
   MCP_WORKSPACE_READ_LIMIT,
+  SYMBOL_EDGE_RELATIONS,
+  SYMBOL_LAYER_LIMITS,
   bandUnsupportedReason,
+  selectSymbolNeighborhood,
   createAccessTokenSecret,
   createUlid,
   edgeOmissionReason,
@@ -26,6 +29,7 @@ import {
   type McpMemoryBlockName,
   type McpWriteMemoryResult,
   type McpDbObjectData,
+  type McpEdgeData,
   type McpEdgeFamily,
   type McpEdgeOmission,
   type McpEdgeProvenance,
@@ -37,6 +41,8 @@ import {
   type McpFindingProvenance,
   type McpNodeType,
   type McpSourceSpan,
+  type McpSymbolData,
+  type McpSymbolNeighborhood,
   type McpTodoMatch,
   type McpNote,
   type McpPackMeasurement,
@@ -178,6 +184,50 @@ function edgeProvenance(value: unknown): McpEdgeProvenance {
     method: typeof stored.method === "string" ? stored.method : null,
     reason: typeof stored.reason === "string" ? stored.reason : null,
     span: sourceSpan(stored.span),
+  };
+}
+
+const ULID_SHAPE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+const SYMBOL_COLUMNS =
+  "id, repository_id, artifact_id, path, container, kind, name, start_line, end_line, engine, stable_key";
+const SYMBOL_EDGE_COLUMNS =
+  "id, source_node_id, target_node_id, relation, family, confidence, provenance";
+
+/** One symbol row (todo 26): the columns the table has, and no other. */
+function symbolData(row: Row): McpSymbolData {
+  return {
+    artifactNodeId: requiredString(row, "artifact_id"),
+    container: nullableString(row.container),
+    endLine: Number(row.end_line),
+    engine: nullableString(row.engine),
+    kind: requiredString(row, "kind"),
+    name: requiredString(row, "name"),
+    nodeId: requiredString(row, "id"),
+    path: requiredString(row, "path"),
+    repositoryId: requiredString(row, "repository_id"),
+    stableKey: requiredString(row, "stable_key"),
+    startLine: Number(row.start_line),
+  };
+}
+
+/** A symbol edge, or null when the row names a relation the layer has not. */
+function symbolEdgeData(row: Row): McpEdgeData | null {
+  const relation = String(row.relation);
+  if (!(SYMBOL_EDGE_RELATIONS as readonly string[]).includes(relation)) {
+    return null;
+  }
+  return {
+    confidence:
+      row.confidence === null || row.confidence === undefined
+        ? null
+        : Number(row.confidence),
+    family: edgeFamily(row.family),
+    id: requiredString(row, "id"),
+    provenance: edgeProvenance(row.provenance),
+    relation: relation as McpEdgeRelation,
+    sourceNodeId: requiredString(row, "source_node_id"),
+    targetNodeId: requiredString(row, "target_node_id"),
+    tier: edgeTier(record(row.provenance).tier),
   };
 }
 
@@ -624,6 +674,139 @@ export class SupabaseMcpStore implements McpStore {
    * artifact the user named simply was not in the answer, and nothing said
    * so. This asks the database for that path.
    */
+  /**
+   * The symbol layer for the ids named (todo 26): a file's symbols, a
+   * symbol itself, their `declares` and one `extends` hop. Three reads by
+   * id and never a whole-workspace one — the caps are the map's.
+   */
+  async loadSymbolNeighborhood(
+    principal: McpPrincipal,
+    input: { nodeIds: readonly string[] },
+  ): Promise<McpSymbolNeighborhood> {
+    const workspaceId = principal.workspaceId;
+    const named = [...new Set(input.nodeIds)].sort();
+    const ids = named.filter((id) => ULID_SHAPE.test(id));
+    if (ids.length === 0) {
+      return { edges: [], symbols: [], truncated: [], unknownNodeIds: named };
+    }
+
+    const files = await this.client
+      .from("artifacts")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .in("id", ids);
+    queryError("MCP symbol file lookup failed", files.error);
+    const namedFiles = new Set(
+      rows(files.data).map((row) => requiredString(row, "id")),
+    );
+    const fileIds = ids
+      .filter((id) => namedFiles.has(id))
+      .slice(0, SYMBOL_LAYER_LIMITS.files);
+    const symbolIds = ids.filter((id) => !namedFiles.has(id));
+
+    const [byFile, byId] = await Promise.all([
+      fileIds.length === 0
+        ? Promise.resolve({ data: [], error: null })
+        : this.client
+            .from("symbols")
+            .select(SYMBOL_COLUMNS)
+            .eq("workspace_id", workspaceId)
+            .in("artifact_id", fileIds)
+            .order("id", { ascending: true })
+            .limit(SYMBOL_LAYER_LIMITS.symbols + 1),
+      symbolIds.length === 0
+        ? Promise.resolve({ data: [], error: null })
+        : this.client
+            .from("symbols")
+            .select(SYMBOL_COLUMNS)
+            .eq("workspace_id", workspaceId)
+            .in("id", symbolIds),
+    ]);
+    queryError("MCP symbol query failed", byFile.error);
+    queryError("MCP symbol lookup failed", byId.error);
+    const seeds = new Map<string, McpSymbolData>();
+    for (const row of [...rows(byFile.data), ...rows(byId.data)]) {
+      const symbol = symbolData(row);
+      seeds.set(symbol.nodeId, symbol);
+    }
+    if (seeds.size === 0) {
+      return selectSymbolNeighborhood(
+        { artifactIds: namedFiles, edges: [], symbols: [] },
+        named,
+      );
+    }
+
+    // Every edge that touches a seed: its declaration, what it extends and
+    // what extends it. PostgREST's `or` takes the two lists inline; the ids
+    // are ULIDs, so nothing in them needs quoting.
+    const seedList = [...seeds.keys()].join(",");
+    const edgeResult = await this.client
+      .from("symbol_edges")
+      .select(SYMBOL_EDGE_COLUMNS)
+      .eq("workspace_id", workspaceId)
+      .or(`source_node_id.in.(${seedList}),target_node_id.in.(${seedList})`)
+      .order("id", { ascending: true })
+      .limit(SYMBOL_LAYER_LIMITS.edges + 1);
+    queryError("MCP symbol edge query failed", edgeResult.error);
+    const edges = rows(edgeResult.data).flatMap((row) => {
+      const edge = symbolEdgeData(row);
+      return edge ? [edge] : [];
+    });
+
+    // The far end of an `extends` hop is a symbol the reads above did not
+    // fetch; its row is what lets the hop be a node rather than an id.
+    const farIds = [
+      ...new Set(
+        edges
+          .filter((edge) => edge.relation === "extends")
+          .flatMap((edge) => [edge.sourceNodeId, edge.targetNodeId])
+          .filter((id) => !seeds.has(id)),
+      ),
+    ];
+    const far =
+      farIds.length === 0
+        ? { data: [], error: null }
+        : await this.client
+            .from("symbols")
+            .select(SYMBOL_COLUMNS)
+            .eq("workspace_id", workspaceId)
+            .in("id", farIds);
+    queryError("MCP symbol hop lookup failed", far.error);
+    const farSymbols = rows(far.data).map(symbolData);
+    // …and their declaration edges, so a hop lands on a file too.
+    const farDeclares =
+      farSymbols.length === 0
+        ? { data: [], error: null }
+        : await this.client
+            .from("symbol_edges")
+            .select(SYMBOL_EDGE_COLUMNS)
+            .eq("workspace_id", workspaceId)
+            .eq("relation", "declares")
+            .in(
+              "target_node_id",
+              farSymbols.map(({ nodeId }) => nodeId),
+            );
+    queryError("MCP symbol hop edge query failed", farDeclares.error);
+    const symbols = [...seeds.values(), ...farSymbols];
+    return selectSymbolNeighborhood(
+      {
+        artifactIds: new Set([
+          ...namedFiles,
+          ...symbols.map(({ artifactNodeId }) => artifactNodeId),
+        ]),
+        edges: [
+          ...edges,
+          ...rows(farDeclares.data).flatMap((row) => {
+            const edge = symbolEdgeData(row);
+            return edge ? [edge] : [];
+          }),
+        ],
+        symbols,
+      },
+      named,
+    );
+  }
+
   async findArtifacts(
     principal: McpPrincipal,
     selector: { id?: string | undefined; path?: string | undefined },
@@ -827,6 +1010,9 @@ export class SupabaseMcpStore implements McpStore {
         .from("graph_nodes")
         .select("id, label")
         .eq("workspace_id", workspaceId)
+        // The symbol layer is read by neighbourhood, never here (todo 26);
+        // left in, it would spend the row budget before the files did.
+        .neq("kind", "symbol")
         .order("id", { ascending: true })
         .limit(MCP_WORKSPACE_READ_LIMIT + 1),
       this.client

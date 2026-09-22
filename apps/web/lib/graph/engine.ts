@@ -24,6 +24,7 @@ import {
   DEFAULT_DISPLAY_SETTINGS,
   DEFAULT_VIEWPORT,
 } from "./render-frame";
+import type { SymbolHalo } from "./symbol-halo";
 import { fitToView } from "./camera";
 import { buildHitIndex, type HitIndex } from "./hit-test";
 import { createPositionBuffer, type PositionBuffer } from "./position-buffer";
@@ -217,6 +218,8 @@ export interface GraphEngine {
   setDirectionalFocus(enabled: boolean): void;
   setPalette(palette: GraphPalette): void;
   setSelectedNode(nodeId: string | null): void;
+  /** The selected file's symbol layer to draw around it (todo 26); null clears. */
+  setSymbolHalo(halo: SymbolHalo | null): void;
   /**
    * Which nodes to draw, or null for all of them (Phase 4 Wave B todo 13).
    *
@@ -279,6 +282,7 @@ export async function createGraphEngine(
   let camera: Camera = { ...DEFAULT_CAMERA };
   let palette = options.palette;
   let selectedNodeId: string | null = null;
+  let symbolHalo: SymbolHalo | null = null;
   let hoveredNodeId: string | null = null;
   let pinnedNodeId: string | null = null;
   let visibleNodeIds: ReadonlySet<string> | null = null;
@@ -439,6 +443,7 @@ export async function createGraphEngine(
       palette,
       positions,
       selectedNodeId,
+      symbolHalo,
       textFadeThreshold,
       viewport,
     });
@@ -569,6 +574,10 @@ export async function createGraphEngine(
     },
     setSelectedNode(nodeId) {
       selectedNodeId = nodeId;
+      touch();
+    },
+    setSymbolHalo(halo) {
+      symbolHalo = halo;
       touch();
     },
     visibleNodes: () => visibleNodeIds,
