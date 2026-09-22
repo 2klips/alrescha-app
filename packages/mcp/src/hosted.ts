@@ -6,11 +6,7 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-import {
-  FACET_DOMAINS,
-  FACET_UNITS,
-  deriveArtifactFacets,
-} from "@alrescha/core";
+import { FACET_DOMAINS, FACET_UNITS } from "@alrescha/core";
 
 import { buildRepoOverview, findModuleForNode } from "./module-tools";
 
@@ -18,7 +14,7 @@ import {
   getWorkspaceArtifact,
   getWorkspaceFindings,
   queryWorkspaceBrain,
-  searchWorkspaceIndex,
+  searchWorkspaceIndexPage,
   selectWorkspaceContextPack,
 } from "./data-brain";
 import {
@@ -1460,24 +1456,27 @@ function createServer(
       type_filter,
     }) => {
       const workspace = await readWorkspace();
-      const ranked = searchWorkspaceIndex(workspace, {
+      /**
+       * Query, type, domain, then the limit — in that order (RE-02).
+       *
+       * This handler used to rank, take the twenty the ranking function cut
+       * to, and *then* filter by domain. A workspace whose first twenty
+       * `auth` hits were all frontend answered a backend filter with nothing,
+       * and `limit: 100` could never reach past twenty rows that no longer
+       * existed. One search path decides all four.
+       */
+      const page = searchWorkspaceIndexPage(workspace, {
         query,
+        ...(domain_filter ? { domain: domain_filter } : {}),
+        ...(limit === undefined ? {} : { limit }),
         ...(type_filter ? { typeFilter: type_filter } : {}),
       });
-      const filtered = domain_filter
-        ? ranked.filter(
-            (result) =>
-              deriveArtifactFacets(result.path, "code_metadata").domain ===
-              domain_filter,
-          )
-        : ranked;
       // `include_excerpt: false` is what `search_nodes` was — the same
       // ranking with the prose *omitted*, not blanked. An empty string is
       // still a key on the wire, and the point of the ID-first entry point
       // is that a caller pays for ids and paths and nothing else (todo 22 ⑴).
-      const kept = filtered
-        .slice(0, limit ?? filtered.length)
-        .map(({ excerpt, excerptAbsence, title, ...rest }) =>
+      const kept = page.results.map(
+        ({ excerpt, excerptAbsence, title, ...rest }) =>
           include_excerpt === false
             ? rest
             : {
@@ -1489,7 +1488,7 @@ function createServer(
                 ...(excerptAbsence ? { excerptAbsence } : {}),
                 title,
               },
-        );
+      );
       const symbolHits = await symbolHitsFor(workspace, kept, query);
       const results = kept.map((result) => {
         const symbols = symbolHits.get(result.nodeId);
@@ -1503,11 +1502,16 @@ function createServer(
       );
       return toolResult(
         {
+          // Whether the rows this ranking was built from were the whole
+          // table. `truncated: 0` on a read that stopped at its row budget
+          // would say "this is every match", which that read cannot know.
+          coverage: page.coverage,
           query,
           results,
-          // What the cap left out, so a caller narrows the query rather than
-          // reading the page it got as the whole answer.
-          truncated: Math.max(0, filtered.length - kept.length),
+          // Eligible candidates *this read reached* that the limit left out,
+          // so a caller narrows the query rather than reading the page it
+          // got as the whole answer.
+          truncated: page.omitted,
           workspaceId: principal.workspaceId,
         },
         sized,

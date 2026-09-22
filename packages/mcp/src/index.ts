@@ -6,10 +6,12 @@ export type { ChangeBrief } from "./prepare-change";
 export {
   BRAIN_TABLE_COLUMNS,
   BRAIN_TABLE_ROWS,
+  SEARCH_INDEX_DEFAULT_LIMIT,
   getWorkspaceArtifact,
   getWorkspaceFindings,
   queryWorkspaceBrain,
   searchWorkspaceIndex,
+  searchWorkspaceIndexPage,
   selectWorkspaceContextPack,
 } from "./data-brain";
 export {
@@ -53,6 +55,9 @@ export type {
   BrainNode,
   BrainQueryFilter,
   FindingQueryFilter,
+  SearchIndexCoverage,
+  SearchIndexInput,
+  SearchIndexPage,
   SearchIndexResult,
   SearchRank,
   SelectedContextPack,
