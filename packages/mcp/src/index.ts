@@ -1,8 +1,14 @@
 export const MCP_PACKAGE_NAME = "@alrescha/mcp";
 
 export { createHostedMcpEndpoint } from "./hosted";
-export { prepareChange } from "./prepare-change";
-export type { ChangeBrief } from "./prepare-change";
+export { CHANGE_BRIEF_CONSUMER_CAP, prepareChange } from "./prepare-change";
+export type {
+  ChangeBrief,
+  ChangeBriefBasis,
+  ChangeBriefBudget,
+  ChangeBriefConsumers,
+  ChangeBriefTarget,
+} from "./prepare-change";
 export {
   BRAIN_TABLE_COLUMNS,
   BRAIN_TABLE_ROWS,

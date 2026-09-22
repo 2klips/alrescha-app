@@ -1,6 +1,12 @@
-import { impactOf, type DependencyImpact } from "./graph-tools";
-import { getWorkspaceArtifact } from "./data-brain";
-import type { ArtifactCard } from "@alrescha/core";
+import {
+  impactOf,
+  type DependencyImpact,
+  type ImpactBound,
+  type ImpactConfidence,
+} from "./graph-tools";
+import { getWorkspaceArtifact, type ArtifactWithNeighbors } from "./data-brain";
+import { estimateTokens } from "./repo-map";
+import type { ArtifactCard, SummaryState } from "@alrescha/core";
 import type {
   McpArtifactMatch,
   McpEdgeOmission,
@@ -9,12 +15,11 @@ import type {
 
 /**
  * Everything a change to one file has to account for, composed once (Codex
- * remedy §9.1, step S5).
+ * remedy §9.1, step S5; contract RE-03 ⑶a).
  *
- * **This registers no tool.** The tool catalogue is budgeted at ≤16 and todo
- * 22 owns where these pieces surface; what belongs here is the composition
- * itself, so the order and the omissions are decided in one place instead of
- * separately by whichever caller assembles them next.
+ * **This registers no tool.** What belongs here is the composition itself, so
+ * the order and the omissions are decided in one place instead of separately
+ * by whichever caller assembles them next.
  *
  * Deterministic selection, in the order a person would want it:
  *
@@ -26,28 +31,127 @@ import type {
  * It does not write prose and it does not claim to replace reading the
  * source. What it hands back are **locations** — a card, node ids and paths —
  * so the reader opens the right files instead of the nearest ones.
+ *
+ * ## What 03b changed, and why
+ *
+ * The brief used to hand back `dependencyImpact` alone. That field's
+ * `complete` says only whether the *walk* ran out of graph; it knows nothing
+ * about a table that stopped at its row budget or a relation that fell
+ * outside the vocabulary. So a brief built on a truncated read reported
+ * `complete: true` and an agent concluded a change was safe because it could
+ * not see what it would break. `bound`, `boundReasons` and `confidence` were
+ * already computed by `impactOf` and thrown away here; now they travel.
  */
 
+/** Consumers past this are a payload, not a list. Stated, never silent. */
+export const CHANGE_BRIEF_CONSUMER_CAP = 25;
+
+/**
+ * Which commit and revision this answer stands on.
+ *
+ * Nullable on purpose: `McpReadBasis` is optional per repository — the hosted
+ * store attaches it only when its RPC returned a row, and the in-memory store
+ * never sets one. A brief that invented a commit would be worse than one that
+ * says it has none.
+ */
+export type ChangeBriefBasis =
+  | {
+      readonly analyzedCommit: string | null;
+      readonly available: true;
+      readonly dataRevision: number;
+      /**
+       * Typed `null` at the source: there is no immutable generation to name,
+       * so none is named. Not a placeholder for a value that arrives later.
+       */
+      readonly graphGeneration: null;
+      readonly indexedCommit: string | null;
+      readonly readConsistency: string;
+      readonly repositoryFullName: string | null;
+      readonly repositoryId: string;
+      readonly stages: {
+        readonly analysis: string;
+        readonly structure: string;
+      };
+    }
+  | { readonly available: false; readonly reason: string };
+
+/** The consumers, with how the set was reached and where it stops. */
+export interface ChangeBriefConsumers extends DependencyImpact {
+  /** `exact` only when the walk, the relations and every row read agree. */
+  readonly bound: ImpactBound;
+  /** Why it is a floor, when it is. Empty exactly when `bound` is `exact`. */
+  readonly boundReasons: readonly string[];
+  /** Edge tiers behind the set — how it was reached, not how big it is. */
+  readonly confidence: ImpactConfidence;
+}
+
+/**
+ * What this brief costs, and how that was arrived at.
+ *
+ * `targetCardTokens` is the body estimate and leaves `token_budget`'s current
+ * meaning alone; `briefTokens` is this brief serialised. Neither is a
+ * provider's billed count — the heuristic is one token per four UTF-16
+ * characters and says so on the wire.
+ */
+export interface ChangeBriefBudget {
+  readonly approach: string;
+  readonly briefTokens: number;
+  readonly targetCardTokens: number;
+  /** Entries a cap dropped. Empty means none were, not that none exist. */
+  readonly truncatedItems: readonly { count: number; of: string }[];
+}
+
+export interface ChangeBriefTarget {
+  /** True when a path named more than one repository. Nobody picks. */
+  readonly ambiguous: boolean;
+  /** The repositories that answered, when more than one did. */
+  readonly candidates?: readonly {
+    readonly artifactId: string;
+    readonly repositoryFullName: string;
+    readonly repositoryId: string;
+  }[];
+  readonly card: ArtifactCard | null;
+  /** The freshness rule's answer, as the card carries it. Never re-derived. */
+  readonly freshness: SummaryState["state"] | null;
+  readonly nodeId: string | null;
+  readonly path: string;
+  /** The blob this row was scanned from; null when none was stored. */
+  readonly sourceDigest: string | null;
+}
+
 export interface ChangeBrief {
-  /** Consumers to look at, with the path each was reached by. */
-  readonly consumers: DependencyImpact | null;
+  readonly basis: ChangeBriefBasis;
+  readonly budget: ChangeBriefBudget;
+  /** Null means *not computed* — never "this file has no consumers". */
+  readonly consumers: ChangeBriefConsumers | null;
   /** Where the answer is thin, from the card and the read together. */
   readonly missing: readonly string[];
   readonly omissions: readonly McpEdgeOmission[];
-  readonly target: {
-    readonly card: ArtifactCard | null;
-    readonly nodeId: string | null;
-    readonly path: string;
-  };
+  readonly target: ChangeBriefTarget;
 }
+
+const TOKEN_APPROACH =
+  "one token per four UTF-16 characters of the serialised value; an approximation, not a provider's billed count";
 
 export function prepareChange(
   workspace: McpWorkspaceData,
-  selector: { readonly id?: string; readonly path?: string },
+  selector: {
+    readonly id?: string | undefined;
+    readonly path?: string | undefined;
+  },
   found?: readonly McpArtifactMatch[],
+  /**
+   * An already-resolved lookup, when the caller has one. `get_artifact`
+   * resolves the target before it decides whether a brief was asked for, and
+   * looking the same row up twice is the duplicate read the contract forbids.
+   */
+  resolved?: ArtifactWithNeighbors,
 ): ChangeBrief {
-  const artifact = getWorkspaceArtifact(workspace, selector, found);
+  const artifact = resolved ?? getWorkspaceArtifact(workspace, selector, found);
   const nodeId = artifact.artifact?.id ?? null;
+  // One walk per target. `impactOf` builds a graph view and expands up to its
+  // edge budget; calling it twice to read two of its fields would double that
+  // for nothing.
   const impact = nodeId
     ? impactOf(workspace, nodeId, 2, "dependency-impact")
     : null;
@@ -67,14 +171,91 @@ export function prepareChange(
     );
   }
 
-  return {
-    consumers: impact?.dependencyImpact ?? null,
+  const repository = artifact.artifact
+    ? (workspace.repositories.find(
+        ({ id }) => id === artifact.artifact?.repositoryId,
+      ) ?? null)
+    : null;
+  const readBasis = repository?.basis ?? null;
+  const basis: ChangeBriefBasis =
+    readBasis === null
+      ? {
+          available: false,
+          reason:
+            "no read basis accompanied this repository; commit and revision cannot be stated",
+        }
+      : {
+          analyzedCommit: readBasis.analyzedCommit,
+          available: true,
+          dataRevision: readBasis.dataRevision,
+          graphGeneration: readBasis.graphGeneration,
+          indexedCommit: readBasis.indexedCommit,
+          readConsistency: workspace.coverage?.readConsistency ?? "unproven",
+          repositoryFullName: repository?.fullName ?? null,
+          repositoryId: readBasis.repositoryId,
+          stages: readBasis.stages,
+        };
+
+  const truncatedItems: { count: number; of: string }[] = [];
+  const walk = impact?.dependencyImpact ?? null;
+  const overCap = walk
+    ? Math.max(0, walk.candidates.length - CHANGE_BRIEF_CONSUMER_CAP)
+    : 0;
+  if (overCap > 0) truncatedItems.push({ count: overCap, of: "consumers" });
+
+  const consumers: ChangeBriefConsumers | null =
+    walk && impact
+      ? {
+          ...walk,
+          bound: overCap > 0 ? "lower-bound" : impact.bound,
+          boundReasons: [
+            ...impact.boundReasons,
+            ...(overCap > 0
+              ? [
+                  `the brief kept ${CHANGE_BRIEF_CONSUMER_CAP} of ${walk.candidates.length} consumers`,
+                ]
+              : []),
+          ],
+          candidates: walk.candidates.slice(0, CHANGE_BRIEF_CONSUMER_CAP),
+          confidence: impact.confidence,
+        }
+      : null;
+
+  const target: ChangeBriefTarget = {
+    ambiguous: Boolean(artifact.ambiguous),
+    ...(artifact.ambiguous
+      ? { candidates: artifact.ambiguous.candidates }
+      : {}),
+    card: artifact.card,
+    freshness: artifact.card?.summary.state ?? null,
+    nodeId,
+    path: artifact.artifact?.path ?? selector.path ?? "",
+    // The hosted decoder writes `""` when the column is null, and an empty
+    // digest is no digest.
+    sourceDigest: artifact.artifact?.blobSha
+      ? artifact.artifact.blobSha
+      : null,
+  };
+
+  const targetCardTokens = artifact.card
+    ? estimateTokens(JSON.stringify(artifact.card))
+    : 0;
+  const withoutBudget = {
+    basis,
+    consumers,
     missing,
     omissions: impact?.omissions ?? [],
-    target: {
-      card: artifact.card,
-      nodeId,
-      path: artifact.artifact?.path ?? selector.path ?? "",
+    target,
+  };
+  return {
+    ...withoutBudget,
+    budget: {
+      approach: TOKEN_APPROACH,
+      // The brief's own serialised size, counted over everything but this
+      // number. A field that included itself would be a number about itself.
+      briefTokens: estimateTokens(JSON.stringify(withoutBudget)),
+      targetCardTokens,
+      truncatedItems,
     },
   };
 }

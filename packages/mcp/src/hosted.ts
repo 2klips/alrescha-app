@@ -9,6 +9,7 @@ import { z } from "zod";
 import { FACET_DOMAINS, FACET_UNITS } from "@alrescha/core";
 
 import { buildRepoOverview, findModuleForNode } from "./module-tools";
+import { prepareChange } from "./prepare-change";
 
 import {
   getWorkspaceArtifact,
@@ -239,6 +240,23 @@ const EXPLAIN_MODULE_TOOL = {
  * holding an id had to know which of two tools to ask. One selector — `path`,
  * `id`, or `ids` for a batch — and one answer shape.
  */
+/**
+ * `include_change_brief` is opt-in because the brief costs a graph walk
+ * (RE-03 ⑶b).
+ *
+ * The contract's first candidate was to expand whichever code card
+ * `request_context_pack` had already chosen, and no input would have been
+ * needed. Measured on this repository — 998 artifacts, 12 task descriptions
+ * across three budgets — the pack's `codeCards` was **never** exactly one:
+ * 33 of 36 runs saturated the 20-card cap and 3 returned none, with the same
+ * first path for every task. A selector that cannot name a target cannot
+ * carry a brief, so the contract's stated fallback applies.
+ *
+ * `get_artifact` is where a caller has *already* named one target by id or
+ * path, which is the thing the pack could not do. The catalogue cost was
+ * measured, not guessed: one optional boolean is +10 approximate tokens,
+ * inside the 3,150 ratchet that `hosted.test.ts` pins.
+ */
 const GET_ARTIFACT_TOOL = {
   annotations: READ_ONLY_TOOL,
   description:
@@ -247,6 +265,7 @@ const GET_ARTIFACT_TOOL = {
     .object({
       id: z.string().trim().min(1).optional(),
       ids: z.array(z.string().trim().min(1)).min(1).max(4).optional(),
+      include_change_brief: z.boolean().optional(),
       max_chars: z.number().int().min(1).max(10_000).optional(),
       path: z.string().trim().min(1).optional(),
     })
@@ -970,9 +989,22 @@ function createServer(
       ...(node ? [node.id] : []),
       ...result.neighbors.map(({ id }) => id),
     ]);
+    /**
+     * The brief reuses the lookup this handler already did — `resolved` is
+     * the same `ArtifactWithNeighbors`, so the target is not read twice and
+     * `impactOf` runs once for it.
+     *
+     * An ambiguous path still gets a brief: saying "two repositories answer
+     * to this path, name one" is the answer, and withholding it would leave
+     * the caller to infer the ambiguity from an empty result.
+     */
+    const changeBrief = selector.include_change_brief
+      ? prepareChange(workspace, selector, found, result)
+      : null;
     return toolResult(
       {
         ...result,
+        ...(changeBrief ? { changeBrief } : {}),
         ...(node
           ? {
               node: selector.max_chars

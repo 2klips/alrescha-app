@@ -446,9 +446,11 @@ describe("hosted MCP contract", () => {
      * `query_brain` took the domain, unit and family filters (todo 21) →
      * 3,076 when `log_progress` took its three attribution fields → 3,131
      * when the concept vocabulary joined (todo 19 ⑴: one node type and six
-     * relations, paid once per schema that carries the relation enum). Each
-     * rise was caught here first, which is the whole point of a ratchet: it
-     * does not forbid growth, it makes growth say its price.
+     * relations, paid once per schema that carries the relation enum) →
+     * 3,141 when `get_artifact` took `include_change_brief` (RE-03 ⑶b: one
+     * optional boolean, +10, measured before it was written and again
+     * after). Each rise was caught here first, which is the whole point of a
+     * ratchet: it does not forbid growth, it makes growth say its price.
      */
     expect(estimateTokens(JSON.stringify(listed.tools))).toBeLessThanOrEqual(
       3_150,
