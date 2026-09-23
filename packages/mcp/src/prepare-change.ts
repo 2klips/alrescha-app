@@ -1,6 +1,7 @@
 import {
   impactOf,
   type DependencyImpact,
+  type GraphEdgeRef,
   type ImpactBound,
   type ImpactConfidence,
 } from "./graph-tools";
@@ -75,8 +76,33 @@ export type ChangeBriefBasis =
     }
   | { readonly available: false; readonly reason: string };
 
+/**
+ * One hop of a consumer's path, as the brief carries it (R-02).
+ *
+ * The contract keeps what says *why* this is a consumer — the relation, how
+ * confident the edge is, and the evidence that produced it. Edge ids and
+ * endpoints are left out: the candidate already names its node and distance,
+ * and repeating a whole edge row per hop per consumer is payload, not
+ * explanation. `impact_of` still answers with the full edge.
+ *
+ * Known limit: on a path longer than one hop, the intermediate node is not
+ * named in `via`. It is reachable — it is itself a candidate at a shorter
+ * distance — but `via` alone does not say which one.
+ */
+export type ChangeBriefHop = Pick<GraphEdgeRef, "provenance" | "relation" | "tier">;
+
+export interface ChangeBriefCandidate {
+  readonly distance: number;
+  readonly nodeId: string;
+  readonly path: string | null;
+  readonly via: readonly ChangeBriefHop[];
+}
+
 /** The consumers, with how the set was reached and where it stops. */
-export interface ChangeBriefConsumers extends DependencyImpact {
+export interface ChangeBriefConsumers
+  extends Omit<DependencyImpact, "candidates"> {
+  /** Capped at `CHANGE_BRIEF_CONSUMER_CAP`, each hop projected (R-02). */
+  readonly candidates: readonly ChangeBriefCandidate[];
   /** `exact` only when the walk, the relations and every row read agree. */
   readonly bound: ImpactBound;
   /** Why it is a floor, when it is. Empty exactly when `bound` is `exact`. */
@@ -218,7 +244,18 @@ export function prepareChange(
                 ]
               : []),
           ],
-          candidates: walk.candidates.slice(0, CHANGE_BRIEF_CONSUMER_CAP),
+          candidates: walk.candidates
+            .slice(0, CHANGE_BRIEF_CONSUMER_CAP)
+            .map(({ distance, nodeId, path, via }) => ({
+              distance,
+              nodeId,
+              path,
+              via: via.map(({ provenance, relation, tier }) => ({
+                provenance,
+                relation,
+                tier,
+              })),
+            })),
           confidence: impact.confidence,
         }
       : null;

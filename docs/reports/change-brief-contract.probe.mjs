@@ -1,4 +1,4 @@
-// RE-03 ⑶a — the change-brief contract, produced rather than written.
+// RE-03 — the change-brief contract, produced rather than written.
 // Read-only: no network, model API, database or repository writes.
 // Run from the target checkout:
 //   node --import tsx docs/reports/change-brief-contract.probe.mjs
@@ -163,126 +163,37 @@ const partial = {
 };
 
 /**
- * The proposed composition, computed here and NOT in the product source —
- * 03a is the contract, 03b is the implementation. Every value below is read
- * off the existing types; nothing is invented.
+ * The brief as `prepareChange` actually builds it (RE-03 ⑶b, R-01, R-02).
+ *
+ * In 03a this function composed a *proposed* shape by hand, because the
+ * implementation did not exist yet. It exists now, so the examples come
+ * from the implementation itself — a contract document whose examples were
+ * written separately from the code would drift from it the first time
+ * either changed. `impactOf` is called here only to show what the brief
+ * reports from it; the brief itself calls it once.
  */
 function compose(workspace, selector, label) {
   const brief = prepareChange(workspace, selector);
-  const repositories = workspace.repositories;
-  // The same call `prepareChange` makes internally, kept here so the
-  // contract can show what the brief drops on the floor today.
   const report = brief.target.nodeId
     ? impactOf(workspace, brief.target.nodeId, 2, "dependency-impact")
     : null;
-  const holder =
-    repositories.find((repo) =>
-      repo.artifacts.some(({ id }) => id === brief.target.nodeId),
-    ) ?? null;
-  const basis = holder?.basis ?? null;
-  const row = holder?.artifacts.find(({ id }) => id === brief.target.nodeId);
-
-  // `impactOf` carries the evidence grade and the bound; `ChangeBrief` drops
-  // both today. The contract keeps them, because "12 consumers" assembled
-  // from resolved import edges and from one an agent asserted by hand are
-  // not the same claim.
-  const body = brief.target.card
-    ? estimateTokens(JSON.stringify(brief.target.card))
-    : 0;
-
-  const composed = {
-    basis:
-      basis === null
-        ? {
-            available: false,
-            reason:
-              "no read basis accompanied this repository; commit and revision cannot be stated",
-          }
-        : {
-            analyzedCommit: basis.analyzedCommit,
-            available: true,
-            dataRevision: basis.dataRevision,
-            // Typed `null` at the source: there is no immutable generation
-            // to name, so none is named.
-            graphGeneration: basis.graphGeneration,
-            indexedCommit: basis.indexedCommit,
-            readConsistency: workspace.coverage?.readConsistency ?? "unproven",
-            repositoryFullName: holder?.fullName ?? null,
-            repositoryId: basis.repositoryId,
-            stages: basis.stages,
-          },
-    budget: {
-      approach:
-        "one token per four UTF-16 characters of the serialised value; an approximation, not a provider's billed count",
-      targetCardTokens: body,
-      truncatedItems: [],
-    },
-    consumers:
-      brief.consumers === null
-        ? null
-        : {
-            // Read from the impact report, NOT from `dependencyImpact.complete`.
-            // `complete` says only that the walk ran out of graph; it knows
-            // nothing about a capped table or a dropped relation, so a brief
-            // over a truncated read currently presents its consumer list as
-            // the whole answer. `bound` is the field that accounts for all
-            // three.
-            bound: report?.bound ?? null,
-            boundReasons: report?.boundReasons ?? [],
-            confidence: report?.confidence ?? null,
-            candidates: brief.consumers.candidates.map((candidate) => ({
-              distance: candidate.distance,
-              nodeId: candidate.nodeId,
-              path: candidate.path,
-              via: candidate.via.map((ref) => ({
-                provenance: ref.provenance,
-                relation: ref.relation,
-                tier: ref.tier,
-              })),
-            })),
-            relatedTests: brief.consumers.relatedTests,
-            stoppedBy: brief.consumers.stoppedBy,
-          },
-    missing: brief.missing,
-    omissions: brief.omissions,
-    target:
-      brief.target.nodeId === null
-        ? {
-            ambiguous: true,
-            nodeId: null,
-            path: brief.target.path,
-          }
-        : {
-            ambiguous: false,
-            freshness: brief.target.card?.summary.state ?? null,
-            nodeId: brief.target.nodeId,
-            path: brief.target.path,
-            sourceDigest: row?.blobSha ?? null,
-          },
-  };
   return {
-    current: brief,
-    dropped: report
-      ? {
-          affectedRoutes: report.affectedRoutes,
-          bound: report.bound,
-          boundReasons: report.boundReasons,
-          confidence: report.confidence,
-        }
-      : null,
+    brief,
     example: label,
-    proposed: composed,
+    // What impact_of answers that the brief still leaves out, so the gap is
+    // stated rather than implied: `affectedRoutes` (contract §7 ⑵).
+    notCarried: report ? { affectedRoutes: report.affectedRoutes } : null,
   };
 }
 
 /**
- * What an explicit opt-in on `get_artifact` would cost the catalogue, if the
- * pack's selection turns out not to name a target reliably.
+ * The served catalogue, as it stands.
  *
- * Measured against the **real** advertised catalogue, not a hand-written
- * approximation of it: the served `tools/list` payload, then the same
- * payload with one optional boolean added to `get_artifact`'s real schema.
- * OQ-059 is a token budget, so a proposal without a number is not a proposal.
+ * In 03a this measured a hypothetical: the catalogue with one optional
+ * boolean added to `get_artifact` (3,131 → 3,141). 03b added exactly that
+ * field, so widening the real schema again would measure nothing. What is
+ * left to report is the current size against the ratchet; the before/after
+ * history lives in the contract document.
  */
 async function catalogueCost() {
   const store = new InMemoryMcpStore({
@@ -309,32 +220,16 @@ async function catalogueCost() {
     }),
   );
   const listed = await client.listTools();
-  const without = estimateTokens(JSON.stringify(listed.tools));
-  const widened = listed.tools.map((tool) =>
-    tool.name === "get_artifact"
-      ? {
-          ...tool,
-          inputSchema: {
-            ...tool.inputSchema,
-            properties: {
-              ...tool.inputSchema.properties,
-              include_change_brief: {
-                type: "boolean",
-              },
-            },
-          },
-        }
-      : tool,
-  );
-  const with_ = estimateTokens(JSON.stringify(widened));
+  const tokens = estimateTokens(JSON.stringify(listed.tools));
+  const artifactTool = listed.tools.find(({ name }) => name === "get_artifact");
   await client.close();
   return {
     catalogueRatchet: 3_150,
-    delta: with_ - without,
-    note: "served tools/list, then the same payload with one optional boolean added to get_artifact's real schema",
+    getArtifactHasOptIn: Object.keys(
+      artifactTool?.inputSchema.properties ?? {},
+    ).includes("include_change_brief"),
+    tokens,
     toolCount: listed.tools.length,
-    with: with_,
-    without,
   };
 }
 
@@ -346,7 +241,7 @@ const payload = {
     compose(ambiguous, { path: "src/session.ts" }, "ambiguous-target"),
     compose(partial, { path: "src/session.ts" }, "partial-result"),
   ],
-  optInCost: await catalogueCost(),
+  catalogue: await catalogueCost(),
 };
 
 log(JSON.stringify(payload, null, 2));

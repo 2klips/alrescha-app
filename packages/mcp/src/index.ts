@@ -6,7 +6,9 @@ export type {
   ChangeBrief,
   ChangeBriefBasis,
   ChangeBriefBudget,
+  ChangeBriefCandidate,
   ChangeBriefConsumers,
+  ChangeBriefHop,
   ChangeBriefTarget,
 } from "./prepare-change";
 export {

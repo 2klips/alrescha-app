@@ -423,6 +423,37 @@ describe("the change brief, composed", () => {
     }
   });
 
+  /**
+   * R-02 (post-merge review, 2026-09-23). The contract kept three fields per
+   * hop — relation, tier, provenance — and the implementation passed all
+   * nine, so every capped consumer repeated edge ids and endpoints the
+   * candidate already names. The projection is the brief's; `impact_of`
+   * answers with the full edge, unchanged.
+   */
+  it("carries each hop as relation, tier and provenance only", () => {
+    const brief = prepareChange(healthy(), { path: "src/session.ts" });
+    const hops = (brief.consumers?.candidates ?? []).flatMap(({ via }) => via);
+    expect(hops.length).toBeGreaterThan(0);
+    for (const hop of hops) {
+      expect(Object.keys(hop).sort()).toEqual(["provenance", "relation", "tier"]);
+    }
+    // The evidence survives the projection intact: how the edge was found,
+    // why, and where.
+    const stored = edge("imports", TEST, CODE);
+    expect(hops.find(({ relation }) => relation === "imports")).toEqual({
+      provenance: stored.provenance,
+      relation: "imports",
+      tier: "resolved",
+    });
+    // The candidate still says which node and how far — the fields the hop
+    // no longer repeats.
+    expect(brief.consumers?.candidates[0]).toMatchObject({
+      distance: 1,
+      nodeId: TEST,
+      path: "tests/session.test.ts",
+    });
+  });
+
   it("estimates its own size and says the estimate is an approximation", () => {
     const brief = prepareChange(healthy(), { path: "src/session.ts" });
     expect(brief.budget.targetCardTokens).toBeGreaterThan(0);
@@ -640,6 +671,38 @@ describe("get_artifact carries the brief only when asked", () => {
     // Four ids are four targets; a brief is about one.
     expect(payload).not.toHaveProperty("changeBrief");
     expect(payload).toHaveProperty("nodes");
+  });
+
+  it("leaves impact_of's edges whole", async () => {
+    const client = await connect(
+      new InMemoryMcpStore({ workspaces: [healthy()] }),
+    );
+    const answer = await client.callTool({
+      arguments: { mode: "dependency-impact", node_id: CODE },
+      name: "impact_of",
+    });
+    const payload = answer.structuredContent as {
+      found: boolean;
+      impact: {
+        dependencyImpact: {
+          candidates: { via: Record<string, unknown>[] }[];
+        } | null;
+      } | null;
+    };
+    expect(payload.found).toBe(true);
+    const hop = payload.impact?.dependencyImpact?.candidates[0]?.via[0];
+    // The brief projects; the tool that answers about impact does not.
+    expect(Object.keys(hop ?? {}).sort()).toEqual([
+      "confidence",
+      "derived",
+      "family",
+      "id",
+      "provenance",
+      "relation",
+      "sourceNodeId",
+      "targetNodeId",
+      "tier",
+    ]);
   });
 
   it("keeps the catalogue at 21 tools inside its ratchet", async () => {
