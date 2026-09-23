@@ -648,10 +648,17 @@ function createServer(
   /**
    * The symbols a search hit matched, with where they are (todo 26, R5
    * §2.9 ⑹). The index ranks a file by its symbol names; this reads the
-   * hit files' layer — by neighbourhood, never whole — and pairs each
+   * hit files' own symbols — never the workspace's — and pairs each
    * matched name with its node id and `path:startLine-endLine`, so the
    * caller can open the file at the span or ask `impact_of` about the
    * symbol without another lookup.
+   *
+   * By file, not by neighbourhood (RE-04). A hit shows a name, a kind and a
+   * span; the neighbourhood read also fetched every edge those symbols
+   * touch, with every symbol of every hit file in one request's URL.
+   * Rebuilt locally from this repository — the pilot — a one-name query's
+   * request was 8,568 characters, because a barrel re-exporting 135 names
+   * was among the hits (`docs/reports/re-04-search-failure.probe.mjs`).
    */
   const symbolHitsFor = async (
     workspace: McpWorkspaceData,
@@ -676,9 +683,7 @@ function createServer(
       .map((hit) => hit.nodeId);
     const result = new Map<string, SymbolHit[]>();
     if (tokens.length === 0 || fileIds.length === 0) return result;
-    const layer = await store.loadSymbolNeighborhood(principal, {
-      nodeIds: fileIds,
-    });
+    const layer = await store.loadFileSymbols(principal, { fileIds });
     for (const symbol of layer.symbols) {
       const matched = byNode.get(symbol.artifactNodeId);
       if (!matched?.includes(symbol.name)) continue;

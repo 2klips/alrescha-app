@@ -764,7 +764,10 @@ describe("search_index and the symbol layer", () => {
 
   it("reads the layer for the files it answers with, and no others", async () => {
     const store = new InMemoryMcpStore({ workspaces: [symbolFixture()] });
-    const spy = vi.spyOn(store, "loadSymbolNeighborhood");
+    // RE-04: the lazy read is `loadFileSymbols` now — a hit's own symbols,
+    // no neighbourhood. The ids it may be asked for are unchanged.
+    const spy = vi.spyOn(store, "loadFileSymbols");
+    const neighbourhood = vi.spyOn(store, "loadSymbolNeighborhood");
     const issued = await store.issueAccessToken({
       actorUserId: USER_ID,
       name: "RE-02 symbols",
@@ -819,10 +822,12 @@ describe("search_index and the symbol layer", () => {
     // The lazy read is scoped to the files that made the page, never to the
     // whole ranking and never to the workspace.
     const readIds = spy.mock.calls.flatMap(
-      ([, input]) => (input as { nodeIds: readonly string[] }).nodeIds,
+      ([, input]) => (input as { fileIds: readonly string[] }).fileIds,
     );
     expect(readIds).toEqual(["yn20"]);
+    expect(neighbourhood).not.toHaveBeenCalled();
     spy.mockRestore();
+    neighbourhood.mockRestore();
   });
 
   it("keeps the per-file symbol cap", async () => {

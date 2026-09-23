@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   SYMBOL_LAYER_LIMITS,
+  selectFileSymbols,
   selectSymbolNeighborhood,
   withSymbolNeighborhood,
   type McpEdgeData,
@@ -154,6 +155,59 @@ describe("selecting a symbol neighbourhood", () => {
     );
     expect(capped.symbols).toHaveLength(SYMBOL_LAYER_LIMITS.symbols);
     expect(capped.edges).toHaveLength(SYMBOL_LAYER_LIMITS.symbols);
+    expect(capped.truncated).toEqual([
+      { limit: SYMBOL_LAYER_LIMITS.symbols, table: "symbols" },
+    ]);
+  });
+});
+
+/**
+ * A file's own symbols, and nothing they reach (RE-04). What a search hit
+ * shows is a name, a kind and a span in the file it hit; the edges and the
+ * `extends` hop a neighbourhood carries are not part of that answer, so the
+ * read that serves it does not fetch them.
+ */
+describe("selecting the symbols of named files", () => {
+  it("answers the files' symbols in reading order, and no hop", () => {
+    const read = selectFileSymbols(POOL.symbols, ["fb", "fa"]);
+    // fa's two, then fb's one — and not c1, which extends b1 from a file
+    // nobody named.
+    expect(read.symbols.map(({ nodeId }) => nodeId)).toEqual([
+      "a1",
+      "a2",
+      "b1",
+    ]);
+    expect(read.truncated).toEqual([]);
+  });
+
+  it("answers nothing for an id that owns no symbol", () => {
+    expect(selectFileSymbols(POOL.symbols, ["nope"])).toEqual({
+      symbols: [],
+      truncated: [],
+    });
+  });
+
+  it("stops at the neighbourhood's caps and says so", () => {
+    const files = Array.from(
+      { length: SYMBOL_LAYER_LIMITS.files + 1 },
+      (_, index) => `f${String(index).padStart(3, "0")}`,
+    );
+    const many = selectFileSymbols(
+      files.map((file, index) => symbol(`s${index}`, file, `S${index}`, 1)),
+      files,
+    );
+    expect(many.symbols).toHaveLength(SYMBOL_LAYER_LIMITS.files);
+    expect(many.truncated).toEqual([
+      { limit: SYMBOL_LAYER_LIMITS.files, table: "files" },
+    ]);
+
+    const crowded = Array.from(
+      { length: SYMBOL_LAYER_LIMITS.symbols + 1 },
+      (_, index) => symbol(`s${index}`, "big", `S${index}`, index + 1),
+    );
+    const capped = selectFileSymbols(crowded, ["big"]);
+    expect(capped.symbols).toHaveLength(SYMBOL_LAYER_LIMITS.symbols);
+    expect(capped.symbols.at(-1)?.startLine).toBe(SYMBOL_LAYER_LIMITS.symbols);
     expect(capped.truncated).toEqual([
       { limit: SYMBOL_LAYER_LIMITS.symbols, table: "symbols" },
     ]);

@@ -44,6 +44,7 @@ export {
   bandUnsupportedReason,
   edgeOmissionReason,
   hashAccessToken,
+  selectFileSymbols,
   selectSymbolNeighborhood,
   withSymbolNeighborhood,
 } from "./store";
@@ -134,6 +135,7 @@ export type {
   McpSessionUsageInput,
   McpSessionUsageResult,
   McpSourceSpan,
+  McpFileSymbolRead,
   McpSymbolData,
   McpSymbolNeighborhood,
   McpStore,

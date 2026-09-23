@@ -2539,6 +2539,67 @@ describe("the symbol layer", () => {
     expect(spec === undefined || spec.symbols === undefined).toBe(true);
   });
 
+  /**
+   * What a search hit needs from the layer is a name, a kind and a span —
+   * never an edge (RE-04). Reading the hit files' whole neighbourhood put
+   * every symbol of every hit file into one request's URL, twice; rebuilt
+   * from this repository, a single export name made that request 8,568
+   * characters, because a barrel file re-exporting 135 names was among the
+   * hits.
+   */
+  it("reads a search hit's symbols by file, and never their edges", async () => {
+    const neighbourhoods: (readonly string[])[] = [];
+    const fileReads: (readonly string[])[] = [];
+    class RecordingStore extends InMemoryMcpStore {
+      override async loadSymbolNeighborhood(
+        ...args: Parameters<InMemoryMcpStore["loadSymbolNeighborhood"]>
+      ) {
+        neighbourhoods.push(args[1].nodeIds);
+        return super.loadSymbolNeighborhood(...args);
+      }
+      override async loadFileSymbols(
+        ...args: Parameters<InMemoryMcpStore["loadFileSymbols"]>
+      ) {
+        fileReads.push(args[1].fileIds);
+        return super.loadFileSymbols(...args);
+      }
+    }
+    const store = new RecordingStore({ workspaces: [layered()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Symbols",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const { client, transport } = createSdkClient(
+      createHostedMcpEndpoint({ store }).fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const answer = await client.callTool({
+      arguments: { query: "ReportParser" },
+      name: "search_index",
+    });
+    const hit = (
+      answer.structuredContent as {
+        results: { nodeId: string; symbols?: unknown }[];
+      }
+    ).results.find(({ nodeId }) => nodeId === FILE);
+    expect(hit?.symbols).toEqual([
+      {
+        kind: "class",
+        name: "ReportParser",
+        nodeId: PARSER,
+        span: `${PATH}:42-60`,
+      },
+    ]);
+    // One read, of the one hit file whose symbols matched — no neighbourhood.
+    expect(fileReads).toEqual([[FILE]]);
+    expect(neighbourhoods).toEqual([]);
+  });
+
   it("does not find an id that names neither a file nor a symbol", async () => {
     const client = await connected();
     const answer = await client.callTool({

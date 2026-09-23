@@ -405,6 +405,50 @@ export interface McpSymbolNeighborhood {
 }
 
 /**
+ * What `loadFileSymbols` answers: the symbols the named files declare, in
+ * reading order, and where the caps stopped it.
+ */
+export interface McpFileSymbolRead {
+  symbols: McpSymbolData[];
+  truncated: McpReadTruncation[];
+}
+
+/** File, then line, then name — how a layer is read top to bottom. */
+function symbolReadingOrder(left: McpSymbolData, right: McpSymbolData): number {
+  return (
+    left.path.localeCompare(right.path) ||
+    left.startLine - right.startLine ||
+    left.name.localeCompare(right.name)
+  );
+}
+
+/**
+ * The symbols of the files named, and nothing they reach (RE-04): what a
+ * search hit shows is a name, a kind and a span in the file it hit. The
+ * neighbourhood's caps and order, without its edges or its `extends` hop —
+ * both stores hand this their pool, as they do `selectSymbolNeighborhood`.
+ */
+export function selectFileSymbols(
+  pool: readonly McpSymbolData[],
+  fileIds: readonly string[],
+): McpFileSymbolRead {
+  const named = [...new Set(fileIds)].sort();
+  const truncated: McpReadTruncation[] = [];
+  const files = new Set(named.slice(0, SYMBOL_LAYER_LIMITS.files));
+  if (files.size < named.length) {
+    truncated.push({ limit: SYMBOL_LAYER_LIMITS.files, table: "files" });
+  }
+  const symbols = pool
+    .filter((symbol) => files.has(symbol.artifactNodeId))
+    .sort(symbolReadingOrder);
+  const kept = symbols.slice(0, SYMBOL_LAYER_LIMITS.symbols);
+  if (kept.length < symbols.length) {
+    truncated.push({ limit: SYMBOL_LAYER_LIMITS.symbols, table: "symbols" });
+  }
+  return { symbols: kept, truncated };
+}
+
+/**
  * The neighbourhood rule, over whatever pool the store handed it: the
  * in-memory store passes a repository's whole layer, the hosted one passes
  * the rows it fetched by id. Same caps, same hop, so a tool answers the same
@@ -469,12 +513,7 @@ export function selectSymbolNeighborhood(
   const symbols = [...reached]
     .map((id) => byId.get(id))
     .filter((symbol): symbol is McpSymbolData => symbol !== undefined)
-    .sort(
-      (left, right) =>
-        left.path.localeCompare(right.path) ||
-        left.startLine - right.startLine ||
-        left.name.localeCompare(right.name),
-    );
+    .sort(symbolReadingOrder);
   const keptSymbols =
     symbols.length > SYMBOL_LAYER_LIMITS.symbols
       ? symbols.slice(0, SYMBOL_LAYER_LIMITS.symbols)
@@ -1122,6 +1161,16 @@ export interface McpStore {
     principal: McpPrincipal,
     input: { nodeIds: readonly string[] },
   ): Promise<McpSymbolNeighborhood>;
+  /**
+   * The symbols the named files declare, and no edge or hop (RE-04): what
+   * `search_index` shows on a hit. It used to borrow the neighbourhood read,
+   * which fetches every edge those symbols touch — none of which a hit
+   * shows — with every symbol of every hit file in the request's URL.
+   */
+  loadFileSymbols(
+    principal: McpPrincipal,
+    input: { fileIds: readonly string[] },
+  ): Promise<McpFileSymbolRead>;
   /**
    * Every receipt with its summary, for the one reader that needs them
    * (RE-04 B-01). `loadWorkspace` carries receipts without summaries; this
@@ -1904,6 +1953,21 @@ export class InMemoryMcpStore implements McpStore {
         ),
       },
       input.nodeIds,
+    );
+  }
+
+  /** A search hit's symbols (RE-04): the files' own, from the same layer. */
+  async loadFileSymbols(
+    principal: McpPrincipal,
+    input: { fileIds: readonly string[] },
+  ): Promise<McpFileSymbolRead> {
+    const workspace = this.#workspaces.get(principal.workspaceId);
+    if (!workspace || workspace.ownerUserId !== principal.userId) {
+      throw new Error("Workspace access denied");
+    }
+    return selectFileSymbols(
+      workspace.repositories.flatMap((repository) => repository.symbols ?? []),
+      input.fileIds,
     );
   }
 

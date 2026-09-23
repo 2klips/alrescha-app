@@ -12,7 +12,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SupabaseMcpStore } from "./supabase-store";
 
-type TableResponse = { data: unknown; error: { message: string } | null };
+type TableResponse = {
+  data: unknown;
+  error: { code?: string; message: string } | null;
+  /** What PostgREST answered with; the real client always sets it. */
+  status?: number;
+};
 type HttpSendResult =
   { success: true } | { success: false; status: number; error: string };
 
@@ -1429,5 +1434,200 @@ describe("SupabaseMcpStore — receipt summaries leave the workspace read", () =
     await expect(store.loadReceiptSummaries(PRINCIPAL)).rejects.toThrow(
       "MCP receipt summary query failed: statement timeout",
     );
+  });
+});
+
+/**
+ * The symbol layer, in requests a gateway accepts (RE-04).
+ *
+ * PostgREST filters travel in the URL. The layer used to put every symbol of
+ * the files it was asked about into one `or` — once per endpoint column — so
+ * the request grew with the file. Rebuilt locally from this repository —
+ * the pilot — one export name made the search's edge request 8,568
+ * characters because a barrel re-exporting 135 names was among the hits,
+ * and a common word made it 57,056. Supabase does
+ * not publish where its gateway stops; postgrest-js warns past 8,000.
+ */
+describe("SupabaseMcpStore — the symbol layer in bounded requests", () => {
+  const LAYER_REPOSITORY = "01K287J3D18V7A1MZG9E8D1Y20";
+  const PRINCIPAL = {
+    scopes: ["mcp:read" as const],
+    tokenId: TOKEN_ID,
+    userId: USER_ID,
+    workspaceId: WORKSPACE_ID,
+  };
+  const ulid = (n: number) =>
+    `01K287J3D18V7A1MZG9E${String(n).padStart(6, "0")}`;
+  const FILE = ulid(900_000);
+
+  function symbolRow(n: number, file = FILE) {
+    return {
+      artifact_id: file,
+      container: null,
+      end_line: n + 2,
+      engine: "typescript-ast",
+      id: ulid(n),
+      kind: "function",
+      name: `name${n}`,
+      path: `src/${file}.ts`,
+      repository_id: LAYER_REPOSITORY,
+      stable_key: `key-${n}`,
+      start_line: n + 1,
+    };
+  }
+
+  function declaresRow(n: number) {
+    return {
+      confidence: 1,
+      family: "hierarchy",
+      id: ulid(500_000 + n),
+      provenance: { method: "typescript-ast", tier: "resolved" },
+      relation: "declares",
+      source_node_id: FILE,
+      target_node_id: ulid(n),
+    };
+  }
+
+  /** Every argument one method was given, on every builder of one table. */
+  function argsOf(fake: FakeSupabaseClient, table: string, method: string) {
+    return fake.fromCalls.flatMap((name, index) =>
+      name === table
+        ? (fake.builders[index]?.calls ?? [])
+            .filter((call) => call.method === method)
+            .map((call) => call.args)
+        : [],
+    );
+  }
+
+  /** The ids in each `or` filter's two lists, per request. */
+  function orLists(fake: FakeSupabaseClient): string[][][] {
+    return argsOf(fake, "symbol_edges", "or").map(([filter]) =>
+      [...String(filter).matchAll(/\.in\.\(([^)]*)\)/g)].map((match) =>
+        (match[1] ?? "").split(","),
+      ),
+    );
+  }
+
+  it("reads a search hit's symbols by file within the workspace, and no edge or hop", async () => {
+    const fake = new FakeSupabaseClient({
+      symbols: { data: [symbolRow(2), symbolRow(1)], error: null },
+    });
+    const store = new SupabaseMcpStore(asClient(fake));
+    const read = await store.loadFileSymbols(PRINCIPAL, { fileIds: [FILE] });
+
+    expect(fake.fromCalls).toEqual(["symbols"]);
+    expect(argsOf(fake, "symbols", "eq")).toContainEqual([
+      "workspace_id",
+      WORKSPACE_ID,
+    ]);
+    expect(argsOf(fake, "symbols", "in")).toEqual([["artifact_id", [FILE]]]);
+    // Reading order, as the neighbourhood states it.
+    expect(read.symbols.map(({ name }) => name)).toEqual(["name1", "name2"]);
+    expect(read.truncated).toEqual([]);
+  });
+
+  it("asks for a search page's files at most sixty at a time", async () => {
+    const files = Array.from({ length: 130 }, (_, n) => ulid(700_000 + n));
+    const fake = new FakeSupabaseClient({ symbols: { data: [], error: null } });
+    const store = new SupabaseMcpStore(asClient(fake));
+    await store.loadFileSymbols(PRINCIPAL, { fileIds: files });
+
+    const lists = argsOf(fake, "symbols", "in").map(
+      ([, ids]) => ids as string[],
+    );
+    expect(lists.map((ids) => ids.length)).toEqual([60, 60, 10]);
+    expect(lists.flat().sort()).toEqual([...files].sort());
+  });
+
+  it("asks for a file's symbol edges sixty symbols at a time, and keeps each edge once", async () => {
+    const count = 130;
+    const fake = new FakeSupabaseClient({
+      artifacts: { data: [{ id: FILE }], error: null },
+      // Every request is answered with every edge: an edge two batches both
+      // touch must still arrive once.
+      symbol_edges: {
+        data: Array.from({ length: count }, (_, n) => declaresRow(n + 1)),
+        error: null,
+      },
+      symbols: {
+        data: Array.from({ length: count }, (_, n) => symbolRow(n + 1)),
+        error: null,
+      },
+    });
+    const store = new SupabaseMcpStore(asClient(fake));
+    const layer = await store.loadSymbolNeighborhood(PRINCIPAL, {
+      nodeIds: [FILE],
+    });
+
+    const lists = orLists(fake);
+    expect(lists).toHaveLength(3);
+    for (const [sources, targets] of lists) {
+      expect(sources?.length).toBeLessThanOrEqual(60);
+      expect(targets).toEqual(sources);
+    }
+    expect(lists.flatMap(([sources]) => sources ?? []).sort()).toEqual(
+      Array.from({ length: count }, (_, n) => ulid(n + 1)).sort(),
+    );
+    expect(argsOf(fake, "symbol_edges", "eq")).toContainEqual([
+      "workspace_id",
+      WORKSPACE_ID,
+    ]);
+    expect(layer.symbols).toHaveLength(count);
+    expect(layer.edges).toHaveLength(count);
+    expect(new Set(layer.edges.map(({ id }) => id)).size).toBe(count);
+  });
+
+  /**
+   * What a verifier may keep from a failed read without keeping its body:
+   * the HTTP status, the PostgREST or SQLSTATE code, and which read it was.
+   * The first `search_index` after 47b32d2 came back as an unclassified
+   * tool error because the message carried none of these.
+   */
+  it("names a failed read's status and code ahead of its text", async () => {
+    const tooLong = new FakeSupabaseClient({
+      symbols: {
+        data: null,
+        error: { message: "URI too long\n" },
+        status: 414,
+      },
+    });
+    await expect(
+      new SupabaseMcpStore(asClient(tooLong)).loadFileSymbols(PRINCIPAL, {
+        fileIds: [FILE],
+      }),
+    ).rejects.toThrow(
+      /^\[HTTP 414\] MCP file symbol query failed: URI too long/,
+    );
+
+    const timedOut = new FakeSupabaseClient({
+      receipts: {
+        data: null,
+        error: {
+          code: "57014",
+          message: "canceling statement due to statement timeout",
+        },
+        status: 500,
+      },
+    });
+    await expect(
+      new SupabaseMcpStore(asClient(timedOut)).loadReceiptSummaries(PRINCIPAL),
+    ).rejects.toThrow(
+      /^\[HTTP 500 57014\] MCP receipt summary query failed: canceling statement/,
+    );
+  });
+
+  it("keeps a code out of the tag when it is not a code", async () => {
+    const odd = new FakeSupabaseClient({
+      symbols: {
+        data: null,
+        error: { code: "not a code; drop table", message: "odd" },
+        status: 400,
+      },
+    });
+    await expect(
+      new SupabaseMcpStore(asClient(odd)).loadFileSymbols(PRINCIPAL, {
+        fileIds: [FILE],
+      }),
+    ).rejects.toThrow(/^\[HTTP 400\] MCP file symbol query failed: odd$/);
   });
 });

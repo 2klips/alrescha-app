@@ -14,6 +14,7 @@ import {
   SYMBOL_EDGE_RELATIONS,
   SYMBOL_LAYER_LIMITS,
   bandUnsupportedReason,
+  selectFileSymbols,
   selectSymbolNeighborhood,
   createAccessTokenSecret,
   createUlid,
@@ -35,6 +36,7 @@ import {
   type McpEdgeProvenance,
   type McpEdgeRelation,
   type McpEdgeTier,
+  type McpFileSymbolRead,
   type McpReadBasis,
   type McpRescanResult,
   type McpReadTruncation,
@@ -61,6 +63,8 @@ import {
 } from "@alrescha/mcp";
 import { LINK_SCHEMA_VERSION, summaryState } from "@alrescha/core";
 
+import { firstRowsById, readInBatches } from "../supabase/id-batches";
+
 type Row = Record<string, unknown>;
 
 /**
@@ -71,8 +75,38 @@ type Row = Record<string, unknown>;
  */
 const LAST_USED_AT_TOUCH_THROTTLE_MS = 5 * 60_000;
 
-function queryError(label: string, error: { message: string } | null): void {
-  if (error) throw new Error(`${label}: ${error.message}`);
+/** A PostgREST (`PGRST116`) or SQLSTATE (`57014`) code, and nothing else. */
+const RESPONSE_CODE = /^(?:PGRST\d{3}|[0-9A-Z]{5})$/;
+
+/**
+ * A failed read as an error a verifier can classify without keeping its
+ * body (RE-04): `[HTTP 414] MCP symbol edge query failed: URI too long`.
+ *
+ * The status and the response code lead and the label names the read;
+ * everything after the colon is the upstream's text, which may quote the
+ * request. The first `search_index` after 47b32d2 failed with a message
+ * that led with none of these, and the only way to tell which read it was
+ * would have been to keep the text. A response with no status — only a
+ * test double's — keeps the old form.
+ */
+function queryError(
+  label: string,
+  response: {
+    error: { code?: string; message: string } | null;
+    status?: number;
+  },
+): void {
+  const { error } = response;
+  if (!error) return;
+  const code =
+    typeof error.code === "string" && RESPONSE_CODE.test(error.code)
+      ? ` ${error.code}`
+      : "";
+  const tag =
+    typeof response.status === "number"
+      ? `[HTTP ${response.status}${code}] `
+      : "";
+  throw new Error(`${tag}${label}: ${error.message}`);
 }
 
 function rows(data: unknown): Row[] {
@@ -357,7 +391,7 @@ export class SupabaseMcpStore implements McpStore {
       .eq("id", workspaceId)
       .eq("owner_user_id", actorUserId)
       .maybeSingle();
-    queryError("Workspace owner check failed", result.error);
+    queryError("Workspace owner check failed", result);
     if (!result.data) throw new Error("Workspace access denied");
   }
 
@@ -499,7 +533,7 @@ export class SupabaseMcpStore implements McpStore {
       user_id: note.userId,
       workspace_id: note.workspaceId,
     });
-    queryError("MCP note write failed", result.error);
+    queryError("MCP note write failed", result);
     return note;
   }
 
@@ -527,7 +561,7 @@ export class SupabaseMcpStore implements McpStore {
       p_user_id: principal.userId,
       p_workspace_id: principal.workspaceId,
     });
-    queryError("MCP progress write failed", result.error);
+    queryError("MCP progress write failed", result);
     const row = rows(result.data)[0];
     if (!row) throw new Error("MCP progress write failed: empty result");
     const event: McpProgressEvent = {
@@ -559,7 +593,7 @@ export class SupabaseMcpStore implements McpStore {
       )
       .eq("token_hash", hashAccessToken(secret))
       .maybeSingle();
-    queryError("MCP token lookup failed", result.error);
+    queryError("MCP token lookup failed", result);
     const token = result.data as Row | null;
     if (!token || token.revoked_at) return null;
     if (
@@ -629,7 +663,7 @@ export class SupabaseMcpStore implements McpStore {
         "id, workspace_id, created_by, name, token_prefix, scopes, created_at, last_used_at, expires_at, revoked_at",
       )
       .single();
-    queryError("MCP token issuance failed", inserted.error);
+    queryError("MCP token issuance failed", inserted);
     const row = inserted.data as Row;
     return {
       record: this.publicToken(row),
@@ -650,7 +684,7 @@ export class SupabaseMcpStore implements McpStore {
       .eq("workspace_id", input.workspaceId)
       .eq("created_by", input.actorUserId)
       .order("created_at", { ascending: false });
-    queryError("MCP token list failed", result.error);
+    queryError("MCP token list failed", result);
     return rows(result.data).map((row) => this.publicToken(row));
   }
 
@@ -691,7 +725,7 @@ export class SupabaseMcpStore implements McpStore {
       .eq("workspace_id", principal.workspaceId)
       .order("id", { ascending: true })
       .limit(MCP_WORKSPACE_READ_LIMIT + 1);
-    queryError("MCP receipt summary query failed", response.error);
+    queryError("MCP receipt summary query failed", response);
     const all = rows(response.data);
     const kept = all.slice(0, MCP_WORKSPACE_READ_LIMIT);
     return {
@@ -712,8 +746,14 @@ export class SupabaseMcpStore implements McpStore {
 
   /**
    * The symbol layer for the ids named (todo 26): a file's symbols, a
-   * symbol itself, their `declares` and one `extends` hop. Three reads by
-   * id and never a whole-workspace one — the caps are the map's.
+   * symbol itself, their `declares` and one `extends` hop. Reads by id and
+   * never a whole-workspace one — the caps are the map's.
+   *
+   * Every id list goes out in batches (RE-04). A file's edges used to be one
+   * request carrying every symbol of the file, twice, in its URL — about
+   * 28,000 characters for a barrel re-exporting 485 names. Each batch runs
+   * the query the single request ran, so the merge below is exactly its
+   * answer (`firstRowsById`).
    */
   async loadSymbolNeighborhood(
     principal: McpPrincipal,
@@ -726,14 +766,20 @@ export class SupabaseMcpStore implements McpStore {
       return { edges: [], symbols: [], truncated: [], unknownNodeIds: named };
     }
 
-    const files = await this.client
-      .from("artifacts")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .in("id", ids);
-    queryError("MCP symbol file lookup failed", files.error);
+    const files = await readInBatches(ids, (batch) =>
+      this.client
+        .from("artifacts")
+        .select("id")
+        .eq("workspace_id", workspaceId)
+        .in("id", batch),
+    );
+    for (const response of files) {
+      queryError("MCP symbol file lookup failed", response);
+    }
     const namedFiles = new Set(
-      rows(files.data).map((row) => requiredString(row, "id")),
+      files.flatMap((response) =>
+        rows(response.data).map((row) => requiredString(row, "id")),
+      ),
     );
     const fileIds = ids
       .filter((id) => namedFiles.has(id))
@@ -741,27 +787,37 @@ export class SupabaseMcpStore implements McpStore {
     const symbolIds = ids.filter((id) => !namedFiles.has(id));
 
     const [byFile, byId] = await Promise.all([
-      fileIds.length === 0
-        ? Promise.resolve({ data: [], error: null })
-        : this.client
-            .from("symbols")
-            .select(SYMBOL_COLUMNS)
-            .eq("workspace_id", workspaceId)
-            .in("artifact_id", fileIds)
-            .order("id", { ascending: true })
-            .limit(SYMBOL_LAYER_LIMITS.symbols + 1),
-      symbolIds.length === 0
-        ? Promise.resolve({ data: [], error: null })
-        : this.client
-            .from("symbols")
-            .select(SYMBOL_COLUMNS)
-            .eq("workspace_id", workspaceId)
-            .in("id", symbolIds),
+      readInBatches(fileIds, (batch) =>
+        this.client
+          .from("symbols")
+          .select(SYMBOL_COLUMNS)
+          .eq("workspace_id", workspaceId)
+          .in("artifact_id", batch)
+          .order("id", { ascending: true })
+          .limit(SYMBOL_LAYER_LIMITS.symbols + 1),
+      ),
+      readInBatches(symbolIds, (batch) =>
+        this.client
+          .from("symbols")
+          .select(SYMBOL_COLUMNS)
+          .eq("workspace_id", workspaceId)
+          .in("id", batch),
+      ),
     ]);
-    queryError("MCP symbol query failed", byFile.error);
-    queryError("MCP symbol lookup failed", byId.error);
+    for (const response of byFile) {
+      queryError("MCP symbol query failed", response);
+    }
+    for (const response of byId) {
+      queryError("MCP symbol lookup failed", response);
+    }
     const seeds = new Map<string, McpSymbolData>();
-    for (const row of [...rows(byFile.data), ...rows(byId.data)]) {
+    for (const row of [
+      ...firstRowsById(
+        byFile.map((response) => rows(response.data)),
+        SYMBOL_LAYER_LIMITS.symbols + 1,
+      ),
+      ...byId.flatMap((response) => rows(response.data)),
+    ]) {
       const symbol = symbolData(row);
       seeds.set(symbol.nodeId, symbol);
     }
@@ -775,16 +831,23 @@ export class SupabaseMcpStore implements McpStore {
     // Every edge that touches a seed: its declaration, what it extends and
     // what extends it. PostgREST's `or` takes the two lists inline; the ids
     // are ULIDs, so nothing in them needs quoting.
-    const seedList = [...seeds.keys()].join(",");
-    const edgeResult = await this.client
-      .from("symbol_edges")
-      .select(SYMBOL_EDGE_COLUMNS)
-      .eq("workspace_id", workspaceId)
-      .or(`source_node_id.in.(${seedList}),target_node_id.in.(${seedList})`)
-      .order("id", { ascending: true })
-      .limit(SYMBOL_LAYER_LIMITS.edges + 1);
-    queryError("MCP symbol edge query failed", edgeResult.error);
-    const edges = rows(edgeResult.data).flatMap((row) => {
+    const edgeResults = await readInBatches([...seeds.keys()], (batch) => {
+      const list = batch.join(",");
+      return this.client
+        .from("symbol_edges")
+        .select(SYMBOL_EDGE_COLUMNS)
+        .eq("workspace_id", workspaceId)
+        .or(`source_node_id.in.(${list}),target_node_id.in.(${list})`)
+        .order("id", { ascending: true })
+        .limit(SYMBOL_LAYER_LIMITS.edges + 1);
+    });
+    for (const response of edgeResults) {
+      queryError("MCP symbol edge query failed", response);
+    }
+    const edges = firstRowsById(
+      edgeResults.map((response) => rows(response.data)),
+      SYMBOL_LAYER_LIMITS.edges + 1,
+    ).flatMap((row) => {
       const edge = symbolEdgeData(row);
       return edge ? [edge] : [];
     });
@@ -799,30 +862,33 @@ export class SupabaseMcpStore implements McpStore {
           .filter((id) => !seeds.has(id)),
       ),
     ];
-    const far =
-      farIds.length === 0
-        ? { data: [], error: null }
-        : await this.client
-            .from("symbols")
-            .select(SYMBOL_COLUMNS)
-            .eq("workspace_id", workspaceId)
-            .in("id", farIds);
-    queryError("MCP symbol hop lookup failed", far.error);
-    const farSymbols = rows(far.data).map(symbolData);
+    const far = await readInBatches(farIds, (batch) =>
+      this.client
+        .from("symbols")
+        .select(SYMBOL_COLUMNS)
+        .eq("workspace_id", workspaceId)
+        .in("id", batch),
+    );
+    for (const response of far) {
+      queryError("MCP symbol hop lookup failed", response);
+    }
+    const farSymbols = far.flatMap((response) =>
+      rows(response.data).map(symbolData),
+    );
     // …and their declaration edges, so a hop lands on a file too.
-    const farDeclares =
-      farSymbols.length === 0
-        ? { data: [], error: null }
-        : await this.client
-            .from("symbol_edges")
-            .select(SYMBOL_EDGE_COLUMNS)
-            .eq("workspace_id", workspaceId)
-            .eq("relation", "declares")
-            .in(
-              "target_node_id",
-              farSymbols.map(({ nodeId }) => nodeId),
-            );
-    queryError("MCP symbol hop edge query failed", farDeclares.error);
+    const farDeclares = await readInBatches(
+      farSymbols.map(({ nodeId }) => nodeId),
+      (batch) =>
+        this.client
+          .from("symbol_edges")
+          .select(SYMBOL_EDGE_COLUMNS)
+          .eq("workspace_id", workspaceId)
+          .eq("relation", "declares")
+          .in("target_node_id", batch),
+    );
+    for (const response of farDeclares) {
+      queryError("MCP symbol hop edge query failed", response);
+    }
     const symbols = [...seeds.values(), ...farSymbols];
     return selectSymbolNeighborhood(
       {
@@ -832,13 +898,52 @@ export class SupabaseMcpStore implements McpStore {
         ]),
         edges: [
           ...edges,
-          ...rows(farDeclares.data).flatMap((row) => {
-            const edge = symbolEdgeData(row);
-            return edge ? [edge] : [];
-          }),
+          ...farDeclares.flatMap((response) =>
+            rows(response.data).flatMap((row) => {
+              const edge = symbolEdgeData(row);
+              return edge ? [edge] : [];
+            }),
+          ),
         ],
         symbols,
       },
+      named,
+    );
+  }
+
+  /**
+   * A search hit's symbols (RE-04): the named files' own, in the workspace,
+   * with no edge and no hop — a hit shows a name, a kind and a span. Batched
+   * like the neighbourhood, and merged to what one ordered, limited query
+   * would have kept before the shared rule orders and caps it.
+   */
+  async loadFileSymbols(
+    principal: McpPrincipal,
+    input: { fileIds: readonly string[] },
+  ): Promise<McpFileSymbolRead> {
+    const workspaceId = principal.workspaceId;
+    const named = [...new Set(input.fileIds)]
+      .filter((id) => ULID_SHAPE.test(id))
+      .sort();
+    const responses = await readInBatches(
+      named.slice(0, SYMBOL_LAYER_LIMITS.files),
+      (batch) =>
+        this.client
+          .from("symbols")
+          .select(SYMBOL_COLUMNS)
+          .eq("workspace_id", workspaceId)
+          .in("artifact_id", batch)
+          .order("id", { ascending: true })
+          .limit(SYMBOL_LAYER_LIMITS.symbols + 1),
+    );
+    for (const response of responses) {
+      queryError("MCP file symbol query failed", response);
+    }
+    return selectFileSymbols(
+      firstRowsById(
+        responses.map((response) => rows(response.data)),
+        SYMBOL_LAYER_LIMITS.symbols + 1,
+      ).map(symbolData),
       named,
     );
   }
@@ -860,7 +965,7 @@ export class SupabaseMcpStore implements McpStore {
     )
       .order("repository_id", { ascending: true })
       .limit(MCP_ARTIFACT_MATCH_LIMIT);
-    queryError("MCP artifact lookup failed", matches.error);
+    queryError("MCP artifact lookup failed", matches);
 
     const matchRows = rows(matches.data);
     if (matchRows.length === 0) return [];
@@ -873,7 +978,7 @@ export class SupabaseMcpStore implements McpStore {
       .select("id, full_name")
       .eq("workspace_id", workspaceId)
       .in("id", repositoryIds);
-    queryError("MCP artifact repository lookup failed", repositories.error);
+    queryError("MCP artifact repository lookup failed", repositories);
     const fullNames = new Map(
       rows(repositories.data).map((row) => [
         requiredString(row, "id"),
@@ -889,7 +994,7 @@ export class SupabaseMcpStore implements McpStore {
         "id",
         matchRows.map((row) => requiredString(row, "id")),
       );
-    queryError("MCP artifact label lookup failed", labels.error);
+    queryError("MCP artifact label lookup failed", labels);
     const labelById = new Map(
       rows(labels.data).map((row) => [
         requiredString(row, "id"),
@@ -949,7 +1054,7 @@ export class SupabaseMcpStore implements McpStore {
         target_repository_id: null,
         target_workspace_id: workspaceId,
       });
-      queryError("MCP edge page query failed", response.error);
+      queryError("MCP edge page query failed", response);
       const page = record(response.data);
       // The ground moved under a fenced page: stop rather than splice rows
       // from two states together. The caller's coverage says so.
@@ -1171,7 +1276,7 @@ export class SupabaseMcpStore implements McpStore {
       ["sections", sections],
       ["concepts", concepts],
     ] as const)
-      queryError(`MCP ${label} query failed`, result.error);
+      queryError(`MCP ${label} query failed`, result);
 
     const labels = new Map(
       kept("graph_nodes", nodes.data).map((row) => [
@@ -1579,7 +1684,7 @@ export class SupabaseMcpStore implements McpStore {
       target_repository_id: repositoryId,
       target_workspace_id: principal.workspaceId,
     });
-    queryError("MCP rescan request failed", result.error);
+    queryError("MCP rescan request failed", result);
     const outcome = record(result.data);
     return {
       jobId: typeof outcome.jobId === "string" ? outcome.jobId : null,
@@ -1601,7 +1706,7 @@ export class SupabaseMcpStore implements McpStore {
       .eq("workspace_id", principal.workspaceId)
       .order("id", { ascending: true })
       .limit(2);
-    queryError("MCP repository lookup failed", rows.error);
+    queryError("MCP repository lookup failed", rows);
     const found = rows.data ?? [];
     return found.length === 1 ? String((found[0] as Row)["id"]) : null;
   }
@@ -1656,7 +1761,7 @@ export class SupabaseMcpStore implements McpStore {
       tool: event.tool,
       workspace_id: event.workspaceId,
     });
-    queryError("Access event write failed", result.error);
+    queryError("Access event write failed", result);
   }
 
   /**
@@ -1699,7 +1804,7 @@ export class SupabaseMcpStore implements McpStore {
       .eq("created_by", input.actorUserId)
       .select("id")
       .maybeSingle();
-    queryError("MCP token revocation failed", result.error);
+    queryError("MCP token revocation failed", result);
     if (!result.data) throw new Error("MCP token not found");
   }
 }

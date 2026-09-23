@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SYMBOL_LAYER_LIMITS } from "@alrescha/mcp";
 
+import { firstRowsById, readInBatches } from "../supabase/id-batches";
+
 /**
  * The map's symbol layer, one request per set of files (Phase 4 Wave F todo
  * 26, R5 §2.4: "near zoom, selected files only, default load 0").
@@ -127,19 +129,32 @@ export async function readSymbolLayer(
   // The far end of an `extends` may be a symbol of a file not asked for;
   // the edge still travels, so the halo can say "extends X" with X's id,
   // and the client asks for X's file when it wants X drawn.
+  //
+  // Sixty symbols a request (RE-04): one request with every symbol in its
+  // URL, twice, was about 28,000 characters for a barrel re-exporting 485
+  // names, and a halo the gateway refuses is a halo that never draws.
   const edges: SymbolLayerEdge[] = [];
   if (symbolIds.length > 0) {
-    const list = symbolIds.join(",");
-    const edgeResult = await client
-      .from("symbol_edges")
-      .select("id,source_node_id,target_node_id,relation")
-      .or(`source_node_id.in.(${list}),target_node_id.in.(${list})`)
-      .order("id", { ascending: true })
-      .limit(SYMBOL_LAYER_LIMITS.edges + 1);
-    if (edgeResult.error) {
-      throw new Error(`symbol edge read failed: ${edgeResult.error.message}`);
+    const edgeResults = await readInBatches(symbolIds, (batch) => {
+      const list = batch.join(",");
+      return client
+        .from("symbol_edges")
+        .select("id,source_node_id,target_node_id,relation")
+        .or(`source_node_id.in.(${list}),target_node_id.in.(${list})`)
+        .order("id", { ascending: true })
+        .limit(SYMBOL_LAYER_LIMITS.edges + 1);
+    });
+    for (const edgeResult of edgeResults) {
+      if (edgeResult.error) {
+        throw new Error(`symbol edge read failed: ${edgeResult.error.message}`);
+      }
     }
-    const edgeRows = (edgeResult.data ?? []) as SymbolEdgeRow[];
+    const edgeRows = firstRowsById(
+      edgeResults.map(
+        (edgeResult) => (edgeResult.data ?? []) as SymbolEdgeRow[],
+      ),
+      SYMBOL_LAYER_LIMITS.edges + 1,
+    );
     const keptEdges =
       edgeRows.length > SYMBOL_LAYER_LIMITS.edges
         ? edgeRows.slice(0, SYMBOL_LAYER_LIMITS.edges)
