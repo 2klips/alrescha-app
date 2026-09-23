@@ -830,16 +830,20 @@ function createServer(
     "Receipt summary",
     "In-toto-shaped assurance receipt summaries",
     async () => {
-      const workspace = await readWorkspace();
-      const receipts = workspace.repositories.flatMap((repository) =>
-        repository.receipts.map((receipt) => ({
-          ...receipt,
-          repositoryId: repository.id,
-        })),
-      );
+      // The one reader of receipt summaries asks for them (RE-04 B-01). The
+      // workspace read no longer carries the column — it was 40 MB on the
+      // pilot and every tool paid for it — so this resource reads receipts
+      // by itself rather than through `readWorkspace`. Same rows, same order,
+      // same payload shape as before; a capped read now says so.
+      requireScope("mcp:read");
+      const read = await store.loadReceiptSummaries(principal);
       return {
-        payload: { receipts, workspaceId: workspace.id },
-        targetNodeIds: receipts.map(({ id }) => id),
+        payload: {
+          receipts: read.receipts,
+          ...(read.truncated ? { truncated: read.truncated } : {}),
+          workspaceId: principal.workspaceId,
+        },
+        targetNodeIds: read.receipts.map(({ id }) => id),
       };
     },
   );

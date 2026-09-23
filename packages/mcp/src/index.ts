@@ -6,7 +6,9 @@ export type {
   ChangeBrief,
   ChangeBriefBasis,
   ChangeBriefBudget,
+  ChangeBriefCandidate,
   ChangeBriefConsumers,
+  ChangeBriefHop,
   ChangeBriefTarget,
 } from "./prepare-change";
 export {
@@ -120,6 +122,8 @@ export type {
   McpProgressEvent,
   McpProgressStatus,
   McpReceiptData,
+  McpReceiptSummaryRead,
+  McpReceiptWithSummary,
   McpRepositoryData,
   McpRequirementData,
   McpRescanResult,

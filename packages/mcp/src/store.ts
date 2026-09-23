@@ -605,7 +605,38 @@ export interface McpReceiptData {
   digest: string | null;
   id: string;
   status: string;
+  /**
+   * The receipt's statement and finding delta (RE-04 B-01). **Absent on a
+   * workspace read**, present on `loadReceiptSummaries`.
+   *
+   * A summary carries the whole in-toto statement, so it is the heaviest
+   * column the workspace touches: 330 receipts were 40,101,144 bytes on the
+   * pilot, read by every `search_index`, `get_artifact`, `get_neighbors` and
+   * `impact_of` call — and used by none of them. Of the five MCP readers of
+   * `receipts`, four need an id, a commit, a status or a count; only the
+   * `receipts-summary` resource reads the summary. It asks for it.
+   *
+   * Absent rather than `{}`: an empty object would say "this receipt has an
+   * empty summary", which is a different fact from "this read did not carry
+   * one".
+   */
+  summary?: Record<string, unknown>;
+}
+
+/** A receipt as `loadReceiptSummaries` answers it: summary included. */
+export interface McpReceiptWithSummary extends McpReceiptData {
+  repositoryId: string;
   summary: Record<string, unknown>;
+}
+
+/**
+ * What the targeted summary read carried (RE-04 B-01). Bounded like every
+ * other read, and it says so when it stopped: the same row budget the
+ * workspace read uses, reported as a truncation rather than a shorter list.
+ */
+export interface McpReceiptSummaryRead {
+  receipts: McpReceiptWithSummary[];
+  truncated: McpReadTruncation | null;
 }
 
 export interface McpContextPackData {
@@ -1091,6 +1122,12 @@ export interface McpStore {
     principal: McpPrincipal,
     input: { nodeIds: readonly string[] },
   ): Promise<McpSymbolNeighborhood>;
+  /**
+   * Every receipt with its summary, for the one reader that needs them
+   * (RE-04 B-01). `loadWorkspace` carries receipts without summaries; this
+   * is how the `receipts-summary` resource asks for the rest.
+   */
+  loadReceiptSummaries(principal: McpPrincipal): Promise<McpReceiptSummaryRead>;
   publishAccessEvent(channel: string, event: McpAccessEvent): Promise<void>;
   /**
    * Record one prompt for the authenticated member (ADR-011). The store is
@@ -1826,6 +1863,15 @@ export class InMemoryMcpStore implements McpStore {
           ...rest,
           ...(requested.has("database") ? {} : { dbObjects: [] }),
           ...(requested.has("route") ? {} : { routes: [] }),
+          // Receipt summaries stay in the store for the same reason
+          // (RE-04 B-01): the hosted read no longer selects the column, and
+          // a fixture that still handed them back would pass tests the
+          // hosted store fails. `loadReceiptSummaries` is how a caller asks.
+          receipts: rest.receipts.map((receipt) => {
+            const { summary: carried, ...withoutSummary } = receipt;
+            void carried;
+            return withoutSummary;
+          }),
         };
       }),
     };
@@ -1859,6 +1905,36 @@ export class InMemoryMcpStore implements McpStore {
       },
       input.nodeIds,
     );
+  }
+
+  /**
+   * Every receipt with its summary (RE-04 B-01), bounded by the same row
+   * budget the workspace read uses so a fixture past it behaves like the
+   * hosted store rather than answering with more than hosted could.
+   */
+  async loadReceiptSummaries(
+    principal: McpPrincipal,
+  ): Promise<McpReceiptSummaryRead> {
+    const workspace = this.#workspaces.get(principal.workspaceId);
+    if (!workspace || workspace.ownerUserId !== principal.userId) {
+      throw new Error("Workspace access denied");
+    }
+    const all = workspace.repositories
+      .flatMap((repository) =>
+        repository.receipts.map((receipt) => ({
+          ...receipt,
+          repositoryId: repository.id,
+          summary: receipt.summary ?? {},
+        })),
+      )
+      .sort((left, right) => left.id.localeCompare(right.id));
+    return {
+      receipts: all.slice(0, MCP_WORKSPACE_READ_LIMIT),
+      truncated:
+        all.length > MCP_WORKSPACE_READ_LIMIT
+          ? { limit: MCP_WORKSPACE_READ_LIMIT, table: "receipts" }
+          : null,
+    };
   }
 
   async listAccessTokens(input: {
