@@ -120,6 +120,8 @@ export type {
   McpProgressEvent,
   McpProgressStatus,
   McpReceiptData,
+  McpReceiptSummaryRead,
+  McpReceiptWithSummary,
   McpRepositoryData,
   McpRequirementData,
   McpRescanResult,

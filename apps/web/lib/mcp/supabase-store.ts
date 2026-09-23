@@ -38,6 +38,7 @@ import {
   type McpReadBasis,
   type McpRescanResult,
   type McpReadTruncation,
+  type McpReceiptSummaryRead,
   type McpFindingProvenance,
   type McpNodeType,
   type McpSourceSpan,
@@ -675,6 +676,41 @@ export class SupabaseMcpStore implements McpStore {
    * so. This asks the database for that path.
    */
   /**
+   * Every receipt with its summary (RE-04 B-01), for the one reader that
+   * needs them. The workspace read stopped selecting `summary` because it
+   * was 40,101,144 bytes over 330 rows on the pilot and no workspace reader
+   * used it; this is the same table, the same order and the same row budget,
+   * asked for only when the caller wants the statements.
+   */
+  async loadReceiptSummaries(
+    principal: McpPrincipal,
+  ): Promise<McpReceiptSummaryRead> {
+    const response = await this.client
+      .from("receipts")
+      .select("id, repository_id, commit_sha, status, summary, digest")
+      .eq("workspace_id", principal.workspaceId)
+      .order("id", { ascending: true })
+      .limit(MCP_WORKSPACE_READ_LIMIT + 1);
+    queryError("MCP receipt summary query failed", response.error);
+    const all = rows(response.data);
+    const kept = all.slice(0, MCP_WORKSPACE_READ_LIMIT);
+    return {
+      receipts: kept.map((row) => ({
+        commitSha: requiredString(row, "commit_sha"),
+        digest: nullableString(row.digest),
+        id: requiredString(row, "id"),
+        repositoryId: requiredString(row, "repository_id"),
+        status: requiredString(row, "status"),
+        summary: record(row.summary),
+      })),
+      truncated:
+        all.length > MCP_WORKSPACE_READ_LIMIT
+          ? { limit: MCP_WORKSPACE_READ_LIMIT, table: "receipts" }
+          : null,
+    };
+  }
+
+  /**
    * The symbol layer for the ids named (todo 26): a file's symbols, a
    * symbol itself, their `declares` and one `extends` hop. Three reads by
    * id and never a whole-workspace one — the caps are the map's.
@@ -1044,9 +1080,12 @@ export class SupabaseMcpStore implements McpStore {
         .eq("workspace_id", workspaceId)
         .order("id", { ascending: true })
         .limit(MCP_WORKSPACE_READ_LIMIT + 1),
+      // No `summary` (RE-04 B-01). It is the whole in-toto statement — 330
+      // receipts were 40,101,144 bytes on the pilot — and no reader of this
+      // workspace uses it; the one that does calls `loadReceiptSummaries`.
       this.client
         .from("receipts")
-        .select("id, repository_id, commit_sha, status, summary, digest")
+        .select("id, repository_id, commit_sha, status, digest")
         .eq("workspace_id", workspaceId)
         .order("id", { ascending: true })
         .limit(MCP_WORKSPACE_READ_LIMIT + 1),
@@ -1426,7 +1465,6 @@ export class SupabaseMcpStore implements McpStore {
               digest: nullableString(row.digest),
               id: requiredString(row, "id"),
               status: requiredString(row, "status"),
-              summary: record(row.summary),
             })),
           requirements: requirementRows
             .filter((row) => row.repository_id === repositoryId)

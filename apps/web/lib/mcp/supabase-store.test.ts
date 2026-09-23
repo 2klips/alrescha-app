@@ -1292,3 +1292,142 @@ describe("SupabaseMcpStore.loadWorkspace — every answer reaches its own field"
     ]);
   });
 });
+
+/**
+ * RE-04 B-01 — the workspace read stopped carrying receipt summaries.
+ *
+ * Every `search_index`, `get_artifact`, `get_neighbors` and `impact_of` call
+ * loads the workspace, and that load selected `receipts.summary` — the whole
+ * in-toto statement per receipt, 330 rows and 40,101,144 bytes on the pilot.
+ * Four of the five MCP readers of `receipts` use an id, a commit, a status or
+ * a count; only the `receipts-summary` resource reads the summary, and it now
+ * asks `loadReceiptSummaries` for it.
+ */
+describe("SupabaseMcpStore — receipt summaries leave the workspace read", () => {
+  const RECEIPT_REPOSITORY = "01K287J3D18V7A1MZG9E8D1Y20";
+  const PRINCIPAL = {
+    scopes: ["mcp:read" as const],
+    tokenId: TOKEN_ID,
+    userId: USER_ID,
+    workspaceId: WORKSPACE_ID,
+  };
+
+  function receiptRow(index: number) {
+    return {
+      commit_sha: index.toString(16).padStart(40, "0"),
+      digest: null,
+      id: `01K287J3D18V7A1MZG9E8D${String(index).padStart(4, "0")}`,
+      repository_id: RECEIPT_REPOSITORY,
+      status: "generated",
+      summary: { statement: { subject: [{ name: `f-${index}` }] } },
+    };
+  }
+
+  function selectOf(fake: FakeSupabaseClient, table: string): string[] {
+    return fake.fromCalls.flatMap((name, index) =>
+      name === table
+        ? (fake.builders[index]?.calls ?? [])
+            .filter(({ method }) => method === "select")
+            .map(({ args }) => String(args[0]))
+        : [],
+    );
+  }
+
+  for (const [label, bands] of [
+    ["the default bands", undefined],
+    ["every band", [...MCP_READ_BANDS]],
+  ] as const) {
+    it(`does not select summary under ${label}`, async () => {
+      const fake = new FakeSupabaseClient({
+        receipts: { data: [receiptRow(1)], error: null },
+        repositories: {
+          data: [
+            {
+              default_branch: "main",
+              full_name: "2klips/alrescha-app",
+              id: RECEIPT_REPOSITORY,
+            },
+          ],
+          error: null,
+        },
+      });
+      const store = new SupabaseMcpStore(asClient(fake));
+      const workspace = await store.loadWorkspace(
+        PRINCIPAL,
+        bands ? { bands } : {},
+      );
+
+      const selects = selectOf(fake, "receipts");
+      expect(selects).toHaveLength(1);
+      expect(selects[0]).not.toContain("summary");
+      // The columns every remaining reader uses are still read.
+      for (const column of ["id", "repository_id", "commit_sha", "status"]) {
+        expect(selects[0]).toContain(column);
+      }
+      const [receipt] = workspace.repositories[0]?.receipts ?? [];
+      expect(receipt?.commitSha).toBe(receiptRow(1).commit_sha);
+      // Absent, not `{}` — an empty object would claim an empty summary.
+      expect(receipt).not.toHaveProperty("summary");
+    });
+  }
+
+  it("reads summaries only when asked, bounded and tenant-scoped", async () => {
+    const fake = new FakeSupabaseClient({
+      receipts: { data: [receiptRow(1), receiptRow(2)], error: null },
+    });
+    const store = new SupabaseMcpStore(asClient(fake));
+    const read = await store.loadReceiptSummaries(PRINCIPAL);
+
+    const selects = selectOf(fake, "receipts");
+    expect(selects).toHaveLength(1);
+    expect(selects[0]).toContain("summary");
+    const builder = fake.builders[fake.fromCalls.indexOf("receipts")];
+    expect(
+      builder?.calls.find(({ method }) => method === "eq")?.args,
+    ).toEqual(["workspace_id", WORKSPACE_ID]);
+    expect(
+      builder?.calls.find(({ method }) => method === "order")?.args,
+    ).toEqual(["id", { ascending: true }]);
+    expect(
+      builder?.calls.find(({ method }) => method === "limit")?.args,
+    ).toEqual([MCP_WORKSPACE_READ_LIMIT + 1]);
+
+    expect(read.truncated).toBeNull();
+    expect(read.receipts.map(({ id }) => id)).toEqual([
+      receiptRow(1).id,
+      receiptRow(2).id,
+    ]);
+    expect(read.receipts[0]).toMatchObject({
+      repositoryId: RECEIPT_REPOSITORY,
+      summary: receiptRow(1).summary,
+    });
+  });
+
+  it("says so when the summary read ran past its budget", async () => {
+    const fake = new FakeSupabaseClient({
+      receipts: {
+        data: Array.from({ length: MCP_WORKSPACE_READ_LIMIT + 1 }, (_, i) =>
+          receiptRow(i),
+        ),
+        error: null,
+      },
+    });
+    const store = new SupabaseMcpStore(asClient(fake));
+    const read = await store.loadReceiptSummaries(PRINCIPAL);
+    expect(read.receipts).toHaveLength(MCP_WORKSPACE_READ_LIMIT);
+    expect(read.truncated).toEqual({
+      limit: MCP_WORKSPACE_READ_LIMIT,
+      table: "receipts",
+    });
+  });
+
+  it("surfaces a failed summary read instead of an empty list", async () => {
+    const fake = new FakeSupabaseClient({
+      receipts: { data: null, error: { message: "statement timeout" } },
+    });
+    const store = new SupabaseMcpStore(asClient(fake));
+    await expect(store.loadReceiptSummaries(PRINCIPAL)).rejects.toThrow(
+      "MCP receipt summary query failed: statement timeout",
+    );
+  });
+});
