@@ -41,7 +41,7 @@
 
 | # | 후보 | 드러나는 모습 | 판정 |
 | --- | --- | --- | --- |
-| F1 | search의 `symbol_edges` 요청 URL이 게이트웨이 한도 초과 | `MCP symbol edge query failed: URI too long` — 코드도 timeout도 없음 | **가장 유력** — 인계서가 권한 질의 형태로 로컬 재현, 운영 미관측 |
+| F1 | search의 `symbol_edges` 요청 URL이 게이트웨이 한도 초과 | `MCP symbol edge query failed: URI too long` — 코드도 timeout도 없음 | **가장 유력** — 인계서가 권장한 질의 형태로 로컬 재현, 운영 미관측 |
 | F2 | 공통 읽기 statement timeout | `canceling statement due to statement timeout` | 낮음 — 분류기가 인식하고, 같은 읽기가 46초 안에 4번 통과 |
 | F3 | 게이트웨이 5xx·네트워크 | `TypeError: fetch failed`, HTML 본문 | **배제 못 함** — postgrest-js가 GET을 503/520/네트워크에서 1·2·4초 간격 최대 3회 재시도하므로 소요 시간으로 F1과 구분 불가 |
 | F4 | 출력 스키마 검증 | `Output validation error` | 배제 — `search_index`에는 outputSchema가 없음 |
