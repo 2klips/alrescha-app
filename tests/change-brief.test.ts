@@ -8,6 +8,7 @@ import {
   CHANGE_BRIEF_CONSUMER_CAP,
   InMemoryMcpStore,
   createHostedMcpEndpoint,
+  estimateTokens,
   prepareChange,
 } from "../packages/mcp/src/index";
 import type {
@@ -367,6 +368,59 @@ describe("the change brief, composed", () => {
     expect(brief.consumers?.boundReasons.join(" ")).toContain(
       `kept ${CHANGE_BRIEF_CONSUMER_CAP} of ${many}`,
     );
+  });
+
+  /**
+   * R-01 (post-merge review, 2026-09-23). `briefTokens` counted the brief
+   * *without its budget object* — so `approach`, `targetCardTokens` and
+   * `truncatedItems` were paid for and never counted, and a capped brief,
+   * the one whose metadata grows, was under-reported the most. The scope is
+   * now the whole brief minus this one number, which is the only way a field
+   * can count the payload it sits in without counting itself.
+   */
+  it("counts the whole brief except its own number", () => {
+    const many = CHANGE_BRIEF_CONSUMER_CAP + 7;
+    const consumers = Array.from({ length: many }, (_, i) =>
+      artifact(
+        `01K300000000000000000000D${String(i).padStart(2, "0")}`,
+        `src/caller-${String(i).padStart(2, "0")}.ts`,
+      ),
+    );
+    const capped = prepareChange(
+      {
+        id: WORKSPACE,
+        ownerUserId: USER,
+        repositories: [
+          repository({
+            artifacts: [artifact(CODE, "src/session.ts", CURRENT), ...consumers],
+            edges: consumers.map((consumer) => edge("imports", consumer.id, CODE)),
+            fullName: "2klips/alrescha-app",
+            id: REPO_A,
+            withBasis: true,
+          }),
+        ],
+      },
+      { path: "src/session.ts" },
+    );
+    const small = prepareChange(healthy(), { path: "src/session.ts" });
+    expect(capped.budget.truncatedItems).not.toEqual([]);
+
+    for (const [label, brief] of [
+      ["small", small],
+      ["capped", capped],
+    ] as const) {
+      const { briefTokens, ...budgetWithoutCount } = brief.budget;
+      const counted = estimateTokens(
+        JSON.stringify({ ...brief, budget: budgetWithoutCount }),
+      );
+      expect(briefTokens, label).toBe(counted);
+      // And it is never the old, smaller scope.
+      const { budget: _dropped, ...withoutBudget } = brief;
+      void _dropped;
+      expect(briefTokens, label).toBeGreaterThan(
+        estimateTokens(JSON.stringify(withoutBudget)),
+      );
+    }
   });
 
   it("estimates its own size and says the estimate is an approximation", () => {

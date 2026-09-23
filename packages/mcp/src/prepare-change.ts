@@ -88,10 +88,12 @@ export interface ChangeBriefConsumers extends DependencyImpact {
 /**
  * What this brief costs, and how that was arrived at.
  *
- * `targetCardTokens` is the body estimate and leaves `token_budget`'s current
- * meaning alone; `briefTokens` is this brief serialised. Neither is a
- * provider's billed count — the heuristic is one token per four UTF-16
- * characters and says so on the wire.
+ * `targetCardTokens` is `target.card` serialised; `briefTokens` is the whole
+ * brief serialised, its budget metadata included, less only the
+ * `briefTokens` field itself. Both are `ceil(UTF-16 length / 4)` — an
+ * approximation, not a provider's billed count, and the wire says so. Neither
+ * changes what `token_budget` or `max_chars` mean or cap; the full
+ * `get_artifact` response is metered by `emitAccessEvent`, not here.
  */
 export interface ChangeBriefBudget {
   readonly approach: string;
@@ -240,22 +242,31 @@ export function prepareChange(
   const targetCardTokens = artifact.card
     ? estimateTokens(JSON.stringify(artifact.card))
     : 0;
-  const withoutBudget = {
+  /**
+   * `briefTokens` counts the whole brief — its budget metadata included —
+   * except the `briefTokens` number itself (R-01, post-merge review).
+   *
+   * The first version counted the brief *without its budget object*, so
+   * `approach`, `targetCardTokens` and `truncatedItems` were paid for and
+   * never counted, and a capped brief — the one whose metadata grows — was
+   * under-reported the most. Leaving out only the one field that cannot
+   * count itself is the whole scope a self-describing number can have.
+   * JSON length does not depend on key order, so the count is the same
+   * however the final object is assembled.
+   */
+  const withoutCount = {
     basis,
+    budget: { approach: TOKEN_APPROACH, targetCardTokens, truncatedItems },
     consumers,
     missing,
     omissions: impact?.omissions ?? [],
     target,
   };
   return {
-    ...withoutBudget,
+    ...withoutCount,
     budget: {
-      approach: TOKEN_APPROACH,
-      // The brief's own serialised size, counted over everything but this
-      // number. A field that included itself would be a number about itself.
-      briefTokens: estimateTokens(JSON.stringify(withoutBudget)),
-      targetCardTokens,
-      truncatedItems,
+      ...withoutCount.budget,
+      briefTokens: estimateTokens(JSON.stringify(withoutCount)),
     },
   };
 }
