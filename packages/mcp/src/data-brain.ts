@@ -30,6 +30,7 @@ import type {
   McpEdgeRelation,
   McpIndexEntryData,
   McpNodeType,
+  McpSectionData,
   McpWorkspaceData,
 } from "./store";
 
@@ -52,9 +53,24 @@ export interface SearchIndexResult {
   rank: SearchRank;
   repositoryId: string;
   score: number;
+  /**
+   * The ADR/OQ/G/MT headings of this document that the question matched
+   * (RE-04). Present only when one did.
+   */
+  sections?: SectionHit[];
   title: string;
   type: McpNodeType;
 }
+
+/** A section heading a search matched, with the node it names. */
+export interface SectionHit {
+  heading: string;
+  nodeId: string;
+  token: string;
+}
+
+/** Sections one result will name, however many of its headings matched. */
+const SECTION_HITS_PER_RESULT = 8;
 
 interface WorkspaceIndexEntry {
   entry: McpIndexEntryData;
@@ -234,12 +250,17 @@ function directRank(
   entry: McpIndexEntryData,
   query: string,
   tokens: readonly string[],
+  sections: readonly McpSectionData[] = [],
 ): SearchRank | null {
+  const headings = [
+    ...entry.headings,
+    ...sections.map(({ heading }) => heading),
+  ];
   const exactFields = [
     entry.title,
     entry.path,
     entry.searchKey,
-    ...entry.headings,
+    ...headings,
     ...entry.tags,
     ...entry.symbols,
   ];
@@ -247,7 +268,7 @@ function directRank(
     return "exact";
   if (
     includesEveryToken(
-      [entry.title, ...entry.headings, ...entry.tags].join(" "),
+      [entry.title, ...headings, ...entry.tags].join(" "),
       tokens,
     )
   ) {
@@ -477,11 +498,32 @@ export function searchWorkspaceIndexPage(
         repositoryId: repository.id,
       })),
   );
+  /**
+   * The ADR/OQ/G/MT headings each repository's documents declare (RE-04).
+   * The scan does not index a document's headings, so these — carried by
+   * every read as section nodes, and on the pilot mostly Korean — are the
+   * only heading text a search can see. A document answers for its own
+   * headings; a requirement drawn from the same file does not.
+   */
+  const sectionKey = (repositoryId: string, path: string) =>
+    `${repositoryId}\n${path}`;
+  const sectionsOf = new Map<string, McpSectionData[]>();
+  for (const repository of workspace.repositories) {
+    for (const section of repository.sections ?? []) {
+      const key = sectionKey(repository.id, section.sourcePath);
+      sectionsOf.set(key, [...(sectionsOf.get(key) ?? []), section]);
+    }
+  }
+  const declared = ({ entry, repositoryId }: WorkspaceIndexEntry) =>
+    entry.type === "artifact"
+      ? (sectionsOf.get(sectionKey(repositoryId, entry.path)) ?? [])
+      : [];
   const ranks = new Map<string, SearchRank>();
   const directNodeIds = new Set<string>();
 
-  for (const { entry } of entries) {
-    const rank = directRank(entry, query, tokens);
+  for (const indexed of entries) {
+    const { entry } = indexed;
+    const rank = directRank(entry, query, tokens, declared(indexed));
     if (!rank) continue;
     ranks.set(entry.id, rank);
     directNodeIds.add(entry.nodeId);
@@ -524,29 +566,31 @@ export function searchWorkspaceIndexPage(
       type: "memory" as const,
     }));
 
-  const entryResults: SearchIndexResult[] = entries.flatMap(
-    ({ entry, repositoryId }) => {
-      const rank = ranks.get(entry.id);
-      if (!rank || (input.typeFilter && entry.type !== input.typeFilter))
-        return [];
-      return [
-        {
-          ...excerptResult(
-            excerptFor(workspace, entry.nodeId, entry.searchKey),
-          ),
-          id: entry.id,
-          neighborIds: [...entry.neighborIds],
-          nodeId: entry.nodeId,
-          path: entry.path,
-          rank,
-          repositoryId,
-          score: scoreFor(rank) + (bonus.get(entry.nodeId) ?? 0),
-          title: entry.title,
-          type: entry.type,
-        },
-      ];
-    },
-  );
+  const entryResults: SearchIndexResult[] = entries.flatMap((indexed) => {
+    const { entry, repositoryId } = indexed;
+    const rank = ranks.get(entry.id);
+    if (!rank || (input.typeFilter && entry.type !== input.typeFilter))
+      return [];
+    const matched = declared(indexed)
+      .filter(({ heading }) => includesEveryToken(heading, tokens))
+      .slice(0, SECTION_HITS_PER_RESULT)
+      .map(({ heading, nodeId, token }) => ({ heading, nodeId, token }));
+    return [
+      {
+        ...excerptResult(excerptFor(workspace, entry.nodeId, entry.searchKey)),
+        id: entry.id,
+        neighborIds: [...entry.neighborIds],
+        nodeId: entry.nodeId,
+        path: entry.path,
+        rank,
+        repositoryId,
+        score: scoreFor(rank) + (bonus.get(entry.nodeId) ?? 0),
+        ...(matched.length > 0 ? { sections: matched } : {}),
+        title: entry.title,
+        type: entry.type,
+      },
+    ];
+  });
 
   /**
    * The domain narrows the candidates, and it is derived from the path the
