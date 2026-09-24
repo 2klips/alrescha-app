@@ -14,10 +14,12 @@ import type { PGlite } from "@electric-sql/pglite";
  * took.
  *
  * It reads only the shapes this repository's readers send: `select` of plain
- * columns and of a to-one resource embedded through its one foreign key
- * (`runs(commit_sha)`), `eq`/`neq`/`is`/`in`/`gt`/`gte`/`lt`/`lte` filters
- * and their `not.` negation, an `or` over those, `order`, `limit`/`offset`,
- * `Prefer: count=exact`, the single object `.single()` asks for, and `rpc`
+ * columns, of a value inside a json column (`summary:metadata->summary`) and
+ * of a to-one resource embedded through its one foreign key
+ * (`runs(commit_sha)`), `eq`/`neq`/`is`/`in`/`gt`/`gte`/`lt`/`lte`/`like`
+ * filters and their `not.` negation, an `or` over those, `order`,
+ * `limit`/`offset`, `Prefer: count=exact` — on a `HEAD` too, which answers
+ * the count and no rows — the single object `.single()` asks for, and `rpc`
  * calls of scalar functions. Anything else is answered 501 so a test cannot
  * pass on a shape the emulator silently misread.
  *
@@ -77,10 +79,15 @@ const OPERATORS: Readonly<Record<string, string>> = {
   eq: "=",
   gt: ">",
   gte: ">=",
+  like: "like",
   lt: "<",
   lte: "<=",
   neq: "<>",
 };
+/** `alias:column->key->>key`, the alias optional. */
+const JSON_PATH =
+  /^(?:([a-z_][a-z0-9_]*):)?([a-z_][a-z0-9_]*)((?:->>?(?:[A-Za-z_][A-Za-z0-9_]*|\d+))+)$/;
+const JSON_STEP = /(->>?)([A-Za-z_][A-Za-z0-9_]*|\d+)/g;
 
 class Unsupported extends Error {}
 
@@ -146,7 +153,9 @@ class Query {
     }
     const sql = OPERATORS[operator];
     if (!sql) throw new Unsupported(`operator ${operator}`);
-    return `${name} ${sql} ${this.param(value)}`;
+    // PostgREST reads `*` in a pattern as `%`, which a URL need not escape.
+    const operand = operator === "like" ? value.replaceAll("*", "%") : value;
+    return `${name} ${sql} ${this.param(operand)}`;
   }
 
   /** `(a.in.(…),b.eq.x)` as one disjunction. */
@@ -161,6 +170,30 @@ class Query {
     });
     return `(${terms.join(" or ")})`;
   }
+}
+
+/**
+ * A value inside a json column, as PostgREST selects one: `->` keeps it
+ * json, `->>` makes it text, and the field is named for its alias or, with
+ * none, for its last key.
+ */
+function jsonPath(
+  alias: string | undefined,
+  column: string,
+  steps: string,
+): string {
+  let sql = `t.${identifier(column)}`;
+  let last = column;
+  for (const [, arrow = "->", key = ""] of steps.matchAll(JSON_STEP)) {
+    // Keys are word characters or an array index, so they inline safely.
+    sql += /^\d+$/.test(key) ? `${arrow}${key}` : `${arrow}'${key}'`;
+    last = key;
+  }
+  const name = alias ?? last;
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    throw new Unsupported(`json path named ${name}`);
+  }
+  return `${sql} as "${name}"`;
 }
 
 function order(value: string): string {
@@ -311,6 +344,11 @@ export function postgrestOverPglite(
     const list: string[] = [];
     for (const item of topLevel(value)) {
       const term = item.trim();
+      const path = JSON_PATH.exec(term);
+      if (path) {
+        list.push(jsonPath(path[1], path[2] ?? "", path[3] ?? ""));
+        continue;
+      }
       const embed = /^([a-z_][a-z0-9_]*)\((.*)\)$/.exec(term);
       if (!embed) {
         list.push(`t.${identifier(term)}`);
@@ -470,6 +508,13 @@ export function postgrestOverPglite(
           null,
         );
         return json(answer.body, 200);
+      }
+      if (method === "HEAD" && !path.includes("/")) {
+        // `head: true`: the same query answered by its headers alone — the
+        // count, when one was asked for — and no rows.
+        const answer = await table(path, url, headers.get("prefer") ?? "");
+        record("table", path, 200, 0, answer.ms, 0);
+        return new Response(null, { headers: answer.headers, status: 200 });
       }
       if (method === "GET" && !path.includes("/")) {
         const answer = await table(path, url, headers.get("prefer") ?? "");
