@@ -1206,6 +1206,7 @@ export class SupabaseMcpStore implements McpStore {
       dbObjects,
       sections,
       concepts,
+      basisResponse,
     ] = await Promise.all([
       table("repositories", "id, full_name, default_branch"),
       table("graph_nodes", "id, label", (query) =>
@@ -1272,6 +1273,13 @@ export class SupabaseMcpStore implements McpStore {
         "concepts",
         "id, repository_id, slug, name, kind, summary, member_paths",
       ),
+      // What each repository's rows are standing on (REMEDY §5.4). It needs
+      // none of the rows above, so it no longer waits for them as a round
+      // trip of its own (RE-04); it is still read after the first revision
+      // and before the second, inside the fence like every read here.
+      this.client.rpc("read_repository_basis", {
+        target_workspace_id: workspaceId,
+      }),
     ]);
     for (const [label, result] of [
       ["repositories", repositories],
@@ -1308,9 +1316,6 @@ export class SupabaseMcpStore implements McpStore {
     // What each repository's rows are standing on: the revision, the commit
     // the structure was published from, and whether the derived layer caught
     // up. Three independent states, reported as three (REMEDY §5.4).
-    const basisResponse = await this.client.rpc("read_repository_basis", {
-      target_workspace_id: workspaceId,
-    });
     const basisByRepository = new Map<string, McpReadBasis>(
       (basisResponse.error ? [] : rows(basisResponse.data)).map((row) => [
         requiredString(row, "repositoryId"),

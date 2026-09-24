@@ -1041,6 +1041,32 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
     });
   });
 
+  /**
+   * The basis needs none of the rows the other reads return, so it is asked
+   * for alongside them instead of as a round trip of its own after the
+   * longest of them — the edge chain (RE-04). It stays inside the fence:
+   * after the first revision read and before the second.
+   */
+  it("asks for the basis alongside the edge pages, inside the fence", async () => {
+    const fake = client([
+      { edges: ["e1"], hasMore: true },
+      { edges: ["e2"], hasMore: true },
+      { edges: ["e3"], hasMore: false },
+    ]);
+    await workspaceOf(fake);
+    const order = fake.rpcCalls.map(({ name }) => name);
+    const basis = order.indexOf("read_repository_basis");
+    const pages = order.flatMap((name, index) =>
+      name === "read_edge_page" ? [index] : [],
+    );
+    expect(pages).toHaveLength(3);
+    // Before the chain's last page, not after it.
+    expect(basis).toBeLessThan(pages.at(-1) ?? -1);
+    // Still between the two revision reads.
+    expect(order.indexOf("revision_of")).toBeLessThan(basis);
+    expect(order.lastIndexOf("revision_of")).toBeGreaterThan(basis);
+  });
+
   it("stops at its page budget and says so rather than reading forever", async () => {
     const fake = client(
       Array.from({ length: MCP_EDGE_MAX_PAGES + 2 }, (_unused, index) => ({
