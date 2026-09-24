@@ -276,10 +276,17 @@ describe("loadWorkspacePilotReport", () => {
 
       // `summary` also carries the whole in-toto statement — 330 receipts
       // were 40,101,144 bytes on the pilot — and the report needs only the
-      // snapshot.
+      // snapshot. The first page asks for the exact count so the read can
+      // continue past the server's row cap (RE-04); this fake answers
+      // without one, so there is no second page.
       const receipts = client.queriesOf("receipts");
       expect(receipts.map((query) => query.argsOf("select"))).toEqual([
-        [["id,commit_sha,created_at,findings:summary->findings"]],
+        [
+          [
+            "id,commit_sha,created_at,findings:summary->findings",
+            { count: "exact" },
+          ],
+        ],
       ]);
       // Whatever this select gains later, `summary` stays behind that path.
       expect(
