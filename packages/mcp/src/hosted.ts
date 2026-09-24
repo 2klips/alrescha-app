@@ -624,9 +624,15 @@ function createServer(
    * names them here. A tool that does not name a band is a tool whose answer
    * never mentioned it.
    */
-  const readWorkspace = async (bands?: readonly McpReadBand[]) => {
+  const readWorkspace = async (
+    bands?: readonly McpReadBand[],
+    options: { edges?: boolean } = {},
+  ) => {
     requireScope("mcp:read");
-    return store.loadWorkspace(principal, bands ? { bands } : {});
+    return store.loadWorkspace(principal, {
+      ...(bands ? { bands } : {}),
+      ...options,
+    });
   };
   /**
    * The symbol layer, on request only (todo 26). A default read carries no
@@ -1496,7 +1502,10 @@ function createServer(
       query,
       type_filter,
     }) => {
-      const workspace = await readWorkspace();
+      // No edges (RE-04): the ranking walks the index's neighbour cache, and
+      // the edge pages were 3.6 of 4.7 MB and four sequential requests of
+      // every search on the pilot.
+      const workspace = await readWorkspace(undefined, { edges: false });
       /**
        * Query, type, domain, then the limit — in that order (RE-02).
        *

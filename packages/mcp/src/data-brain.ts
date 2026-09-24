@@ -314,6 +314,15 @@ function scoreFor(rank: SearchRank): number {
  * gap, so a lexical winner cannot be overturned (the Graft weighting rule).
  * The walk is seeded by the direct lexical hits; with no direct hit there is
  * nothing to personalize and the bonus is zero everywhere.
+ *
+ * The graph it walks is the index's own neighbour cache (RE-04), not the
+ * edges a read carried. `search_index` stopped reading edges: they were 3.6
+ * of 4.7 MB and four sequential requests of every search on the pilot, for a
+ * bonus that only reorders inside a tier. Over the pilot's own files the
+ * cache ranked the named file where the edges did in 76 of 80 questions and
+ * one place apart in the other four, and it is never cut short — the edge
+ * read stops at 8,000 rows, and the pilot has 11,833. One graph, whatever
+ * the read carried, so a transport cannot decide the ranking.
  */
 const PPR_TIER_BONUS = 50;
 
@@ -323,22 +332,27 @@ function connectivityBonus(
 ): ReadonlyMap<string, number> {
   if (seeds.size === 0) return new Map();
   const nodeIds = new Set<string>();
-  const edges: PageRankEdge[] = [];
+  // Undirected pairs, each once: an entry and its neighbour usually name
+  // each other, and a pair counted twice would weigh twice in the walk.
+  const pairs = new Map<string, PageRankEdge>();
+  const link = (source: string, target: string): void => {
+    const key =
+      source < target ? `${source}\n${target}` : `${target}\n${source}`;
+    if (!pairs.has(key)) pairs.set(key, { source, target });
+  };
   for (const repository of workspace.repositories) {
     for (const artifact of repository.artifacts) nodeIds.add(artifact.id);
     for (const requirement of repository.requirements) {
       nodeIds.add(requirement.id);
-      edges.push({
-        source: requirement.sourceArtifactId,
-        target: requirement.id,
-      });
+      link(requirement.sourceArtifactId, requirement.id);
     }
     for (const evidence of repository.evidence) nodeIds.add(evidence.id);
     for (const finding of repository.findings) nodeIds.add(finding.id);
-    for (const edge of repository.edges) {
-      edges.push({ source: edge.sourceNodeId, target: edge.targetNodeId });
+    for (const entry of repository.indexEntries) {
+      for (const neighbour of entry.neighborIds) link(entry.nodeId, neighbour);
     }
   }
+  const edges = [...pairs.values()];
   const rank = personalizedPageRank({
     edges,
     nodes: [...nodeIds],

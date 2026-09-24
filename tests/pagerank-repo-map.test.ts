@@ -222,15 +222,48 @@ describe("graph schema card (Wave B todo 5)", () => {
   });
 });
 
+/**
+ * The rerank reads connectivity from the index's own neighbour cache
+ * (RE-04), not from the edges a workspace read happened to carry.
+ *
+ * `search_index` no longer reads edges: they were 3.6 of 4.7 MB and four
+ * sequential requests of every search on the pilot, for a bonus that only
+ * reorders inside a tier. On the pilot's own files the neighbour cache ranks
+ * the named file where the edges did in 76 of 80 questions and one place
+ * apart in the other four (docs/reports/re-04-search-cost.probe.mjs). And
+ * the cache is never cut short: the edge read stops at 8,000 rows, the
+ * pilot has 11,833.
+ *
+ * Here `a`'s cache names b, lonely and the hub; b's names the hub. b sits in
+ * the seed's neighbourhood twice over, lonely once.
+ */
+function cached(): McpWorkspaceData {
+  const base = workspace();
+  const repository = base.repositories[0]!;
+  return {
+    ...base,
+    repositories: [
+      {
+        ...repository,
+        indexEntries: [
+          indexEntry("a", "src/a.ts", ["b", "lonely", "hub"]),
+          indexEntry("b", "src/b.ts", ["hub"]),
+          indexEntry("lonely", "docs/lonely.md"),
+        ],
+      },
+    ],
+  };
+}
+
 describe("connectivity rerank (Wave B todo 5)", () => {
   it("reorders inside a tier without overturning a lexical winner", () => {
-    const results = searchWorkspaceIndex(workspace(), { query: "src/a.ts" });
+    const results = searchWorkspaceIndex(cached(), { query: "src/a.ts" });
     const paths = results.map(({ path }) => path);
 
     // The exact lexical hit stays on top whatever the graph says.
     expect(paths[0]).toBe("src/a.ts");
-    // b and lonely are both graph-neighbor tier; b is edge-connected to the
-    // seed and rises above the unconnected lonely.
+    // b and lonely are both graph-neighbor tier; b is connected to the
+    // seed's neighbourhood in the cache and rises above lonely.
     expect(paths.indexOf("src/b.ts")).toBeLessThan(
       paths.indexOf("docs/lonely.md"),
     );
@@ -242,5 +275,23 @@ describe("connectivity rerank (Wave B todo 5)", () => {
     expect(byPath.get("src/b.ts")?.score ?? 0).toBeLessThan(
       byPath.get("src/a.ts")?.score ?? 0,
     );
+  });
+
+  it("ranks the same whatever edges the read carried", () => {
+    const withEdges = cached();
+    const withoutEdges: McpWorkspaceData = {
+      ...withEdges,
+      repositories: withEdges.repositories.map((repository) => ({
+        ...repository,
+        edges: [],
+      })),
+    };
+    const answer = (subject: McpWorkspaceData) =>
+      searchWorkspaceIndex(subject, { query: "src/a.ts" }).map(
+        ({ path, score }) => [path, score],
+      );
+    // A search read carries no edges; a full read carries some. The two
+    // must not rank differently, or the transport decides the answer.
+    expect(answer(withoutEdges)).toEqual(answer(withEdges));
   });
 });

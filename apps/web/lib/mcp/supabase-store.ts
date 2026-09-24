@@ -1135,7 +1135,7 @@ export class SupabaseMcpStore implements McpStore {
 
   async loadWorkspace(
     principal: McpPrincipal,
-    options?: { bands?: readonly McpReadBand[] },
+    options?: { bands?: readonly McpReadBand[]; edges?: boolean },
   ): Promise<McpWorkspaceData> {
     const workspaceId = principal.workspaceId;
     /**
@@ -1226,7 +1226,15 @@ export class SupabaseMcpStore implements McpStore {
         "evidence",
         "id, repository_id, source_artifact_id, kind, verdict, metadata",
       ),
-      this.#readEdgePages(workspaceId, revisionBefore),
+      // No edge page for a caller that does not walk the graph (RE-04): the
+      // pages were most of every search's bytes and its longest chain of
+      // requests. The absence is reported as a table that stopped at none.
+      options?.edges === false
+        ? Promise.resolve({
+            rows: [] as Row[],
+            truncation: { limit: 0, table: "edges" } as McpReadTruncation,
+          })
+        : this.#readEdgePages(workspaceId, revisionBefore),
       table(
         "findings",
         "id, repository_id, title, source_node_id, target_node_id, kind, severity, status, provenance, confidence, evidence_grade",

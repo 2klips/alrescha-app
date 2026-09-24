@@ -1067,6 +1067,36 @@ describe("SupabaseMcpStore.loadWorkspace — edge paging", () => {
     expect(order.lastIndexOf("revision_of")).toBeGreaterThan(basis);
   });
 
+  /**
+   * A read that does not need the graph asks for none of it (RE-04): the
+   * edge pages were most of what every search paid for. The absence is
+   * reported, never implied — an empty edge list with a complete coverage
+   * would say "this workspace has no edges".
+   */
+  it("reads no edge page when asked not to, and says the table stopped at none", async () => {
+    const fake = client([{ edges: ["e1"], hasMore: false }]);
+    const store = new SupabaseMcpStore(asClient(fake));
+    const workspace = await store.loadWorkspace(
+      {
+        scopes: ["mcp:read"],
+        tokenId: TOKEN_ID,
+        userId: USER_ID,
+        workspaceId: WORKSPACE_ID,
+      },
+      { edges: false },
+    );
+    expect(fake.callsTo("read_edge_page")).toHaveLength(0);
+    expect(workspace.repositories[0]?.edges).toEqual([]);
+    expect(workspace.coverage?.truncated).toContainEqual({
+      limit: 0,
+      table: "edges",
+    });
+    expect(workspace.coverage?.result).toBe("partial");
+    // Everything else is read as before.
+    expect(fake.fromCalls).toContain("index_entries");
+    expect(fake.fromCalls).toContain("artifacts");
+  });
+
   it("stops at its page budget and says so rather than reading forever", async () => {
     const fake = client(
       Array.from({ length: MCP_EDGE_MAX_PAGES + 2 }, (_unused, index) => ({
