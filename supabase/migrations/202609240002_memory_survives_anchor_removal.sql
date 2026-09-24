@@ -79,13 +79,45 @@ begin
 end;
 $$;
 
--- BEFORE INSERT only. Updates cannot move a reference: the existing
--- `*_invalidate_only` triggers refuse any update but the invalidation stamp.
 create trigger memory_block_entries_anchor_in_tenant
   before insert on public.memory_block_entries
   for each row execute function public.require_memory_anchor_in_tenant();
 create trigger agent_assertions_nodes_in_tenant
   before insert on public.agent_assertions
   for each row execute function public.require_assertion_nodes_in_tenant();
+
+-- Updates. The only legal update is still the one-way invalidation stamp,
+-- enforced by the `*_invalidate_only` triggers from 202608230004. Their
+-- function compared six columns (id, workspace, token, user and the two
+-- ingest times), which was enough while foreign keys pinned the node
+-- columns. With the keys gone, an UPDATE that sets `invalidated_at` could
+-- also move `anchor_node_id`, `source_node_id`, `target_node_id` or
+-- `repository_id` — to an id that never existed, or to another tenant's
+-- node — and pass. So the function now holds every column except the two
+-- the stamp writes (`invalidated_at`, `invalidated_by`), whatever columns
+-- the tables gain later. It checks no node on purpose: a row whose anchor a
+-- scan removed must still be invalidatable. The messages are unchanged.
+-- The applied 202608230004 file stays as it is (migrate.ts checksums it);
+-- replacing the function here is how a new migration changes it.
+create or replace function public.allow_only_invalidation()
+returns trigger
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if old.invalidated_at is not null then
+    raise exception 'an invalidated row is immutable';
+  end if;
+  if new.invalidated_at is null then
+    raise exception 'the only legal update is setting invalidated_at';
+  end if;
+  if (to_jsonb(new) - 'invalidated_at' - 'invalidated_by')
+     is distinct from
+     (to_jsonb(old) - 'invalidated_at' - 'invalidated_by') then
+    raise exception 'invalidation must not rewrite history';
+  end if;
+  return new;
+end;
+$$;
 
 commit;

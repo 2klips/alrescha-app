@@ -22,7 +22,10 @@ import {
  * invalidation. What a missing anchor means for reads (stale, hidden) is
  * the memory-resume card's decision (RE-05); readers already skip an
  * endpoint or anchor they cannot resolve. What the foreign keys guaranteed
- * at write time — the node exists in the same tenant — still holds.
+ * at write time — the node exists in the same tenant — still holds, and
+ * with the keys gone the one legal update (the invalidation stamp) must
+ * not be able to move a reference either (review R1, 2026-09-24): the old
+ * update guard compared six columns and left the node columns unchecked.
  */
 
 const USER = "a3333333-3333-4333-8333-333333333333";
@@ -275,7 +278,11 @@ describe("agent memory survives the removal of the node it points at", () => {
     expect(await assertionRows()).toHaveLength(1);
   });
 
-  it("memory still refuses a node that does not exist in its tenant when written", async () => {
+  /** A real node in another user's workspace, and that workspace's repository. */
+  async function otherTenantNode(): Promise<{
+    node: string;
+    repository: string;
+  }> {
     await database.query(
       "insert into auth.users (id, email) values ($1, 'anchor-other@example.test')",
       [OTHER_USER],
@@ -289,14 +296,24 @@ describe("agent memory survives the removal of the node it points at", () => {
       "select public.ensure_local_repository($1, 'local/other') as id",
       [otherWorkspace],
     );
+    const repository = otherRepository.rows[0]?.id ?? "";
     const foreign = await asServiceRole(database, (tx) =>
       tx.query<{ id: string }>(
         `insert into public.graph_nodes (workspace_id, repository_id, kind, label)
          values ($1, $2, 'artifact', 'elsewhere.ts') returning id`,
-        [otherWorkspace, otherRepository.rows[0]?.id ?? ""],
+        [otherWorkspace, repository],
       ),
     );
-    const foreignNode = foreign.rows[0]?.id ?? "";
+    return { node: foreign.rows[0]?.id ?? "", repository };
+  }
+
+  /** A direct service_role UPDATE, the path the MCP functions do not guard. */
+  async function update(sql: string, params: unknown[]): Promise<void> {
+    await asServiceRole(database, (tx) => tx.query(sql, params));
+  }
+
+  it("memory still refuses a node that does not exist in its tenant when written", async () => {
+    const { node: foreignNode } = await otherTenantNode();
     const local = await nodeOf("src/b.ts");
 
     // The functions answer before writing, as they always did.
@@ -333,6 +350,154 @@ describe("agent memory survives the removal of the node it points at", () => {
     expect((await writeMemory(null, "workspace-wide", "fine")).outcome).toBe(
       "added",
     );
+  });
+
+  it("an invalidating update cannot move a memory entry's anchor or change what it says", async () => {
+    const anchor = await nodeOf("src/a.ts");
+    await writeMemory(anchor, "no-sync-io", "a.ts must not block");
+    const { node: foreign } = await otherTenantNode();
+    const before = await memoryRows();
+    const id = before[0]?.id ?? "";
+
+    for (const [column, value] of [
+      ["anchor_node_id", "01K00000000000000000000000"], // never existed
+      ["anchor_node_id", foreign], // another tenant's real node
+      ["anchor_node_id", await nodeOf("src/b.ts")], // a real node, but not this one
+      ["anchor_node_id", null], // file memory turned workspace-wide
+      ["text", "rewritten while invalidating"],
+      ["entry_key", "renamed-key"],
+    ] as const) {
+      await expect(
+        update(
+          `update public.memory_block_entries
+           set invalidated_at = now(), ${column} = $2 where id = $1`,
+          [id, value],
+        ),
+        `${column} = ${String(value)}`,
+      ).rejects.toThrow(/must not rewrite history/);
+    }
+    expect(await memoryRows()).toEqual(before);
+  });
+
+  it("an invalidating update cannot move an assertion's source, target or repository", async () => {
+    const a = await nodeOf("src/a.ts");
+    const b = await nodeOf("src/b.ts");
+    await assertLink(a, b, "uses");
+    const { node: foreign, repository: foreignRepository } =
+      await otherTenantNode();
+    const secondRepository = await database.query<{ id: string }>(
+      "select public.ensure_local_repository($1, 'local/second') as id",
+      [workspaceId],
+    );
+    const before = await assertionRows();
+    const id = before[0]?.id ?? "";
+
+    for (const [column, value] of [
+      ["target_node_id", foreign],
+      ["target_node_id", "01K00000000000000000000000"],
+      ["source_node_id", await nodeOf("src/c.ts")],
+      ["repository_id", secondRepository.rows[0]?.id ?? ""],
+      ["repository_id", foreignRepository],
+      ["relation", "produces"],
+      ["reason", "rewritten while invalidating"],
+    ] as const) {
+      await expect(
+        update(
+          `update public.agent_assertions
+           set invalidated_at = now(), ${column} = $2 where id = $1`,
+          [id, value],
+        ),
+        `${column} = ${value}`,
+      ).rejects.toThrow(/must not rewrite history/);
+    }
+    expect(await assertionRows()).toEqual(before);
+  });
+
+  it("a pure invalidation still goes through, before and after the scan removes the node", async () => {
+    const a = await nodeOf("src/a.ts");
+    const b = await nodeOf("src/b.ts");
+    const c = await nodeOf("src/c.ts");
+    await writeMemory(a, "about-a", "a.ts is going away");
+    await writeMemory(b, "about-b", "b.ts stays");
+    await assertLink(a, b, "uses");
+    await assertLink(b, c, "uses");
+    const memory = new Map((await memoryRows()).map((row) => [row.text, row]));
+    const assertions = await assertionRows();
+    const fromA = assertions.find((row) => row.source_node_id === a);
+    const fromB = assertions.find((row) => row.source_node_id === b);
+
+    // Before any removal: the stamp alone, and the stamp with a superseder.
+    await update(
+      "update public.memory_block_entries set invalidated_at = now() where id = $1",
+      [memory.get("b.ts stays")?.id],
+    );
+    await update(
+      `update public.agent_assertions
+       set invalidated_at = now(), invalidated_by = $2 where id = $1`,
+      [fromB?.id, "01K00000000000000000000001"],
+    );
+
+    await apply({
+      commitSha: SHA_B,
+      removedPaths: ["src/a.ts"],
+      unchangedPaths: ["src/b.ts", "src/c.ts"],
+    });
+    expect(await nodeExists(a)).toBe(false);
+
+    // After the scan removed a.ts: the rows pointing at it can still be
+    // invalidated, and nothing but the stamp changes.
+    await update(
+      "update public.memory_block_entries set invalidated_at = now() where id = $1",
+      [memory.get("a.ts is going away")?.id],
+    );
+    await update(
+      "update public.agent_assertions set invalidated_at = now() where id = $1",
+      [fromA?.id],
+    );
+
+    const after = await memoryRows();
+    expect(after.every((row) => row.invalidated_at !== null)).toBe(true);
+    expect(
+      after.map(({ id, anchor_node_id, text }) => ({
+        id,
+        anchor_node_id,
+        text,
+      })),
+    ).toEqual(
+      [...memory.values()].map(({ id, anchor_node_id, text }) => ({
+        id,
+        anchor_node_id,
+        text,
+      })),
+    );
+    const afterAssertions = await assertionRows();
+    expect(afterAssertions.every((row) => row.invalidated_at !== null)).toBe(
+      true,
+    );
+    expect(
+      afterAssertions.map(
+        ({ id, source_node_id, target_node_id, relation }) => ({
+          id,
+          source_node_id,
+          target_node_id,
+          relation,
+        }),
+      ),
+    ).toEqual(
+      assertions.map(({ id, source_node_id, target_node_id, relation }) => ({
+        id,
+        source_node_id,
+        target_node_id,
+        relation,
+      })),
+    );
+    // Invalidated rows stay immutable, as before.
+    await expect(
+      update(
+        "update public.memory_block_entries set invalidated_at = now() where id = $1",
+        [memory.get("a.ts is going away")?.id],
+      ),
+    ).rejects.toThrow(/immutable/);
   });
 
   it("memory rows are still never deleted", async () => {
