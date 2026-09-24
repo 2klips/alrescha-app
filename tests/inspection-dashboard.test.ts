@@ -178,6 +178,41 @@ describe("buildInspectionDashboard", () => {
     expect(dashboard.ruledOut.entries).toHaveLength(2);
   });
 
+  it("puts the newest ruled-out attempt first by instant, not by collation", () => {
+    // PostgREST writes timestamptz with trailing fractional zeros trimmed and
+    // no fraction at all at zero microseconds; a collating compare ranks `.`
+    // before `+` and read `…:56+00:00` as later than `…:56.5+00:00`. A zone
+    // with daylight time writes the fall-back hour with two offsets, which
+    // text order reads backwards. The later attempt's id sorts last and each
+    // pair is read in both orders, so neither can supply the answer.
+    const attempt = (id: string, recordedAt: string) => ({
+      hypothesis: "재시도 횟수를 늘리면 해결된다",
+      id,
+      outcome: "배제",
+      recordedAt,
+      refs: [],
+    });
+    const newestFirst = (earlier: string, later: string) => {
+      const attempts = [attempt("r-a", earlier), attempt("r-b", later)];
+      return [attempts, [...attempts].reverse()].map((ruledOutAttempts) =>
+        build({ ruledOutAttempts }).ruledOut.entries.map(({ id }) => id),
+      );
+    };
+
+    expect(
+      newestFirst("2026-09-24T03:12:56+00:00", "2026-09-24T03:12:56.5+00:00"),
+    ).toEqual([
+      ["r-b", "r-a"],
+      ["r-b", "r-a"],
+    ]);
+    expect(
+      newestFirst("2026-11-01T01:30:00-04:00", "2026-11-01T01:10:00-05:00"),
+    ).toEqual([
+      ["r-b", "r-a"],
+      ["r-b", "r-a"],
+    ]);
+  });
+
   it("treats a zero-total todo board as unmeasured, not as 0%", () => {
     expect(build({ todos: { done: 0, total: 0 } }).progress.percent).toBeNull();
     const measured = build({ todos: { done: 3, total: 4 } }).progress;

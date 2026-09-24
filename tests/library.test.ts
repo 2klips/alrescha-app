@@ -95,4 +95,45 @@ describe("personal library", () => {
       filterLibraryItems(items, { query: "database", tag: "auth" }),
     ).toEqual([]);
   });
+
+  it("lists the newest snapshot first by instant, not by collation", () => {
+    // `created_at` is PostgREST text, which writes no fraction at zero
+    // microseconds: a collating compare read `…:56+00:00` as later than
+    // `…:56.5+00:00`. Text order reads the fall-back hour's two offsets
+    // backwards. The newer item's id sorts last, both read orders.
+    const item = (id: string, createdAt: string) => ({
+      ...createLibrarySnapshot({
+        content: "Check OAuth evidence.",
+        name: "Review auth",
+        source: {
+          commitSha: "1".repeat(40),
+          path: ".agents/skills/review-auth/SKILL.md",
+          repository: "alrescha/api",
+        },
+        tags: ["auth"],
+        type: "skill",
+      }),
+      createdAt,
+      id,
+    });
+    const newestFirst = (earlier: string, later: string) => {
+      const items = [item("item-a", earlier), item("item-b", later)];
+      return [items, [...items].reverse()].map((read) =>
+        filterLibraryItems(read, { query: "", tag: null }).map(({ id }) => id),
+      );
+    };
+
+    expect(
+      newestFirst("2026-09-24T03:12:56+00:00", "2026-09-24T03:12:56.5+00:00"),
+    ).toEqual([
+      ["item-b", "item-a"],
+      ["item-b", "item-a"],
+    ]);
+    expect(
+      newestFirst("2026-11-01T01:30:00-04:00", "2026-11-01T01:10:00-05:00"),
+    ).toEqual([
+      ["item-b", "item-a"],
+      ["item-b", "item-a"],
+    ]);
+  });
 });

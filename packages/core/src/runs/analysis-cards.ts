@@ -7,6 +7,8 @@
  * read from a stored row or `null`; nothing is fabricated.
  */
 
+import { byInstant } from "../data/instant-order";
+
 export type AnalysisTriggerKind =
   "manual" | "push" | "check_run" | "workflow_run";
 
@@ -248,7 +250,7 @@ export function buildCommitAnalysisCards(
     })
     .sort(
       (left, right) =>
-        right.createdAt.localeCompare(left.createdAt) ||
+        byInstant(right.createdAt, left.createdAt) ||
         left.runId.localeCompare(right.runId),
     );
 }

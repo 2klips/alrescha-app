@@ -1,3 +1,4 @@
+import { byInstant } from "../data/instant-order";
 import type { TodoStatus } from "./todos";
 
 export interface ProgressTodo {
@@ -281,7 +282,7 @@ function blockedReason(
           (todo.source.kind === "progress-event" &&
             event.id === todo.source.eventId)),
     )
-    .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))[0];
+    .sort((left, right) => byInstant(right.occurredAt, left.occurredAt))[0];
   return stated?.summary ?? NO_STATED_BLOCKER;
 }
 
@@ -301,7 +302,7 @@ function attentionFor(
     left: ProgressAttentionItem,
     right: ProgressAttentionItem,
   ): number =>
-    left.since.localeCompare(right.since) || left.id.localeCompare(right.id);
+    byInstant(left.since, right.since) || left.id.localeCompare(right.id);
   return {
     blocked: input.todos
       .filter((todo) => todo.status === "blocked")
@@ -386,7 +387,7 @@ export function buildProgressDashboard(
     })),
   ].sort(
     (left, right) =>
-      right.occurredAt.localeCompare(left.occurredAt) ||
+      byInstant(right.occurredAt, left.occurredAt) ||
       left.id.localeCompare(right.id),
   );
   const now = input.now ? new Date(input.now) : new Date();

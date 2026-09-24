@@ -249,6 +249,73 @@ describe("the attention list", () => {
     );
   });
 
+  it("takes the newest blocker by instant, not by collation", () => {
+    // A collating compare read PostgREST's `…:56+00:00` (zero microseconds,
+    // no fraction written) as later than `…:56.5+00:00`, and text order reads
+    // the fall-back hour's two offsets backwards. Both read orders.
+    const blocker = (id: string, occurredAt: string, summary: string) => ({
+      id,
+      occurredAt,
+      refs: [],
+      status: "blocked" as const,
+      summary,
+      task: "작업",
+      todoId: "todo-1",
+    });
+    const reasons = (earlier: string, later: string) => {
+      const events = [
+        blocker("event-a", earlier, "옛 사유"),
+        blocker("event-b", later, "새 사유"),
+      ];
+      return [events, [...events].reverse()].map(
+        (progressEvents) =>
+          buildProgressDashboard(
+            input({ progressEvents, todos: [todo({ status: "blocked" })] }),
+          ).attention.blocked[0]?.reason,
+      );
+    };
+
+    expect(
+      reasons("2026-09-06T03:12:56+00:00", "2026-09-06T03:12:56.5+00:00"),
+    ).toEqual(["새 사유", "새 사유"]);
+    expect(
+      reasons("2026-11-01T01:30:00-04:00", "2026-11-01T01:10:00-05:00"),
+    ).toEqual(["새 사유", "새 사유"]);
+  });
+
+  it("orders both lists oldest first by instant, not by collation", () => {
+    // `updated_at` arrives as PostgREST text: `…:56+00:00` at zero
+    // microseconds is the older of the pair, and so is the fall-back hour's
+    // `-04:00` reading. The older todo's id sorts last, both read orders.
+    const lists = (earlier: string, later: string) => {
+      const todos = [
+        todo({ id: "blocked-b", status: "blocked", updatedAt: earlier }),
+        todo({ id: "stale-b", status: "in-progress", updatedAt: earlier }),
+        todo({ id: "blocked-a", status: "blocked", updatedAt: later }),
+        todo({ id: "stale-a", status: "in-progress", updatedAt: later }),
+      ];
+      return [todos, [...todos].reverse()].map((read) => {
+        const { attention } = buildProgressDashboard(
+          input({ now: "2026-11-20T12:00:00.000Z", todos: read }),
+        );
+        return [attention.blocked, attention.stale].map((items) =>
+          items.map(({ id }) => id),
+        );
+      });
+    };
+    const oldestFirst = [
+      ["blocked-b", "blocked-a"],
+      ["stale-b", "stale-a"],
+    ];
+
+    expect(
+      lists("2026-11-01T03:12:56+00:00", "2026-11-01T03:12:56.5+00:00"),
+    ).toEqual([oldestFirst, oldestFirst]);
+    expect(
+      lists("2026-11-01T01:30:00-04:00", "2026-11-01T01:10:00-05:00"),
+    ).toEqual([oldestFirst, oldestFirst]);
+  });
+
   /**
    * A blocked item nobody explained is the one worth showing. Dropping it
    * from the list, or giving it an empty reason that renders as a blank, is
@@ -324,5 +391,42 @@ describe("the timeline", () => {
     expect(dashboard.digest.today.total).toBe(1);
     // A scan is not a commit, so the commit count stays honest.
     expect(dashboard.digest.today.commits).toBe(0);
+  });
+
+  it("puts the newest entry first by instant, not by collation", () => {
+    // Every entry's time is PostgREST text: `…:56+00:00` at zero microseconds
+    // is half a second before `…:56.5+00:00`, which a collating compare read
+    // the other way round, and text order reads the fall-back hour's two
+    // offsets backwards. The newer entry's id sorts last, both read orders.
+    const event = (id: string, occurredAt: string) => ({
+      id,
+      occurredAt,
+      refs: [],
+      status: "progress" as const,
+      summary: "진행",
+      task: "작업",
+      todoId: "todo-1",
+    });
+    const newestFirst = (earlier: string, later: string) => {
+      const events = [event("event-a", earlier), event("event-b", later)];
+      return [events, [...events].reverse()].map((progressEvents) =>
+        buildProgressDashboard(input({ progressEvents })).timeline.map(
+          ({ id }) => id,
+        ),
+      );
+    };
+
+    expect(
+      newestFirst("2026-09-06T03:12:56+00:00", "2026-09-06T03:12:56.5+00:00"),
+    ).toEqual([
+      ["event-b", "event-a"],
+      ["event-b", "event-a"],
+    ]);
+    expect(
+      newestFirst("2026-11-01T01:30:00-04:00", "2026-11-01T01:10:00-05:00"),
+    ).toEqual([
+      ["event-b", "event-a"],
+      ["event-b", "event-a"],
+    ]);
   });
 });

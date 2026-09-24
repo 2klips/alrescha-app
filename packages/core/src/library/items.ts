@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { byInstant } from "../data/instant-order";
+
 export type LibraryItemType = "instruction" | "rules" | "skill";
 
 export interface LibraryItemSource {
@@ -105,7 +107,7 @@ export function filterLibraryItems(
     })
     .sort(
       (left, right) =>
-        right.createdAt.localeCompare(left.createdAt) ||
+        byInstant(right.createdAt, left.createdAt) ||
         left.id.localeCompare(right.id),
     );
 }
