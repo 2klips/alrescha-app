@@ -64,8 +64,26 @@ import {
 import { LINK_SCHEMA_VERSION, summaryState } from "@alrescha/core";
 
 import { firstRowsById, readInBatches } from "../supabase/id-batches";
+import { readByIdPages, type RowPage } from "../supabase/row-pages";
 
 type Row = Record<string, unknown>;
+/**
+ * The part of a PostgREST query builder the paged reads use (RE-04).
+ *
+ * Stated structurally because supabase-js types a select from its column
+ * string, and a column list chosen at run time sends that inference into a
+ * recursion TypeScript gives up on. One cast, where the builder is made.
+ */
+interface TableQuery extends PromiseLike<RowPage<Row>> {
+  eq(column: string, value: unknown): TableQuery;
+  gt(column: string, value: unknown): TableQuery;
+  in(column: string, values: readonly unknown[]): TableQuery;
+  is(column: string, value: null): TableQuery;
+  limit(count: number): TableQuery;
+  neq(column: string, value: unknown): TableQuery;
+  or(filters: string): TableQuery;
+  order(column: string, options: { ascending: boolean }): TableQuery;
+}
 
 /**
  * Minimum gap between `last_used_at` touches on the same token (QW-11). The
@@ -710,6 +728,40 @@ export class SupabaseMcpStore implements McpStore {
    * so. This asks the database for that path.
    */
   /**
+   * One table's rows for a workspace, in id order, up to `limit` — paged
+   * past the server's own row cap (RE-04).
+   *
+   * PostgREST stops every answer at `max_rows` (1,000 unless the project
+   * raised it) and says nothing, so one request for 2,001 rows came back
+   * with 1,000 and the read called itself complete. `readByIdPages` asks for
+   * the exact count and continues after the last id until the rows are in
+   * hand; a table under the cap is still one request. The tenant predicate
+   * is on every page.
+   */
+  #pages(
+    workspaceId: string,
+    name: string,
+    columns: string,
+    limit: number,
+    narrow: (query: TableQuery) => TableQuery = (query) => query,
+  ) {
+    return readByIdPages<Row>((page) => {
+      let query = narrow(
+        (
+          this.client
+            .from(name)
+            .select(
+              columns,
+              page.count ? { count: "exact" } : undefined,
+            ) as unknown as TableQuery
+        ).eq("workspace_id", workspaceId),
+      );
+      if (page.after !== null) query = query.gt("id", page.after);
+      return query.order("id", { ascending: true }).limit(page.limit);
+    }, limit);
+  }
+
+  /**
    * Every receipt with its summary (RE-04 B-01), for the one reader that
    * needs them. The workspace read stopped selecting `summary` because it
    * was 40,101,144 bytes over 330 rows on the pilot and no workspace reader
@@ -719,12 +771,12 @@ export class SupabaseMcpStore implements McpStore {
   async loadReceiptSummaries(
     principal: McpPrincipal,
   ): Promise<McpReceiptSummaryRead> {
-    const response = await this.client
-      .from("receipts")
-      .select("id, repository_id, commit_sha, status, summary, digest")
-      .eq("workspace_id", principal.workspaceId)
-      .order("id", { ascending: true })
-      .limit(MCP_WORKSPACE_READ_LIMIT + 1);
+    const response = await this.#pages(
+      principal.workspaceId,
+      "receipts",
+      "id, repository_id, commit_sha, status, summary, digest",
+      MCP_WORKSPACE_READ_LIMIT + 1,
+    );
     queryError("MCP receipt summary query failed", response);
     const all = rows(response.data);
     const kept = all.slice(0, MCP_WORKSPACE_READ_LIMIT);
@@ -788,13 +840,13 @@ export class SupabaseMcpStore implements McpStore {
 
     const [byFile, byId] = await Promise.all([
       readInBatches(fileIds, (batch) =>
-        this.client
-          .from("symbols")
-          .select(SYMBOL_COLUMNS)
-          .eq("workspace_id", workspaceId)
-          .in("artifact_id", batch)
-          .order("id", { ascending: true })
-          .limit(SYMBOL_LAYER_LIMITS.symbols + 1),
+        this.#pages(
+          workspaceId,
+          "symbols",
+          SYMBOL_COLUMNS,
+          SYMBOL_LAYER_LIMITS.symbols + 1,
+          (query) => query.in("artifact_id", batch),
+        ),
       ),
       readInBatches(symbolIds, (batch) =>
         this.client
@@ -833,13 +885,14 @@ export class SupabaseMcpStore implements McpStore {
     // are ULIDs, so nothing in them needs quoting.
     const edgeResults = await readInBatches([...seeds.keys()], (batch) => {
       const list = batch.join(",");
-      return this.client
-        .from("symbol_edges")
-        .select(SYMBOL_EDGE_COLUMNS)
-        .eq("workspace_id", workspaceId)
-        .or(`source_node_id.in.(${list}),target_node_id.in.(${list})`)
-        .order("id", { ascending: true })
-        .limit(SYMBOL_LAYER_LIMITS.edges + 1);
+      return this.#pages(
+        workspaceId,
+        "symbol_edges",
+        SYMBOL_EDGE_COLUMNS,
+        SYMBOL_LAYER_LIMITS.edges + 1,
+        (query) =>
+          query.or(`source_node_id.in.(${list}),target_node_id.in.(${list})`),
+      );
     });
     for (const response of edgeResults) {
       queryError("MCP symbol edge query failed", response);
@@ -928,13 +981,13 @@ export class SupabaseMcpStore implements McpStore {
     const responses = await readInBatches(
       named.slice(0, SYMBOL_LAYER_LIMITS.files),
       (batch) =>
-        this.client
-          .from("symbols")
-          .select(SYMBOL_COLUMNS)
-          .eq("workspace_id", workspaceId)
-          .in("artifact_id", batch)
-          .order("id", { ascending: true })
-          .limit(SYMBOL_LAYER_LIMITS.symbols + 1),
+        this.#pages(
+          workspaceId,
+          "symbols",
+          SYMBOL_COLUMNS,
+          SYMBOL_LAYER_LIMITS.symbols + 1,
+          (query) => query.in("artifact_id", batch),
+        ),
     );
     for (const response of responses) {
       queryError("MCP file symbol query failed", response);
@@ -1118,6 +1171,19 @@ export class SupabaseMcpStore implements McpStore {
       truncated.push({ limit: MCP_WORKSPACE_READ_LIMIT, table });
       return all.slice(0, MCP_WORKSPACE_READ_LIMIT);
     };
+    /** One table of this read, paged past the server's row cap (RE-04). */
+    const table = (
+      name: string,
+      columns: string,
+      narrow?: (query: TableQuery) => TableQuery,
+    ) =>
+      this.#pages(
+        workspaceId,
+        name,
+        columns,
+        MCP_WORKSPACE_READ_LIMIT + 1,
+        narrow,
+      );
     // Positional, and the order below must match the array exactly. Adding
     // `todos` in the middle of the array while its name stayed at the end of
     // this list shifted every result after it by one, and the first symptom
@@ -1141,122 +1207,71 @@ export class SupabaseMcpStore implements McpStore {
       sections,
       concepts,
     ] = await Promise.all([
-      this.client
-        .from("repositories")
-        .select("id, full_name, default_branch")
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.client
-        .from("graph_nodes")
-        .select("id, label")
-        .eq("workspace_id", workspaceId)
+      table("repositories", "id, full_name, default_branch"),
+      table("graph_nodes", "id, label", (query) =>
         // The symbol layer is read by neighbourhood, never here (todo 26);
         // left in, it would spend the row budget before the files did.
-        .neq("kind", "symbol")
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.client
-        .from("artifacts")
-        .select("id, repository_id, kind, path, metadata, source_blob_sha")
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.client
-        .from("requirements")
-        .select("id, repository_id, source_artifact_id, statement, status")
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.client
-        .from("evidence")
-        .select(
-          "id, repository_id, source_artifact_id, kind, verdict, metadata",
-        )
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
+        query.neq("kind", "symbol"),
+      ),
+      table(
+        "artifacts",
+        "id, repository_id, kind, path, metadata, source_blob_sha",
+      ),
+      table(
+        "requirements",
+        "id, repository_id, source_artifact_id, statement, status",
+      ),
+      table(
+        "evidence",
+        "id, repository_id, source_artifact_id, kind, verdict, metadata",
+      ),
       this.#readEdgePages(workspaceId, revisionBefore),
-      this.client
-        .from("findings")
-        .select(
-          "id, repository_id, title, source_node_id, target_node_id, kind, severity, status, provenance, confidence, evidence_grade",
-        )
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
+      table(
+        "findings",
+        "id, repository_id, title, source_node_id, target_node_id, kind, severity, status, provenance, confidence, evidence_grade",
+      ),
       // No `summary` (RE-04 B-01). It is the whole in-toto statement — 330
       // receipts were 40,101,144 bytes on the pilot — and no reader of this
       // workspace uses it; the one that does calls `loadReceiptSummaries`.
-      this.client
-        .from("receipts")
-        .select("id, repository_id, commit_sha, status, digest")
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.client
-        .from("index_entries")
-        .select(
-          "id, repository_id, node_id, neighbor_ids, search_key, entry_type, title, path, headings, tags, symbols",
-        )
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
-      this.client
-        .from("memory_block_entries")
-        .select("id, anchor_node_id, name, entry_key, text, valid_from")
-        .eq("workspace_id", workspaceId)
-        .is("invalidated_at", null),
+      table("receipts", "id, repository_id, commit_sha, status, digest"),
+      table(
+        "index_entries",
+        "id, repository_id, node_id, neighbor_ids, search_key, entry_type, title, path, headings, tags, symbols",
+      ),
+      table(
+        "memory_block_entries",
+        "id, anchor_node_id, name, entry_key, text, valid_from",
+        (query) => query.is("invalidated_at", null),
+      ),
       // Todos are workspace-scoped: a checkbox can name no repository at
       // all, so this is not part of the per-repository walk (todo 21).
       wants("evidence")
-        ? this.client
-            .from("todos")
-            .select(
-              "id, repository_id, title, status, source_key, source_event_id, source_path, created_at, updated_at",
-            )
-            .eq("workspace_id", workspaceId)
-            .order("id", { ascending: true })
-            .limit(MCP_WORKSPACE_READ_LIMIT + 1)
+        ? table(
+            "todos",
+            "id, repository_id, title, status, source_key, source_event_id, source_path, created_at, updated_at",
+          )
         : empty,
-      this.client
-        .from("module_summaries")
-        .select(
-          "repository_id, module_key, name, member_paths, member_digest, summary",
-        )
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
+      // `id` is selected only to continue past a page; the decoder ignores it.
+      table(
+        "module_summaries",
+        "id, repository_id, module_key, name, member_paths, member_digest, summary",
+      ),
       wants("route")
-        ? this.client
-            .from("routes")
-            .select("id, repository_id, url, tier, methods")
-            .eq("workspace_id", workspaceId)
-            .order("id", { ascending: true })
-            .limit(MCP_WORKSPACE_READ_LIMIT + 1)
+        ? table("routes", "id, repository_id, url, tier, methods")
         : empty,
       wants("database")
-        ? this.client
-            .from("db_objects")
-            .select("id, repository_id, name, kind, source_path, source_line")
-            .eq("workspace_id", workspaceId)
-            .order("id", { ascending: true })
-            .limit(MCP_WORKSPACE_READ_LIMIT + 1)
+        ? table(
+            "db_objects",
+            "id, repository_id, name, kind, source_path, source_line",
+          )
         : empty,
-      this.client
-        .from("sections")
-        .select("id, repository_id, token, heading, source_path")
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
+      table("sections", "id, repository_id, token, heading, source_path"),
       // The concept layer (todo 19 ⑴): a semantic band row like a module
       // summary, and read like one — it is prose a model wrote.
-      this.client
-        .from("concepts")
-        .select("id, repository_id, slug, name, kind, summary, member_paths")
-        .eq("workspace_id", workspaceId)
-        .order("id", { ascending: true })
-        .limit(MCP_WORKSPACE_READ_LIMIT + 1),
+      table(
+        "concepts",
+        "id, repository_id, slug, name, kind, summary, member_paths",
+      ),
     ]);
     for (const [label, result] of [
       ["repositories", repositories],
