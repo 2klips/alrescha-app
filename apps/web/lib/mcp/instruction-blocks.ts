@@ -27,7 +27,7 @@ Before grepping or reading files broadly:
 
 1. \`get_graph_schema\` — learn this repository's graph vocabulary first.
 2. \`repo_map\` (pass \`focus\` = files/symbols from the task) — token-budgeted orientation.
-3. \`search_nodes\` → \`get_neighbors\` / \`trace_path\` — navigate by ids; fetch bodies only through \`get_node_content\`.
+3. \`search_index\` → \`get_neighbors\` / \`trace_path\` — navigate by ids; open a file through \`get_artifact\`.
 4. \`memory_read\` — check what earlier agents already learned (gotchas, conventions, decisions).
 
 Record what you learn before finishing:
