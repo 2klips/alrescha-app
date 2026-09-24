@@ -169,6 +169,61 @@ describe("searching the section headings a read carries", () => {
     expect("sections" in (code.results[0] ?? {})).toBe(false);
   });
 
+  /**
+   * The store keeps only its budget of section rows and says so in
+   * `coverage.truncated`. A heading past that budget is not in the read, so
+   * a question only it answers finds nothing — and that page must say the
+   * read was partial, not that the repository holds no such decision.
+   */
+  it("calls a page partial when the section read ran out", () => {
+    const whole = workspace();
+    expect(
+      searchWorkspaceIndexPage(whole, { query: "복원 절차" }).results,
+    ).toHaveLength(1);
+
+    const [first, ...rest] = whole.repositories;
+    const capped: McpWorkspaceData = {
+      ...whole,
+      coverage: {
+        readConsistency: "unproven",
+        result: "partial",
+        truncated: [{ limit: 2_000, table: "sections" }],
+      },
+      repositories: [
+        {
+          ...first!,
+          sections: (first!.sections ?? []).filter(
+            ({ token }) => token !== "ADR-012",
+          ),
+        },
+        ...rest,
+      ],
+    };
+    const page = searchWorkspaceIndexPage(capped, { query: "복원 절차" });
+    expect(page.results).toEqual([]);
+    expect(page.coverage).toEqual({
+      reason: "sections stopped at 2000 rows",
+      result: "partial",
+    });
+  });
+
+  it("stays complete when the only table left out is the edges search never reads", () => {
+    // What `loadWorkspace(principal, { edges: false })` reports for a search.
+    const page = searchWorkspaceIndexPage(
+      {
+        ...workspace(),
+        coverage: {
+          readConsistency: "unproven",
+          result: "partial",
+          truncated: [{ limit: 0, table: "edges" }],
+        },
+      },
+      { query: "복원 절차" },
+    );
+    expect(page.results.map(({ nodeId }) => nodeId)).toEqual(["a0"]);
+    expect(page.coverage).toEqual({ reason: null, result: "complete" });
+  });
+
   it("finds nothing for a word no heading, path or symbol holds", () => {
     expect(
       searchWorkspaceIndexPage(workspace(), { query: "존재하지 않는 결정" })

@@ -399,12 +399,19 @@ export const SEARCH_INDEX_DEFAULT_LIMIT = 20;
  * The tables this ranking is built from. A workspace read that stopped short
  * on one of them cannot say the page is every match; one that stopped short
  * on `routes` has nothing to do with this answer.
+ *
+ * `sections` is here since search matches their headings (RE-04): a read
+ * that stopped at its section budget drops the documents only a later
+ * heading would have found, and answering 0 rows as `complete` would read
+ * that miss as an absence. `edges` is not — search ranks by the index's
+ * neighbour cache and asks for no edge at all.
  */
 const SEARCH_INDEX_TABLES: ReadonlySet<string> = new Set([
   "artifacts",
   "graph_nodes",
   "index_entries",
   "memory_block_entries",
+  "sections",
 ]);
 
 export interface SearchIndexInput {
