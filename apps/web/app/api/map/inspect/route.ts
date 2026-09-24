@@ -7,38 +7,15 @@ import {
   type InspectArtifactRow,
   type InspectorCardPayload,
 } from "../../../../lib/map/inspect-card";
+import { readModuleCardInputs } from "../../../../lib/map/module-rows";
 import { createClient } from "../../../../lib/supabase/server";
 
 export const dynamic = "force-dynamic";
-
-/** Rows one module computation may read — the map's own per-table caps. */
-const ARTIFACT_LIMIT = 2_000;
-const EDGE_LIMIT = 6_000;
 
 interface NodeRow {
   readonly id: string;
   readonly kind: string;
   readonly repository_id: string;
-}
-
-interface ModuleArtifactRow {
-  readonly id: string;
-  readonly path: string;
-  readonly source_blob_sha: string | null;
-}
-
-interface ModuleEdgeRow {
-  readonly relation: string;
-  readonly source_node_id: string;
-  readonly target_node_id: string;
-}
-
-interface ModuleSummaryRow {
-  readonly member_digest: string;
-  readonly member_paths: readonly string[] | null;
-  readonly module_key: string;
-  readonly name: string;
-  readonly summary: string;
 }
 
 function json(payload: unknown, status = 200): Response {
@@ -88,57 +65,12 @@ export async function GET(request: Request): Promise<Response> {
     if (!artifact.data) return json({ error: "not_found" }, 404);
     const artifactRow = artifact.data as unknown as InspectArtifactRow;
 
-    const [artifacts, edges, summaries] = await Promise.all([
-      client
-        .from("artifacts")
-        .select("id,path,source_blob_sha")
-        .eq("repository_id", row.repository_id)
-        .order("id", { ascending: true })
-        .limit(ARTIFACT_LIMIT),
-      client
-        .from("edges")
-        .select("relation,source_node_id,target_node_id")
-        .eq("repository_id", row.repository_id)
-        .in("relation", ["imports", "calls"])
-        .order("id", { ascending: true })
-        .limit(EDGE_LIMIT),
-      client
-        .from("module_summaries")
-        .select("module_key,name,member_paths,member_digest,summary")
-        .eq("repository_id", row.repository_id),
-    ]);
-    if (artifacts.error || edges.error || summaries.error) {
-      return json({ error: "unavailable" }, 500);
-    }
+    const inputs = await readModuleCardInputs(client, row.repository_id);
+    if (!inputs) return json({ error: "unavailable" }, 500);
     const payload: InspectorCardPayload = {
       card: artifactInspectorCard(artifactRow),
       kind: "artifact",
-      module: moduleCardForPath(
-        {
-          artifacts: ((artifacts.data ?? []) as ModuleArtifactRow[]).map(
-            (entry) => ({
-              blobSha: entry.source_blob_sha,
-              id: entry.id,
-              path: entry.path,
-            }),
-          ),
-          edges: ((edges.data ?? []) as ModuleEdgeRow[]).map((entry) => ({
-            relation: entry.relation,
-            sourceNodeId: entry.source_node_id,
-            targetNodeId: entry.target_node_id,
-          })),
-          summaries: ((summaries.data ?? []) as ModuleSummaryRow[]).map(
-            (entry) => ({
-              memberDigest: entry.member_digest,
-              memberPaths: entry.member_paths ?? [],
-              moduleKey: entry.module_key,
-              name: entry.name,
-              summary: entry.summary,
-            }),
-          ),
-        },
-        artifactRow.path,
-      ),
+      module: moduleCardForPath(inputs, artifactRow.path),
       nodeId,
     };
     return json(payload);

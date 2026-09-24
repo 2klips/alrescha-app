@@ -29,6 +29,13 @@ import {
   REPOSITORY_SELECTION_COLUMNS,
   currentRepository,
 } from "../shell/current-repository";
+import {
+  EVERY_ROW,
+  readRowsById,
+  readRowsByPosition,
+  type Narrow,
+  type TableQuery,
+} from "../supabase/table-pages";
 
 /**
  * `/app/map` loader (Phase 3 Wave A todo 1).
@@ -962,12 +969,47 @@ export function buildWorkspaceMapModel(
   };
 }
 
-/** Caps keep one pathological workspace from serializing megabytes into HTML. */
-const NODE_LIMIT = 2_000;
+/**
+ * Caps keep one pathological workspace from serializing megabytes into HTML.
+ * Both are above PostgREST's own row cap (1,000), which the reads below page
+ * past instead of taking it for the end of a table (RE-04).
+ */
+export const NODE_LIMIT = 2_000;
 const EDGE_LIMIT = 6_000;
 const FEED_LIMIT = 20;
 /** Enough completions to find the current commit's; the newest wins anyway. */
 const SCAN_COMPLETION_LIMIT = 20;
+
+const EDGE_COLUMNS =
+  "id,source_node_id,target_node_id,relation,family,confidence,provenance";
+
+/**
+ * Co-change pairs strongest first, the table's key breaking ties: a total
+ * order, so the pairs the budget keeps are the same whichever page they
+ * arrive on.
+ */
+const CO_CHANGE_ORDER = [
+  ["change_count", false],
+  ["repository_id", true],
+  ["path_a", true],
+  ["path_b", true],
+] as const;
+
+/**
+ * Repositories newest-created first: the order `currentRepository` falls
+ * back on for a tie, and the one this read had before it paged by id.
+ */
+function newestFirst(rows: readonly MapRepositoryRow[]): MapRepositoryRow[] {
+  const createdAt = (row: MapRepositoryRow) => {
+    const at = Date.parse(row.created_at ?? "");
+    return Number.isFinite(at) ? at : Number.NEGATIVE_INFINITY;
+  };
+  return [...rows].sort(
+    (left, right) =>
+      createdAt(right) - createdAt(left) ||
+      (right.id < left.id ? -1 : right.id > left.id ? 1 : 0),
+  );
+}
 
 /**
  * A succeeded scan job with its run's commit embedded. PostgREST answers a
@@ -994,6 +1036,10 @@ function embeddedCommit(runs: ScanJobQueryRow["runs"]): string | null {
  * a package read as a cluster — so it must not compete with files for the
  * 2,000-node budget. Route, db_object and section hubs arrive in Wave A′ and
  * get their own lines then.
+ *
+ * Every hub budget is within PostgREST's row cap (1,000), so each hub read
+ * is one request the cap cannot cut; a budget raised past it has to page
+ * like the node reads (RE-04).
  */
 export const DIRECTORY_LIMIT = 300;
 
@@ -1049,18 +1095,33 @@ export async function loadWorkspaceMap(
   }
   const workspaceId = String(workspaceResult.data.id);
 
-  // One query per edge family, in parallel: the budgets are per family and a
+  /** The tenant predicate, on every page of every read below. */
+  const inWorkspace = <Row>(query: TableQuery<Row>) =>
+    query.eq("workspace_id", workspaceId);
+  /**
+   * One read of the map in id order, up to its budget, paged past
+   * PostgREST's row cap (RE-04). The server stops every answer at 1,000 rows
+   * and says nothing, so asking for 2,000 nodes in one request drew exactly
+   * the first thousand — in production, on 2026-09-23 and 2026-09-24 — as
+   * if they were the whole workspace.
+   */
+  const table = <Row extends { readonly id?: unknown }>(
+    name: string,
+    columns: string,
+    limit: number,
+    narrow: Narrow<Row> = (query) => query,
+  ) =>
+    readRowsById<Row>(client, name, columns, limit, (query) =>
+      narrow(inWorkspace(query)),
+    );
+
+  // One read per edge family, in parallel: the budgets are per family and a
   // single query cannot express eight of them (R5 §2.5, OQ-038).
   const familyQueries = Object.entries(EDGE_FAMILY_LIMITS).map(
     ([family, limit]) =>
-      client
-        .from("edges")
-        .select(
-          "id,source_node_id,target_node_id,relation,family,confidence,provenance",
-        )
-        .eq("workspace_id", workspaceId)
-        .eq("family", family)
-        .limit(limit),
+      table<MapEdgeRow>("edges", EDGE_COLUMNS, limit, (query) =>
+        query.eq("family", family),
+      ),
   );
 
   const [
@@ -1093,37 +1154,40 @@ export async function loadWorkspaceMap(
       .eq("workspace_id", workspaceId)
       .order("occurred_at", { ascending: false })
       .limit(FEED_LIMIT),
-    client
-      .from("artifacts")
-      .select("id,classification,path,exported_symbols")
-      .eq("workspace_id", workspaceId)
-      // Same key as the `graph_nodes` query below, and for the same reason:
-      // both are capped at NODE_LIMIT, so an unordered artifacts page could
-      // return a different 2,000 rows than the nodes page and leave matched
-      // code nodes with no classification (R4 §3.7). A scan writes a node
-      // and its artifact in one transaction, so the two keys agree row for
-      // row; `id` breaks the tie those shared timestamps create.
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .limit(NODE_LIMIT),
-    client
-      .from("agent_assertions")
-      .select("id,source_node_id,target_node_id,relation,reason")
-      .eq("workspace_id", workspaceId)
-      .is("invalidated_at", null)
-      .limit(EDGE_LIMIT),
-    client
-      .from("file_co_changes")
-      .select("path_a,path_b,change_count")
-      .eq("workspace_id", workspaceId)
-      .gte("change_count", CO_CHANGE_MIN_COUNT)
-      .order("change_count", { ascending: false })
-      .limit(EDGE_LIMIT),
-    client
-      .from("concepts")
-      .select("id,slug,name,kind,member_paths")
-      .eq("workspace_id", workspaceId)
-      .limit(NODE_LIMIT),
+    // Same key as the `graph_nodes` read below, and for the same reason:
+    // both stop at NODE_LIMIT, so pages in two different orders could hold
+    // different rows and leave matched code nodes with no classification
+    // (R4 §3.7). An artifact's id is its node's id, so reading both in id
+    // order keeps them row for row by construction. The ids are ULIDs the
+    // database mints from the clock as it writes each row, so id order is
+    // write order — the created-at order the budget kept before, short of
+    // two writers at once — and a key a page can continue after.
+    table<MapArtifactRow>(
+      "artifacts",
+      "id,classification,path,exported_symbols",
+      NODE_LIMIT,
+    ),
+    table<MapAssertionRow>(
+      "agent_assertions",
+      "id,source_node_id,target_node_id,relation,reason",
+      EDGE_LIMIT,
+      (query) => query.is("invalidated_at", null),
+    ),
+    // No id to continue after, and the budget keeps the strongest pairs, so
+    // this one pages by position in change-count order.
+    readRowsByPosition<MapCoChangeRow>(
+      client,
+      "file_co_changes",
+      "path_a,path_b,change_count",
+      EDGE_LIMIT,
+      CO_CHANGE_ORDER,
+      (query) => inWorkspace(query).gte("change_count", CO_CHANGE_MIN_COUNT),
+    ),
+    table<MapConceptRow>(
+      "concepts",
+      "id,slug,name,kind,member_paths",
+      NODE_LIMIT,
+    ),
     client
       .from("directories")
       .select("id,path,role")
@@ -1153,62 +1217,55 @@ export async function loadWorkspaceMap(
     // backfilled every one of them, so this is an empty set on a migrated
     // database — and a visible one, rather than a silent omission, if it is
     // ever not.
-    client
-      .from("edges")
-      .select(
-        "id,source_node_id,target_node_id,relation,family,confidence,provenance",
-      )
-      .eq("workspace_id", workspaceId)
-      .is("family", null)
-      .limit(EDGE_LIMIT),
-    client
-      .from("findings")
-      .select("source_node_id,target_node_id,status")
-      .eq("workspace_id", workspaceId)
-      .eq("status", "open"),
-    client
-      .from("graph_nodes")
-      .select("id,kind,label")
-      .eq("workspace_id", workspaceId)
-      // Symbols would otherwise spend the node budget on a layer the map
-      // loads by file (todo 26).
-      .neq("kind", "symbol")
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .limit(NODE_LIMIT),
-    client
-      .from("rationales")
-      .select("id,artifact_id,source_path,source_line")
-      .eq("workspace_id", workspaceId)
-      .limit(NODE_LIMIT),
-    client
-      .from("repositories")
-      .select(
-        `id,full_name,last_scanned_commit_sha,layout_config,${REPOSITORY_SELECTION_COLUMNS}`,
-      )
-      .eq("workspace_id", workspaceId)
-      .order("created_at", { ascending: false }),
-    client
-      .from("requirements")
-      .select("id,statement,source_artifact_id,source_span,status")
-      .eq("workspace_id", workspaceId)
-      .limit(NODE_LIMIT),
-    client
-      .from("evidence")
-      .select("id,kind,verdict,source_artifact_id")
-      .eq("workspace_id", workspaceId)
-      .limit(NODE_LIMIT),
-    client
-      .from("mcp_tokens")
-      .select("id,revoked_at")
-      .eq("workspace_id", workspaceId),
+    table<MapEdgeRow>("edges", EDGE_COLUMNS, EDGE_LIMIT, (query) =>
+      query.is("family", null),
+    ),
+    // `id` is selected only to continue past a page.
+    table<MapFindingRow & { readonly id: string }>(
+      "findings",
+      "id,source_node_id,target_node_id,status",
+      EVERY_ROW,
+      (query) => query.eq("status", "open"),
+    ),
+    table<MapGraphNodeRow>(
+      "graph_nodes",
+      "id,kind,label",
+      NODE_LIMIT,
+      (query) =>
+        // Symbols would otherwise spend the node budget on a layer the map
+        // loads by file (todo 26).
+        query.neq("kind", "symbol"),
+    ),
+    table<MapRationaleRow>(
+      "rationales",
+      "id,artifact_id,source_path,source_line",
+      NODE_LIMIT,
+    ),
+    table<MapRepositoryRow>(
+      "repositories",
+      `id,full_name,last_scanned_commit_sha,layout_config,${REPOSITORY_SELECTION_COLUMNS}`,
+      EVERY_ROW,
+    ),
+    table<MapRequirementRow>(
+      "requirements",
+      "id,statement,source_artifact_id,source_span,status",
+      NODE_LIMIT,
+    ),
+    table<MapEvidenceRow>(
+      "evidence",
+      "id,kind,verdict,source_artifact_id",
+      NODE_LIMIT,
+    ),
+    table<MapTokenRow>("mcp_tokens", "id,revoked_at", EVERY_ROW),
     // HUD coverage (todo 15): every `implements` edge, outside the family
-    // budgets above — a count, so it must not be a capped page.
-    client
-      .from("edges")
-      .select("source_node_id")
-      .eq("workspace_id", workspaceId)
-      .eq("relation", "implements"),
+    // budgets above — a count, so it must not be a capped page, the
+    // server's own cap included.
+    table<MapImplementsEdgeRow & { readonly id: string }>(
+      "edges",
+      "id,source_node_id",
+      EVERY_ROW,
+      (query) => query.eq("relation", "implements"),
+    ),
     // HUD freshness (todo 15): when the last scan finished. A GitHub push
     // lands as a succeeded `scan` job whose run carries the commit; a local
     // push (`alrescha push`) records a completed `manual` run and no job.
@@ -1268,31 +1325,31 @@ export async function loadWorkspaceMap(
   ];
 
   const edgeRows = [
-    ...familyEdges.flatMap((result) => (result.data ?? []) as MapEdgeRow[]),
-    ...((legacyEdges.data ?? []) as MapEdgeRow[]),
+    ...familyEdges.flatMap((result) => result.data),
+    ...legacyEdges.data,
   ];
 
   return buildWorkspaceMapModel(
     workspaceId,
     {
       accessEvents: (accessEvents.data ?? []) as MapAccessEventRow[],
-      artifacts: (artifacts.data ?? []) as MapArtifactRow[],
-      assertions: (assertions.data ?? []) as MapAssertionRow[],
-      coChanges: (coChanges.data ?? []) as MapCoChangeRow[],
-      concepts: (concepts.data ?? []) as MapConceptRow[],
+      artifacts: artifacts.data,
+      assertions: assertions.data,
+      coChanges: coChanges.data,
+      concepts: concepts.data,
       dbObjects: (dbObjectRows.data ?? []) as MapDbObjectRow[],
       directories: (directories.data ?? []) as MapDirectoryRow[],
       edges: edgeRows,
       routes: (routeRows.data ?? []) as MapRouteRow[],
-      evidence: (evidence.data ?? []) as MapEvidenceRow[],
-      findings: (findings.data ?? []) as MapFindingRow[],
-      graphNodes: (graphNodes.data ?? []) as MapGraphNodeRow[],
-      rationales: (rationales.data ?? []) as MapRationaleRow[],
-      repositories: (repositories.data ?? []) as MapRepositoryRow[],
-      requirements: (requirements.data ?? []) as MapRequirementRow[],
+      evidence: evidence.data,
+      findings: findings.data,
+      graphNodes: graphNodes.data,
+      rationales: rationales.data,
+      repositories: newestFirst(repositories.data),
+      requirements: requirements.data,
       sections: (sectionRows.data ?? []) as MapSectionRow[],
-      tokens: (tokens.data ?? []) as MapTokenRow[],
-      implementsEdges: (implementsEdges.data ?? []) as MapImplementsEdgeRow[],
+      tokens: tokens.data,
+      implementsEdges: implementsEdges.data,
       riskMap,
       scanCompletions,
     },

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { SYMBOL_LAYER_LIMITS } from "@alrescha/mcp";
 
 import { firstRowsById, readInBatches } from "../supabase/id-batches";
+import { readRowsById, readRowsByPosition } from "../supabase/table-pages";
 
 /**
  * The map's symbol layer, one request per set of files (Phase 4 Wave F todo
@@ -91,6 +92,18 @@ interface SymbolEdgeRow {
   readonly target_node_id: string;
 }
 
+/**
+ * The halo's order — by file, then line, then name — which its golden-angle
+ * layout places symbols by and its budget keeps the first of. The id last
+ * makes it total, so no two pages of it share a row.
+ */
+const SYMBOL_ORDER = [
+  ["path", true],
+  ["start_line", true],
+  ["name", true],
+  ["id", true],
+] as const;
+
 export async function readSymbolLayer(
   client: SupabaseClient,
   fileIds: readonly string[],
@@ -101,20 +114,21 @@ export async function readSymbolLayer(
     return { edges: [], files: [], symbols: [], truncated: notes };
   }
 
-  const symbolResult = await client
-    .from("symbols")
-    .select(
-      "id,artifact_id,path,container,kind,name,start_line,end_line,engine",
-    )
-    .in("artifact_id", fileIds)
-    .order("path", { ascending: true })
-    .order("start_line", { ascending: true })
-    .order("name", { ascending: true })
-    .limit(SYMBOL_LAYER_LIMITS.symbols + 1);
+  // The budget plus one says when the budget is hit — but only if the rows
+  // past PostgREST's own cap (1,000, RE-04) are read at all, so this pages:
+  // by position, in the halo's own order, the key last to make it total.
+  const symbolResult = await readRowsByPosition<SymbolRow>(
+    client,
+    "symbols",
+    "id,artifact_id,path,container,kind,name,start_line,end_line,engine",
+    SYMBOL_LAYER_LIMITS.symbols + 1,
+    SYMBOL_ORDER,
+    (query) => query.in("artifact_id", fileIds),
+  );
   if (symbolResult.error) {
     throw new Error(`symbol layer read failed: ${symbolResult.error.message}`);
   }
-  const symbolRows = (symbolResult.data ?? []) as SymbolRow[];
+  const symbolRows = symbolResult.data;
   const keptRows =
     symbolRows.length > SYMBOL_LAYER_LIMITS.symbols
       ? symbolRows.slice(0, SYMBOL_LAYER_LIMITS.symbols)
@@ -137,12 +151,15 @@ export async function readSymbolLayer(
   if (symbolIds.length > 0) {
     const edgeResults = await readInBatches(symbolIds, (batch) => {
       const list = batch.join(",");
-      return client
-        .from("symbol_edges")
-        .select("id,source_node_id,target_node_id,relation")
-        .or(`source_node_id.in.(${list}),target_node_id.in.(${list})`)
-        .order("id", { ascending: true })
-        .limit(SYMBOL_LAYER_LIMITS.edges + 1);
+      // Each batch in id order past the cap, as the symbols above.
+      return readRowsById<SymbolEdgeRow>(
+        client,
+        "symbol_edges",
+        "id,source_node_id,target_node_id,relation",
+        SYMBOL_LAYER_LIMITS.edges + 1,
+        (query) =>
+          query.or(`source_node_id.in.(${list}),target_node_id.in.(${list})`),
+      );
     });
     for (const edgeResult of edgeResults) {
       if (edgeResult.error) {
@@ -150,9 +167,7 @@ export async function readSymbolLayer(
       }
     }
     const edgeRows = firstRowsById(
-      edgeResults.map(
-        (edgeResult) => (edgeResult.data ?? []) as SymbolEdgeRow[],
-      ),
+      edgeResults.map((edgeResult) => edgeResult.data),
       SYMBOL_LAYER_LIMITS.edges + 1,
     );
     const keptEdges =
