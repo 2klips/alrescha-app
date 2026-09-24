@@ -33,9 +33,13 @@ export interface CommitCardJobRow {
 
 export interface CommitCardReceiptRow {
   readonly commit_sha: string;
+  /**
+   * `summary->findings`: the §13 snapshot alone, or null when the summary has
+   * no `findings` or is not an object.
+   */
+  readonly findings: unknown;
   readonly id: string;
   readonly run_id: string | null;
-  readonly summary: unknown;
 }
 
 export interface CommitCardRepositoryRow {
@@ -94,7 +98,14 @@ export function receiptFindings(summary: unknown): CommitFindingsDelta | null {
   if (typeof summary !== "object" || summary === null) {
     return null;
   }
-  const findings = (summary as Record<string, unknown>)["findings"];
+  return snapshotFindings((summary as Record<string, unknown>)["findings"]);
+}
+
+/**
+ * The same checks on the snapshot alone — what the commit cards select
+ * (`summary->findings`), so they never read the rest of the summary.
+ */
+function snapshotFindings(findings: unknown): CommitFindingsDelta | null {
   if (typeof findings !== "object" || findings === null) {
     return null;
   }
@@ -141,7 +152,7 @@ export function buildWorkspaceCommitCards(
   );
   const receipts: AnalysisReceiptInput[] = rows.receipts.map((receipt) => ({
     commitSha: receipt.commit_sha,
-    findings: receiptFindings(receipt.summary),
+    findings: snapshotFindings(receipt.findings),
     id: receipt.id,
     runId: receipt.run_id,
   }));
@@ -207,7 +218,10 @@ export async function loadWorkspaceCommitCards(
       ? Promise.resolve({ data: [], error: null })
       : client
           .from("receipts")
-          .select("id,run_id,commit_sha,summary")
+          // Only the §13 snapshot (RE-04, after B-01). `summary` also carries
+          // the whole in-toto statement — 330 receipts were 40,101,144 bytes
+          // on the pilot, up to 142,917 each — and a card reads none of it.
+          .select("id,run_id,commit_sha,findings:summary->findings")
           .eq("workspace_id", workspaceId)
           .in("run_id", runIds),
     client
