@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { computePilotStats, type PilotUsageDay } from "./pilot-stats";
+import {
+  computePilotStats,
+  type PilotReceiptSnapshot,
+  type PilotRunMeasurement,
+  type PilotUsageDay,
+} from "./pilot-stats";
 
 describe("pilot stats", () => {
   test("computes documented trends over a three-receipt chain", () => {
@@ -250,5 +255,94 @@ describe("three kinds of number, kept apart (todo 24)", () => {
     expect(report.methodology.servedTokens).toContain("assumption");
     expect(report.methodology.reportedUsage).toContain("unverified");
     expect(report.methodology.packEstimate).toContain("An estimate");
+  });
+});
+
+describe("first and latest by time, not by collation", () => {
+  // PostgREST writes timestamptz with trailing fractional zeros trimmed and
+  // no fraction at all at zero microseconds: `…:56+00:00` is half a second
+  // before `…:56.5+00:00`, yet a collating compare ranks `.` before `+` and
+  // put it last. Where the times differ, the ids sort against them, and every
+  // pair is read in both orders — the query's `order by` and a read paged by
+  // id — so neither the ids nor the read order can supply the answer.
+  const receipt = (
+    id: string,
+    createdAt: string,
+    openTotal: number,
+  ): PilotReceiptSnapshot => ({
+    commitSha: "e".repeat(40),
+    createdAt,
+    findings: { opened: 0, openTotal, resolved: 0 },
+    id,
+  });
+  const bothOrders = <T>(earlier: T, later: T): T[][] => [
+    [earlier, later],
+    [later, earlier],
+  ];
+  const findingsOf = (receipts: readonly PilotReceiptSnapshot[]) =>
+    computePilotStats({ enabled: true, packs: [], receipts, runs: [] })
+      .findings;
+  const scansOf = (runs: readonly PilotRunMeasurement[]) =>
+    computePilotStats({ enabled: true, packs: [], receipts: [], runs }).scans;
+
+  test("a receipt at zero microseconds precedes a later one in its second", () => {
+    const earlier = receipt("receipt-b", "2026-09-24T03:12:56+00:00", 7);
+    const later = receipt("receipt-a", "2026-09-24T03:12:56.5+00:00", 4);
+
+    expect(bothOrders(earlier, later).map(findingsOf)).toMatchObject([
+      { latestOpenTotal: 4, netOpenChange: -3 },
+      { latestOpenTotal: 4, netOpenChange: -3 },
+    ]);
+  });
+
+  test("a run started at zero microseconds precedes a later one in its second", () => {
+    const earlier: PilotRunMeasurement = {
+      completedAt: "2026-09-24T03:13:06+00:00",
+      id: "run-b",
+      startedAt: "2026-09-24T03:12:56+00:00",
+    };
+    const later: PilotRunMeasurement = {
+      completedAt: "2026-09-24T03:13:04.5+00:00",
+      id: "run-a",
+      startedAt: "2026-09-24T03:12:56.5+00:00",
+    };
+
+    expect(bothOrders(earlier, later).map(scansOf)).toMatchObject([
+      { durationChangePercent: -20, latestDurationMs: 8_000 },
+      { durationChangePercent: -20, latestDurationMs: 8_000 },
+    ]);
+  });
+
+  test("digits past the millisecond still order two receipts", () => {
+    // Date.parse keeps milliseconds only, so these two parse equal.
+    const earlier = receipt("receipt-b", "2026-09-24T03:12:56+00:00", 7);
+    const later = receipt("receipt-a", "2026-09-24T03:12:56.0001+00:00", 4);
+
+    expect(bothOrders(earlier, later).map(findingsOf)).toMatchObject([
+      { latestOpenTotal: 4, netOpenChange: -3 },
+      { latestOpenTotal: 4, netOpenChange: -3 },
+    ]);
+  });
+
+  test("two offsets compare as instants across a fall-back hour", () => {
+    // Postgres in a zone with daylight time writes the repeated hour with two
+    // offsets; by text alone, the later of these reads as the earlier.
+    const earlier = receipt("receipt-b", "2026-11-01T01:30:00-04:00", 7);
+    const later = receipt("receipt-a", "2026-11-01T01:10:00-05:00", 4);
+
+    expect(bothOrders(earlier, later).map(findingsOf)).toMatchObject([
+      { latestOpenTotal: 4, netOpenChange: -3 },
+      { latestOpenTotal: 4, netOpenChange: -3 },
+    ]);
+  });
+
+  test("the id settles an exact tie the same way on every read", () => {
+    const first = receipt("receipt-a", "2026-09-24T03:12:56.5+00:00", 7);
+    const second = receipt("receipt-b", "2026-09-24T03:12:56.5+00:00", 4);
+
+    expect(bothOrders(first, second).map(findingsOf)).toMatchObject([
+      { latestOpenTotal: 4, netOpenChange: -3 },
+      { latestOpenTotal: 4, netOpenChange: -3 },
+    ]);
   });
 });

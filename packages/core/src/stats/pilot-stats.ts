@@ -83,16 +83,40 @@ function roundOne(value: number): number {
   return Math.round(value * 10) / 10;
 }
 
+function byCodeUnit(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+/**
+ * Oldest first, by instant rather than by text. PostgREST writes timestamptz
+ * with trailing fractional zeros trimmed, and with no fraction at all at zero
+ * microseconds; a collating `localeCompare` ranks `.` before `+`, so it put
+ * `…:56+00:00` after `…:56.5+00:00`, half a second later — and the first and
+ * latest rows are the two ends of every trend below. `Date.parse` compares
+ * instants, whatever their offsets, to the millisecond; the digits it
+ * truncates order by code unit, which is chronological in that format because
+ * the offset's sign sorts below `.` and every digit; the id settles an exact
+ * tie, so the ends do not depend on the order the rows were read in.
+ */
+function oldestFirst<T extends { readonly id: string }>(
+  timeOf: (row: T) => string,
+): (left: T, right: T) => number {
+  return (left, right) =>
+    Date.parse(timeOf(left)) - Date.parse(timeOf(right)) ||
+    byCodeUnit(timeOf(left), timeOf(right)) ||
+    byCodeUnit(left.id, right.id);
+}
+
 export function computePilotStats(input: PilotStatsInput) {
-  const receipts = [...input.receipts].sort((left, right) =>
-    left.createdAt.localeCompare(right.createdAt),
+  const receipts = [...input.receipts].sort(
+    oldestFirst((receipt) => receipt.createdAt),
   );
   const runs = [...input.runs]
     .map((run) => ({
       ...run,
       durationMs: Date.parse(run.completedAt) - Date.parse(run.startedAt),
     }))
-    .sort((left, right) => left.startedAt.localeCompare(right.startedAt));
+    .sort(oldestFirst((run) => run.startedAt));
   const selectedTokens = input.packs.reduce(
     (total, pack) => total + pack.selectedTokens,
     0,
