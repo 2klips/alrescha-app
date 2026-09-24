@@ -1,4 +1,5 @@
 import { computePilotStats, type PilotUsageDay } from "@alrescha/core/stats";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test, vi } from "vitest";
@@ -6,7 +7,10 @@ import { describe, expect, test, vi } from "vitest";
 import { PilotStatsDashboard } from "../../app/app/(shell)/stats/pilot-stats-dashboard";
 import { STATS } from "../strings";
 import { createPilotStatsExportResponse } from "./export";
-import { buildPilotStatsReport } from "./pilot-report";
+import {
+  buildPilotStatsReport,
+  loadWorkspacePilotReport,
+} from "./pilot-report";
 
 describe("workspace pilot report", () => {
   test("maps stored receipt summaries, pack events, and completed runs", () => {
@@ -28,26 +32,22 @@ describe("workspace pilot report", () => {
         {
           commit_sha: "a".repeat(40),
           created_at: "2026-08-11T12:00:00.000Z",
-          id: "receipt-1",
-          summary: {
-            findings: {
-              open_total: 4,
-              opened: [{ id: "f1" }, { id: "f2" }, { id: "f3" }, { id: "f4" }],
-              resolved: [],
-            },
+          findings: {
+            open_total: 4,
+            opened: [{ id: "f1" }, { id: "f2" }, { id: "f3" }, { id: "f4" }],
+            resolved: [],
           },
+          id: "receipt-1",
         },
         {
           commit_sha: "b".repeat(40),
           created_at: "2026-08-12T12:00:00.000Z",
-          id: "receipt-2",
-          summary: {
-            findings: {
-              open_total: 2,
-              opened: [],
-              resolved: [{ id: "f1" }, { id: "f2" }],
-            },
+          findings: {
+            open_total: 2,
+            opened: [],
+            resolved: [{ id: "f1" }, { id: "f2" }],
           },
+          id: "receipt-2",
         },
       ],
       runs: [
@@ -75,6 +75,231 @@ describe("workspace pilot report", () => {
     expect(report.evidence.packMeasurements).toBe(1);
     expect(report.scans.latestDurationMs).toBe(2_500);
   });
+
+  // A receipt row carries `summary->findings`: null when the summary has no
+  // snapshot or is not an object, the snapshot itself otherwise. Each is read
+  // the way the whole summary's `findings` was.
+  test.each<
+    [
+      string,
+      unknown,
+      { opened: number; openTotal: number; resolved: number } | null,
+    ]
+  >([
+    [
+      "fingerprint lists",
+      { open_total: 3, opened: ["f1", "f2"], resolved: ["f0"] },
+      { opened: 2, openTotal: 3, resolved: 1 },
+    ],
+    [
+      "counts",
+      { open_total: 3, opened: 2, resolved: 1 },
+      { opened: 2, openTotal: 3, resolved: 1 },
+    ],
+    ["no snapshot", null, null],
+    ["a snapshot that is not an object", "3", null],
+    [
+      "a snapshot that is a list",
+      [{ open_total: 3, opened: [], resolved: [] }],
+      null,
+    ],
+    ["opened is negative", { open_total: 3, opened: -1, resolved: [] }, null],
+    [
+      "open_total is not a number",
+      { open_total: "3", opened: [], resolved: [] },
+      null,
+    ],
+    ["resolved is missing", { open_total: 3, opened: [] }, null],
+  ])(
+    "reads the selected snapshot as the summary's (%s)",
+    (_label, findings, counted) => {
+      const report = buildPilotStatsReport({
+        enabled: true,
+        packEvents: [],
+        receipts: [
+          {
+            commit_sha: "a".repeat(40),
+            created_at: "2026-08-11T12:00:00.000Z",
+            findings,
+            id: "receipt-1",
+          },
+        ],
+        runs: [],
+      });
+
+      expect(report.evidence.receipts).toBe(counted ? 1 : 0);
+      expect(report.findings).toMatchObject({
+        latestOpenTotal: counted?.openTotal ?? null,
+        opened: counted?.opened ?? 0,
+        resolved: counted?.resolved ?? 0,
+      });
+    },
+  );
+});
+
+/**
+ * A `.from(table)` chain: records its calls and resolves the table's rows
+ * from `.single()` or when awaited — the two ways the loader ends a query.
+ */
+class FakeQuery {
+  readonly calls: { args: unknown[]; method: string }[] = [];
+
+  constructor(private readonly data: unknown) {}
+
+  #record(method: string, args: unknown[]): this {
+    this.calls.push({ args, method });
+    return this;
+  }
+
+  /** The arguments of every call to `method`, in order. */
+  argsOf(method: string): unknown[][] {
+    return this.calls
+      .filter((call) => call.method === method)
+      .map(({ args }) => args);
+  }
+
+  eq(...args: unknown[]) {
+    return this.#record("eq", args);
+  }
+
+  gte(...args: unknown[]) {
+    return this.#record("gte", args);
+  }
+
+  limit(...args: unknown[]) {
+    return this.#record("limit", args);
+  }
+
+  order(...args: unknown[]) {
+    return this.#record("order", args);
+  }
+
+  select(...args: unknown[]) {
+    return this.#record("select", args);
+  }
+
+  async single() {
+    return { data: this.data, error: null };
+  }
+
+  then<TResult1 = unknown, TResult2 = never>(
+    onfulfilled?:
+      | ((value: {
+          data: unknown;
+          error: null;
+        }) => TResult1 | PromiseLike<TResult1>)
+      | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ): PromiseLike<TResult1 | TResult2> {
+    return Promise.resolve({ data: this.data, error: null }).then(
+      onfulfilled,
+      onrejected,
+    );
+  }
+}
+
+class FakeClient {
+  readonly queries: { query: FakeQuery; table: string }[] = [];
+
+  constructor(private readonly rows: Readonly<Record<string, unknown>>) {}
+
+  from(table: string): FakeQuery {
+    const query = new FakeQuery(this.rows[table] ?? []);
+    this.queries.push({ query, table });
+    return query;
+  }
+
+  queriesOf(table: string): FakeQuery[] {
+    return this.queries
+      .filter((entry) => entry.table === table)
+      .map(({ query }) => query);
+  }
+}
+
+describe("loadWorkspacePilotReport", () => {
+  test.each<[string, string | null, unknown[][]]>([
+    ["the workspace", null, [["workspace_id", "workspace-1"]]],
+    [
+      "one repository",
+      "repo-1",
+      [
+        ["workspace_id", "workspace-1"],
+        ["repository_id", "repo-1"],
+      ],
+    ],
+  ])(
+    "reads each receipt's findings snapshot for %s, never the whole summary",
+    async (_label, repositoryFilter, receiptFilters) => {
+      const client = new FakeClient({
+        receipts: [
+          {
+            commit_sha: "a".repeat(40),
+            created_at: "2026-08-11T12:00:00.000Z",
+            findings: {
+              open_total: 4,
+              opened: ["f1", "f2", "f3", "f4"],
+              resolved: [],
+            },
+            id: "receipt-1",
+          },
+          // What `summary->findings` is for a summary without a snapshot.
+          {
+            commit_sha: "b".repeat(40),
+            created_at: "2026-08-12T12:00:00.000Z",
+            findings: null,
+            id: "receipt-2",
+          },
+          {
+            commit_sha: "c".repeat(40),
+            created_at: "2026-08-13T12:00:00.000Z",
+            findings: {
+              open_total: 1,
+              opened: [],
+              resolved: ["f2", "f3", "f4"],
+            },
+            id: "receipt-3",
+          },
+        ],
+        repositories: [{ full_name: "2klips/alrescha-app", id: "repo-1" }],
+        workspaces: {
+          id: "workspace-1",
+          pilot_instrumentation_consented_at: "2026-08-10T00:00:00.000Z",
+          pilot_instrumentation_enabled: true,
+        },
+      });
+
+      const { report, workspaceId } = await loadWorkspacePilotReport(
+        client as unknown as SupabaseClient,
+        "user-1",
+        repositoryFilter,
+      );
+
+      // `summary` also carries the whole in-toto statement — 330 receipts
+      // were 40,101,144 bytes on the pilot — and the report needs only the
+      // snapshot.
+      const receipts = client.queriesOf("receipts");
+      expect(receipts.map((query) => query.argsOf("select"))).toEqual([
+        [["id,commit_sha,created_at,findings:summary->findings"]],
+      ]);
+      // Whatever this select gains later, `summary` stays behind that path.
+      expect(
+        String(receipts[0]?.argsOf("select")[0]?.[0]).replaceAll(
+          "summary->findings",
+          "",
+        ),
+      ).not.toContain("summary");
+      expect(receipts[0]?.argsOf("eq")).toEqual(receiptFilters);
+
+      expect(workspaceId).toBe("workspace-1");
+      expect(report.evidence.receipts).toBe(2);
+      expect(report.findings).toEqual({
+        latestOpenTotal: 1,
+        netOpenChange: -3,
+        opened: 4,
+        resolved: 3,
+      });
+    },
+  );
 });
 
 describe("pilot stats JSON export", () => {
