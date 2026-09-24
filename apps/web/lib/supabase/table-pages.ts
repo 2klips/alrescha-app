@@ -94,7 +94,8 @@ export function readRowsByPosition<Row>(
   narrow: Narrow<Row>,
 ): Promise<PagedRows<Row>> {
   if (!Number.isFinite(limit)) {
-    // A range needs an end; a read with no budget pages by id instead.
+    // A range needs an end; a read with no budget pages by id instead, or
+    // by `readEveryRowByPosition`, which ends it at the count.
     throw new RangeError(`a read by position needs a budget, got ${limit}`);
   }
   return readByPositionPages<Row>((page) => {
@@ -106,4 +107,33 @@ export function readRowsByPosition<Row>(
       ? query.range(page.offset, page.offset + page.limit - 1)
       : query.limit(page.limit);
   }, limit);
+}
+
+/**
+ * Every row `narrow` selects, in `order`, for a read with no budget whose
+ * order only the database can give: text under the database's own
+ * collation, which no TypeScript sort reproduces — one that ignores
+ * punctuation files `.claude/…` among the c's, not before the capitals.
+ * Pages by position as `readRowsByPosition` does, `order` total as there.
+ * The first page is the read with no limit, as it was; a later one exists
+ * only once that page's exact count is in hand, and its range ends there.
+ */
+export function readEveryRowByPosition<Row>(
+  client: SupabaseClient,
+  table: string,
+  columns: string,
+  order: readonly (readonly [column: string, ascending: boolean])[],
+  narrow: Narrow<Row>,
+): Promise<PagedRows<Row>> {
+  return readByPositionPages<Row>((page) => {
+    let query = narrow(tableQuery<Row>(client, table, columns, page.count));
+    for (const [column, ascending] of order) {
+      query = query.order(column, { ascending });
+    }
+    // Without a count the first page ends the read, as a page shorter than
+    // an unlimited ask does, so no later page is asked without one.
+    return page.total === null
+      ? query
+      : query.range(page.offset, page.total - 1);
+  }, EVERY_ROW);
 }

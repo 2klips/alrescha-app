@@ -602,6 +602,8 @@ export async function loadWorkspaceInspectionDashboard(
     throw new Error("Personal workspace is unavailable.");
   }
   const workspaceId = String(workspaceResult.data.id);
+  const inWorkspace = <Row>(query: TableQuery<Row>) =>
+    query.eq("workspace_id", workspaceId);
 
   // The risk rows come from the one builder `/app/map` also reads, so the
   // two screens cannot rank different files from different limits.
@@ -619,21 +621,32 @@ export async function loadWorkspaceInspectionDashboard(
     coverage,
   ] = await Promise.all([
     risk.findings,
-    client
-      .from("artifacts")
-      .select(
-        "path,kind,last_seen_commit_sha,source_blob_sha,exported_symbols," +
-          "summary:metadata->summary,summary_blob_sha:metadata->summaryBlobSha",
-      )
-      .eq("workspace_id", workspaceId)
-      .in("kind", DOCUMENT_KINDS),
+    // Every document the freshness widget lists and every todo it counts,
+    // past PostgREST's row cap like the risk rows (RE-04): neither has a
+    // budget, and a capped page listed a thousand documents and counted a
+    // thousand todos as all of them. `id` is selected only to continue past
+    // a page.
+    readRowsById<InspectionArtifactQueryRow & { readonly id: string }>(
+      client,
+      "artifacts",
+      "id,path,kind,last_seen_commit_sha,source_blob_sha,exported_symbols," +
+        "summary:metadata->summary,summary_blob_sha:metadata->summaryBlobSha",
+      EVERY_ROW,
+      (query) => inWorkspace(query).in("kind", DOCUMENT_KINDS),
+    ),
     client
       .from("ruled_out_attempts")
       .select("id,hypothesis,outcome,refs,recorded_at")
       .eq("workspace_id", workspaceId)
       .order("recorded_at", { ascending: false })
       .limit(50),
-    client.from("todos").select("status").eq("workspace_id", workspaceId),
+    readRowsById<InspectionTodoRow & { readonly id: string }>(
+      client,
+      "todos",
+      "id,status",
+      EVERY_ROW,
+      inWorkspace,
+    ),
     risk.audit,
     client
       .from("runs")
@@ -664,9 +677,8 @@ export async function loadWorkspaceInspectionDashboard(
   const latestAudit = (audit.data ?? [])[0] as { report?: unknown } | undefined;
   const latestRun = (head.data ?? [])[0] as { commit_sha?: string } | undefined;
 
-  const artifactRows: InspectionArtifactRow[] = (
-    (artifacts.data ?? []) as unknown as InspectionArtifactQueryRow[]
-  ).map(artifactRowFromQuery);
+  const artifactRows: InspectionArtifactRow[] =
+    artifacts.data.map(artifactRowFromQuery);
 
   return {
     dashboard: buildWorkspaceInspectionDashboard({
@@ -681,7 +693,7 @@ export async function loadWorkspaceInspectionDashboard(
         riskEdges,
       }),
       ruledOut: (ruledOut.data ?? []) as InspectionRuledOutRow[],
-      todos: (todos.data ?? []) as InspectionTodoRow[],
+      todos: todos.data,
     }),
     workspaceId,
   };

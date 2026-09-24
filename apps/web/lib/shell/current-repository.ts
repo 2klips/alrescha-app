@@ -53,3 +53,23 @@ export function currentRepository<Row extends SelectableRepositoryRow>(
 
 /** The columns a repository query must carry for `currentRepository`. */
 export const REPOSITORY_SELECTION_COLUMNS = "created_at,selected_at";
+
+/**
+ * Repositories newest-created first, the newest id breaking a tie: the order
+ * `currentRepository` falls back on for a tie, for a loader that read them
+ * in another — by id, past PostgREST's row cap (RE-04). The home and the map
+ * both put their rows back in it, so they name the same repository.
+ */
+export function newestCreatedFirst<
+  Row extends SelectableRepositoryRow & { readonly id: string },
+>(rows: readonly Row[]): Row[] {
+  const createdAt = (row: Row) => {
+    const at = Date.parse(row.created_at ?? "");
+    return Number.isFinite(at) ? at : Number.NEGATIVE_INFINITY;
+  };
+  return [...rows].sort(
+    (left, right) =>
+      createdAt(right) - createdAt(left) ||
+      (right.id < left.id ? -1 : right.id > left.id ? 1 : 0),
+  );
+}

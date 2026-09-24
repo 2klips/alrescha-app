@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { currentRepository } from "./current-repository";
+import { currentRepository, newestCreatedFirst } from "./current-repository";
 
 /**
  * The one rule every workspace screen picks its repository by (PR #9
@@ -55,5 +55,39 @@ describe("currentRepository", () => {
     expect(currentRepository([blank, garbled])?.id).toBe("blank");
     // Anything with a real time outranks rows that have none.
     expect(currentRepository([blank, first, garbled])?.id).toBe("first");
+  });
+});
+
+/**
+ * The order a loader that read repositories by id (RE-04) hands
+ * `currentRepository`, so that its ties fall the same way on every screen.
+ */
+describe("newestCreatedFirst", () => {
+  test("puts the newest-created first, the newest id first in a tie, and rows with no time last", () => {
+    const rows = [
+      { created_at: T(1), id: "01A", selected_at: null },
+      { created_at: null, id: "01Z", selected_at: null },
+      { created_at: T(5), id: "01B", selected_at: null },
+      { created_at: T(5), id: "01C", selected_at: null },
+    ];
+    expect(newestCreatedFirst(rows).map(({ id }) => id)).toEqual([
+      "01C",
+      "01B",
+      "01A",
+      "01Z",
+    ]);
+    // A copy: the caller's rows keep their order.
+    expect(rows.map(({ id }) => id)).toEqual(["01A", "01Z", "01B", "01C"]);
+  });
+
+  test("gives currentRepository the same tie whatever order the rows were read in", () => {
+    const byId = [
+      { created_at: T(5), id: "01B", selected_at: null },
+      { created_at: T(5), id: "01C", selected_at: null },
+    ];
+    expect(currentRepository(newestCreatedFirst(byId))?.id).toBe("01C");
+    expect(currentRepository(newestCreatedFirst([...byId].reverse()))?.id).toBe(
+      "01C",
+    );
   });
 });

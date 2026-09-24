@@ -45,6 +45,11 @@ export interface PageRequest {
   readonly limit: number;
   /** Rows already in hand: where a read by position starts its next page. */
   readonly offset: number;
+  /**
+   * The count the first page came back with: null until it has, and when the
+   * server sent none. Where a read by position with no budget ends a range.
+   */
+  readonly total: number | null;
 }
 
 /**
@@ -95,6 +100,7 @@ async function readPages<Row>(
       count: request === 0,
       limit: wanted,
       offset: rows.length,
+      total,
     });
     status = answer.status;
     if (answer.error) {
