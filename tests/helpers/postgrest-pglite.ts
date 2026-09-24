@@ -42,6 +42,13 @@ export interface PostgrestRequestRecord {
 }
 
 export interface PostgrestPgliteOptions {
+  /**
+   * Time added to every request before the database sees it — a network
+   * round trip, as an assumption the caller states. Concurrent requests wait
+   * concurrently, so a read's wall time grows with its longest chain of
+   * dependent requests, not with how many it makes.
+   */
+  readonly latencyMs?: number;
   /** PostgREST's `db-max-rows`. Omitted means no server cap. */
   readonly maxRows?: number;
   /**
@@ -186,19 +193,29 @@ export function postgrestOverPglite(
 ): PostgrestPglite {
   const requests: PostgrestRequestRecord[] = [];
   const signatures = new Map<string, Map<string, string>>();
+  /**
+   * PGlite runs one statement at a time. Queueing here, rather than inside
+   * PGlite, makes `ms` the time a statement ran and not the time it waited
+   * behind the other requests of the same `Promise.all`.
+   */
+  let queue: Promise<unknown> = Promise.resolve();
 
-  async function run<T>(
+  function run<T>(
     sql: string,
     params: unknown[],
   ): Promise<{ ms: number; rows: T[] }> {
-    const started = performance.now();
-    const result = options.role
-      ? await database.transaction(async (transaction) => {
-          await transaction.exec(`set local role ${options.role}`);
-          return transaction.query<T>(sql, params);
-        })
-      : await database.query<T>(sql, params);
-    return { ms: performance.now() - started, rows: result.rows };
+    const next = queue.then(async () => {
+      const started = performance.now();
+      const result = options.role
+        ? await database.transaction(async (transaction) => {
+            await transaction.exec(`set local role ${options.role}`);
+            return transaction.query<T>(sql, params);
+          })
+        : await database.query<T>(sql, params);
+      return { ms: performance.now() - started, rows: result.rows };
+    });
+    queue = next.catch(() => undefined);
+    return next;
   }
 
   /** The declared type of each argument, so a named call can cast. */
@@ -317,6 +334,9 @@ export function postgrestOverPglite(
       init?.headers ?? (input instanceof Request ? input.headers : undefined),
     );
     const path = url.pathname.replace(/^\/rest\/v1\//, "");
+    if (options.latencyMs) {
+      await new Promise((resolve) => setTimeout(resolve, options.latencyMs));
+    }
     const record = (
       kind: "rpc" | "table",
       name: string,
