@@ -26,6 +26,8 @@ export {
 
 export type { Edge, Finding, Provenance } from "./data/schemas";
 
+export { byInstant } from "./data/instant-order";
+
 export {
   JudgmentValidationError,
   applyJudgment,

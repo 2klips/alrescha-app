@@ -10,6 +10,7 @@
  */
 
 import type { ArtifactCard } from "../brain/artifact-card";
+import { byInstant } from "../data/instant-order";
 import {
   parseNpmAuditReport,
   type DependencyAuditReport,
@@ -279,7 +280,7 @@ export function buildInspectionDashboard(
   // a repeated hypothesis stays visible twice, which is the point.
   const ruledOut = [...input.ruledOutAttempts].sort(
     (left, right) =>
-      right.recordedAt.localeCompare(left.recordedAt) ||
+      byInstant(right.recordedAt, left.recordedAt) ||
       left.id.localeCompare(right.id),
   );
 

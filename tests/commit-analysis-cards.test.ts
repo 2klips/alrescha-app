@@ -300,4 +300,36 @@ describe("commit card ordering", () => {
     });
     expect(cards.map(({ runId }) => runId)).toEqual(["run-new", "run-old"]);
   });
+
+  it("lists the newest run first by instant, not by collation", () => {
+    // `runs.created_at` is PostgREST text, which writes no fraction at zero
+    // microseconds: a collating compare read `…:56+00:00` as later than
+    // `…:56.5+00:00` and put it first — and `/app/commits` opens the first
+    // card. Text order reads the fall-back hour's two offsets backwards. The
+    // newer run's id sorts last, both read orders.
+    const newestFirst = (earlier: string, later: string) => {
+      const runs = [
+        { ...RUN, createdAt: earlier, id: "run-a" },
+        { ...RUN, createdAt: later, id: "run-b" },
+      ];
+      return [runs, [...runs].reverse()].map((read) =>
+        buildCommitAnalysisCards({ jobs: [], receipts: [], runs: read }).map(
+          ({ runId }) => runId,
+        ),
+      );
+    };
+
+    expect(
+      newestFirst("2026-09-24T03:12:56+00:00", "2026-09-24T03:12:56.5+00:00"),
+    ).toEqual([
+      ["run-b", "run-a"],
+      ["run-b", "run-a"],
+    ]);
+    expect(
+      newestFirst("2026-11-01T01:30:00-04:00", "2026-11-01T01:10:00-05:00"),
+    ).toEqual([
+      ["run-b", "run-a"],
+      ["run-b", "run-a"],
+    ]);
+  });
 });
