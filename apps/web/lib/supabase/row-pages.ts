@@ -34,12 +34,22 @@ export interface PagedRows<Row> {
 
 /** What one page request needs to say. */
 export interface PageRequest {
-  /** Continue after this id; null for the first page. */
+  /**
+   * Continue after this id; null for the first page, and for every page of
+   * a read by position.
+   */
   readonly after: string | null;
   /** Ask the server for the total — the first page only. */
   readonly count: boolean;
   /** Rows still wanted. */
   readonly limit: number;
+  /** Rows already in hand: where a read by position starts its next page. */
+  readonly offset: number;
+  /**
+   * The count the first page came back with: null until it has, and when the
+   * server sent none. Where a read by position with no budget ends a range.
+   */
+  readonly total: number | null;
 }
 
 /**
@@ -51,9 +61,33 @@ export interface PageRequest {
  * that does not end the read adds at least one row, so a read makes at most
  * `limit` requests; there is no page cap that could stop it short silently.
  */
-export async function readByIdPages<Row extends { readonly id?: unknown }>(
+export function readByIdPages<Row extends { readonly id?: unknown }>(
   page: (request: PageRequest) => PromiseLike<RowPage<Row>>,
   limit: number,
+): Promise<PagedRows<Row>> {
+  return readPages(page, limit, (last) => String(last.id));
+}
+
+/**
+ * The same, for a read with no id to continue after — `file_co_changes` is
+ * keyed by its path pair — whose budget keeps rows by an order of its own:
+ * each page starts at `offset`, where the rows in hand end. The caller's
+ * order must be total, or two pages could repeat one row and skip another.
+ * A position is only as steady as the rows: one that moves across a page
+ * boundary between two requests is read twice or not at all, which a
+ * display read survives until the next load.
+ */
+export function readByPositionPages<Row>(
+  page: (request: PageRequest) => PromiseLike<RowPage<Row>>,
+  limit: number,
+): Promise<PagedRows<Row>> {
+  return readPages(page, limit, () => null);
+}
+
+async function readPages<Row>(
+  page: (request: PageRequest) => PromiseLike<RowPage<Row>>,
+  limit: number,
+  continueAfter: (last: Row) => string | null,
 ): Promise<PagedRows<Row>> {
   const rows: Row[] = [];
   let total: number | null = null;
@@ -61,7 +95,13 @@ export async function readByIdPages<Row extends { readonly id?: unknown }>(
   let status: number | undefined;
   for (let request = 0; ; request += 1) {
     const wanted = limit - rows.length;
-    const answer = await page({ after, count: request === 0, limit: wanted });
+    const answer = await page({
+      after,
+      count: request === 0,
+      limit: wanted,
+      offset: rows.length,
+      total,
+    });
     status = answer.status;
     if (answer.error) {
       return {
@@ -82,7 +122,7 @@ export async function readByIdPages<Row extends { readonly id?: unknown }>(
       last === undefined ||
       (total === null ? batch.length < wanted : rows.length >= total);
     if (done) break;
-    after = String(last.id);
+    after = continueAfter(last);
   }
   return {
     data: rows.slice(0, limit),

@@ -18,6 +18,12 @@ import {
   type RuledOutAttemptInput,
 } from "@alrescha/core";
 
+import {
+  EVERY_ROW,
+  readRowsById,
+  type TableQuery,
+} from "../supabase/table-pages";
+
 /**
  * `/inspection` from stored evidence (Phase 2C todo 1).
  *
@@ -408,8 +414,16 @@ export function riskMapFromRows(rows: WorkspaceRiskRows): RiskMap {
  * The queries behind `WorkspaceRiskRows`, built once so the inspection
  * loader and the map loader cannot drift apart on a select list or a limit.
  * Callers await them inside their own `Promise.all`.
+ *
+ * The reads with no budget of their own page past PostgREST's row cap
+ * (RE-04): the server answers with at most 1,000 rows and says nothing, so
+ * "every artifact" was the first thousand of them and a risk ranking over
+ * more edges than that ranked what one page happened to hold. The two with
+ * a budget within the cap stay one request each.
  */
 export function riskRowQueries(client: SupabaseClient, workspaceId: string) {
+  const inWorkspace = <Row>(query: TableQuery<Row>) =>
+    query.eq("workspace_id", workspaceId);
   return {
     audit: client
       .from("dependency_audit_reports")
@@ -425,29 +439,40 @@ export function riskRowQueries(client: SupabaseClient, workspaceId: string) {
       .limit(500),
     // Coverage evidence (todo 18). No row anywhere means nothing has been
     // measured, which the map reports as unmeasured rather than untested.
-    coverage: client
-      .from("evidence")
-      .select("source_artifact_id")
-      .eq("workspace_id", workspaceId)
-      .eq("kind", "ci"),
-    findings: client
-      .from("findings")
-      .select(
-        "id,kind,severity,status,title,confidence,evidence_grade,provenance,dismissed_reason",
-      )
-      .eq("workspace_id", workspaceId),
+    // `id` here and on the edges is selected only to continue past a page.
+    coverage: readRowsById<{
+      readonly id: string;
+      readonly source_artifact_id: string;
+    }>(client, "evidence", "id,source_artifact_id", EVERY_ROW, (query) =>
+      inWorkspace(query).eq("kind", "ci"),
+    ),
+    findings: readRowsById<InspectionFindingRow>(
+      client,
+      "findings",
+      "id,kind,severity,status,title,confidence,evidence_grade,provenance,dismissed_reason",
+      EVERY_ROW,
+      inWorkspace,
+    ),
     // The risk map's own rows (todo 21). Every artifact, not just the
     // documents the freshness widget reads: risk ranks code, and code is
     // most of a repository.
-    riskArtifacts: client
-      .from("artifacts")
-      .select("id,kind,path")
-      .eq("workspace_id", workspaceId),
-    riskEdges: client
-      .from("edges")
-      .select("relation,source_node_id,target_node_id")
-      .eq("workspace_id", workspaceId)
-      .in("relation", ["calls", "imports", "tests"]),
+    riskArtifacts: readRowsById<InspectionRiskRows["artifacts"][number]>(
+      client,
+      "artifacts",
+      "id,kind,path",
+      EVERY_ROW,
+      inWorkspace,
+    ),
+    riskEdges: readRowsById<
+      InspectionRiskRows["edges"][number] & { readonly id: string }
+    >(
+      client,
+      "edges",
+      "id,relation,source_node_id,target_node_id",
+      EVERY_ROW,
+      (query) =>
+        inWorkspace(query).in("relation", ["calls", "imports", "tests"]),
+    ),
   };
 }
 
@@ -577,6 +602,8 @@ export async function loadWorkspaceInspectionDashboard(
     throw new Error("Personal workspace is unavailable.");
   }
   const workspaceId = String(workspaceResult.data.id);
+  const inWorkspace = <Row>(query: TableQuery<Row>) =>
+    query.eq("workspace_id", workspaceId);
 
   // The risk rows come from the one builder `/app/map` also reads, so the
   // two screens cannot rank different files from different limits.
@@ -594,21 +621,32 @@ export async function loadWorkspaceInspectionDashboard(
     coverage,
   ] = await Promise.all([
     risk.findings,
-    client
-      .from("artifacts")
-      .select(
-        "path,kind,last_seen_commit_sha,source_blob_sha,exported_symbols," +
-          "summary:metadata->summary,summary_blob_sha:metadata->summaryBlobSha",
-      )
-      .eq("workspace_id", workspaceId)
-      .in("kind", DOCUMENT_KINDS),
+    // Every document the freshness widget lists and every todo it counts,
+    // past PostgREST's row cap like the risk rows (RE-04): neither has a
+    // budget, and a capped page listed a thousand documents and counted a
+    // thousand todos as all of them. `id` is selected only to continue past
+    // a page.
+    readRowsById<InspectionArtifactQueryRow & { readonly id: string }>(
+      client,
+      "artifacts",
+      "id,path,kind,last_seen_commit_sha,source_blob_sha,exported_symbols," +
+        "summary:metadata->summary,summary_blob_sha:metadata->summaryBlobSha",
+      EVERY_ROW,
+      (query) => inWorkspace(query).in("kind", DOCUMENT_KINDS),
+    ),
     client
       .from("ruled_out_attempts")
       .select("id,hypothesis,outcome,refs,recorded_at")
       .eq("workspace_id", workspaceId)
       .order("recorded_at", { ascending: false })
       .limit(50),
-    client.from("todos").select("status").eq("workspace_id", workspaceId),
+    readRowsById<InspectionTodoRow & { readonly id: string }>(
+      client,
+      "todos",
+      "id,status",
+      EVERY_ROW,
+      inWorkspace,
+    ),
     risk.audit,
     client
       .from("runs")
@@ -639,9 +677,8 @@ export async function loadWorkspaceInspectionDashboard(
   const latestAudit = (audit.data ?? [])[0] as { report?: unknown } | undefined;
   const latestRun = (head.data ?? [])[0] as { commit_sha?: string } | undefined;
 
-  const artifactRows: InspectionArtifactRow[] = (
-    (artifacts.data ?? []) as unknown as InspectionArtifactQueryRow[]
-  ).map(artifactRowFromQuery);
+  const artifactRows: InspectionArtifactRow[] =
+    artifacts.data.map(artifactRowFromQuery);
 
   return {
     dashboard: buildWorkspaceInspectionDashboard({
@@ -656,7 +693,7 @@ export async function loadWorkspaceInspectionDashboard(
         riskEdges,
       }),
       ruledOut: (ruledOut.data ?? []) as InspectionRuledOutRow[],
-      todos: (todos.data ?? []) as InspectionTodoRow[],
+      todos: todos.data,
     }),
     workspaceId,
   };

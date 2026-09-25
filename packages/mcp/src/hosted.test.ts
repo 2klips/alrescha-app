@@ -2600,6 +2600,72 @@ describe("the symbol layer", () => {
     expect(neighbourhoods).toEqual([]);
   });
 
+  /**
+   * Search ranks by the index's neighbour cache (RE-04), so it asks for no
+   * edge — on the pilot they were 3.6 of 4.7 MB and four sequential requests
+   * of every search. The graph tools still read them: their answer is the
+   * edges.
+   */
+  it("reads no edge for a search, and the graph tools still do", async () => {
+    const reads: { edges: boolean | undefined; tool: string }[] = [];
+    let tool = "";
+    class RecordingStore extends InMemoryMcpStore {
+      override async loadWorkspace(
+        ...args: Parameters<InMemoryMcpStore["loadWorkspace"]>
+      ) {
+        reads.push({ edges: args[1]?.edges, tool });
+        return super.loadWorkspace(...args);
+      }
+    }
+    const store = new RecordingStore({ workspaces: [layered()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Edges",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const { client, transport } = createSdkClient(
+      createHostedMcpEndpoint({ store }).fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    tool = "search_index";
+    const found = await client.callTool({
+      arguments: { query: "ReportParser" },
+      name: "search_index",
+    });
+    expect(found.isError).not.toBe(true);
+    tool = "get_neighbors";
+    await client.callTool({
+      arguments: { node_id: FILE },
+      name: "get_neighbors",
+    });
+    expect(reads).toEqual([
+      { edges: false, tool: "search_index" },
+      { edges: undefined, tool: "get_neighbors" },
+    ]);
+
+    // The in-memory store says what it left out, as the hosted one does.
+    const principal = {
+      scopes: ["mcp:read" as const],
+      tokenId: issued.record.id,
+      userId: USER_ID,
+      workspaceId: WORKSPACE_ID,
+    };
+    const without = await new InMemoryMcpStore({
+      workspaces: [layered()],
+    }).loadWorkspace(principal, { edges: false });
+    expect(without.repositories.every(({ edges }) => edges.length === 0)).toBe(
+      true,
+    );
+    expect(without.coverage?.truncated).toContainEqual({
+      limit: 0,
+      table: "edges",
+    });
+  });
+
   it("does not find an id that names neither a file nor a symbol", async () => {
     const client = await connected();
     const answer = await client.callTool({

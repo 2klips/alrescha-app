@@ -7,6 +7,11 @@ import { storedInTotoStatementSchema } from "@alrescha/core/receipts";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { PROGRESS } from "../strings";
+import {
+  EVERY_ROW,
+  readRowsById,
+  type TableQuery,
+} from "../supabase/table-pages";
 
 interface RequirementRow {
   id: string;
@@ -225,23 +230,37 @@ export async function loadWorkspaceProgressReport(
     throw new Error("Personal workspace is unavailable.");
   }
   const workspaceId = String(workspaceResult.data.id);
+  const inWorkspace = <Row>(query: TableQuery<Row>) =>
+    query.eq("workspace_id", workspaceId);
   const [requirements, edges, todos, events, receipts, findings, localScans] =
     await Promise.all([
-      client
-        .from("requirements")
-        .select("id,status")
-        .eq("workspace_id", workspaceId),
-      client
-        .from("edges")
-        .select("relation,source_node_id")
-        .eq("workspace_id", workspaceId)
-        .eq("relation", "implements"),
-      client
-        .from("todos")
-        .select(
-          "id,requirement_id,source_event_id,source_kind,source_path,source_span,status,title,updated_at",
-        )
-        .eq("workspace_id", workspaceId),
+      // The ledger is a count, so its three reads have no budget and page
+      // past PostgREST's row cap (RE-04): the server answers with at most
+      // 1,000 rows and says nothing, and a capped page under-reported every
+      // number on the screen. Todos come in id order, the order they were
+      // written; the reads below with a budget of 100 stay one request.
+      readRowsById<RequirementRow>(
+        client,
+        "requirements",
+        "id,status",
+        EVERY_ROW,
+        inWorkspace,
+      ),
+      // `id` is selected only to continue past a page.
+      readRowsById<EdgeRow & { readonly id: string }>(
+        client,
+        "edges",
+        "id,relation,source_node_id",
+        EVERY_ROW,
+        (query) => inWorkspace(query).eq("relation", "implements"),
+      ),
+      readRowsById<TodoRow>(
+        client,
+        "todos",
+        "id,requirement_id,source_event_id,source_kind,source_path,source_span,status,title,updated_at",
+        EVERY_ROW,
+        inWorkspace,
+      ),
       client
         .from("progress_events")
         .select("id,occurred_at,refs,status,summary,task,todo_id")
@@ -297,13 +316,13 @@ export async function loadWorkspaceProgressReport(
   return {
     report: buildWorkspaceProgressReport(
       {
-        edges: (edges.data ?? []) as EdgeRow[],
+        edges: edges.data,
         findings: (findings.data ?? []) as FindingRow[],
         localScans: (localScans.data ?? []) as LocalScanRow[],
         progressEvents: (events.data ?? []) as ProgressEventRow[],
         receipts: (receipts.data ?? []) as ReceiptRow[],
-        requirements: (requirements.data ?? []) as RequirementRow[],
-        todos: (todos.data ?? []) as TodoRow[],
+        requirements: requirements.data,
+        todos: todos.data,
       },
       { lastVisitedAt },
     ),

@@ -13,11 +13,15 @@ import type { PGlite } from "@electric-sql/pglite";
  * and records, per request, the rows, the bytes and the time the database
  * took.
  *
- * It reads only the shapes this repository's store sends: `select` of plain
- * columns, `eq`/`neq`/`is`/`in`/`gt`/`gte`/`lt`/`lte` filters, an `or` over
- * those, `order`, `limit`/`offset`, `Prefer: count=exact`, and `rpc` calls
- * of scalar functions. Anything else is answered 501 so a test cannot pass
- * on a shape the emulator silently misread.
+ * It reads only the shapes this repository's readers send: `select` of plain
+ * columns, of a value inside a json column (`summary:metadata->summary`) and
+ * of a to-one resource embedded through its one foreign key
+ * (`runs(commit_sha)`), `eq`/`neq`/`is`/`in`/`gt`/`gte`/`lt`/`lte`/`like`
+ * filters and their `not.` negation, an `or` over those, `order`,
+ * `limit`/`offset`, `Prefer: count=exact` — on a `HEAD` too, which answers
+ * the count and no rows — the single object `.single()` asks for, and `rpc`
+ * calls of scalar functions. Anything else is answered 501 so a test cannot
+ * pass on a shape the emulator silently misread.
  *
  * `maxRows` is PostgREST's `db-max-rows`: no response carries more rows than
  * it, whatever `limit` asked for. Supabase's default is 1,000 — the value in
@@ -42,14 +46,27 @@ export interface PostgrestRequestRecord {
 }
 
 export interface PostgrestPgliteOptions {
+  /**
+   * Time added to every request before the database sees it — a network
+   * round trip, as an assumption the caller states. Concurrent requests wait
+   * concurrently, so a read's wall time grows with its longest chain of
+   * dependent requests, not with how many it makes.
+   */
+  readonly latencyMs?: number;
   /** PostgREST's `db-max-rows`. Omitted means no server cap. */
   readonly maxRows?: number;
   /**
    * Run each statement as this role, the way PostgREST switches to the
    * JWT's role. `service_role` bypasses row security but not grants, so a
    * table the role cannot read fails here as it would hosted.
+   * `authenticated` is a signed-in user's session and needs `userId`.
    */
-  readonly role?: "service_role";
+  readonly role?: "authenticated" | "service_role";
+  /**
+   * The JWT's subject — what `auth.uid()` returns — for `authenticated`, so
+   * every row-security policy applies as it does to the browser's session.
+   */
+  readonly userId?: string;
 }
 
 export interface PostgrestPglite {
@@ -62,10 +79,15 @@ const OPERATORS: Readonly<Record<string, string>> = {
   eq: "=",
   gt: ">",
   gte: ">=",
+  like: "like",
   lt: "<",
   lte: "<=",
   neq: "<>",
 };
+/** `alias:column->key->>key`, the alias optional. */
+const JSON_PATH =
+  /^(?:([a-z_][a-z0-9_]*):)?([a-z_][a-z0-9_]*)((?:->>?(?:[A-Za-z_][A-Za-z0-9_]*|\d+))+)$/;
+const JSON_STEP = /(->>?)([A-Za-z_][A-Za-z0-9_]*|\d+)/g;
 
 class Unsupported extends Error {}
 
@@ -108,6 +130,8 @@ class Query {
     if (dot < 0) throw new Unsupported(`filter ${filter}`);
     const operator = filter.slice(0, dot);
     const value = filter.slice(dot + 1);
+    // `not.is.null`, `not.eq.x`: the same condition, negated.
+    if (operator === "not") return `not (${this.condition(column, value)})`;
     if (operator === "is") {
       if (value === "null") return `${name} is null`;
       throw new Unsupported(`is.${value}`);
@@ -129,7 +153,9 @@ class Query {
     }
     const sql = OPERATORS[operator];
     if (!sql) throw new Unsupported(`operator ${operator}`);
-    return `${name} ${sql} ${this.param(value)}`;
+    // PostgREST reads `*` in a pattern as `%`, which a URL need not escape.
+    const operand = operator === "like" ? value.replaceAll("*", "%") : value;
+    return `${name} ${sql} ${this.param(operand)}`;
   }
 
   /** `(a.in.(…),b.eq.x)` as one disjunction. */
@@ -144,6 +170,30 @@ class Query {
     });
     return `(${terms.join(" or ")})`;
   }
+}
+
+/**
+ * A value inside a json column, as PostgREST selects one: `->` keeps it
+ * json, `->>` makes it text, and the field is named for its alias or, with
+ * none, for its last key.
+ */
+function jsonPath(
+  alias: string | undefined,
+  column: string,
+  steps: string,
+): string {
+  let sql = `t.${identifier(column)}`;
+  let last = column;
+  for (const [, arrow = "->", key = ""] of steps.matchAll(JSON_STEP)) {
+    // Keys are word characters or an array index, so they inline safely.
+    sql += /^\d+$/.test(key) ? `${arrow}${key}` : `${arrow}'${key}'`;
+    last = key;
+  }
+  const name = alias ?? last;
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    throw new Unsupported(`json path named ${name}`);
+  }
+  return `${sql} as "${name}"`;
 }
 
 function order(value: string): string {
@@ -180,25 +230,51 @@ function json(
   });
 }
 
+/** `.single()`'s `Accept`: one JSON object instead of an array. */
+const SINGULAR = /application\/vnd\.pgrst\.object\+json/;
+
 export function postgrestOverPglite(
   database: PGlite,
   options: PostgrestPgliteOptions = {},
 ): PostgrestPglite {
+  if (options.role === "authenticated" && options.userId === undefined) {
+    throw new Error("an authenticated session needs the userId it is for");
+  }
   const requests: PostgrestRequestRecord[] = [];
   const signatures = new Map<string, Map<string, string>>();
+  const foreignKeys = new Map<
+    string,
+    { columns: string[]; referenced: string[] }
+  >();
+  /**
+   * PGlite runs one statement at a time. Queueing here, rather than inside
+   * PGlite, makes `ms` the time a statement ran and not the time it waited
+   * behind the other requests of the same `Promise.all`.
+   */
+  let queue: Promise<unknown> = Promise.resolve();
 
-  async function run<T>(
+  function run<T>(
     sql: string,
     params: unknown[],
   ): Promise<{ ms: number; rows: T[] }> {
-    const started = performance.now();
-    const result = options.role
-      ? await database.transaction(async (transaction) => {
-          await transaction.exec(`set local role ${options.role}`);
-          return transaction.query<T>(sql, params);
-        })
-      : await database.query<T>(sql, params);
-    return { ms: performance.now() - started, rows: result.rows };
+    const next = queue.then(async () => {
+      const started = performance.now();
+      const result = options.role
+        ? await database.transaction(async (transaction) => {
+            if (options.userId !== undefined) {
+              await transaction.query(
+                "select set_config('request.jwt.claim.sub', $1, true)",
+                [options.userId],
+              );
+            }
+            await transaction.exec(`set local role ${options.role}`);
+            return transaction.query<T>(sql, params);
+          })
+        : await database.query<T>(sql, params);
+      return { ms: performance.now() - started, rows: result.rows };
+    });
+    queue = next.catch(() => undefined);
+    return next;
   }
 
   /** The declared type of each argument, so a named call can cast. */
@@ -217,31 +293,106 @@ export function postgrestOverPglite(
     return types;
   }
 
+  /**
+   * The one foreign key from `table` to `resource`, the way PostgREST finds
+   * the relationship an embed names. None, or more than one, is a shape this
+   * emulator does not guess at.
+   */
+  async function foreignKey(
+    table: string,
+    resource: string,
+  ): Promise<{ columns: string[]; referenced: string[] }> {
+    const cacheKey = `${table}->${resource}`;
+    const known = foreignKeys.get(cacheKey);
+    if (known) return known;
+    const result = await database.query<{
+      columns: string[];
+      referenced: string[];
+    }>(
+      `select
+         array(select a.attname::text
+               from unnest(c.conkey) with ordinality as k(attnum, position)
+               join pg_attribute a
+                 on a.attrelid = c.conrelid and a.attnum = k.attnum
+               order by k.position) as columns,
+         array(select a.attname::text
+               from unnest(c.confkey) with ordinality as k(attnum, position)
+               join pg_attribute a
+                 on a.attrelid = c.confrelid and a.attnum = k.attnum
+               order by k.position) as referenced
+       from pg_constraint c
+       where c.contype = 'f'
+         and c.conrelid = to_regclass('public.' || $1)
+         and c.confrelid = to_regclass('public.' || $2)`,
+      [table, resource],
+    );
+    const [only, ...others] = result.rows;
+    if (!only || others.length > 0) {
+      throw new Unsupported(`embed ${resource} of ${table}`);
+    }
+    foreignKeys.set(cacheKey, only);
+    return only;
+  }
+
+  /**
+   * The select list over `t`. An embedded resource is a to-one object read
+   * through the table's foreign key — null when the key points nowhere, as
+   * PostgREST's left join answers.
+   */
+  async function selectList(table: string, value: string): Promise<string> {
+    if (value === "*") return "t.*";
+    const list: string[] = [];
+    for (const item of topLevel(value)) {
+      const term = item.trim();
+      const path = JSON_PATH.exec(term);
+      if (path) {
+        list.push(jsonPath(path[1], path[2] ?? "", path[3] ?? ""));
+        continue;
+      }
+      const embed = /^([a-z_][a-z0-9_]*)\((.*)\)$/.exec(term);
+      if (!embed) {
+        list.push(`t.${identifier(term)}`);
+        continue;
+      }
+      const resource = embed[1] ?? "";
+      const key = await foreignKey(table, resource);
+      const columns = (embed[2] ?? "")
+        .split(",")
+        .map((column) => `r.${identifier(column.trim())}`);
+      const on = key.columns
+        .map(
+          (column, index) =>
+            `r.${identifier(key.referenced[index] ?? "")} = t.${identifier(column)}`,
+        )
+        .join(" and ");
+      list.push(
+        `(select row_to_json(e) from (select ${columns.join(", ")} ` +
+          `from public.${identifier(resource)} r where ${on}) e) ` +
+          `as ${identifier(resource)}`,
+      );
+    }
+    return list.join(", ");
+  }
+
   async function table(
     name: string,
     url: URL,
     prefer: string,
   ): Promise<{
-    body: string;
     headers: Record<string, string>;
     ms: number;
-    rows: number;
+    /** Each row as PostgREST serialises it. */
+    rows: string[];
   }> {
     const query = new Query();
-    let columns = "*";
+    let columns = "t.*";
     let orderBy = "";
     let limit: number | null = null;
     let offset = 0;
     const conditions: string[] = [];
     for (const [key, value] of url.searchParams) {
       if (key === "select") {
-        columns =
-          value === "*"
-            ? "*"
-            : value
-                .split(",")
-                .map((column) => identifier(column.trim()))
-                .join(", ");
+        columns = await selectList(name, value);
       } else if (key === "order") {
         orderBy = order(value);
       } else if (key === "limit") {
@@ -260,7 +411,7 @@ export function postgrestOverPglite(
         : Math.min(limit ?? options.maxRows, options.maxRows);
     const where =
       conditions.length > 0 ? ` where ${conditions.join(" and ")}` : "";
-    const from = `public.${identifier(name)}${where}`;
+    const from = `public.${identifier(name)} t${where}`;
     const select =
       `select row_to_json(x)::text as row from (select ${columns} from ${from}` +
       (orderBy ? ` order by ${orderBy}` : "") +
@@ -281,10 +432,9 @@ export function postgrestOverPglite(
     const n = rows.rows.length;
     const range = n === 0 ? "*" : `${offset}-${offset + n - 1}`;
     return {
-      body: `[${rows.rows.map(({ row }) => row).join(",")}]`,
       headers: { "content-range": `${range}/${total ?? "*"}` },
       ms,
-      rows: n,
+      rows: rows.rows.map(({ row }) => row),
     };
   }
 
@@ -317,6 +467,9 @@ export function postgrestOverPglite(
       init?.headers ?? (input instanceof Request ? input.headers : undefined),
     );
     const path = url.pathname.replace(/^\/rest\/v1\//, "");
+    if (options.latencyMs) {
+      await new Promise((resolve) => setTimeout(resolve, options.latencyMs));
+    }
     const record = (
       kind: "rpc" | "table",
       name: string,
@@ -356,17 +509,36 @@ export function postgrestOverPglite(
         );
         return json(answer.body, 200);
       }
+      if (method === "HEAD" && !path.includes("/")) {
+        // `head: true`: the same query answered by its headers alone — the
+        // count, when one was asked for — and no rows.
+        const answer = await table(path, url, headers.get("prefer") ?? "");
+        record("table", path, 200, 0, answer.ms, 0);
+        return new Response(null, { headers: answer.headers, status: 200 });
+      }
       if (method === "GET" && !path.includes("/")) {
         const answer = await table(path, url, headers.get("prefer") ?? "");
-        record(
-          "table",
-          path,
-          200,
-          Buffer.byteLength(answer.body),
-          answer.ms,
-          answer.rows,
-        );
-        return json(answer.body, 200, answer.headers);
+        const n = answer.rows.length;
+        if (SINGULAR.test(headers.get("accept") ?? "")) {
+          // `.single()`: the row itself, or PostgREST's 406 when there is
+          // not exactly one.
+          if (n !== 1) {
+            const body = JSON.stringify({
+              code: "PGRST116",
+              details: `The result contains ${n} rows`,
+              hint: null,
+              message: "Cannot coerce the result to a single JSON object",
+            });
+            record("table", path, 406, Buffer.byteLength(body), answer.ms, n);
+            return json(body, 406);
+          }
+          const body = answer.rows[0] ?? "null";
+          record("table", path, 200, Buffer.byteLength(body), answer.ms, n);
+          return json(body, 200, answer.headers);
+        }
+        const body = `[${answer.rows.join(",")}]`;
+        record("table", path, 200, Buffer.byteLength(body), answer.ms, n);
+        return json(body, 200, answer.headers);
       }
       throw new Unsupported(`${method} ${path}`);
     } catch (error) {

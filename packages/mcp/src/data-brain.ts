@@ -30,6 +30,7 @@ import type {
   McpEdgeRelation,
   McpIndexEntryData,
   McpNodeType,
+  McpSectionData,
   McpWorkspaceData,
 } from "./store";
 
@@ -52,9 +53,24 @@ export interface SearchIndexResult {
   rank: SearchRank;
   repositoryId: string;
   score: number;
+  /**
+   * The ADR/OQ/G/MT headings of this document that the question matched
+   * (RE-04). Present only when one did.
+   */
+  sections?: SectionHit[];
   title: string;
   type: McpNodeType;
 }
+
+/** A section heading a search matched, with the node it names. */
+export interface SectionHit {
+  heading: string;
+  nodeId: string;
+  token: string;
+}
+
+/** Sections one result will name, however many of its headings matched. */
+const SECTION_HITS_PER_RESULT = 8;
 
 interface WorkspaceIndexEntry {
   entry: McpIndexEntryData;
@@ -234,12 +250,17 @@ function directRank(
   entry: McpIndexEntryData,
   query: string,
   tokens: readonly string[],
+  sections: readonly McpSectionData[] = [],
 ): SearchRank | null {
+  const headings = [
+    ...entry.headings,
+    ...sections.map(({ heading }) => heading),
+  ];
   const exactFields = [
     entry.title,
     entry.path,
     entry.searchKey,
-    ...entry.headings,
+    ...headings,
     ...entry.tags,
     ...entry.symbols,
   ];
@@ -247,7 +268,7 @@ function directRank(
     return "exact";
   if (
     includesEveryToken(
-      [entry.title, ...entry.headings, ...entry.tags].join(" "),
+      [entry.title, ...headings, ...entry.tags].join(" "),
       tokens,
     )
   ) {
@@ -314,6 +335,15 @@ function scoreFor(rank: SearchRank): number {
  * gap, so a lexical winner cannot be overturned (the Graft weighting rule).
  * The walk is seeded by the direct lexical hits; with no direct hit there is
  * nothing to personalize and the bonus is zero everywhere.
+ *
+ * The graph it walks is the index's own neighbour cache (RE-04), not the
+ * edges a read carried. `search_index` stopped reading edges: they were 3.6
+ * of 4.7 MB and four sequential requests of every search on the pilot, for a
+ * bonus that only reorders inside a tier. Over the pilot's own files the
+ * cache ranked the named file where the edges did in 76 of 80 questions and
+ * one place apart in the other four, and it is never cut short — the edge
+ * read stops at 8,000 rows, and the pilot has 11,833. One graph, whatever
+ * the read carried, so a transport cannot decide the ranking.
  */
 const PPR_TIER_BONUS = 50;
 
@@ -323,22 +353,27 @@ function connectivityBonus(
 ): ReadonlyMap<string, number> {
   if (seeds.size === 0) return new Map();
   const nodeIds = new Set<string>();
-  const edges: PageRankEdge[] = [];
+  // Undirected pairs, each once: an entry and its neighbour usually name
+  // each other, and a pair counted twice would weigh twice in the walk.
+  const pairs = new Map<string, PageRankEdge>();
+  const link = (source: string, target: string): void => {
+    const key =
+      source < target ? `${source}\n${target}` : `${target}\n${source}`;
+    if (!pairs.has(key)) pairs.set(key, { source, target });
+  };
   for (const repository of workspace.repositories) {
     for (const artifact of repository.artifacts) nodeIds.add(artifact.id);
     for (const requirement of repository.requirements) {
       nodeIds.add(requirement.id);
-      edges.push({
-        source: requirement.sourceArtifactId,
-        target: requirement.id,
-      });
+      link(requirement.sourceArtifactId, requirement.id);
     }
     for (const evidence of repository.evidence) nodeIds.add(evidence.id);
     for (const finding of repository.findings) nodeIds.add(finding.id);
-    for (const edge of repository.edges) {
-      edges.push({ source: edge.sourceNodeId, target: edge.targetNodeId });
+    for (const entry of repository.indexEntries) {
+      for (const neighbour of entry.neighborIds) link(entry.nodeId, neighbour);
     }
   }
+  const edges = [...pairs.values()];
   const rank = personalizedPageRank({
     edges,
     nodes: [...nodeIds],
@@ -364,12 +399,19 @@ export const SEARCH_INDEX_DEFAULT_LIMIT = 20;
  * The tables this ranking is built from. A workspace read that stopped short
  * on one of them cannot say the page is every match; one that stopped short
  * on `routes` has nothing to do with this answer.
+ *
+ * `sections` is here since search matches their headings (RE-04): a read
+ * that stopped at its section budget drops the documents only a later
+ * heading would have found, and answering 0 rows as `complete` would read
+ * that miss as an absence. `edges` is not — search ranks by the index's
+ * neighbour cache and asks for no edge at all.
  */
 const SEARCH_INDEX_TABLES: ReadonlySet<string> = new Set([
   "artifacts",
   "graph_nodes",
   "index_entries",
   "memory_block_entries",
+  "sections",
 ]);
 
 export interface SearchIndexInput {
@@ -463,11 +505,32 @@ export function searchWorkspaceIndexPage(
         repositoryId: repository.id,
       })),
   );
+  /**
+   * The ADR/OQ/G/MT headings each repository's documents declare (RE-04).
+   * The scan does not index a document's headings, so these — carried by
+   * every read as section nodes, and on the pilot mostly Korean — are the
+   * only heading text a search can see. A document answers for its own
+   * headings; a requirement drawn from the same file does not.
+   */
+  const sectionKey = (repositoryId: string, path: string) =>
+    `${repositoryId}\n${path}`;
+  const sectionsOf = new Map<string, McpSectionData[]>();
+  for (const repository of workspace.repositories) {
+    for (const section of repository.sections ?? []) {
+      const key = sectionKey(repository.id, section.sourcePath);
+      sectionsOf.set(key, [...(sectionsOf.get(key) ?? []), section]);
+    }
+  }
+  const declared = ({ entry, repositoryId }: WorkspaceIndexEntry) =>
+    entry.type === "artifact"
+      ? (sectionsOf.get(sectionKey(repositoryId, entry.path)) ?? [])
+      : [];
   const ranks = new Map<string, SearchRank>();
   const directNodeIds = new Set<string>();
 
-  for (const { entry } of entries) {
-    const rank = directRank(entry, query, tokens);
+  for (const indexed of entries) {
+    const { entry } = indexed;
+    const rank = directRank(entry, query, tokens, declared(indexed));
     if (!rank) continue;
     ranks.set(entry.id, rank);
     directNodeIds.add(entry.nodeId);
@@ -510,29 +573,31 @@ export function searchWorkspaceIndexPage(
       type: "memory" as const,
     }));
 
-  const entryResults: SearchIndexResult[] = entries.flatMap(
-    ({ entry, repositoryId }) => {
-      const rank = ranks.get(entry.id);
-      if (!rank || (input.typeFilter && entry.type !== input.typeFilter))
-        return [];
-      return [
-        {
-          ...excerptResult(
-            excerptFor(workspace, entry.nodeId, entry.searchKey),
-          ),
-          id: entry.id,
-          neighborIds: [...entry.neighborIds],
-          nodeId: entry.nodeId,
-          path: entry.path,
-          rank,
-          repositoryId,
-          score: scoreFor(rank) + (bonus.get(entry.nodeId) ?? 0),
-          title: entry.title,
-          type: entry.type,
-        },
-      ];
-    },
-  );
+  const entryResults: SearchIndexResult[] = entries.flatMap((indexed) => {
+    const { entry, repositoryId } = indexed;
+    const rank = ranks.get(entry.id);
+    if (!rank || (input.typeFilter && entry.type !== input.typeFilter))
+      return [];
+    const matched = declared(indexed)
+      .filter(({ heading }) => includesEveryToken(heading, tokens))
+      .slice(0, SECTION_HITS_PER_RESULT)
+      .map(({ heading, nodeId, token }) => ({ heading, nodeId, token }));
+    return [
+      {
+        ...excerptResult(excerptFor(workspace, entry.nodeId, entry.searchKey)),
+        id: entry.id,
+        neighborIds: [...entry.neighborIds],
+        nodeId: entry.nodeId,
+        path: entry.path,
+        rank,
+        repositoryId,
+        score: scoreFor(rank) + (bonus.get(entry.nodeId) ?? 0),
+        ...(matched.length > 0 ? { sections: matched } : {}),
+        title: entry.title,
+        type: entry.type,
+      },
+    ];
+  });
 
   /**
    * The domain narrows the candidates, and it is derived from the path the
