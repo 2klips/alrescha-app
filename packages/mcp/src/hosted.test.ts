@@ -2288,6 +2288,50 @@ describe("impact confidence and the banded read", () => {
     // An answer shorter than the store is only honest if it says so.
     expect(answer.structuredContent).toMatchObject({ truncated: 0 });
   });
+
+  it("keeps the newest memory by instant, not by collation, when it caps", async () => {
+    // `updatedAt` is PostgREST text: `…:56+00:00` at zero microseconds is
+    // half a second before `…:56.5+00:00`, which a collating compare read
+    // the other way round, and text order reads the fall-back hour's two
+    // offsets backwards. Under a cap of one, the older entry was the one
+    // kept. Both read orders.
+    const entry = (id: string, updatedAt: string) => ({
+      anchorNodeId: null,
+      anchorPath: null,
+      entryKey: id,
+      id,
+      name: "gotchas" as const,
+      text: id,
+      updatedAt,
+    });
+    const kept = (earlier: string, later: string) =>
+      Promise.all(
+        [
+          [entry("mem-older", earlier), entry("mem-newer", later)],
+          [entry("mem-newer", later), entry("mem-older", earlier)],
+        ].map(async (memoryEntries) => {
+          const client = await connected({
+            ...workspaceFixture(),
+            memoryEntries,
+          });
+          const answer = await client.callTool({
+            arguments: { limit: 1 },
+            name: "memory_read",
+          });
+          const { entries } = answer.structuredContent as {
+            entries: { id: string }[];
+          };
+          return entries.map(({ id }) => id);
+        }),
+      );
+
+    expect(
+      await kept("2026-09-06T03:12:56+00:00", "2026-09-06T03:12:56.5+00:00"),
+    ).toEqual([["mem-newer"], ["mem-newer"]]);
+    expect(
+      await kept("2026-11-01T01:30:00-04:00", "2026-11-01T01:10:00-05:00"),
+    ).toEqual([["mem-newer"], ["mem-newer"]]);
+  });
 });
 
 /**

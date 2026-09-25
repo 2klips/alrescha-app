@@ -4,17 +4,19 @@
 
 **상태: REVIEW.** 로컬 완료 조건 통과 + head `6c1b262`의 커밋 CI 전건 SUCCESS. [PR #26](https://github.com/2klips/alrescha-app/pull/26) 열림, 미머지. 운영 검증은 아직 없다.
 
+**현재(2026-09-25):** PR #26으로 머지(2026-09-22)·배포. RE-02는 RELEASED · PROD_VERIFIED(2026-09-24).
+
 ## 1. SHA와 작업 공간
 
-| 항목        | 값                                                                       |
-| ----------- | ------------------------------------------------------------------------ |
-| 기준 SHA    | `5d0c709` — 착수·종료 시점 모두 [PR #25](https://github.com/2klips/alrescha-app/pull/25) head, **OPEN**, 미머지 |
-| 구현 SHA    | `2ba9c18`                                                                |
-| 브랜치      | `research/re-02-search-accuracy`                                         |
-| worktree    | `C:/Users/axz14/Desktop/Project/Arr/re-02-search`                        |
-| 인계 문서   | `6c1b262`                                                                |
-| PR          | [#26](https://github.com/2klips/alrescha-app/pull/26) OPEN · base `phase4/todo-26-symbol-nodes` · head `6c1b262` |
-| 커밋 CI     | head `6c1b262`: gate 2건·Vercel 2건 **모두 SUCCESS** (2026-09-22 11:44–11:52Z) |
+| 항목      | 값                                                                                                               |
+| --------- | ---------------------------------------------------------------------------------------------------------------- |
+| 기준 SHA  | `5d0c709` — 착수·종료 시점 모두 [PR #25](https://github.com/2klips/alrescha-app/pull/25) head, **OPEN**, 미머지  |
+| 구현 SHA  | `2ba9c18`                                                                                                        |
+| 브랜치    | `research/re-02-search-accuracy`                                                                                 |
+| worktree  | `C:/Users/axz14/Desktop/Project/Arr/re-02-search`                                                                |
+| 인계 문서 | `6c1b262`                                                                                                        |
+| PR        | [#26](https://github.com/2klips/alrescha-app/pull/26) OPEN · base `phase4/todo-26-symbol-nodes` · head `6c1b262` |
+| 커밋 CI   | head `6c1b262`: gate 2건·Vercel 2건 **모두 SUCCESS** (2026-09-22 11:44–11:52Z)                                   |
 
 착수 시 PR #25의 head `5d0c709` 체크는 gate 2건·Vercel 2건 모두 SUCCESS였다. 그 head는 종료 시에도 동일했다. 이 카드는 **PR #25 브랜치에 아무것도 추가하지 않았다.**
 
@@ -28,15 +30,15 @@ git show research/re-02-search-accuracy:docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-
 
 ## 2. 변경 파일과 blob 해시
 
-| 파일                                              | 상태 | blob                                       |
-| ------------------------------------------------- | ---- | ------------------------------------------ |
-| `packages/mcp/src/data-brain.ts`                  | M    | `af5b6ec920c69715ac68fa9304525b20824381b6` |
-| `packages/mcp/src/hosted.ts`                      | M    | `bcf667a10f05d5611952a36363641bad1790a3e5` |
-| `packages/mcp/src/index.ts`                       | M    | `2b19a4c14578718dc80b9b990b21d410dcf07c96` |
-| `tests/search-accuracy.test.ts`                   | 신규 | `e9e5c176a2eb8790bcc22728086fd36dda7437e8` |
-| `docs/reports/research-2026-09-21.probe.re-02.mjs`| 신규 | `2174a2fce10e168ebc46b3490f59c3c0e7e5cc41` |
-| `.omo/evidence/research-re-02.md`                 | 신규 | `ba9f40a6965275d53fe0040e0ebbb696a0259e3f` |
-| `docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-02.md`   | 신규 | 이 문서 (`6c1b262`에서 추가, 이후 CI 결과로 갱신) |
+| 파일                                               | 상태 | blob                                              |
+| -------------------------------------------------- | ---- | ------------------------------------------------- |
+| `packages/mcp/src/data-brain.ts`                   | M    | `af5b6ec920c69715ac68fa9304525b20824381b6`        |
+| `packages/mcp/src/hosted.ts`                       | M    | `bcf667a10f05d5611952a36363641bad1790a3e5`        |
+| `packages/mcp/src/index.ts`                        | M    | `2b19a4c14578718dc80b9b990b21d410dcf07c96`        |
+| `tests/search-accuracy.test.ts`                    | 신규 | `e9e5c176a2eb8790bcc22728086fd36dda7437e8`        |
+| `docs/reports/research-2026-09-21.probe.re-02.mjs` | 신규 | `2174a2fce10e168ebc46b3490f59c3c0e7e5cc41`        |
+| `.omo/evidence/research-re-02.md`                  | 신규 | `ba9f40a6965275d53fe0040e0ebbb696a0259e3f`        |
+| `docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-02.md`    | 신규 | 이 문서 (`6c1b262`에서 추가, 이후 CI 결과로 갱신) |
 
 구현 커밋 `2ba9c18` 6 파일 +1,263 / −27, 인계 커밋 `6c1b262`가 이 문서. PR #26의 diff는 합계 7 파일이다.
 
@@ -67,12 +69,12 @@ git show research/re-02-search-accuracy:docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-
 
 20 frontend + 5 backend, 전부 제목 `auth`:
 
-| 사례                          | 전 | 후 |
-| ----------------------------- | --: | --: |
-| `domain_filter: backend`      |  0 |  5 |
-| `query: "!!!"`                | 20 |  0 |
-| `limit: 100`                  | 20 | 25 |
-| 기본 페이지의 `truncated`     |  0 |  5 |
+| 사례                      |  전 |  후 |
+| ------------------------- | --: | --: |
+| `domain_filter: backend`  |   0 |   5 |
+| `query: "!!!"`            |  20 |   0 |
+| `limit: 100`              |  20 |  25 |
+| 기본 페이지의 `truncated` |   0 |   5 |
 
 > 원본 probe의 `filterAfterLimit.returnedAfterDomainFilter`는 **수정 후에도 0**이다. 그 블록은 옛 호출 형태(랭킹 후 JS에서 필터)를 일부러 재현하므로 현재 경로를 재는 것이 아니다. fixture를 바꿔 옛 결과를 감추지 않았다. 현재 경로는 `research-2026-09-21.probe.re-02.mjs`가 같은 fixture로 잰다.
 
@@ -80,15 +82,15 @@ git show research/re-02-search-accuracy:docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-
 
 환경: Windows 11, Node + pnpm, worktree `../re-02-search`에서 `pnpm install --frozen-lockfile` 후 실행. 2026-09-22.
 
-| 명령                                                                  | 결과                                   |
-| --------------------------------------------------------------------- | -------------------------------------- |
-| `node --import tsx docs/reports/research-2026-09-21.probe.mjs`         | `!!!` 20 → **0**                       |
-| `node --import tsx docs/reports/research-2026-09-21.probe.re-02.mjs`   | backend **5**, limit 100 → **25**, 기본 omitted **5** |
-| `pnpm exec vitest run` — `hosted.test.ts` `symbol-layer.test.ts` `artifact-facets.test.ts` `scope-fidelity.test.ts` `search-accuracy.test.ts` | 5 files / **109 passed** |
-| `pnpm lint`                                                           | clean (`--max-warnings=0`)             |
-| `pnpm typecheck`                                                      | 6 projects clean                       |
-| `pnpm test`                                                           | **208 files / 1,934 passed / 1 skipped** |
-| `node --import tsx scripts/verify-scope-boundaries.ts`                | **PASS** — 12 boundaries, 388 files, 0 forbidden |
+| 명령                                                                                                                                          | 결과                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `node --import tsx docs/reports/research-2026-09-21.probe.mjs`                                                                                | `!!!` 20 → **0**                                      |
+| `node --import tsx docs/reports/research-2026-09-21.probe.re-02.mjs`                                                                          | backend **5**, limit 100 → **25**, 기본 omitted **5** |
+| `pnpm exec vitest run` — `hosted.test.ts` `symbol-layer.test.ts` `artifact-facets.test.ts` `scope-fidelity.test.ts` `search-accuracy.test.ts` | 5 files / **109 passed**                              |
+| `pnpm lint`                                                                                                                                   | clean (`--max-warnings=0`)                            |
+| `pnpm typecheck`                                                                                                                              | 6 projects clean                                      |
+| `pnpm test`                                                                                                                                   | **208 files / 1,934 passed / 1 skipped**              |
+| `node --import tsx scripts/verify-scope-boundaries.ts`                                                                                        | **PASS** — 12 boundaries, 388 files, 0 forbidden      |
 
 **수치 구분이 중요하다.** 208 = `5d0c709`의 테스트 파일 207개 + 이 카드의 1개. 기존 207개는 전부 그대로 통과했다. 위 표는 **격리 worktree의 작업트리 실행**이며, 공유 루트의 미커밋 UI 테스트 2개를 포함하지 않는다. 심볼 인계에 적힌 209 files / 1,920 passed는 그 UI 파일이 포함된 **공유 트리** 수치이므로 위 숫자와 직접 비교하면 안 된다.
 
@@ -96,12 +98,12 @@ git show research/re-02-search-accuracy:docs/reports/CLAUDE_TO_CODEX_HANDOFF_RE-
 
 PR #26 head `6c1b262` — 구현 `2ba9c18`과 인계 `6c1b262`를 모두 포함한 커밋 — 의 체크:
 
-| check                   | 결과    | 완료                   |
-| ----------------------- | ------- | ---------------------- |
-| gate                    | SUCCESS | 2026-09-22T11:49:55Z   |
-| gate                    | SUCCESS | 2026-09-22T11:52:07Z   |
-| Vercel                  | SUCCESS | —                      |
-| Vercel Preview Comments | SUCCESS | 2026-09-22T11:44:47Z   |
+| check                   | 결과    | 완료                 |
+| ----------------------- | ------- | -------------------- |
+| gate                    | SUCCESS | 2026-09-22T11:49:55Z |
+| gate                    | SUCCESS | 2026-09-22T11:52:07Z |
+| Vercel                  | SUCCESS | —                    |
+| Vercel Preview Comments | SUCCESS | 2026-09-22T11:44:47Z |
 
 `gh run list --branch research/re-02-search-accuracy`로도 head `6c1b262`의 CI run 2건이 `completed success`다. 오래된 커밋의 성공으로 대체하지 않았다. 확인 명령:
 

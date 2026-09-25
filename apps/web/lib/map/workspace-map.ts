@@ -6,6 +6,7 @@ import {
   type BrainArea,
   type LayoutConventions,
 } from "@alrescha/core/artifact-facets";
+import { byInstant } from "@alrescha/core/instant-order";
 import type {
   ArtifactClassification,
   RiskLevel,
@@ -564,8 +565,10 @@ export function buildWorkspaceMapHud(
   const commitSha = repository?.last_scanned_commit_sha ?? null;
   const completions = (rows.scanCompletions ?? [])
     .filter(({ completed_at }) => typeof completed_at === "string")
+    // Newest first by instant: `completed_at` is PostgREST text, which a
+    // collating compare misorders within a second and across offsets.
     .sort((left, right) =>
-      String(right.completed_at).localeCompare(String(left.completed_at)),
+      byInstant(String(right.completed_at), String(left.completed_at)),
     );
   const completion =
     completions.find(({ commit_sha }) => commit_sha === commitSha) ?? null;

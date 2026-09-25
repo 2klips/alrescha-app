@@ -246,7 +246,14 @@ function digestWindow(
   from: Date,
 ): ProgressDigestWindow {
   const iso = from.toISOString();
-  const entries = timeline.filter((entry) => entry.occurredAt >= iso);
+  // By instant: entry times are PostgREST text (`+00:00`, fraction trimmed,
+  // or another session offset) and `iso` is `Z` text, so a string compare
+  // dropped an entry at exactly the window start and misplaced every other
+  // offset. `from` is whole milliseconds, which is all `Date.parse` keeps.
+  const fromMs = from.getTime();
+  const entries = timeline.filter(
+    (entry) => Date.parse(entry.occurredAt) >= fromMs,
+  );
   const refs = new Set<string>();
   for (const entry of entries) for (const ref of entry.refs) refs.add(ref);
   return {
@@ -293,9 +300,10 @@ function attentionFor(
   input: BuildProgressDashboardInput,
   now: Date,
 ): ProgressAttention {
-  const staleBefore = new Date(
-    now.getTime() - STALE_AFTER_DAYS * DAY_MS,
-  ).toISOString();
+  // An instant, compared with `Date.parse` below: `updatedAt` is PostgREST
+  // text in the session's offset, which a string compare against `Z` text
+  // read hours off.
+  const staleBeforeMs = now.getTime() - STALE_AFTER_DAYS * DAY_MS;
   // Oldest first in both lists: the thing that has been waiting longest is
   // the thing to look at, and a list sorted by id would bury it.
   const byAge = (
@@ -315,7 +323,9 @@ function attentionFor(
       .sort(byAge),
     stale: input.todos
       .filter(
-        (todo) => todo.status === "in-progress" && todo.updatedAt < staleBefore,
+        (todo) =>
+          todo.status === "in-progress" &&
+          Date.parse(todo.updatedAt) < staleBeforeMs,
       )
       .map((todo) => ({
         id: todo.id,

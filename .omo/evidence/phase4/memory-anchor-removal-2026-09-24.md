@@ -61,6 +61,7 @@
 - lint·typecheck·`git diff --check`·prettier(변경 파일) PASS.
 - 전체 vitest **213 files · 1,999 passed · 1 skipped**(R1 수정 후; 처음 `947b0da`는 1,996).
 - 미실행: `tests/e2e/agent-memory.spec.ts`(로컬 Supabase Docker 필요). 운영 DB 조회·적용 없음(운영 사전 조회는 배포 Codex 리뷰 기록 참조: 해당 오류 잡 0건, 기억·단언 0/0).
+- 운영 적용(2026-09-25): PR #34 머지(`b1a40b0`) 뒤 배포 Codex가 21:09 KST에 적용했다. 사후 대상 FK 0·신규 트리거 2·`allow_only_invalidation` 교체 true·기억/단언 행 0/0 보존·장부 70/pending 0. 기록: 공유 루트의 미커밋 `.omo/evidence/phase4/pr33-34-production-migration-2026-09-25.md`.
 
 ## 관찰 (이번 범위 밖)
 

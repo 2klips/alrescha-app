@@ -4,15 +4,17 @@
 
 **상태: LOCAL_VERIFIED.** 격리 worktree에서 완료 조건 통과. **푸시·PR 없음**(롤아웃 문서의 추가 push/merge/배포 금지). 커밋 CI·운영 검증 없음.
 
+**현재(2026-09-25):** PR #28로 머지(2026-09-22)·배포. RE-03은 RELEASED · PROD_VERIFIED(2026-09-24).
+
 ## 1. SHA와 base 확인
 
-| 항목      | 값                                                          |
-| --------- | ----------------------------------------------------------- |
-| 기준 SHA  | `9834656` = RE-03 ⑶a head = [PR #27](https://github.com/2klips/alrescha-app/pull/27) head |
-| 구현 SHA  | `90eb410`                                                   |
-| 브랜치    | `research/re-03b-change-brief-path`                         |
-| worktree  | `C:/Users/axz14/Desktop/Project/Arr/re-03b-path`             |
-| 푸시/PR   | **없음.** 로컬 커밋만                                        |
+| 항목     | 값                                                                                        |
+| -------- | ----------------------------------------------------------------------------------------- |
+| 기준 SHA | `9834656` = RE-03 ⑶a head = [PR #27](https://github.com/2klips/alrescha-app/pull/27) head |
+| 구현 SHA | `90eb410`                                                                                 |
+| 브랜치   | `research/re-03b-change-brief-path`                                                       |
+| worktree | `C:/Users/axz14/Desktop/Project/Arr/re-03b-path`                                          |
+| 푸시/PR  | **없음.** 로컬 커밋만                                                                     |
 
 **읽기 전용으로 확인한 스택(2026-09-22):**
 
@@ -23,14 +25,14 @@
 
 ## 2. 변경 파일
 
-| 파일                                | 상태 | 비고                                   |
-| ----------------------------------- | ---- | -------------------------------------- |
-| `packages/mcp/src/prepare-change.ts`| M    | 브리프 구성. +227/−28                  |
-| `packages/mcp/src/hosted.ts`        | M    | `get_artifact`의 opt-in. +32           |
-| `packages/mcp/src/index.ts`         | M    | 타입 재수출                            |
-| `packages/mcp/src/hosted.test.ts`   | M    | **주석만** — ratchet 상승 기록. 단언 불변 |
-| `tests/change-brief.test.ts`        | 신규 | 18건                                   |
-| `.omo/evidence/research-re-03b.md`  | 신규 | 증거                                   |
+| 파일                                 | 상태 | 비고                                      |
+| ------------------------------------ | ---- | ----------------------------------------- |
+| `packages/mcp/src/prepare-change.ts` | M    | 브리프 구성. +227/−28                     |
+| `packages/mcp/src/hosted.ts`         | M    | `get_artifact`의 opt-in. +32              |
+| `packages/mcp/src/index.ts`          | M    | 타입 재수출                               |
+| `packages/mcp/src/hosted.test.ts`    | M    | **주석만** — ratchet 상승 기록. 단언 불변 |
+| `tests/change-brief.test.ts`         | 신규 | 18건                                      |
+| `.omo/evidence/research-re-03b.md`   | 신규 | 증거                                      |
 
 **다른 담당 보유(이 커밋에 없음):** Codex 홈/overview UI 9개 + 테스트 2개, `docs/brand/**`, `.claude/launch.json`, 연구 문서, `RESEARCH_WORKBOARD.md`(공유 루트 미커밋 — 이 카드의 claim/handoff 줄만 편집). 공유 루트에서 checkout/reset/stash/clean·`git add .` 하지 않았다.
 
@@ -46,12 +48,12 @@
 
 계약 §4의 기본 후보는 `request_context_pack`의 `codeCards` 중 **정확히 1개**를 확장하는 것이었다. 이 저장소 `57304f30`에서 **998 artifacts**, 과제 12개(한/영), 예산 3종으로 측정:
 
-| `codeCards` 길이 | 횟수 |
-| ---------------- | ---: |
+| `codeCards` 길이 |  횟수 |
+| ---------------- | ----: |
 | 정확히 1         | **0** |
-| 0                | 3 |
-| 20(상한)         | 33 |
-| 합계             | 36 |
+| 0                |     3 |
+| 20(상한)         |    33 |
+| 합계             |    36 |
 
 어느 예산에서도 1이 아니었고, 첫 카드 경로가 모든 과제에서 동일(`.env.example`)했다 — 선택이 `repository.artifacts`를 경로순으로 훑어 앞 20개를 담기 때문이다. **대상을 지목하지 못하는 선택자는 브리프를 실을 수 없다.**
 
@@ -59,15 +61,15 @@
 
 ## 5. 실행한 명령·결과
 
-| 명령 | 결과 |
-| --- | --- |
-| `pnpm exec vitest run tests/change-brief.test.ts` | 18 passed |
-| `pnpm exec vitest run` (hosted·artifact-card·context-pack·change-brief·search-accuracy) | 5 files / 101 passed |
-| `pnpm lint` | clean (`--max-warnings=0`) |
-| `pnpm typecheck` | 6 projects clean |
-| `pnpm test` | **209 files / 1,952 passed / 1 skipped** |
-| `node --import tsx scripts/verify-scope-boundaries.ts` | PASS — 12 boundaries, 388 files |
-| 카탈로그 probe | **21 tools / 3,141 tokens** (ratchet 3,150) |
+| 명령                                                                                    | 결과                                        |
+| --------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `pnpm exec vitest run tests/change-brief.test.ts`                                       | 18 passed                                   |
+| `pnpm exec vitest run` (hosted·artifact-card·context-pack·change-brief·search-accuracy) | 5 files / 101 passed                        |
+| `pnpm lint`                                                                             | clean (`--max-warnings=0`)                  |
+| `pnpm typecheck`                                                                        | 6 projects clean                            |
+| `pnpm test`                                                                             | **209 files / 1,952 passed / 1 skipped**    |
+| `node --import tsx scripts/verify-scope-boundaries.ts`                                  | PASS — 12 boundaries, 388 files             |
+| 카탈로그 probe                                                                          | **21 tools / 3,141 tokens** (ratchet 3,150) |
 
 209 = `9834656`의 208 + 이 카드 1. 1,952 = 1,934 + 18. 기존 파일 전부 무수정 통과.
 **격리 worktree의 작업트리 실행이며 커밋 CI가 아니다** — 이 브랜치는 푸시하지 않았다.

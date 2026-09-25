@@ -8,6 +8,7 @@
     ".": "./src/index.ts",
     "./artifact-facets": "./src/ingest/artifact-facets.ts",
     "./byok": "./src/ai/byok.ts",
+    "./instant-order": "./src/data/instant-order.ts",
     "./receipts": "./src/assurance/receipts.ts",
     "./repository-url": "./src/github/repository-url.ts",
     "./stats": "./src/stats/pilot-stats.ts"

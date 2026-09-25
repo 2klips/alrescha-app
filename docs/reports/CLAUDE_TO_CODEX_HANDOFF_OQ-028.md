@@ -4,6 +4,8 @@
 
 **상태: LOCAL_VERIFIED.** DB 마이그레이션 1건만 있다. 웹·워커·MCP 도구·카탈로그 변경은 없다. 운영 DB에는 적용하지 않았다.
 
+**현재(2026-09-25):** PR #33으로 머지(`2535385`). 운영 migration은 배포 Codex가 2026-09-25 21:09 KST main `b1a40b0`에서 적용했다(migrator 1회 exit 0, 사후 forced 52/52·미강제 0). 기록: 공유 루트의 미커밋 `.omo/evidence/phase4/pr33-34-production-migration-2026-09-25.md`.
+
 ## 1. 기준과 작업 공간
 
 | 항목              | 값                                                                                                          |

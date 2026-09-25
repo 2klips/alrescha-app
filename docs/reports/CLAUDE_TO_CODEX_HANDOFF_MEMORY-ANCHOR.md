@@ -4,6 +4,8 @@
 
 **상태: LOCAL_VERIFIED (R1 수정 포함).** DB 마이그레이션 1건만 있다. 웹·워커·MCP 도구·카탈로그 변경은 없다. 운영 DB에는 적용하지 않았다. R1 수정 커밋은 로컬에만 있고, PR #34에 올리는 push는 사용자 승인 대기다.
 
+**현재(2026-09-25):** PR #34로 머지(`b1a40b0`, 최종 head `2bc8415`). 운영 migration은 배포 Codex가 2026-09-25 21:09 KST 적용했다(사후 대상 FK 0·신규 트리거 2·`allow_only_invalidation` 교체 true·기억/단언 행 0/0 보존). 기록: 공유 루트의 미커밋 `.omo/evidence/phase4/pr33-34-production-migration-2026-09-25.md`. 아래 "push는 승인 대기" 등은 작성 시점 기준이다.
+
 ## 1. 기준과 작업 공간
 
 | 항목              | 값                                                                                                                                                                                                                                    |
