@@ -165,6 +165,8 @@ export const DOC_PAGE_SLUG_IDENTITY_MIGRATION =
   "supabase/migrations/202609150001_doc_page_slug_identity.sql";
 export const FORCE_RLS_REMAINING_TABLES_MIGRATION =
   "supabase/migrations/202609240001_force_rls_remaining_tables.sql";
+export const MEMORY_SURVIVES_ANCHOR_REMOVAL_MIGRATION =
+  "supabase/migrations/202609240002_memory_survives_anchor_removal.sql";
 
 /** Every migration, in order — the production `scripts/migrate.ts` set. */
 export const ALL_MIGRATIONS = [
@@ -237,6 +239,7 @@ export const ALL_MIGRATIONS = [
   DOC_PAGE_SLUG_IDENTITY_MIGRATION,
   SYMBOL_NODES_MIGRATION,
   FORCE_RLS_REMAINING_TABLES_MIGRATION,
+  MEMORY_SURVIVES_ANCHOR_REMOVAL_MIGRATION,
 ] as const;
 
 export async function createTestDatabase(
