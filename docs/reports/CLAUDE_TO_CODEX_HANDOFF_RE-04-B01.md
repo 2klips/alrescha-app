@@ -4,34 +4,36 @@
 
 **상태: LOCAL_VERIFIED, 일부 해결.** receipts 원인은 고쳤고, edge RPC는 **측정만 하고 고치지 않았다.** 푸시·PR·배포 없음.
 
+**현재(2026-09-25):** PR #29로 머지·배포(웹 `47b32d2`). 이후 search 실패 수정(PR #30)과 함께 RE-00이 RELEASED됐다(2026-09-24). edge RPC 미해결은 그대로다.
+
 ## 1. SHA와 작업 공간
 
-| 항목 | 값 |
-| --- | --- |
-| 기준 | `027ec63c477920610ce1d99fd4d68c611188ab80` (main, 착수 시 재확인, 열린 PR 없음) |
-| B-01 receipts | `6b6554b` |
-| R-01 briefTokens | `3771ac8` |
-| R-02 compact via + 계약 현행화 | `2f6e7f2` |
-| 브랜치 | `research/re-04-mcp-read-recovery` |
-| worktree | `C:/Users/axz14/Desktop/Project/Arr/re-04-read` |
-| 푸시 / PR | **없음** — 승인 없는 push 금지 |
+| 항목                           | 값                                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------- |
+| 기준                           | `027ec63c477920610ce1d99fd4d68c611188ab80` (main, 착수 시 재확인, 열린 PR 없음) |
+| B-01 receipts                  | `6b6554b`                                                                       |
+| R-01 briefTokens               | `3771ac8`                                                                       |
+| R-02 compact via + 계약 현행화 | `2f6e7f2`                                                                       |
+| 브랜치                         | `research/re-04-mcp-read-recovery`                                              |
+| worktree                       | `C:/Users/axz14/Desktop/Project/Arr/re-04-read`                                 |
+| 푸시 / PR                      | **없음** — 승인 없는 push 금지                                                  |
 
 공유 루트는 `5d0c709` 그대로이고 편집한 공유 파일은 `RESEARCH_WORKBOARD.md` 하나다(claim·handoff 줄, RE-04 행). UI 9·테스트 2·brand·launch·연구 문서·`:3030`은 건드리지 않았다. 공유 루트 checkout/reset/stash/clean·`git add .` 없음.
 
 ## 2. 변경 파일 (main 대비 10개, +894 / −261)
 
-| 파일 | 커밋 | blob |
-| --- | --- | --- |
-| `apps/web/lib/mcp/supabase-store.ts` | B-01 | `4c81d612` |
-| `apps/web/lib/mcp/supabase-store.test.ts` | B-01 | `e5eb961e` |
-| `packages/mcp/src/store.ts` | B-01 | `3ce1c635` |
-| `packages/mcp/src/hosted.ts` | B-01 | `a9c84922` |
-| `packages/mcp/src/index.ts` | B-01, R-02 | `3320fe8d` |
-| `tests/workspace-read-receipts.test.ts` | B-01 (신규) | `730fc672` |
-| `packages/mcp/src/prepare-change.ts` | R-01, R-02 | `ac8428f1` |
-| `tests/change-brief.test.ts` | R-01, R-02 | `2aa5a224` |
-| `docs/reports/CHANGE_BRIEF_CONTRACT.md` | R-02 | `972f9a25` |
-| `docs/reports/change-brief-contract.probe.mjs` | R-02 | `17ea0be8` |
+| 파일                                           | 커밋        | blob       |
+| ---------------------------------------------- | ----------- | ---------- |
+| `apps/web/lib/mcp/supabase-store.ts`           | B-01        | `4c81d612` |
+| `apps/web/lib/mcp/supabase-store.test.ts`      | B-01        | `e5eb961e` |
+| `packages/mcp/src/store.ts`                    | B-01        | `3ce1c635` |
+| `packages/mcp/src/hosted.ts`                   | B-01        | `a9c84922` |
+| `packages/mcp/src/index.ts`                    | B-01, R-02  | `3320fe8d` |
+| `tests/workspace-read-receipts.test.ts`        | B-01 (신규) | `730fc672` |
+| `packages/mcp/src/prepare-change.ts`           | R-01, R-02  | `ac8428f1` |
+| `tests/change-brief.test.ts`                   | R-01, R-02  | `2aa5a224` |
+| `docs/reports/CHANGE_BRIEF_CONTRACT.md`        | R-02        | `972f9a25` |
+| `docs/reports/change-brief-contract.probe.mjs` | R-02        | `17ea0be8` |
 
 ## 3. B-01 — receipts: 찾았고 고쳤다
 
@@ -41,10 +43,10 @@
 
 **합성 fixture 실측** (PGlite = 실제 PostgreSQL, 전체 마이그레이션, 파일럿 크기로 맞춘 330 receipt, 운영 행 없음):
 
-| receipt select | median | payload |
-| --- | ---: | ---: |
-| summary 포함 | 199 ms | 40,100,611 bytes |
-| summary 제외 | 3 ms | 56,761 bytes |
+| receipt select | median |          payload |
+| -------------- | -----: | ---------------: |
+| summary 포함   | 199 ms | 40,100,611 bytes |
+| summary 제외   |   3 ms |     56,761 bytes |
 
 **상대 비교일 뿐 운영 지연이 아니다.** fixture 바이트는 파일럿 실측 40,101,144와 0.002% 이내라 같은 문제를 재고 있다.
 
@@ -73,13 +75,13 @@
 
 환경: Windows 11, Node, pnpm, worktree에서 `pnpm install --frozen-lockfile` 후. 2026-09-23.
 
-| 명령 | 결과 |
-| --- | --- |
-| `pnpm lint` | clean |
-| `pnpm typecheck` | 6 projects clean |
-| `pnpm test` | **210 files / 1,965 passed / 1 skipped** |
-| `node --import tsx scripts/verify-scope-boundaries.ts` | PASS — 12 boundaries, 388 files |
-| 카탈로그 (contract probe) | 21툴 / 3,141 / ratchet 3,150 |
+| 명령                                                   | 결과                                     |
+| ------------------------------------------------------ | ---------------------------------------- |
+| `pnpm lint`                                            | clean                                    |
+| `pnpm typecheck`                                       | 6 projects clean                         |
+| `pnpm test`                                            | **210 files / 1,965 passed / 1 skipped** |
+| `node --import tsx scripts/verify-scope-boundaries.ts` | PASS — 12 boundaries, 388 files          |
+| 카탈로그 (contract probe)                              | 21툴 / 3,141 / ratchet 3,150             |
 
 1,965 = `027ec63`의 1,952 + B-01 10 + R-01 1 + R-02 2. 기존 테스트 전부 무수정 통과. **격리 worktree의 작업트리 실행이며 커밋 CI가 아니다.**
 
@@ -110,6 +112,7 @@
    ```
 
    `EXPLAIN (ANALYZE, BUFFERS)`는 쿼리를 실제로 실행하므로 statement timeout 안에서만. 결과(플랜 노드·rows·buffers)를 가져오면 그 플랜 위에서 수정을 설계한다. **운영 DB 수정·인덱스 생성은 하지 않는다.**
+
 3. **RE-00 닫기 조건** — 사용자 지시 그대로: MCP 읽기 재검증(1번이 통과한 뒤) + **실제 Near 헤일로** 확인. 캐시/로딩 PASS와 분리. edge truncation 때문에 `impact_of`·브리프가 `lower-bound`를 말하는 것은 정상(§4).
 4. RE-02(`search_index` domain/limit/truncated/coverage)와 RE-03(`get_artifact` default 부재·opt-in·`ids` 제외·21툴)의 운영 확인도 1번 이후 같은 토큰으로.
 

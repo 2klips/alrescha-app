@@ -4,34 +4,36 @@
 
 **상태: LOCAL_VERIFIED.** 가장 유력한 원인(F1)을 운영 없이 재현했고 고쳤다. **운영에서 원인이 확정된 것은 아니다** — 실패 응답을 보관하지 않았으므로 확정은 §7의 A/B나 배포 후 재검증이 한다. 푸시·PR·배포 없음.
 
+**현재(2026-09-25):** PR #30으로 머지·배포(웹 `488c0c4`). 배포 Codex의 운영 확인으로 RE-00 RELEASED, RE-02·RE-03 PROD_VERIFIED(2026-09-24). F1은 운영에서 확정되지 않은 채로 남았다.
+
 ## 1. SHA와 작업 공간
 
-| 항목 | 값 |
-| --- | --- |
-| 기준 | `47b32d2b793cd251cec0b09e9645b1f3d8ea16f1` (main 정확, Vercel production) |
-| 수정 | `faa151a` — search 심볼 읽기 축소 + id 목록 분할 + 오류 태그 |
-| 브랜치 | `research/re-04-search-failure` |
-| worktree | `C:/Users/axz14/Desktop/Project/Arr/re-04-search` |
-| 푸시 / PR | **없음** — 승인 없는 push 금지 |
+| 항목      | 값                                                                        |
+| --------- | ------------------------------------------------------------------------- |
+| 기준      | `47b32d2b793cd251cec0b09e9645b1f3d8ea16f1` (main 정확, Vercel production) |
+| 수정      | `faa151a` — search 심볼 읽기 축소 + id 목록 분할 + 오류 태그              |
+| 브랜치    | `research/re-04-search-failure`                                           |
+| worktree  | `C:/Users/axz14/Desktop/Project/Arr/re-04-search`                         |
+| 푸시 / PR | **없음** — 승인 없는 push 금지                                            |
 
 공유 루트는 `5d0c709` 그대로이고 편집한 공유 파일은 `RESEARCH_WORKBOARD.md` 하나다. UI·테스트·brand·launch·연구 문서·타인 변경·`:3030`은 건드리지 않았다. checkout/reset/stash/clean·`git add .` 없음.
 
 ## 2. 변경 파일 (기준 대비 12개, +1,138 / −106)
 
-| 파일 | 역할 | blob |
-| --- | --- | --- |
-| `apps/web/lib/mcp/supabase-store.ts` | `loadFileSymbols` 신규, 이웃 읽기 분할, `queryError` 태그 | `2b1c796a` |
-| `apps/web/lib/supabase/id-batches.ts` | 신규 — 60개 단위 분할·동시 4·병합 규칙 | `98c33a4b` |
-| `apps/web/lib/map/symbol-layer.ts` | 지도 헤일로 edge 요청 분할 | `29cc48be` |
-| `packages/mcp/src/store.ts` | `McpStore.loadFileSymbols`, 공통 규칙 `selectFileSymbols`, in-memory 구현 | `1d51830d` |
-| `packages/mcp/src/hosted.ts` | `symbolHitsFor`가 이웃 대신 `loadFileSymbols` 사용 | `6be0ed6e` |
-| `packages/mcp/src/index.ts` | export 2개 | `7effffa8` |
-| `apps/web/lib/mcp/symbol-read-url.test.ts` | 신규 — 실제 supabase-js + PostgREST 에뮬레이터 | `4663d847` |
-| `apps/web/lib/supabase/id-batches.test.ts` | 신규 | `ab1abae3` |
-| `apps/web/lib/mcp/supabase-store.test.ts` | 요청 형태·분할·태그 5건 | `fe55da01` |
-| `packages/mcp/src/symbol-layer.test.ts` | `selectFileSymbols` 3건 | `0273fd3d` |
-| `packages/mcp/src/hosted.test.ts` | search가 이웃을 읽지 않음 1건 | `962d9bfc` |
-| `tests/search-accuracy.test.ts` | 기존 RE-02 spy 대상만 교체(§6) | `170f1328` |
+| 파일                                       | 역할                                                                      | blob       |
+| ------------------------------------------ | ------------------------------------------------------------------------- | ---------- |
+| `apps/web/lib/mcp/supabase-store.ts`       | `loadFileSymbols` 신규, 이웃 읽기 분할, `queryError` 태그                 | `2b1c796a` |
+| `apps/web/lib/supabase/id-batches.ts`      | 신규 — 60개 단위 분할·동시 4·병합 규칙                                    | `98c33a4b` |
+| `apps/web/lib/map/symbol-layer.ts`         | 지도 헤일로 edge 요청 분할                                                | `29cc48be` |
+| `packages/mcp/src/store.ts`                | `McpStore.loadFileSymbols`, 공통 규칙 `selectFileSymbols`, in-memory 구현 | `1d51830d` |
+| `packages/mcp/src/hosted.ts`               | `symbolHitsFor`가 이웃 대신 `loadFileSymbols` 사용                        | `6be0ed6e` |
+| `packages/mcp/src/index.ts`                | export 2개                                                                | `7effffa8` |
+| `apps/web/lib/mcp/symbol-read-url.test.ts` | 신규 — 실제 supabase-js + PostgREST 에뮬레이터                            | `4663d847` |
+| `apps/web/lib/supabase/id-batches.test.ts` | 신규                                                                      | `ab1abae3` |
+| `apps/web/lib/mcp/supabase-store.test.ts`  | 요청 형태·분할·태그 5건                                                   | `fe55da01` |
+| `packages/mcp/src/symbol-layer.test.ts`    | `selectFileSymbols` 3건                                                   | `0273fd3d` |
+| `packages/mcp/src/hosted.test.ts`          | search가 이웃을 읽지 않음 1건                                             | `962d9bfc` |
+| `tests/search-accuracy.test.ts`            | 기존 RE-02 spy 대상만 교체(§6)                                            | `170f1328` |
 
 마이그레이션·새 도구·카탈로그 변경 없음(21툴 / 3,141).
 
@@ -39,17 +41,17 @@
 
 다섯 호출 모두 같은 공통 읽기를 쓴다. 그 뒤 **DB를 다시 읽는 것은 `search_index`뿐이다**: `symbolHitsFor` → `loadSymbolNeighborhood(히트 파일)`. `get_neighbors`·`impact_of`는 공통 읽기가 모르는 id일 때만 심볼 레이어를 읽는데 파일 id는 알고 있으므로 읽지 않는다(기록의 "symbol node 0"과 일치). `get_artifact`는 읽지 않는다.
 
-| # | 후보 | 드러나는 모습 | 판정 |
-| --- | --- | --- | --- |
-| F1 | search의 `symbol_edges` 요청 URL이 게이트웨이 한도 초과 | `MCP symbol edge query failed: URI too long` — 코드도 timeout도 없음 | **가장 유력** — 인계서가 권장한 질의 형태로 로컬 재현, 운영 미관측 |
-| F2 | 공통 읽기 statement timeout | `canceling statement due to statement timeout` | 낮음 — 분류기가 인식하고, 같은 읽기가 46초 안에 4번 통과 |
-| F3 | 게이트웨이 5xx·네트워크 | `TypeError: fetch failed`, HTML 본문 | **배제 못 함** — postgrest-js가 GET을 503/520/네트워크에서 1·2·4초 간격 최대 3회 재시도하므로 소요 시간으로 F1과 구분 불가 |
-| F4 | 출력 스키마 검증 | `Output validation error` | 배제 — `search_index`에는 outputSchema가 없음 |
-| F5 | 플랫폼 timeout | HTTP 504 | 배제 — HTTP 200 + tool result |
-| F6 | 클라이언트 abort | `AbortError` | 배제 — MCP 경로에 timeout·signal 없음 |
-| F7 | 운영 데이터에서 순위 코드 예외 | `TypeError` | 배제 못 함, 증거 없음 |
-| F8 | edge RPC 후속 cursor·fence | `MCP edge page query failed` | search 고유가 아님 — 같은 공통 읽기가 같은 46초에 4번 통과 |
-| F9 | `revision_of`·`read_repository_basis` | — | 배제 — 둘 다 예외를 던지지 않음 |
+| #   | 후보                                                    | 드러나는 모습                                                        | 판정                                                                                                                       |
+| --- | ------------------------------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| F1  | search의 `symbol_edges` 요청 URL이 게이트웨이 한도 초과 | `MCP symbol edge query failed: URI too long` — 코드도 timeout도 없음 | **가장 유력** — 인계서가 권장한 질의 형태로 로컬 재현, 운영 미관측                                                         |
+| F2  | 공통 읽기 statement timeout                             | `canceling statement due to statement timeout`                       | 낮음 — 분류기가 인식하고, 같은 읽기가 46초 안에 4번 통과                                                                   |
+| F3  | 게이트웨이 5xx·네트워크                                 | `TypeError: fetch failed`, HTML 본문                                 | **배제 못 함** — postgrest-js가 GET을 503/520/네트워크에서 1·2·4초 간격 최대 3회 재시도하므로 소요 시간으로 F1과 구분 불가 |
+| F4  | 출력 스키마 검증                                        | `Output validation error`                                            | 배제 — `search_index`에는 outputSchema가 없음                                                                              |
+| F5  | 플랫폼 timeout                                          | HTTP 504                                                             | 배제 — HTTP 200 + tool result                                                                                              |
+| F6  | 클라이언트 abort                                        | `AbortError`                                                         | 배제 — MCP 경로에 timeout·signal 없음                                                                                      |
+| F7  | 운영 데이터에서 순위 코드 예외                          | `TypeError`                                                          | 배제 못 함, 증거 없음                                                                                                      |
+| F8  | edge RPC 후속 cursor·fence                              | `MCP edge page query failed`                                         | search 고유가 아님 — 같은 공통 읽기가 같은 46초에 4번 통과                                                                 |
+| F9  | `revision_of`·`read_repository_basis`                   | —                                                                    | 배제 — 둘 다 예외를 던지지 않음                                                                                            |
 
 ## 4. F1 재현 — 운영 없이
 
@@ -57,15 +59,15 @@
 
 `47b32d2` 트리: artifacts 1,005, 심볼 2,597(운영 full 후 2,589). barrel `packages/core/src/index.ts` 485개, `packages/mcp/src/index.ts` 135개.
 
-| 질의 | 심볼 일치 파일 | 읽은 심볼 | edge 요청 URL |
-| --- | ---: | ---: | ---: |
-| `createHostedMcpEndpoint` (인계서 형태) | 2 | 143 | **8,568** |
-| `searchWorkspaceIndexPage` | 2 | 161 | **9,612** |
-| `SupabaseMcpStore` | 1 | 1 | 332 |
-| `search` | 1 | 26 | 1,782 |
-| `store` | 14 | 167 | **9,960** |
-| `edge` | 15 | 979 | **57,056** |
-| `auth` | 7 | 590 | **34,494** |
+| 질의                                    | 심볼 일치 파일 | 읽은 심볼 | edge 요청 URL |
+| --------------------------------------- | -------------: | --------: | ------------: |
+| `createHostedMcpEndpoint` (인계서 형태) |              2 |       143 |     **8,568** |
+| `searchWorkspaceIndexPage`              |              2 |       161 |     **9,612** |
+| `SupabaseMcpStore`                      |              1 |         1 |           332 |
+| `search`                                |              1 |        26 |         1,782 |
+| `store`                                 |             14 |       167 |     **9,960** |
+| `edge`                                  |             15 |       979 |    **57,056** |
+| `auth`                                  |              7 |       590 |    **34,494** |
 
 export 이름 하나가 8,000을 넘는 이유는 `packages/mcp/src/index.ts`가 그 이름을 다시 export하고, 그 barrel의 135개가 통째로 들어가기 때문이다. Supabase는 URL 한도를 **공개하지 않는다**. postgrest-js 2.112.2는 8,000자부터 경고하고, 800개 `in`에서 `URI too long`이 난 공개 보고가 있다([postgrest-js#423](https://github.com/supabase/postgrest-js/issues/423)). 굵은 행 중 어느 것이 실제로 실패했는지는 모른다.
 
@@ -81,14 +83,14 @@ probe 재측정: search는 질의당 `symbols` 요청 **1개**(290–696자), �
 
 환경: Windows 11, Node 24, pnpm, worktree에서 `pnpm install --frozen-lockfile` 후. 2026-09-24.
 
-| 명령 | 결과 |
-| --- | --- |
-| `pnpm lint` | clean |
-| `pnpm typecheck` | root + 6 projects clean |
-| `pnpm test` (`faa151a`) | **212 files / 1,984 passed / 1 skipped** |
-| `node --import tsx scripts/verify-scope-boundaries.ts` | PASS — 12 boundaries, 389 files |
-| 카탈로그 (`change-brief-contract.probe.mjs`) | 21툴 / 3,141 / ratchet 3,150 |
-| `node --import tsx docs/reports/re-04-search-failure.probe.mjs` | §4·§5 수치 |
+| 명령                                                            | 결과                                     |
+| --------------------------------------------------------------- | ---------------------------------------- |
+| `pnpm lint`                                                     | clean                                    |
+| `pnpm typecheck`                                                | root + 6 projects clean                  |
+| `pnpm test` (`faa151a`)                                         | **212 files / 1,984 passed / 1 skipped** |
+| `node --import tsx scripts/verify-scope-boundaries.ts`          | PASS — 12 boundaries, 389 files          |
+| 카탈로그 (`change-brief-contract.probe.mjs`)                    | 21툴 / 3,141 / ratchet 3,150             |
+| `node --import tsx docs/reports/re-04-search-failure.probe.mjs` | §4·§5 수치                               |
 
 1,984 = 1,965(기준 로컬) + 신규 19. **격리 worktree의 작업트리 실행이며 커밋 CI가 아니다.**
 
