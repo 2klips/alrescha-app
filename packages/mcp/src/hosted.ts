@@ -15,6 +15,7 @@ import {
   findingsCoverage,
   getWorkspaceArtifact,
   getWorkspaceFindings,
+  memoryCoverage,
   queryWorkspaceBrain,
   searchWorkspaceIndexPage,
   selectWorkspaceContextPack,
@@ -1200,7 +1201,10 @@ function createServer(
     "memory_read",
     MEMORY_READ_TOOL,
     async ({ anchor_node_id, limit, name }) => {
-      const workspace = await readWorkspace();
+      // Memory is all this answer reads, so it asks for no edge (RE-04
+      // follow-up): a full read's edge pages were up to four requests in a
+      // row, for rows this tool never looks at.
+      const workspace = await readWorkspace(undefined, { edges: false });
       const matched = [...(workspace.memoryEntries ?? [])]
         .filter(
           (entry) =>
@@ -1223,6 +1227,9 @@ function createServer(
       );
       return toolResult(
         {
+          // Whether the entries the read reached were every entry: a cut
+          // table keeps its oldest ids, so the newest memory is what goes.
+          coverage: memoryCoverage(workspace),
           entries,
           // An answer shorter than the store is only honest if it says so
           // (todo 22 ⑴). Zero means the cap left nothing out.

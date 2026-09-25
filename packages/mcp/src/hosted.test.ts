@@ -2367,6 +2367,77 @@ describe("impact confidence and the banded read", () => {
       await kept("2026-11-01T01:30:00-04:00", "2026-11-01T01:10:00-05:00"),
     ).toEqual([["mem-newer"], ["mem-newer"]]);
   });
+
+  it("says whether the memory it read was every entry", async () => {
+    // The workspace read keeps a budget of rows per table, oldest id first,
+    // so a cut `memory_block_entries` loses the newest entries — the ones
+    // this answer puts first. `truncated` counts only what the limit left
+    // out of the rows the read reached (RE-04 production read, 2026-09-25).
+    const coverageOf = async (
+      truncated: { limit: number; table: string }[],
+    ): Promise<unknown> => {
+      const client = await connected({
+        ...workspaceFixture(),
+        coverage: {
+          readConsistency: "single-statement",
+          result: truncated.length > 0 ? "partial" : "complete",
+          truncated,
+        },
+      });
+      const answer = await client.callTool({
+        arguments: {},
+        name: "memory_read",
+      });
+      return (answer.structuredContent as { coverage?: unknown }).coverage;
+    };
+
+    expect(await coverageOf([])).toEqual({ reason: null, result: "complete" });
+    expect(
+      await coverageOf([{ limit: 2_000, table: "memory_block_entries" }]),
+    ).toEqual({
+      reason: "memory_block_entries stopped at 2000 rows",
+      result: "partial",
+    });
+    // A table this answer does not come from leaves it whole.
+    expect(await coverageOf([{ limit: 2_000, table: "graph_nodes" }])).toEqual({
+      reason: null,
+      result: "complete",
+    });
+  });
+
+  it("reads no edge for memory", async () => {
+    // Memory is all this answer reads. A full read's edge pages — up to four
+    // requests in a row — were for rows it never looks at.
+    const reads: (boolean | undefined)[] = [];
+    class RecordingStore extends InMemoryMcpStore {
+      override async loadWorkspace(
+        ...args: Parameters<InMemoryMcpStore["loadWorkspace"]>
+      ) {
+        reads.push(args[1]?.edges);
+        return super.loadWorkspace(...args);
+      }
+    }
+    const store = new RecordingStore({ workspaces: [workspaceFixture()] });
+    const issued = await store.issueAccessToken({
+      actorUserId: USER_ID,
+      name: "Memory",
+      scopes: ["mcp:read"],
+      workspaceId: WORKSPACE_ID,
+    });
+    const { client, transport } = createSdkClient(
+      createHostedMcpEndpoint({ store }).fetch,
+      issued.secret,
+    );
+    clients.push(client);
+    await client.connect(transport);
+
+    const answer = await client.callTool({
+      arguments: {},
+      name: "memory_read",
+    });
+    expect(answer.isError).not.toBe(true);
+    expect(reads).toEqual([false]);
+  });
 });
 
 /**

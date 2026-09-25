@@ -476,6 +476,20 @@ export function findingsCoverage(
   return readCoverage(workspace, FINDINGS_TABLES);
 }
 
+/** The one table `memory_read` answers from. */
+const MEMORY_TABLES: ReadonlySet<string> = new Set(["memory_block_entries"]);
+
+/**
+ * Whether the rows behind a `memory_read` answer were every entry. The read
+ * keeps the oldest ids of a table it cuts, so what a cut loses is the newest
+ * memory — the entries that answer lists first.
+ */
+export function memoryCoverage(
+  workspace: McpWorkspaceData,
+): SearchIndexCoverage {
+  return readCoverage(workspace, MEMORY_TABLES);
+}
+
 /** Which of `tables` the read cut, as a complete-or-partial verdict. */
 function readCoverage(
   workspace: McpWorkspaceData,
