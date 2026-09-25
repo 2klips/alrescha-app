@@ -3,7 +3,13 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   REPOSITORY_SELECTION_COLUMNS,
   currentRepository,
+  newestCreatedFirst,
 } from "../shell/current-repository";
+import {
+  EVERY_ROW,
+  readRowsById,
+  type TableQuery,
+} from "../supabase/table-pages";
 
 /**
  * `/app` workspace home (Phase 3 Wave E todo 13).
@@ -257,6 +263,8 @@ export async function loadWorkspaceJourney(
     throw new Error("Personal workspace is unavailable.");
   }
   const workspaceId = String(workspaceResult.data.id);
+  const inWorkspace = <Row>(query: TableQuery<Row>) =>
+    query.eq("workspace_id", workspaceId);
 
   const [installations, repositories, nodes, edges, assertions, tokens] =
     await Promise.all([
@@ -266,13 +274,17 @@ export async function loadWorkspaceJourney(
         .eq("workspace_id", workspaceId)
         .order("updated_at", { ascending: false })
         .limit(1),
-      client
-        .from("repositories")
-        .select(
-          `id,full_name,installation_id,last_scanned_commit_sha,last_analyzed_commit_sha,${REPOSITORY_SELECTION_COLUMNS}`,
-        )
-        .eq("workspace_id", workspaceId)
-        .order("created_at", { ascending: false }),
+      // Every connected repository and every token, past PostgREST's row
+      // cap (RE-04): the server answers with at most 1,000 rows and says
+      // nothing, and neither read has a budget. The repositories are put
+      // back newest-created first below; the counts are `HEAD`s, no rows.
+      readRowsById<WorkspaceJourneyRepositoryRow>(
+        client,
+        "repositories",
+        `id,full_name,installation_id,last_scanned_commit_sha,last_analyzed_commit_sha,${REPOSITORY_SELECTION_COLUMNS}`,
+        EVERY_ROW,
+        inWorkspace,
+      ),
       client
         .from("graph_nodes")
         .select("id", { count: "exact", head: true })
@@ -289,10 +301,14 @@ export async function loadWorkspaceJourney(
         .select("id", { count: "exact", head: true })
         .eq("workspace_id", workspaceId)
         .is("invalidated_at", null),
-      client
-        .from("mcp_tokens")
-        .select("revoked_at")
-        .eq("workspace_id", workspaceId),
+      // `id` is selected only to continue past a page.
+      readRowsById<{ readonly id: string; readonly revoked_at: string | null }>(
+        client,
+        "mcp_tokens",
+        "id,revoked_at",
+        EVERY_ROW,
+        inWorkspace,
+      ),
     ]);
 
   for (const result of [
@@ -308,8 +324,10 @@ export async function loadWorkspaceJourney(
     }
   }
 
-  const repositoryRows = (repositories.data ??
-    []) as WorkspaceJourneyRepositoryRow[];
+  // Newest-created first, the order this read had before it paged by id,
+  // and the one `/app/map` hands `currentRepository`: the two name the same
+  // repository.
+  const repositoryRows = newestCreatedFirst(repositories.data);
   const current = currentRepository(repositoryRows);
   // The first run's jobs, newest first. Twenty covers a backfill, a rescan
   // or two and their analyses; the stage reads only the newest of each kind.
@@ -338,7 +356,7 @@ export async function loadWorkspaceJourney(
       jobs: (jobs.data ?? []) as WorkspaceJourneyJobRow[],
       nodeCount: nodes.count ?? 0,
       repositories: repositoryRows,
-      tokens: (tokens.data ?? []) as { revoked_at: string | null }[],
+      tokens: tokens.data,
     },
   );
 }

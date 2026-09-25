@@ -59,6 +59,12 @@ describe("a read by position past the server's row cap", () => {
     expect(server.requests.map(({ limit }) => limit)).toEqual([15, 5]);
   });
 
+  it("hands every later page the count the first came back with", async () => {
+    const server = cappedServer(PAIRS, 10, (request) => request.offset);
+    await readByPositionPages(server.page, Number.POSITIVE_INFINITY);
+    expect(server.requests.map(({ total }) => total)).toEqual([null, 25, 25]);
+  });
+
   it("takes a short page for the end when no count came back, as before", async () => {
     const page = async (): Promise<RowPage<{ pair: string }>> => ({
       data: PAIRS.slice(0, 10),

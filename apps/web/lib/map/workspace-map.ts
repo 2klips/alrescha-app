@@ -28,6 +28,7 @@ import type { GraphAccessEvent } from "../realtime/access-events";
 import {
   REPOSITORY_SELECTION_COLUMNS,
   currentRepository,
+  newestCreatedFirst,
 } from "../shell/current-repository";
 import {
   EVERY_ROW,
@@ -996,22 +997,6 @@ const CO_CHANGE_ORDER = [
 ] as const;
 
 /**
- * Repositories newest-created first: the order `currentRepository` falls
- * back on for a tie, and the one this read had before it paged by id.
- */
-function newestFirst(rows: readonly MapRepositoryRow[]): MapRepositoryRow[] {
-  const createdAt = (row: MapRepositoryRow) => {
-    const at = Date.parse(row.created_at ?? "");
-    return Number.isFinite(at) ? at : Number.NEGATIVE_INFINITY;
-  };
-  return [...rows].sort(
-    (left, right) =>
-      createdAt(right) - createdAt(left) ||
-      (right.id < left.id ? -1 : right.id > left.id ? 1 : 0),
-  );
-}
-
-/**
  * A succeeded scan job with its run's commit embedded. PostgREST answers a
  * to-one embed as an object; the untyped client infers an array, so the
  * row admits both and the loader reads whichever arrived.
@@ -1345,7 +1330,8 @@ export async function loadWorkspaceMap(
       findings: findings.data,
       graphNodes: graphNodes.data,
       rationales: rationales.data,
-      repositories: newestFirst(repositories.data),
+      // Newest-created first, the order this read had before it paged by id.
+      repositories: newestCreatedFirst(repositories.data),
       requirements: requirements.data,
       sections: (sectionRows.data ?? []) as MapSectionRow[],
       tokens: tokens.data,

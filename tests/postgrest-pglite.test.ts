@@ -153,6 +153,83 @@ describe("PostgREST over PGlite", () => {
 });
 
 /**
+ * The shapes the screens' loaders send besides the map's (RE-04 loaders):
+ * a `like` pattern (`/app/progress`'s CLI runs), a `HEAD` that asks only for
+ * the count (the home's node, edge and assertion counts), and a value read
+ * out of a json column (`/app/inspection`'s document summaries).
+ */
+describe("PostgREST over PGlite — the screen loaders' shapes", () => {
+  it("matches a like pattern, reading * as %", async () => {
+    const { client } = clientFor();
+    const percent = await client
+      .from("things")
+      .select("id")
+      .like("tag", "x1%")
+      .order("id", { ascending: true });
+    expect(percent.error).toBeNull();
+    // x12, x15 and x18 have no tag: every third row is null.
+    expect(percent.data?.map(({ id }) => id)).toEqual([
+      "T001",
+      "T010",
+      "T011",
+      "T013",
+      "T014",
+      "T016",
+      "T017",
+      "T019",
+    ]);
+    const star = await client
+      .from("things")
+      .select("id")
+      .like("tag", "x2*")
+      .order("id", { ascending: true });
+    expect(star.data?.map(({ id }) => id)).toEqual([
+      "T002",
+      "T020",
+      "T022",
+      "T023",
+      "T025",
+      "T026",
+      "T028",
+      "T029",
+    ]);
+  });
+
+  it("answers a HEAD with the whole count and no rows, whatever its cap", async () => {
+    const { client, emulator } = clientFor(4);
+    const result = await client
+      .from("things")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", "A");
+    expect(result.error).toBeNull();
+    expect(result.count).toBe(15);
+    expect(result.data).toBeNull();
+    expect(emulator.requests.at(-1)).toMatchObject({
+      bytes: 0,
+      method: "HEAD",
+      name: "things",
+      rows: 0,
+      status: 200,
+    });
+  });
+
+  it("reads a value out of a json column, as json or as text, under its alias or its key", async () => {
+    const { client } = clientFor();
+    const aliased = await client
+      .from("things")
+      .select("id,as_json:meta->i,as_text:meta->>i")
+      .eq("id", "T005");
+    expect(aliased.error).toBeNull();
+    expect(aliased.data).toEqual([{ as_json: 5, as_text: "5", id: "T005" }]);
+    const named = await client
+      .from("things")
+      .select("id,meta->i,missing:meta->absent")
+      .eq("id", "T006");
+    expect(named.data).toEqual([{ i: 6, id: "T006", missing: null }]);
+  });
+});
+
+/**
  * The shapes the map loader sends besides the store's (RE-04 map): the one
  * object `.single()` asks for, a negated filter, a to-one embed through a
  * composite tenant key (`jobs` → `runs(commit_sha)`), and a signed-in user's
