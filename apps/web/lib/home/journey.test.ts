@@ -389,9 +389,9 @@ describe("loadWorkspaceJourney", () => {
     });
   }
 
-  test("says which failure lost the workspace, and none of its text", async () => {
+  test("says which kind of failure lost the workspace, and none of its text", async () => {
     // The first `/app` after an idle spell on 7074b74 threw the bare sentence,
-    // and a row the policy hid read the same as an expired token.
+    // and a missing row read the same as a refused token.
     await expect(
       loadWorkspaceJourney(
         answering(406, {

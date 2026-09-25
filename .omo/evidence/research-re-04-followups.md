@@ -32,10 +32,12 @@ Vercel 요청 로그(요청 시작 시각)의 `POST /api/mcp` 21건이 Codex의 
 
 코드상 검색 계산은 질의에 거의 무관하다. PageRank는 O(25 × (노드 + 엣지))로 seed 수와 무관하고, 한국어 질의는 영문 심볼 이름과 겹치지 않아 파일 심볼 읽기(`loadFileSymbols`)를 부르지 않는다. 작업공간 읽기는 모든 검색이 같다(`edges: false`). 그래서 20 s 차이는 계산이 아니라 **그 호출의 I/O 경로**에서 생겼다고 본다. 무엇이었는지는 이 자료로 가를 수 없다.
 
-구조적으로 이런 꼬리를 키우는 요인 두 가지를 확인했다(원인 단정 아님).
+구조적으로 지연을 키울 수 있는 요인 두 가지를 확인했다(원인 단정 아님).
 
 1. **함수와 DB가 다른 대륙이다.** `vercel inspect dpl_Gbt8DQTq…`: 함수 `λ index … [iad1]`(미국 동부). DB는 `mzowdsczwaesmfbxzjzw`, ap-northeast-2(서울) — `docs/DEPLOYMENT_CHECKLIST.md`. 호출마다 인증·리비전 전후·페이지 사슬 등 순차 왕복이 여러 번 태평양을 건넌다. RTT는 측정하지 않았다. 이 사실은 저장소 문서 어디에도 없었다(`iad1`·`icn1`·"함수 리전" 검색 0건).
-2. **postgrest-js 2.112.2의 기본 재시도.** `node_modules/.pnpm/@supabase+postgrest-js@2.112.2/.../dist/index.cjs`: `GET`·`HEAD`·`OPTIONS` 요청이 네트워크 오류나 `503`·`520`을 받으면 1 s·2 s·4 s(또는 `Retry-After`)를 쉬고 최대 3회 다시 보낸다(`X-Retry-Count` 헤더). 성공하면 응답은 200이고 흔적이 없다. 작업공간 읽기의 테이블 페이지는 모두 GET이다(RPC는 POST라 제외).
+2. **postgrest-js 2.112.2의 기본 재시도.** `node_modules/.pnpm/@supabase+postgrest-js@2.112.2/.../dist/index.cjs`: `GET`·`HEAD`·`OPTIONS` 요청이 네트워크 오류나 `503`·`520`을 받으면 1 s·2 s·4 s(또는 `Retry-After`)를 쉬고 최대 3회 다시 보낸다(요청 헤더에 `X-Retry-Count`). 성공하면 응답은 200이고 우리 쪽에 흔적이 없다. 작업공간 읽기의 테이블 페이지는 모두 GET이다(RPC는 POST라 제외).
+
+**보정(2026-09-26, 배포 Codex의 Supabase 로그 조회 뒤).** 이 창의 REST 요청은 23건 모두 2xx(503·520·5xx 0건)였고, 건수와 순서가 작업공간 읽기 1회와 맞았다. 재시도로 늘어난 요청은 edge 로그에 없었다. 대신 성공 응답의 origin 시간이 길었다: `revision_of` 8,458 ms, `artifacts` 9,103 ms, 후단 `revision_of` 2,999 ms. 위 두 요인은 이 꼬리의 설명으로 뒷받침되지 않았다. 리전은 모든 호출의 기본 왕복 문제로 남고, 재시도는 관찰되지 않았다. 다만 `X-Retry-Count`는 Supabase 로그 캡처 대상이 아니므로 헤더로 재시도를 관찰할 수 없다. edge에 닿기 전에 실패한 시도는 로그에 없을 수 있어 배제하지 못한다. origin 시간을 늘린 것(DB 실행·연결 풀 대기·게이트웨이)은 미확정이다. 창 안 `postgres_logs`·`postgrest_logs` 0건은 느린 SQL이 관찰되지 않았다는 뜻일 뿐이다.
 
 ## 4. 최초 홈 500 — 위치 확인, 원인 미확정
 
@@ -46,7 +48,8 @@ Error: Personal workspace is unavailable.
     at h (.next/server/chunks/ssr/apps_web_app_app_(shell)_page_tsx_….js)
 ```
 
-- 던진 곳: `apps/web/lib/home/journey.ts` `loadWorkspaceJourney`의 `workspaces … .single()` 결과 검사. `getCurrentUserId()`는 사용자 id를 돌려줬다(아니면 로그인으로 redirect). 즉 인증 클레임은 유효했고, 바로 다음 PostgREST 조회가 오류 또는 0행이었다. 코드가 `workspaceResult.error`를 버려서 네트워크(`status 0`)·토큰(`401`)·RLS로 숨은 행(`406 PGRST116`)·게이트웨이(`5xx`)를 로그로 가를 수 없었다.
+- 던진 곳: `apps/web/lib/home/journey.ts` `loadWorkspaceJourney`의 `workspaces … .single()` 결과 검사. `getCurrentUserId()`는 사용자 id를 돌려줬다(아니면 로그인으로 redirect). 즉 인증 클레임은 유효했고, 바로 다음 PostgREST 조회가 오류 또는 0행이었다. 코드가 `workspaceResult.error`를 버려서 실패의 HTTP 상태와 코드를 로그에서 볼 수 없었다.
+- **보정(2026-09-26).** 배포 Codex의 Supabase 로그 조회: 13:54:08 `refresh_token` 200(audit token_revoked·token_refreshed), JWKS 200 두 번(13:54:09.121·10.053), 13:54:10.451 `GET /rest/v1/workspaces` **401**(origin 886 ms), 13:54:10.453 같은 경로 **200**(origin 1,189 ms). 401의 PGRST 코드, 어느 토큰·클라이언트가 받았는지, Vercel 요청과의 연결은 미확정이다. 코드상 `/app` 렌더는 같은 서버 클라이언트(`createClient`의 React `cache`)로 `workspaces`를 두 번 동시에 조회한다. 레이아웃의 `lib/shell/context.ts` `getWorkspaceShellContext`는 `maybeSingle`이라 실패하면 null을 돌려 조용히 넘어가고, 페이지의 `loadWorkspaceJourney`는 `single`이라 실패하면 throw → 500이다. 두 요청이 2 ms 간격이라는 모양과 맞는다. 처음 판에서 "로그에 응답이 없으면 네트워크"라고 가정한 조회 요청은 성립하지 않는 전제였다(로그 부재는 범위·보존·수집으로도 생긴다).
 - 시각: 배포 `dpl_Gbt8DQTq…` 생성 13:37:28Z. 이 배포가 받은 요청은 웹훅 9건(13:38:31–13:47:21Z) 뒤 **6분 46초 무요청**, 그다음이 13:54:07.527Z의 `GET /app` 500. 13:54:13Z `HEAD /app` 204, 13:54:39Z `GET /app` 200, 이후 요청 전부 200.
 - 반복 여부: 날짜별 `--status-code 500` 조회(09-19–09-25)에서 500은 이 1건. 로그는 09-23부터 남아 있음을 확인했다(그 이전 날짜의 0건은 보존 기간 밖일 수 있다).
 
@@ -54,3 +57,4 @@ Error: Personal workspace is unavailable.
 
 - 수정 전 red: `tests/workspace-read-row-cap.test.ts` 새 두 테스트가 main에서 `[{ limit: 2000, table: "graph_nodes" }]`와 label 대신 경로(`.agents/skills/review-auth/SKILL.md`)로 실패. `packages/mcp/src/hosted.test.ts` 새 두 테스트가 `coverage` `undefined`, `edges` `[undefined]`로 실패. 홈 테스트는 태그 없는 옛 문장으로 실패(정규식 불일치).
 - 수정 후: 관련 파일 통과, 전체 결과는 인계 §3.
+- 2026-09-26: 배포 Codex가 후보 `85b0266`을 코드 리뷰 PASS(lint·typecheck, 227 files/2,116 passed/1 skipped 재현). 이후 보정 커밋은 문서와 주석·테스트 이름만 바꿨다.

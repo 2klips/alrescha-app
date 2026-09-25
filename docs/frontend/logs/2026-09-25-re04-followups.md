@@ -5,11 +5,19 @@ Status: **built and tested locally; production after merge** (RE-04 follow-up to
 The first `GET /app` on the 7074b74 deployment returned 500 and its log said
 only `Error: Personal workspace is unavailable.`; the refresh was 200.
 `lib/home/journey.ts` threw that sentence whenever the `workspaces` lookup
-failed and dropped the PostgREST error, so a network failure, an expired
-token and a row the policy hid read the same. The message now leads with the
-status and code — `[HTTP 406 PGRST116] Personal workspace is unavailable.` —
-and none of the upstream text. Production shows the digest, not the message,
-so nothing a visitor sees changes; the log does.
+failed and dropped the PostgREST error, so a failed fetch, a refused token
+and a missing row read the same. The message now leads with the status and
+code — `[HTTP 406 PGRST116] Personal workspace is unavailable.` — and none of
+the upstream text. The tag narrows the kind of failure; it does not name a
+cause. Production shows the digest, not the message, so nothing a visitor
+sees changes; the log does.
+
+Correction, 2026-09-26: deployment Codex's Supabase log read found a
+`workspaces` 401 at 13:54:10.451Z, 2 ms before a `workspaces` 200, right
+after a successful token refresh. The `/app` render sends two such lookups
+from one server client — the shell's `maybeSingle` (a failure is silent) and
+the home's `single` (a failure is this 500). Which request got the 401, and
+why, is not established.
 
 | Surface                        | Change                                                                                                                                             |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
