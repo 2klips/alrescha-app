@@ -48,6 +48,10 @@ export const CANONICAL_STATUS_TOKENS = [
   "attention-fg",
   "attention-text",
   "danger-fg",
+  // AA-safe small-text tones, like `attention-text`: what a status label
+  // paints, including on hovered and selected rows.
+  "fg-success",
+  "fg-danger",
   "done-fg",
   "focus-ring",
   "fg-on-emphasis",

@@ -401,6 +401,45 @@ describe("token contrast (WCAG 2.2 AA — Phase 2A todo 9)", () => {
     },
   );
 
+  test.each(THEMES)(
+    "%s: status badges clear 4.5:1 on hovered and selected rows too",
+    (theme) => {
+      // A badge sits in table rows and lists, which paint --bg-hover and
+      // --bg-selected under it — grounds SURFACES does not cover. The
+      // inferred badge painted --attention-fg, an accent rather than a text
+      // token, and measured 4.33:1 / 4.28:1 there in light (axe serious).
+      // Read each grade's colour from the stylesheet, so a badge that
+      // switches to an accent fails here rather than in a browser audit.
+      const primitives = readFileSync(
+        join(repoRoot, "apps/web/app/styles/primitives.css"),
+        "utf8",
+      );
+      const failures: string[] = [];
+      for (const grade of ["verified", "inferred", "broken"]) {
+        const rule =
+          primitives.match(
+            new RegExp(`\\.status-badge\\.${grade}\\s*\\{([^}]*)\\}`),
+          )?.[1] ?? "";
+        const token = rule.match(/color:\s*var\((--[a-z0-9-]+)\)/)?.[1];
+        if (!token) {
+          failures.push(`${grade}: no token colour`);
+          continue;
+        }
+        for (const surface of [...SURFACES, "--bg-hover", "--bg-selected"]) {
+          const ratio = contrastRatio(
+            resolve(token, theme),
+            resolve(surface, theme),
+          );
+          if (ratio < 4.5)
+            failures.push(
+              `${grade} (${token}) on ${surface}: ${ratio.toFixed(2)}:1`,
+            );
+        }
+      }
+      expect(failures).toEqual([]);
+    },
+  );
+
   test("the ratio calculation itself is calibrated", () => {
     expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 5);
     expect(contrastRatio("#ffffff", "#ffffff")).toBeCloseTo(1, 5);

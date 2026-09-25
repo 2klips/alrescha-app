@@ -459,36 +459,36 @@ function LiveActivityFeed({
           <h2 id="map-activity-title">{WORKSPACE_MAP.activity.title}</h2>
         </div>
       </header>
-      <div
+      <ul
         aria-label={WORKSPACE_MAP.activity.aria}
         className="arr-activity-table"
-        role="feed"
       >
         {feed.length > 0 ? (
           feed.map((event) => (
-            <button
-              aria-label={`${event.tool} ${event.targetPath}`}
-              key={event.id}
-              onClick={() => {
-                const node = nodes.find((candidate) =>
-                  event.targetNodeIds.includes(candidate.id),
-                );
-                if (node) onFocusNode(node);
-              }}
-              type="button"
-            >
-              <time>{relativeEventTime(event.occurredAt, clock)}</time>
-              <span className="arr-activity-dot" />
-              <strong>{event.tool}</strong>
-              <span>{event.targetPath}</span>
-            </button>
+            <li key={event.id}>
+              <button
+                aria-label={`${event.tool} ${event.targetPath}`}
+                onClick={() => {
+                  const node = nodes.find((candidate) =>
+                    event.targetNodeIds.includes(candidate.id),
+                  );
+                  if (node) onFocusNode(node);
+                }}
+                type="button"
+              >
+                <time>{relativeEventTime(event.occurredAt, clock)}</time>
+                <span className="arr-activity-dot" />
+                <strong>{event.tool}</strong>
+                <span>{event.targetPath}</span>
+              </button>
+            </li>
           ))
         ) : (
-          <div className="arr-activity-row">
+          <li className="arr-activity-row">
             <span>{WORKSPACE_MAP.activity.empty}</span>
-          </div>
+          </li>
         )}
-      </div>
+      </ul>
     </section>
   );
 }

@@ -25,6 +25,10 @@ import {
   zoomAt,
 } from "../../lib/graph/camera";
 import {
+  cameraGlideFor,
+  usePrefersReducedMotion,
+} from "../../lib/motion/reduced-motion";
+import {
   createGraphEngine,
   wrapWorker,
   type GraphEngine,
@@ -180,6 +184,13 @@ export function BrainMap({
    * someone who has just panned somewhere would be the map taking the wheel.
    */
   const cameraTouchedRef = useRef(false);
+  /**
+   * Whether the person asked for reduced motion. Read by the animation loop,
+   * so a ref: the camera then arrives in one step instead of gliding.
+   */
+  const reducedMotion = usePrefersReducedMotion();
+  const reducedMotionRef = useRef(reducedMotion);
+  reducedMotionRef.current = reducedMotion;
   const latest = useRef({
     data,
     directionalFocus,
@@ -352,7 +363,12 @@ export function BrainMap({
         const target = cameraTargetRef.current;
         if (target) {
           const current = created.camera();
-          const next = approachCamera(current, target, elapsed);
+          const next = approachCamera(
+            current,
+            target,
+            elapsed,
+            cameraGlideFor(reducedMotionRef.current),
+          );
           if (cameraEquals(next, target)) cameraTargetRef.current = null;
           if (!cameraEquals(next, current)) created.setCamera(next);
         }

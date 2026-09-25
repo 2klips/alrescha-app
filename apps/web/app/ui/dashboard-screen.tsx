@@ -398,37 +398,38 @@ function LiveActivityFeed({
           {DASHBOARD.activity.replay}
         </button>
       </header>
-      <div className="arr-activity-table" role="feed">
+      <ul aria-label={DASHBOARD.activity.title} className="arr-activity-table">
         {feed.length > 0
           ? feed.map((event) => (
-              <button
-                aria-label={`${event.tool} ${event.targetPath}`}
-                key={event.id}
-                onClick={() => {
-                  const node = nodes.find((candidate) =>
-                    event.targetNodeIds.includes(candidate.id),
-                  );
-                  if (node) onFocusNode(node);
-                }}
-                type="button"
-              >
-                <time>{relativeEventTime(event.occurredAt, clock)}</time>
-                <span className="arr-activity-dot" />
-                <strong>{event.tool}</strong>
-                <span>{event.targetPath}</span>
-                <code>{DASHBOARD.activity.trace}</code>
-              </button>
+              <li key={event.id}>
+                <button
+                  aria-label={`${event.tool} ${event.targetPath}`}
+                  onClick={() => {
+                    const node = nodes.find((candidate) =>
+                      event.targetNodeIds.includes(candidate.id),
+                    );
+                    if (node) onFocusNode(node);
+                  }}
+                  type="button"
+                >
+                  <time>{relativeEventTime(event.occurredAt, clock)}</time>
+                  <span className="arr-activity-dot" />
+                  <strong>{event.tool}</strong>
+                  <span>{event.targetPath}</span>
+                  <code>{DASHBOARD.activity.trace}</code>
+                </button>
+              </li>
             ))
           : STATIC_ACTIVITY.map((event) => (
-              <div className="arr-activity-row" key={event.tool}>
+              <li className="arr-activity-row" key={event.tool}>
                 <time>{event.time}</time>
                 <span className="arr-activity-dot" />
                 <strong>{event.tool}</strong>
                 <span>{event.detail}</span>
                 <code>{event.meta}</code>
-              </div>
+              </li>
             ))}
-      </div>
+      </ul>
     </section>
   );
 }
