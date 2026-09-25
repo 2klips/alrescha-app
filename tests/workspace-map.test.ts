@@ -950,6 +950,32 @@ describe("buildWorkspaceMapHud", () => {
     });
   });
 
+  it("dates the scan by its newest completion by instant, not by collation", () => {
+    // Two completions of the header's commit in one second, as PostgREST
+    // writes them: `…:56+00:00` at zero microseconds is half a second before
+    // `…:56.5+00:00`, and a collating compare took it as the newer. At
+    // 12:00:56.25 UTC that turned 59.75 s into "1 minute ago". Both orders.
+    const completions = [
+      { commit_sha: "b".repeat(40), completed_at: "2026-09-13T11:59:56+00:00" },
+      {
+        commit_sha: "b".repeat(40),
+        completed_at: "2026-09-13T11:59:56.5+00:00",
+      },
+    ];
+    for (const scanCompletions of [completions, [...completions].reverse()]) {
+      expect(
+        buildWorkspaceMapHud(
+          { findings: [], repositories, requirements: [], scanCompletions },
+          Date.parse("2026-09-13T12:00:56.250Z"),
+        ).lastScan,
+      ).toEqual({
+        ageMinutes: 0,
+        commitSha: "b".repeat(40),
+        completedAt: "2026-09-13T11:59:56.5+00:00",
+      });
+    }
+  });
+
   it("says the age is unknown rather than guessing when no completion matches", () => {
     const hud = buildWorkspaceMapHud(
       {

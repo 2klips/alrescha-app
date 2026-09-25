@@ -6,7 +6,7 @@ import {
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
-import { FACET_DOMAINS, FACET_UNITS } from "@alrescha/core";
+import { FACET_DOMAINS, FACET_UNITS, byInstant } from "@alrescha/core";
 
 import { buildRepoOverview, findModuleForNode } from "./module-tools";
 import { prepareChange } from "./prepare-change";
@@ -1204,8 +1204,10 @@ function createServer(
             (!anchor_node_id || entry.anchorNodeId === anchor_node_id),
         )
         // Newest first, so a cap keeps what a session is most likely to
-        // still be acting on rather than an arbitrary slice.
-        .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+        // still be acting on rather than an arbitrary slice. By instant:
+        // `updatedAt` is PostgREST text, which a collating compare misorders
+        // within a second and across offsets.
+        .sort((left, right) => byInstant(right.updatedAt, left.updatedAt));
       const entries = matched.slice(0, limit ?? MEMORY_READ_DEFAULT_LIMIT);
       const sized = emitAccessEvent(
         store,

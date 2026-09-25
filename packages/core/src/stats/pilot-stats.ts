@@ -1,3 +1,5 @@
+import { byInstant } from "../data/instant-order";
+
 export interface PilotReceiptSnapshot {
   readonly commitSha: string;
   readonly createdAt: string;
@@ -88,23 +90,17 @@ function byCodeUnit(left: string, right: string): number {
 }
 
 /**
- * Oldest first, by instant rather than by text. PostgREST writes timestamptz
- * with trailing fractional zeros trimmed, and with no fraction at all at zero
- * microseconds; a collating `localeCompare` ranks `.` before `+`, so it put
- * `…:56+00:00` after `…:56.5+00:00`, half a second later — and the first and
- * latest rows are the two ends of every trend below. `Date.parse` compares
- * instants, whatever their offsets, to the millisecond; the digits it
- * truncates order by code unit, which is chronological in that format because
- * the offset's sign sorts below `.` and every digit; the id settles an exact
- * tie, so the ends do not depend on the order the rows were read in.
+ * Oldest first, by instant rather than by text (`byInstant`: PostgREST trims
+ * fractional zeros and writes the session offset, which a collating compare
+ * misorders within a second and across offsets) — and the first and latest
+ * rows are the two ends of every trend below. The id settles an exact tie,
+ * so the ends do not depend on the order the rows were read in.
  */
 function oldestFirst<T extends { readonly id: string }>(
   timeOf: (row: T) => string,
 ): (left: T, right: T) => number {
   return (left, right) =>
-    Date.parse(timeOf(left)) - Date.parse(timeOf(right)) ||
-    byCodeUnit(timeOf(left), timeOf(right)) ||
-    byCodeUnit(left.id, right.id);
+    byInstant(timeOf(left), timeOf(right)) || byCodeUnit(left.id, right.id);
 }
 
 export function computePilotStats(input: PilotStatsInput) {

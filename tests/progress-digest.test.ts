@@ -97,6 +97,38 @@ describe("the progress digest", () => {
     expect(dashboard.digest.thisWeek.total).toBe(4);
   });
 
+  it("counts an entry by its instant, whatever offset or fraction it was written with", () => {
+    // Window starts are `toISOString()` text (`…T00:00:00.000Z`); entry times
+    // are PostgREST text. Compared as strings, an entry at exactly midnight
+    // written `…T00:00:00+00:00` sorts below the window start (`+` < `.`)
+    // and fell out of "today", while yesterday 23:30 UTC written in a +09:00
+    // session (`…06T08:30:00+09:00`) sorts above it and fell in.
+    const dashboard = buildProgressDashboard(
+      input({
+        commits: [
+          {
+            occurredAt: "2026-09-06T00:00:00+00:00",
+            sha: "e".repeat(40),
+            summary: "at midnight",
+          },
+        ],
+        findings: [
+          {
+            id: "finding-yesterday",
+            occurredAt: "2026-09-06T08:30:00+09:00",
+            title: "yesterday in UTC",
+          },
+        ],
+      }),
+    );
+
+    expect(dashboard.digest.today).toMatchObject({
+      commits: 1,
+      findingsResolved: 0,
+      total: 1,
+    });
+  });
+
   /**
    * The acceptance criterion, stated as a property: a digest ref that no
    * timeline entry carries would send a reader to a node the screen never
@@ -196,6 +228,33 @@ describe("the attention list", () => {
     // An open todo is not stale — nobody claimed to be working on it.
     expect(dashboard.attention.stale.map(({ id }) => id)).toEqual(["stale"]);
     expect(dashboard.attention.stale[0]?.reason).toMatch(/in progress since/);
+  });
+
+  it("calls an item stale by its instant, whatever offset it was written with", () => {
+    // The cutoff is seven days before NOW: 2026-08-30T12:00:00.000Z. Compared
+    // as strings, `…30T20:00:00+09:00` (11:00 UTC, an hour past the cutoff)
+    // read as newer and was missed, and `…30T03:30:00-09:00` (12:30 UTC,
+    // half an hour inside it) read as older and was flagged.
+    const dashboard = buildProgressDashboard(
+      input({
+        todos: [
+          todo({
+            id: "stale-east",
+            status: "in-progress",
+            updatedAt: "2026-08-30T20:00:00+09:00",
+          }),
+          todo({
+            id: "fresh-west",
+            status: "in-progress",
+            updatedAt: "2026-08-30T03:30:00-09:00",
+          }),
+        ],
+      }),
+    );
+
+    expect(dashboard.attention.stale.map(({ id }) => id)).toEqual([
+      "stale-east",
+    ]);
   });
 
   it("orders both lists oldest first", () => {
