@@ -12,6 +12,7 @@ import { buildRepoOverview, findModuleForNode } from "./module-tools";
 import { prepareChange } from "./prepare-change";
 
 import {
+  findingsCoverage,
   getWorkspaceArtifact,
   getWorkspaceFindings,
   queryWorkspaceBrain,
@@ -1047,6 +1048,9 @@ function createServer(
     );
     return toolResult(
       {
+        // Whether the findings this list was built from were every finding,
+        // as `search_index` says of its rows: a cut table is not a clean bill.
+        coverage: findingsCoverage(workspace),
         findings,
         workspaceId: principal.workspaceId,
       },
