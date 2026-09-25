@@ -12,8 +12,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 interface ReceiptRow {
   readonly commit_sha: string;
   readonly created_at: string;
+  /**
+   * `summary->findings`: the §13 snapshot alone, or null when the summary has
+   * no `findings` or is not an object.
+   */
+  readonly findings: unknown;
   readonly id: string;
-  readonly summary: unknown;
 }
 
 interface PackEventRow {
@@ -92,7 +96,7 @@ function count(value: unknown): number | null {
 }
 
 function receiptSnapshot(row: ReceiptRow): PilotReceiptSnapshot | null {
-  const findings = record(record(row.summary).findings);
+  const findings = record(row.findings);
   const opened = count(findings.opened);
   const resolved = count(findings.resolved);
   const openTotal = count(findings.open_total);
@@ -221,7 +225,10 @@ export async function loadWorkspacePilotReport(
   // narrows through the parameterised builder, and only when asked.
   const receiptQuery = client
     .from("receipts")
-    .select("id,commit_sha,created_at,summary")
+    // Only the §13 snapshot (RE-04, after B-01). `summary` also carries the
+    // whole in-toto statement — 330 receipts were 40,101,144 bytes on the
+    // pilot, up to 142,917 each — and the report reads none of it.
+    .select("id,commit_sha,created_at,findings:summary->findings")
     .eq("workspace_id", workspace.id);
   const runQuery = client
     .from("runs")
