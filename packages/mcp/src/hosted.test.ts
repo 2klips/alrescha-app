@@ -1618,6 +1618,41 @@ describe("get_findings contract", () => {
     ]);
   });
 
+  it("says whether the findings it read were every finding", async () => {
+    // The workspace read keeps a budget of rows per table and records what
+    // it cut in `coverage.truncated`. A list read from a cut `findings`
+    // table is not every finding, and answering it bare lets an agent read
+    // a missing finding as a clean bill.
+    const coverageOf = async (
+      truncated: { limit: number; table: string }[],
+    ): Promise<unknown> => {
+      const client = await connect({
+        ...workspaceWithFindings([finding({ id: "open-one" })]),
+        coverage: {
+          readConsistency: "single-statement",
+          result: truncated.length > 0 ? "partial" : "complete",
+          truncated,
+        },
+      });
+      const result = await client.callTool({
+        arguments: {},
+        name: "get_findings",
+      });
+      return (result.structuredContent as { coverage?: unknown }).coverage;
+    };
+
+    expect(await coverageOf([])).toEqual({ reason: null, result: "complete" });
+    expect(await coverageOf([{ limit: 2_000, table: "findings" }])).toEqual({
+      reason: "findings stopped at 2000 rows",
+      result: "partial",
+    });
+    // A table this answer does not come from leaves it whole.
+    expect(await coverageOf([{ limit: 2_000, table: "sections" }])).toEqual({
+      reason: null,
+      result: "complete",
+    });
+  });
+
   it("orders by severity, worst first", async () => {
     const client = await connect(
       workspaceWithFindings([

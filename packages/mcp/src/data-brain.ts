@@ -458,8 +458,31 @@ export interface SearchIndexPage {
 }
 
 function searchCoverage(workspace: McpWorkspaceData): SearchIndexCoverage {
+  return readCoverage(workspace, SEARCH_INDEX_TABLES);
+}
+
+/** The one table `get_findings` answers from. */
+const FINDINGS_TABLES: ReadonlySet<string> = new Set(["findings"]);
+
+/**
+ * Whether the rows behind a `get_findings` answer were every finding. The
+ * workspace read keeps a budget of rows per table; a list read from a cut
+ * `findings` table answered bare would let an agent read a missing finding
+ * as a clean bill.
+ */
+export function findingsCoverage(
+  workspace: McpWorkspaceData,
+): SearchIndexCoverage {
+  return readCoverage(workspace, FINDINGS_TABLES);
+}
+
+/** Which of `tables` the read cut, as a complete-or-partial verdict. */
+function readCoverage(
+  workspace: McpWorkspaceData,
+  tables: ReadonlySet<string>,
+): SearchIndexCoverage {
   const capped = (workspace.coverage?.truncated ?? []).filter(({ table }) =>
-    SEARCH_INDEX_TABLES.has(table),
+    tables.has(table),
   );
   return capped.length === 0
     ? { reason: null, result: "complete" }
@@ -1257,18 +1280,26 @@ export function selectWorkspaceContextPack(
     taskDescription: input.taskDescription,
     tokenBudget: input.tokenBudget,
   });
-  const selectedNodeIds = new Set(pack.readingOrder.map(({ id }) => id));
-
+  /**
+   * One hop from what the pack chose. The chosen documents and the
+   * requirements they state are the seeds; an edge touching a seed brings in
+   * its other end, and nothing further. This loop used to test membership in
+   * the set it was growing, so a file one edge added could pull in its own
+   * neighbour a few edges later — how far a pack reached depended on the
+   * order the edges were read in, and on this repository most packs filled
+   * the card cap with the same files whatever the task.
+   */
+  const seeds = new Set(pack.readingOrder.map(({ id }) => id));
   for (const repository of workspace.repositories) {
     for (const requirement of repository.requirements) {
-      if (selectedNodeIds.has(requirement.sourceArtifactId))
-        selectedNodeIds.add(requirement.id);
+      if (seeds.has(requirement.sourceArtifactId)) seeds.add(requirement.id);
     }
+  }
+  const selectedNodeIds = new Set(seeds);
+  for (const repository of workspace.repositories) {
     for (const edge of repository.edges) {
-      if (selectedNodeIds.has(edge.sourceNodeId))
-        selectedNodeIds.add(edge.targetNodeId);
-      if (selectedNodeIds.has(edge.targetNodeId))
-        selectedNodeIds.add(edge.sourceNodeId);
+      if (seeds.has(edge.sourceNodeId)) selectedNodeIds.add(edge.targetNodeId);
+      if (seeds.has(edge.targetNodeId)) selectedNodeIds.add(edge.sourceNodeId);
     }
   }
 
