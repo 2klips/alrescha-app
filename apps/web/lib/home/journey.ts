@@ -5,6 +5,7 @@ import {
   currentRepository,
   newestCreatedFirst,
 } from "../shell/current-repository";
+import { responseTag } from "../supabase/response-tag";
 import {
   EVERY_ROW,
   readRowsById,
@@ -260,7 +261,13 @@ export async function loadWorkspaceJourney(
     .limit(1)
     .single();
   if (workspaceResult.error || !workspaceResult.data) {
-    throw new Error("Personal workspace is unavailable.");
+    // Which failure it was, and none of its text. The first `/app` after an
+    // idle spell on 7074b74 died here with nothing but the sentence below in
+    // its log, where no network, an expired token and a row the policy hid
+    // all read the same (RE-04 production read, 2026-09-25).
+    throw new Error(
+      `${responseTag(workspaceResult)}Personal workspace is unavailable.`,
+    );
   }
   const workspaceId = String(workspaceResult.data.id);
   const inWorkspace = <Row>(query: TableQuery<Row>) =>

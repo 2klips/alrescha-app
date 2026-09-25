@@ -64,6 +64,7 @@ import {
 import { LINK_SCHEMA_VERSION, summaryState } from "@alrescha/core";
 
 import { firstRowsById, readInBatches } from "../supabase/id-batches";
+import { responseTag } from "../supabase/response-tag";
 import { readByIdPages, type RowPage } from "../supabase/row-pages";
 
 type Row = Record<string, unknown>;
@@ -93,9 +94,6 @@ interface TableQuery extends PromiseLike<RowPage<Row>> {
  */
 const LAST_USED_AT_TOUCH_THROTTLE_MS = 5 * 60_000;
 
-/** A PostgREST (`PGRST116`) or SQLSTATE (`57014`) code, and nothing else. */
-const RESPONSE_CODE = /^(?:PGRST\d{3}|[0-9A-Z]{5})$/;
-
 /**
  * A failed read as an error a verifier can classify without keeping its
  * body (RE-04): `[HTTP 414] MCP symbol edge query failed: URI too long`.
@@ -116,15 +114,7 @@ function queryError(
 ): void {
   const { error } = response;
   if (!error) return;
-  const code =
-    typeof error.code === "string" && RESPONSE_CODE.test(error.code)
-      ? ` ${error.code}`
-      : "";
-  const tag =
-    typeof response.status === "number"
-      ? `[HTTP ${response.status}${code}] `
-      : "";
-  throw new Error(`${tag}${label}: ${error.message}`);
+  throw new Error(`${responseTag(response)}${label}: ${error.message}`);
 }
 
 function rows(data: unknown): Row[] {
