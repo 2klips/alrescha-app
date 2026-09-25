@@ -952,12 +952,17 @@
 .arr-activity > header button:hover {
   background: var(--bg-hover);
 }
+/* A list of calls, not a `feed` of articles: a feed may only hold articles,
+   and these rows are buttons (axe aria-required-children). */
 .arr-activity-table {
   border-top: 1px solid var(--border-muted);
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .arr-activity-row,
-.arr-activity-table > button {
+.arr-activity-table > li > button {
   align-items: start;
   background: transparent;
   border: 0;
@@ -972,15 +977,15 @@
   width: 100%;
 }
 
-.arr-activity-table > button {
+.arr-activity-table > li > button {
   cursor: pointer;
 }
-.arr-activity-table > button:hover {
+.arr-activity-table > li > button:hover {
   background: var(--bg-hover);
 }
 
 .arr-activity-row > span:not(.arr-activity-dot),
-.arr-activity-table > button > span:not(.arr-activity-dot),
+.arr-activity-table > li > button > span:not(.arr-activity-dot),
 .arr-activity-row code,
 .arr-activity-table code {
   grid-column: 3;

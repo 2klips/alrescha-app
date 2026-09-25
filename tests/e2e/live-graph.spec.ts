@@ -35,7 +35,7 @@ test("scripted MCP reads pulse the graph and feed focus follows the newest call"
     .click();
   await page.getByRole("button", { name: DASHBOARD.activity.replay }).click();
 
-  const feed = page.getByRole("feed");
+  const feed = page.getByRole("list", { name: DASHBOARD.activity.title });
   await expect(feed.getByRole("button")).toHaveCount(5);
   await expect(feed.getByText("private-other-repo.ts")).toHaveCount(0);
   await expect(feed.getByText("revoked-secret.md")).toHaveCount(0);

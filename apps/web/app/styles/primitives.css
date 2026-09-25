@@ -85,17 +85,20 @@
   width: fit-content;
 }
 
+/* Badges paint the grade's text tone, not its accent: a badge sits in rows
+   that turn --bg-hover and --bg-selected, where the accents measured
+   4.17–4.46:1, under AA 4.5 (tests/design-tokens.test.ts pins the pairs). */
 .status-badge.verified {
-  color: var(--success-fg);
+  color: var(--fg-success);
 }
 
 .status-badge.inferred {
   border-style: dashed;
-  color: var(--attention-fg);
+  color: var(--attention-text);
 }
 
 .status-badge.broken {
-  color: var(--danger-fg);
+  color: var(--fg-danger);
 }
 
 .btn {

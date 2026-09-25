@@ -42,6 +42,7 @@ import {
 } from "../../lib/graph/render-frame";
 import type { Position } from "../../lib/graph/simulation-protocol";
 import { hitTargets } from "../../lib/graph/hit-targets";
+import { usePrefersReducedMotion } from "../../lib/motion/reduced-motion";
 import { DASHBOARD } from "../../lib/strings";
 import { GraphForcePanel, useGraphPanelSettings } from "./graph-force-panel";
 
@@ -136,6 +137,7 @@ export function BrainMapStage({
   const [fitRequest, setFitRequest] = useState(0);
   const [settled, setSettled] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
   const forceConfig = useMemo(() => forceConfigOf(settings), [settings]);
   const display = useMemo(() => displaySettingsOf(settings), [settings]);
   const hitLayerRef = useRef<HTMLDivElement | null>(null);
@@ -232,6 +234,9 @@ export function BrainMapStage({
         hiddenLayers ? [...hiddenLayers].sort().join(" ") : ""
       }
       data-lod={lod.level}
+      // Whether the camera glides or jumps: the person's reduced-motion
+      // setting, as the canvas reads it (WCAG 2.3.3).
+      data-motion={reducedMotion ? "reduced" : "full"}
       data-lod-labels={lod.labels}
       // How many nodes a person has pinned (todo 13 ⓒ).
       data-pinned-count={pins ? pins.size : 0}

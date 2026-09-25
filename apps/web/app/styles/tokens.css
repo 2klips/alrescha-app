@@ -38,6 +38,10 @@
   --attention-fg: #d29922;
   --attention-text: var(--attention-fg);
   --danger-fg: #f85149;
+  /* Small-text tones: AA on every ground a status label sits on, hovered and
+     selected rows included. The danger accent is 4.17:1 on --bg-selected. */
+  --fg-success: var(--success-fg);
+  --fg-danger: #ff7b72;
   --done-fg: #ab7df8;
   --focus-ring: #4493f8;
   --fg-on-emphasis: #ffffff;
@@ -58,12 +62,12 @@
   --inferred: var(--attention-fg);
   --info: var(--accent-fg);
   --brand-text: var(--accent-fg);
-  --verified-text: var(--success-fg);
+  --verified-text: var(--fg-success);
   --inferred-text: var(--attention-text);
   --info-text: var(--accent-fg);
   --accent: var(--accent-fg);
   --danger: var(--danger-fg);
-  --danger-text: var(--danger-fg);
+  --danger-text: var(--fg-danger);
   --on-brand: var(--fg-on-emphasis);
   --on-accent: var(--fg-on-emphasis);
   --on-verified: var(--fg-on-success);
@@ -232,6 +236,10 @@
   --attention-fg: #9a6700;
   --attention-text: #7d4e00;
   --danger-fg: #d1242f;
+  /* Small-text tones. --success-fg is 4.46:1 on --bg-selected; the danger
+     accent already clears AA on every ground on paper. */
+  --fg-success: #116329;
+  --fg-danger: var(--danger-fg);
   --done-fg: #8250df;
   --focus-ring: #0969da;
   --fg-on-success: #ffffff;
