@@ -9,6 +9,13 @@ import {
 } from "@alrescha/core/stats";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  readByIdPages,
+  type PagedRows,
+  type PageRequest,
+  type RowPage,
+} from "../supabase/row-pages";
+
 interface ReceiptRow {
   readonly commit_sha: string;
   readonly created_at: string;
@@ -181,6 +188,147 @@ export interface WorkspacePilotReport {
 }
 
 /**
+ * The report is defined across the whole receipt chain (BUILD_PLAN 18), so
+ * no read here has a budget, and none may stop where the server does.
+ * PostgREST answers with at most `max_rows` rows and says nothing about it
+ * (1,000 in `supabase/config.toml`; the hosted value is unverified), and
+ * each read asked for its rows oldest first: a capped answer kept the oldest
+ * and dropped the newest (RE-04). So no page sets a limit — each is as long
+ * as the server allows — and the reads continue past it.
+ */
+const EVERY_ROW = Number.POSITIVE_INFINITY;
+
+/**
+ * The part of a PostgREST query builder the paged reads use, stated
+ * structurally as the MCP store states its own: supabase-js types a select
+ * from its column string, and these take the string as an argument. One
+ * cast, where the builder is made.
+ */
+interface PageQuery<Row> extends PromiseLike<RowPage<Row>> {
+  eq(column: string, value: unknown): PageQuery<Row>;
+  gt(column: string, value: unknown): PageQuery<Row>;
+  gte(column: string, value: unknown): PageQuery<Row>;
+  order(
+    column: string,
+    options: { ascending: boolean; nullsFirst?: boolean },
+  ): PageQuery<Row>;
+}
+
+/** The workspace, narrowed to one repository when the reader asked. */
+interface ReadScope {
+  readonly repositoryId: string | null;
+  readonly workspaceId: string;
+}
+
+/**
+ * One page of `table` in scope; the first asks for the exact count.
+ *
+ * `or("repository_id.eq.<id>")` would have read the same, but a filter
+ * written as a literal is a filter a repository id can inject into. This
+ * narrows through the parameterised builder, and only when asked.
+ */
+function scopedPage<Row>(
+  client: SupabaseClient,
+  table: string,
+  columns: string,
+  page: PageRequest,
+  scope: ReadScope,
+): PageQuery<Row> {
+  const query = (
+    client
+      .from(table)
+      .select(
+        columns,
+        page.count ? { count: "exact" } : undefined,
+      ) as unknown as PageQuery<Row>
+  ).eq("workspace_id", scope.workspaceId);
+  return scope.repositoryId
+    ? query.eq("repository_id", scope.repositoryId)
+    : query;
+}
+
+/**
+ * Every row of `table` in scope, in id order: each page continues after the
+ * last id until the count the first page was given is in hand. A table
+ * under the server's cap is still one request, and every page carries the
+ * scope and `narrow`.
+ *
+ * Id order is not time order — an id takes the clock when its row is
+ * written, `created_at` when its transaction began, and a run is created
+ * when it is queued but started when it runs — and it need not be:
+ * `computePilotStats` orders the receipts by `created_at` and the runs by
+ * `started_at` itself, and pack requests are only counted and summed.
+ */
+function readEveryRow<Row extends { readonly id: string }>(
+  client: SupabaseClient,
+  table: string,
+  columns: string,
+  scope: ReadScope,
+  narrow: (query: PageQuery<Row>) => PageQuery<Row> = (query) => query,
+): Promise<PagedRows<Row>> {
+  return readByIdPages<Row>((page) => {
+    const query = narrow(scopedPage<Row>(client, table, columns, page, scope));
+    return (page.after === null ? query : query.gt("id", page.after)).order(
+      "id",
+      { ascending: true },
+    );
+  }, EVERY_ROW);
+}
+
+/**
+ * Every `usage_daily` row in scope — the aggregate todo 23 built. Read
+ * rather than recomputed here: it is derived from the rows so retention
+ * prunes it, and a second summation in this file would be a second answer
+ * to the same question.
+ *
+ * A view has no id to continue after. A row is one repository's UTC day, or
+ * the day's calls with no repository, so pages go in (day, repository)
+ * order and each continues from the day the last one ended on — that day's
+ * other repositories may not have fit — dropping the rows already read.
+ * That pair is the row's key, and the cursor `readByIdPages` carries. The
+ * order serves the paging only: the report sums the days and counts them.
+ */
+function readEveryUsageDay(
+  client: SupabaseClient,
+  scope: ReadScope,
+): Promise<PagedRows<UsageDayRow & { readonly id: string }>> {
+  const read = new Set<string>();
+  return readByIdPages<UsageDayRow & { readonly id: string }>(async (page) => {
+    const query = scopedPage<UsageDayRow>(
+      client,
+      "usage_daily",
+      "day,repository_id,served_calls,served_measured_calls,served_response_chars,served_estimated_tokens,reported_reports,reported_input_tokens,reported_output_tokens,reported_cache_read_tokens,reported_cache_creation_tokens",
+      page,
+      scope,
+    );
+    const answer = await (
+      page.after === null
+        ? query
+        : query.gte("day", (JSON.parse(page.after) as [string])[0])
+    )
+      .order("day", { ascending: true })
+      .order("repository_id", { ascending: true, nullsFirst: true });
+    if (answer.error) return { ...answer, data: null };
+    const rows = (answer.data ?? []).map((row) => ({
+      ...row,
+      id: JSON.stringify([row.day, row.repository_id]),
+    }));
+    const fresh = rows.filter((row) => !read.has(row.id));
+    if (rows.length > 0 && fresh.length === 0) {
+      // One day filled the whole page: a page that starts at that day can
+      // never pass it. That takes as many repositories reporting on one day
+      // as the server's cap; refused rather than summed short.
+      return {
+        data: null,
+        error: { message: "A usage day holds more rows than one page." },
+      };
+    }
+    for (const row of fresh) read.add(row.id);
+    return { ...answer, data: fresh };
+  }, EVERY_ROW);
+}
+
+/**
  * Phase 4 Wave E todo 24. The filter is applied in the queries, not after
  * them: a total narrowed in the browser is a total that was still computed
  * across every repository, and one of them would be the one the reader was
@@ -220,58 +368,40 @@ export async function loadWorkspacePilotReport(
     };
   }
 
-  // `or("repository_id.eq.<id>")` would have read the same, but a filter
-  // written as a literal is a filter a repository id can inject into. This
-  // narrows through the parameterised builder, and only when asked.
-  const receiptQuery = client
-    .from("receipts")
-    // Only the §13 snapshot (RE-04, after B-01). `summary` also carries the
-    // whole in-toto statement — 330 receipts were 40,101,144 bytes on the
-    // pilot, up to 142,917 each — and the report reads none of it.
-    .select("id,commit_sha,created_at,findings:summary->findings")
-    .eq("workspace_id", workspace.id);
-  const runQuery = client
-    .from("runs")
-    .select("id,started_at,completed_at")
-    .eq("workspace_id", workspace.id)
-    .eq("status", "succeeded");
-  const packQuery = client
-    .from("access_events")
-    .select("occurred_at,pack_selected_tokens,pack_baseline_tokens")
-    .eq("workspace_id", workspace.id)
-    .eq("tool", "request_context_pack")
-    .gte(
-      "occurred_at",
-      workspace.pilot_instrumentation_consented_at ?? "9999-12-31T00:00:00Z",
-    );
-  // The aggregate todo 23 built. Read rather than recomputed here: it is
-  // derived from the rows so retention prunes it, and a second summation in
-  // this file would be a second answer to the same question.
-  const usageQuery = client
-    .from("usage_daily")
-    .select(
-      "day,repository_id,served_calls,served_measured_calls,served_response_chars,served_estimated_tokens,reported_reports,reported_input_tokens,reported_output_tokens,reported_cache_read_tokens,reported_cache_creation_tokens",
-    )
-    .eq("workspace_id", workspace.id);
-
+  const scope = { repositoryId: repositoryFilter, workspaceId: workspace.id };
   const [receiptResult, runResult, packResult, usageResult, repositoryResult] =
     await Promise.all([
-      (repositoryFilter
-        ? receiptQuery.eq("repository_id", repositoryFilter)
-        : receiptQuery
-      ).order("created_at", { ascending: true }),
-      (repositoryFilter
-        ? runQuery.eq("repository_id", repositoryFilter)
-        : runQuery
-      ).order("started_at", { ascending: true }),
-      (repositoryFilter
-        ? packQuery.eq("repository_id", repositoryFilter)
-        : packQuery
-      ).order("occurred_at", { ascending: true }),
-      (repositoryFilter
-        ? usageQuery.eq("repository_id", repositoryFilter)
-        : usageQuery
-      ).order("day", { ascending: true }),
+      readEveryRow<ReceiptRow>(
+        client,
+        "receipts",
+        // Only the §13 snapshot (RE-04, after B-01). `summary` also carries
+        // the whole in-toto statement — 330 receipts were 40,101,144 bytes on
+        // the pilot, up to 142,917 each — and the report reads none of it.
+        "id,commit_sha,created_at,findings:summary->findings",
+        scope,
+      ),
+      readEveryRow<RunRow>(
+        client,
+        "runs",
+        "id,started_at,completed_at",
+        scope,
+        (query) => query.eq("status", "succeeded"),
+      ),
+      readEveryRow<PackEventRow & { readonly id: string }>(
+        client,
+        "access_events",
+        "id,occurred_at,pack_selected_tokens,pack_baseline_tokens",
+        scope,
+        (query) =>
+          query
+            .eq("tool", "request_context_pack")
+            .gte(
+              "occurred_at",
+              workspace.pilot_instrumentation_consented_at ??
+                "9999-12-31T00:00:00Z",
+            ),
+      ),
+      readEveryUsageDay(client, scope),
       client
         .from("repositories")
         .select("id,full_name")
@@ -291,14 +421,14 @@ export async function loadWorkspacePilotReport(
   return {
     report: buildPilotStatsReport({
       enabled: true,
-      packEvents: (packResult.data ?? []) as PackEventRow[],
-      receipts: (receiptResult.data ?? []) as ReceiptRow[],
+      packEvents: packResult.data,
+      receipts: receiptResult.data,
       repositories: (
         (repositoryResult.data ?? []) as { full_name: string; id: string }[]
       ).map(({ full_name, id }) => ({ fullName: full_name, id })),
       repositoryFilter,
-      runs: (runResult.data ?? []) as RunRow[],
-      usage: (usageResult.data ?? []) as UsageDayRow[],
+      runs: runResult.data,
+      usage: usageResult.data,
     }),
     workspaceId: workspace.id,
   };
