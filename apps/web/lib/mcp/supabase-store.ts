@@ -1210,9 +1210,15 @@ export class SupabaseMcpStore implements McpStore {
     ] = await Promise.all([
       table("repositories", "id, full_name, default_branch"),
       table("graph_nodes", "id, label", (query) =>
-        // The symbol layer is read by neighbourhood, never here (todo 26);
-        // left in, it would spend the row budget before the files did.
-        query.neq("kind", "symbol"),
+        // Labels name artifacts and nothing else here (`artifactData`), so
+        // artifacts are all this reads. It used to take every kind but the
+        // symbol layer (todo 26), and requirements, findings, sections and
+        // directories spent the row budget too: on 7074b74 the pilot had
+        // 2,537 such nodes for 1,550 files, this read stopped at 2,000, and
+        // every `search_index` answered `partial` over a table its ranking
+        // never reads (RE-04 production read, 2026-09-25). One node per
+        // artifact, so this stops where `artifacts` does and not before.
+        query.eq("kind", "artifact"),
       ),
       table(
         "artifacts",

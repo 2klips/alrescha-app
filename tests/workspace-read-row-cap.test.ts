@@ -8,6 +8,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { SupabaseMcpStore } from "../apps/web/lib/mcp/supabase-store";
 import { createLocalRepositorySource } from "../packages/cli/src/local-source";
 import { scanRepository } from "../packages/core/src/index";
+import {
+  MCP_WORKSPACE_READ_LIMIT,
+  searchWorkspaceIndexPage,
+} from "../packages/mcp/src/index";
 import type { McpPrincipal } from "../packages/mcp/src/index";
 import { ALL_MIGRATIONS, createTestDatabase } from "./helpers/database";
 import { postgrestOverPglite } from "./helpers/postgrest-pglite";
@@ -191,5 +195,88 @@ describe("a workspace read past the server's row cap", () => {
     const ids = (workspace: typeof capped) =>
       (workspace.repositories[0]?.indexEntries ?? []).map(({ id }) => id);
     expect(ids(capped)).toEqual(ids(whole));
+  });
+});
+
+/**
+ * RE-04 follow-up — the node budget, spent on the nodes the read names.
+ *
+ * A workspace read takes graph nodes for one thing: the label of each
+ * artifact. On 7074b74 the pilot had 1,550 artifacts and 2,537 non-symbol
+ * nodes; requirements, findings, sections and directories filled the
+ * 2,000-row budget, the read stopped, and every `search_index` answered
+ * `partial` over a table its ranking never reads (production read,
+ * 2026-09-25).
+ *
+ * The nodes added here sort before every file, as older nodes do. A scan
+ * labels a file by its path, so a lost label reads the same as the path it
+ * falls back to; one file is renamed here so that a lost label shows.
+ */
+describe("a node budget spent on the nodes the read names", () => {
+  const OTHER = "0000000000";
+  const RENAMED = "A file named apart from its path";
+  let renamedId = "";
+
+  beforeAll(async () => {
+    await database.query(
+      `insert into public.graph_nodes (id, workspace_id, repository_id, kind, label)
+       select $3 || lpad(n::text, 16, '0'), r.workspace_id, r.id, 'directory', 'dir-' || n
+       from public.repositories r, generate_series(1, $2::int) as n
+       where r.workspace_id = $1`,
+      [workspaceId, MCP_WORKSPACE_READ_LIMIT, OTHER],
+    );
+    const renamed = await database.query<{ id: string }>(
+      `update public.graph_nodes set label = $2
+       where id = (select id from public.graph_nodes
+                   where workspace_id = $1 and kind = 'artifact'
+                   order by id limit 1)
+       returning id`,
+      [workspaceId, RENAMED],
+    );
+    renamedId = renamed.rows[0]?.id ?? "";
+  });
+
+  afterAll(async () => {
+    await database.query(
+      "delete from public.graph_nodes where workspace_id = $1 and id like $2",
+      [workspaceId, `${OTHER}%`],
+    );
+    await database.query(
+      `update public.graph_nodes g set label = a.path
+       from public.artifacts a where a.id = g.id and g.id = $1`,
+      [renamedId],
+    );
+  });
+
+  it("stops on no table when only the other kinds pass the budget", async () => {
+    // Not a tautology: the other kinds alone must outnumber the budget.
+    expect(
+      await count(
+        "select count(*)::int as n from public.graph_nodes where workspace_id = $1 and kind <> 'symbol'",
+      ),
+    ).toBeGreaterThan(MCP_WORKSPACE_READ_LIMIT);
+    const { store } = storeWith(1_000);
+    const workspace = await store.loadWorkspace(principal);
+
+    expect(workspace.coverage?.truncated).toEqual([]);
+    const page = searchWorkspaceIndexPage(workspace, { query: "session" });
+    expect(page.results.length).toBeGreaterThan(0);
+    expect(page.coverage).toEqual({ reason: null, result: "complete" });
+  });
+
+  it("still names every file by its label", async () => {
+    const { store } = storeWith(1_000);
+    const workspace = await store.loadWorkspace(principal);
+    const labelled = await database.query<{ id: string; label: string }>(
+      "select id, label from public.graph_nodes where workspace_id = $1 and kind = 'artifact'",
+      [workspaceId],
+    );
+    const byId = new Map(labelled.rows.map((row) => [row.id, row.label]));
+    const artifacts = workspace.repositories[0]?.artifacts ?? [];
+    expect(byId.get(renamedId)).toBe(RENAMED);
+    expect(artifacts.map(({ id }) => id)).toContain(renamedId);
+    for (const artifact of artifacts) {
+      expect(artifact.title).toBe(byId.get(artifact.id));
+    }
   });
 });
