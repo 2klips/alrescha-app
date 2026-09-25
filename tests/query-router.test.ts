@@ -27,10 +27,17 @@ const TAGGED_QUERIES: readonly { query: string; route: QueryRoute }[] = [
   { query: "trace the path from the spec to the failing test", route: "graph" },
   { query: "이 함수를 고치면 어떤 문서가 영향 받아?", route: "graph" },
   { query: "요구사항과 구현 사이의 관계를 보여줘", route: "graph" },
+  // RE-04: "경로" and "path" name a file's location as often as a walk.
+  // A question about where a file is is a lookup, not a traversal.
+  { query: "README 파일 경로가 뭐야?", route: "search" },
+  { query: "설정 파일 경로 알려줘", route: "search" },
+  { query: "what is the path of the vitest config file?", route: "search" },
+  { query: "R-07과 구현 코드 사이의 경로를 보여줘", route: "graph" },
+  { query: "show the path between the spec and the test", route: "graph" },
 ];
 
 describe("routeQuery", () => {
-  it("routes every tagged fixture query correctly (16/16)", () => {
+  it("routes every tagged fixture query correctly", () => {
     const misrouted = TAGGED_QUERIES.filter(
       ({ query, route }) => routeQuery(query).route !== route,
     );

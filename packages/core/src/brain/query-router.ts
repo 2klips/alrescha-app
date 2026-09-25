@@ -23,8 +23,13 @@ export interface QueryRoutingDecision {
 }
 
 const SEARCH_TOOLS = ["search_index", "get_artifact"] as const;
+/**
+ * `search_index` first, for the ids the graph tools take. It used to say
+ * `search_nodes`, which the catalogue merged into `search_index` in todo 22
+ * (RE-04) — a router recommending it sent an agent to a tool that is gone.
+ */
 const GRAPH_TOOLS = [
-  "search_nodes",
+  "search_index",
   "get_neighbors",
   "trace_path",
   "impact_of",
@@ -36,7 +41,18 @@ const GRAPH_SIGNALS: readonly {
   readonly name: string;
   readonly pattern: RegExp;
 }[] = [
-  { name: "path-trace", pattern: /경로|추적|trace|\bpath\b/iu },
+  /**
+   * A walk, not a location (RE-04). "경로" and "path" name where a file is
+   * as often as a route between two things, and "README 파일 경로가 뭐야?"
+   * is a lookup. They count only between two ends — `사이의 경로`, `path
+   * between`/`from` — or beside a verb of tracing; a span with both ends
+   * is `span-endpoints` below.
+   */
+  {
+    name: "path-trace",
+    pattern:
+      /추적|\btrac(?:e|ing)\b|(?:사이|간)의?\s*경로|\bpath\s+(?:between|from)\b/iu,
+  },
   {
     name: "connection",
     pattern: /연결|이어[지진]|연쇄|\bconnected\b|\blinked\b/iu,

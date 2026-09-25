@@ -1146,10 +1146,16 @@ export interface McpStore {
    * The workspace, in the bands the caller asked for (todo 22 ⑹). Omitting
    * `bands` reads `MCP_DEFAULT_READ_BANDS`; the answer says what each
    * requested band did, so a narrower read never reads as an empty one.
+   *
+   * `edges: false` reads no edge (RE-04) — for an answer that does not walk
+   * the graph, like a search, which ranks by the index's neighbour cache.
+   * The coverage says so: `edges` stopped at 0 rows, and the result is
+   * `partial`, so the empty list can never read as "this workspace has no
+   * edges".
    */
   loadWorkspace(
     principal: McpPrincipal,
-    options?: { bands?: readonly McpReadBand[] },
+    options?: { bands?: readonly McpReadBand[]; edges?: boolean },
   ): Promise<McpWorkspaceData>;
   /**
    * The symbol layer for the ids named, and nothing more (todo 26): a file
@@ -1850,7 +1856,7 @@ export class InMemoryMcpStore implements McpStore {
    */
   async loadWorkspace(
     principal: McpPrincipal,
-    options?: { bands?: readonly McpReadBand[] },
+    options?: { bands?: readonly McpReadBand[]; edges?: boolean },
   ): Promise<McpWorkspaceData> {
     const workspace = this.#workspaces.get(principal.workspaceId);
     if (!workspace || workspace.ownerUserId !== principal.userId) {
@@ -1884,15 +1890,27 @@ export class InMemoryMcpStore implements McpStore {
         text: entry.text,
         updatedAt: entry.validFrom,
       }));
+    const declared = workspace.coverage ?? {
+      readConsistency: "single-statement" as const,
+      result: "complete" as const,
+      truncated: [],
+    };
+    // A read that skipped the edges says so, as the hosted one does (RE-04).
+    const withoutEdges = options?.edges === false;
     return {
       ...workspace,
       coverage: {
-        ...(workspace.coverage ?? {
-          readConsistency: "single-statement" as const,
-          result: "complete" as const,
-          truncated: [],
-        }),
+        ...declared,
         bands,
+        ...(withoutEdges
+          ? {
+              result: "partial" as const,
+              truncated: [
+                ...declared.truncated.filter(({ table }) => table !== "edges"),
+                { limit: 0, table: "edges" },
+              ],
+            }
+          : {}),
       },
       memoryEntries: [...(workspace.memoryEntries ?? []), ...written],
       // Todos written through `appendProgress` join the ones the fixture
@@ -1912,6 +1930,7 @@ export class InMemoryMcpStore implements McpStore {
           ...rest,
           ...(requested.has("database") ? {} : { dbObjects: [] }),
           ...(requested.has("route") ? {} : { routes: [] }),
+          ...(withoutEdges ? { edgeOmissions: [], edges: [] } : {}),
           // Receipt summaries stay in the store for the same reason
           // (RE-04 B-01): the hosted read no longer selects the column, and
           // a fixture that still handed them back would pass tests the
