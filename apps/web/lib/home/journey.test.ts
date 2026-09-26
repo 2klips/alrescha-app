@@ -1,8 +1,10 @@
+import { createClient } from "@supabase/supabase-js";
 import { describe, expect, test } from "vitest";
 
 import {
   buildScanProgress,
   buildWorkspaceJourney,
+  loadWorkspaceJourney,
   type WorkspaceJourneyJobRow,
   type WorkspaceJourneyRepositoryRow,
   type WorkspaceJourneyRows,
@@ -365,5 +367,56 @@ describe("buildScanProgress", () => {
     expect(progress.structure).toBe("ready");
     expect(progress.analysis).toBe("failed");
     expect(progress.analysisError).toMatch(/before any artifact/);
+  });
+});
+
+describe("loadWorkspaceJourney", () => {
+  /**
+   * A client whose every request gets `status` and `body` back — through the
+   * real postgrest-js, so the status and the code arrive as a hosted read's
+   * would.
+   */
+  function answering(status: number, body: Record<string, unknown>) {
+    return createClient("https://abcdefghijklmnopqrst.supabase.co", "key", {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: {
+        fetch: async () =>
+          new Response(JSON.stringify(body), {
+            headers: { "content-type": "application/json" },
+            status,
+          }),
+      },
+    });
+  }
+
+  test("says which kind of failure lost the workspace, and none of its text", async () => {
+    // The first `/app` after an idle spell on 7074b74 threw the bare sentence,
+    // and a missing row read the same as a refused token.
+    await expect(
+      loadWorkspaceJourney(
+        answering(406, {
+          code: "PGRST116",
+          details: "The result contains 0 rows",
+          hint: null,
+          message: "Cannot coerce the result to a single JSON object",
+        }),
+        "user-1",
+      ),
+    ).rejects.toThrow(
+      /^\[HTTP 406 PGRST116\] Personal workspace is unavailable\.$/,
+    );
+    await expect(
+      loadWorkspaceJourney(
+        answering(401, {
+          code: "PGRST303",
+          details: null,
+          hint: null,
+          message: "JWT expired",
+        }),
+        "user-1",
+      ),
+    ).rejects.toThrow(
+      /^\[HTTP 401 PGRST303\] Personal workspace is unavailable\.$/,
+    );
   });
 });

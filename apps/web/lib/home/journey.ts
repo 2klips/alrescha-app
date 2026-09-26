@@ -5,6 +5,7 @@ import {
   currentRepository,
   newestCreatedFirst,
 } from "../shell/current-repository";
+import { responseTag } from "../supabase/response-tag";
 import {
   EVERY_ROW,
   readRowsById,
@@ -260,7 +261,15 @@ export async function loadWorkspaceJourney(
     .limit(1)
     .single();
   if (workspaceResult.error || !workspaceResult.data) {
-    throw new Error("Personal workspace is unavailable.");
+    // Which kind of failure, and none of its text: the status and code narrow
+    // it without naming a cause. The first `/app` after an idle spell on
+    // 7074b74 died here with only the sentence below in its log, where a
+    // failed fetch, a refused token and a missing row all read the same; the
+    // Supabase logs later showed a `workspaces` 401 in that window (RE-04
+    // production read, 2026-09-25).
+    throw new Error(
+      `${responseTag(workspaceResult)}Personal workspace is unavailable.`,
+    );
   }
   const workspaceId = String(workspaceResult.data.id);
   const inWorkspace = <Row>(query: TableQuery<Row>) =>
